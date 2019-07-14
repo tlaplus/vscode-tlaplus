@@ -1,0 +1,49 @@
+{
+    "Macro": {
+        "prefix": "macro",
+        "body": [
+            "macro ${1:name}(${2:params}) begin",
+            "  ${0:body}",
+            "end macro;"
+        ],
+        "description": "Create new macro"
+    },
+    "Define": {
+        "prefix": "define",
+        "body": [
+            "define",
+            "  $0",
+            "end define;"
+        ],
+        "description": "Create new define block"
+    },
+    "While": {
+        "prefix": "while",
+        "body": [
+            "while ${1:condition} do",
+            "  ${0:body}",
+            "end while;"
+        ],
+        "description": "Create new while loop"
+    },
+    "If": {
+        "prefix": "if",
+        "body": [
+            "if ${1:condition} then",
+            "  ${0:body}",
+            "end if;"
+        ],
+        "description": "If block"
+    },
+    "If-Else": {
+        "prefix": "ifel",
+        "body": [
+            "if ${1:condition} then",
+            "  ${2:body}",
+            "elseif",
+            "  ${0:body}",
+            "end if;"
+        ],
+        "description": "If-else block"
+    }
+}

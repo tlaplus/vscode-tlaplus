@@ -1,0 +1,92 @@
+{
+    "name": "tlaplus",
+    "displayName": "TLA+",
+    "version": "0.0.1",
+    "description": "TLA+ support.",
+    "author": {
+        "name": "Andrew Lygin"
+    },
+    "license": "MIT",
+    "engines": {
+        "vscode": "^1.36.0"
+    },
+    "categories": [
+        "Programming Languages",
+        "Snippets"
+    ],
+    "activationEvents": [
+        "onLanguage:tlaplus",
+        "onCommand:extension.tlaplus.pluscal.transpile"
+    ],
+    "main": "./out/main.js",
+    "contributes": {
+        "languages": [
+            {
+                "id": "tlaplus",
+                "aliases": [
+                    "TLA+",
+                    "tlaplus"
+                ],
+                "extensions": [
+                    ".tla"
+                ],
+                "configuration": "./tlaplus-lang-config.json"
+            },
+            {
+                "id": "pluscal",
+                "aliases": [
+                    "PlusCal",
+                    "pluscal"
+                ],
+                "extensions": [],
+                "configuration": "./pluscal-lang-config.json"
+            }
+        ],
+        "grammars": [
+            {
+                "language": "tlaplus",
+                "scopeName": "source.tlaplus",
+                "path": "./syntaxes/tlaplus.tmLanguage.json"
+            },
+            {
+                "language": "pluscal",
+                "scopeName": "source.tlaplus.pluscal",
+                "path": "./syntaxes/pluscal.tmLanguage.json"
+            }
+        ],
+        "commands": [
+            {
+                "command": "tlaplus.parse",
+                "title": "Parse TLA+ module",
+                "category": "TLA+"
+            }
+        ],
+        "snippets": [
+            {
+                "language": "tlaplus",
+                "scopeName": "source.tlaplus.pluscal",
+                "path": "./pluscal-snippets.json"
+            }
+        ],
+        "menus": {
+            "commandPalette": [
+                {
+                    "command": "tlaplus.parse",
+                    "when": "editorLangId == tlaplus"
+                }
+            ]
+        }
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "lint": "tslint -p ./",
+        "watch": "tsc -watch -p ./"
+    },
+    "devDependencies": {
+        "@types/node": "^8.10.25",
+        "@types/vscode": "^1.34.0",
+        "tslint": "^5.16.0",
+        "typescript": "^3.5.1"
+    }
+}
