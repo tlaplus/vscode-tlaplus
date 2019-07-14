@@ -4,7 +4,6 @@ import path = require('path');
 import cp = require('child_process');
 
 const javaCmd = 'java' + (process.platform === 'win32' ? '.exe' : '');
-const toolArgsBase = ['-cp', 'tla2tools.jar'];
 
 class ToolResult {
     readonly err: any;
@@ -51,10 +50,13 @@ async function doCheckFile(fileUri: vscode.Uri, diagnostic: vscode.DiagnosticCol
     if (!javaPath) {
         return;
     }
+    const toolsJarPath = path.resolve(__dirname, '../tools/tla2tools.jar');
+    const toolsArgs = ['-cp', toolsJarPath];
+
     diagnostic.clear();
-    transpilePlusCal(javaPath, fileUri)
+    transpilePlusCal(javaPath, toolsArgs, fileUri)
     .then(pcalMessages => {
-        parseSpec(javaPath, fileUri)
+        parseSpec(javaPath, toolsArgs, fileUri)
         .then(specMessages => {
             const messages = pcalMessages.concat(specMessages);
             const uri2diag = new Map<string, vscode.Diagnostic[]>();
@@ -74,26 +76,25 @@ async function doCheckFile(fileUri: vscode.Uri, diagnostic: vscode.DiagnosticCol
 /**
  * Transpiles PlusCal code in the current .tla file to TLA+ code in the same file.
  */
-function transpilePlusCal(javaPath: string, fileUri: vscode.Uri): Promise<DMessage[]> {
+function transpilePlusCal(javaPath: string, toolsArgs: string[], fileUri: vscode.Uri): Promise<DMessage[]> {
     let workDir = path.dirname(fileUri.fsPath);
-    return runTool(javaPath, ["pcal.trans", fileUri.fsPath], workDir)
+    return runTool(javaPath, toolsArgs.concat(["pcal.trans", fileUri.fsPath]), workDir)
             .then(res => parsePlusCalOutput(res, fileUri.fsPath));
 }
 
 /**
  * Parses the resulting TLA+ spec.
  */
-function parseSpec(javaPath: string, fileUri: vscode.Uri): Promise<DMessage[]> {
+function parseSpec(javaPath: string, toolsArgs: string[], fileUri: vscode.Uri): Promise<DMessage[]> {
     let workDir = path.dirname(fileUri.fsPath);
-    return runTool(javaPath, ["tla2sany.SANY", fileUri.fsPath], workDir)
+    return runTool(javaPath, toolsArgs.concat(["tla2sany.SANY", fileUri.fsPath]), workDir)
             .then(res => parseSanyOutput(res));
 }
 
 function runTool(javaPath: string, args: string[], workDir: string): Promise<ToolResult> {
-    const cmdArgs = toolArgsBase.concat(args);
     let p: cp.ChildProcess;
     return new Promise((resolve, reject) => {
-        p = cp.execFile(javaPath, cmdArgs, { env: [], cwd: workDir }, (err, stdout, stderr) => {
+        p = cp.execFile(javaPath, args, { env: [], cwd: workDir }, (err, stdout, stderr) => {
             resolve(new ToolResult(err, stdout, stderr));
         });
     });

@@ -2,7 +2,7 @@
     "name": "vscode-tlaplus",
     "displayName": "TLA+",
     "version": "0.0.1",
-    "description": "TLA+ support.",
+    "description": "TLA+ language support.",
     "author": {
         "name": "Andrew Lygin"
     },
@@ -12,13 +12,20 @@
     },
     "categories": [
         "Programming Languages",
-        "Snippets"
+        "Snippets",
+        "Other"
+    ],
+    "keywords": [
+        "TLA+", "PlusCal", "Modeling", "Specification"
     ],
     "activationEvents": [
         "onLanguage:tlaplus",
         "onCommand:extension.tlaplus.pluscal.transpile"
     ],
     "main": "./out/main.js",
+    "filse": [
+        "tools"
+    ],
     "contributes": {
         "languages": [
             {
