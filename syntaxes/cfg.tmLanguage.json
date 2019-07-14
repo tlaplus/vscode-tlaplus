@@ -1,0 +1,23 @@
+{   "scopeName": "source.cfg",
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "TLA+ Model Config",
+	"patterns": [
+		{
+			"include": "#keywords"
+		},
+		{
+			"include": "#line_comments"
+		}
+	],
+	"repository": {
+		"keywords": {
+			"name": "keyword.control",
+			"match": "\\b(SPECIFICATION|INVARIANT|PROPERTY)\\b"
+		},
+		"line_comments": {
+			"name": "comment.line",
+			"begin": "\\\\\\*",
+			"end": "$"
+		}
+	}
+}

@@ -47,6 +47,12 @@
                 ],
                 "extensions": [],
                 "configuration": "./pluscal-lang-config.json"
+            },
+            {
+                "id": "cfg",
+                "aliases": [],
+                "extensions": [".cfg"],
+                "configuration": "./cfg-lang-config.json"
             }
         ],
         "grammars": [
@@ -59,6 +65,11 @@
                 "language": "pluscal",
                 "scopeName": "source.tlaplus.pluscal",
                 "path": "./syntaxes/pluscal.tmLanguage.json"
+            },
+            {
+                "language": "cfg",
+                "scopeName": "source.cfg",
+                "path": "./syntaxes/cfg.tmLanguage.json"
             }
         ],
         "commands": [
