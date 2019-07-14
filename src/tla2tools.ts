@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
+import fs = require('fs');
 import path = require('path');
 import cp = require('child_process');
 
-const toolCmd = 'java';
+const javaCmd = 'java' + (process.platform === 'win32' ? '.exe' : '');
 const toolArgsBase = ['-cp', 'tla2tools.jar'];
 
 class ToolResult {
@@ -46,10 +47,14 @@ export function parseModule(diagnostic: vscode.DiagnosticCollection) {
 }
 
 async function doCheckFile(fileUri: vscode.Uri, diagnostic: vscode.DiagnosticCollection) {
+    const javaPath = buildJavaPath();
+    if (!javaPath) {
+        return;
+    }
     diagnostic.clear();
-    transpilePlusCal(fileUri)
+    transpilePlusCal(javaPath, fileUri)
     .then(pcalMessages => {
-        parseSpec(fileUri)
+        parseSpec(javaPath, fileUri)
         .then(specMessages => {
             const messages = pcalMessages.concat(specMessages);
             const uri2diag = new Map<string, vscode.Diagnostic[]>();
@@ -69,26 +74,26 @@ async function doCheckFile(fileUri: vscode.Uri, diagnostic: vscode.DiagnosticCol
 /**
  * Transpiles PlusCal code in the current .tla file to TLA+ code in the same file.
  */
-function transpilePlusCal(fileUri: vscode.Uri): Promise<DMessage[]> {
+function transpilePlusCal(javaPath: string, fileUri: vscode.Uri): Promise<DMessage[]> {
     let workDir = path.dirname(fileUri.fsPath);
-    return runTool(["pcal.trans", fileUri.fsPath], workDir)
+    return runTool(javaPath, ["pcal.trans", fileUri.fsPath], workDir)
             .then(res => parsePlusCalOutput(res, fileUri.fsPath));
 }
 
 /**
  * Parses the resulting TLA+ spec.
  */
-function parseSpec(fileUri: vscode.Uri): Promise<DMessage[]> {
+function parseSpec(javaPath: string, fileUri: vscode.Uri): Promise<DMessage[]> {
     let workDir = path.dirname(fileUri.fsPath);
-    return runTool(["tla2sany.SANY", fileUri.fsPath], workDir)
+    return runTool(javaPath, ["tla2sany.SANY", fileUri.fsPath], workDir)
             .then(res => parseSanyOutput(res));
 }
 
-function runTool(args: string[], workDir: string): Promise<ToolResult> {
-    let cmdArgs = toolArgsBase.concat(args);
+function runTool(javaPath: string, args: string[], workDir: string): Promise<ToolResult> {
+    const cmdArgs = toolArgsBase.concat(args);
     let p: cp.ChildProcess;
     return new Promise((resolve, reject) => {
-        p = cp.execFile(toolCmd, cmdArgs, { env: [], cwd: workDir }, (err, stdout, stderr) => {
+        p = cp.execFile(javaPath, cmdArgs, { env: [], cwd: workDir }, (err, stdout, stderr) => {
             resolve(new ToolResult(err, stdout, stderr));
         });
     });
@@ -235,4 +240,18 @@ function reportBrokenToolchain(err: any) {
     // Toolchain is either not installed or broken
     console.log('Toolchain problem: ' + err.message);
     vscode.window.showErrorMessage('Toolchain is broken');
+}
+
+function buildJavaPath() {
+    const javaHome = vscode.workspace.getConfiguration().get<string>('tlaplus.java.home');
+    let javaPath = javaCmd;
+    if (javaHome) {
+        const homeUri = vscode.Uri.parse(javaHome);
+        const javaPath = homeUri.fsPath + path.sep + 'bin' + path.sep + javaCmd;
+        if (!fs.existsSync(javaPath)) {
+            vscode.window.showErrorMessage('Java command not found. Check the Java Home configuration property.');
+            return null;
+        }
+    }
+    return javaPath;
 }

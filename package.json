@@ -1,5 +1,5 @@
 {
-    "name": "tlaplus",
+    "name": "vscode-tlaplus",
     "displayName": "TLA+",
     "version": "0.0.1",
     "description": "TLA+ support.",
@@ -75,6 +75,19 @@
                     "when": "editorLangId == tlaplus"
                 }
             ]
+        },
+        "configuration": {
+            "type": "object",
+            "title": "TLA+",
+            "properties": {
+                "tlaplus.java.home": {
+                    "type": "string",
+                    "scope": "application",
+                    "default": "",
+                    "format": "uri",
+                    "markdownDescription": "Path to **Java 11** home directory that should be used to run TLA+ tools."
+                }
+            }
         }
     },
     "scripts": {
