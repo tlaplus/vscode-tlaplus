@@ -42,10 +42,23 @@ export function parseModule(diagnostic: vscode.DiagnosticCollection) {
         vscode.window.showWarningMessage('File in the active editor is not a TLA+ file, it cannot be transpiled');
         return;
     }
-    editor.document.save().then(() => doCheckFile(editor.document.uri, diagnostic));
+    editor.document.save().then(() => doParseFile(editor.document.uri, diagnostic));
 }
 
-async function doCheckFile(fileUri: vscode.Uri, diagnostic: vscode.DiagnosticCollection) {
+export function checkModel(diagnostic: vscode.DiagnosticCollection) {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+        vscode.window.showWarningMessage('No editor is active, cannot find a TLA+ model to check');
+        return;
+    }
+    if (editor.document.languageId !== 'tlaplus') {
+        vscode.window.showWarningMessage('File in the active editor is not a TLA+ file, it cannot be checked as a model');
+        return;
+    }
+    doCheckModel(editor.document.uri, diagnostic);
+}
+
+async function doParseFile(fileUri: vscode.Uri, diagnostic: vscode.DiagnosticCollection) {
     const javaPath = buildJavaPath();
     if (!javaPath) {
         return;
@@ -71,6 +84,22 @@ async function doCheckFile(fileUri: vscode.Uri, diagnostic: vscode.DiagnosticCol
             uri2diag.forEach((diags, path) => diagnostic.set(vscode.Uri.parse('file://' + path), diags));
         });
     });
+}
+
+async function doCheckModel(fileUri: vscode.Uri, diagnostic: vscode.DiagnosticCollection) {
+    const javaPath = buildJavaPath();
+    if (!javaPath) {
+        return;
+    }
+    const toolsJarPath = path.resolve(__dirname, '../tools/tla2tools.jar');
+    const toolsArgs = ['-XX:+UseParallelGC', '-jar', toolsJarPath, fileUri.fsPath];
+    let workDir = path.dirname(fileUri.fsPath);
+    return runTool(javaPath, toolsArgs, workDir)
+            .then(res => {
+                console.log('Check model ERR: ' + res.err);
+                console.log('---- Check model STDOUT ----\n' + res.stdout);
+                console.log('---- Check model STDERR ----\n' + res.stderr);            
+            });
 }
 
 /**
@@ -164,9 +193,6 @@ function tryParsePlusCalMessage(lines: string[], idx: number, filePath: string, 
 }
 
 function parseSanyOutput(res: ToolResult): DMessage[] {
-    console.log('SANY ERR: ' + res.err);
-    console.log('---- SANY STDOUT ----\n' + res.stdout);
-    console.log('---- SANY STDERR ----\n' + res.stderr);
     if (res.err && (<any>res.err).code !== 255) {
         reportBrokenToolchain(res.err);
         return [];

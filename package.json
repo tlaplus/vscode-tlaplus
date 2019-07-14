@@ -78,6 +78,11 @@
                 "command": "tlaplus.parse",
                 "title": "Parse TLA+ module",
                 "category": "TLA+"
+            },
+            {
+                "command": "tlaplus.model.check",
+                "title": "Check TLA+ model",
+                "category": "TLA+"
             }
         ],
         "snippets": [
@@ -91,6 +96,9 @@
             "commandPalette": [
                 {
                     "command": "tlaplus.parse",
+                    "when": "editorLangId == tlaplus"
+                }, {
+                    "command": "tlaplus.model.check",
                     "when": "editorLangId == tlaplus"
                 }
             ]
