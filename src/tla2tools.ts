@@ -121,6 +121,10 @@ function parsePlusCalOutput(res: ToolResult, filePath: string): DMessage[] {
         vscode.window.showErrorMessage('Cannot parse PlusCal output');
         console.log("----- PlusCal transpiler STDOUT -----\n" + res.stdout + '-------------------');
     }
+    if (messages.length === 1 && messages[0].diagnostic.message.startsWith('Beginning of algorithm string --algorithm not found')) {
+        // This error means that there were no PlusCal code in the file
+        messages = [];
+    }
     return messages;
 }
 
@@ -138,18 +142,23 @@ function tryParsePlusCalMessage(lines: string[], idx: number, filePath: string, 
     if (!textMatches || textMatches.length !== 2) {
         return 0;
     }
+    const message = textMatches[1];
     // Position
-    const rxPosition = /^\s+(?:at )?line (\d+), column (\d+).?\s*$/g;
-    const posMatches = rxPosition.exec(lines[idx + 2]);
-    if (!posMatches || posMatches.length !== 3) {
-        return 0;
+    let line = 0;
+    let col = 0;
+    if (lines[idx + 2].length > 0) {
+        const rxPosition = /^\s+(?:at )?line (\d+), column (\d+).?\s*$/g;
+        const posMatches = rxPosition.exec(lines[idx + 2]);
+        if (!posMatches || posMatches.length !== 3) {
+            return 0;
+        }
+        line = parseInt(posMatches[1]) - 1;
+        col = parseInt(posMatches[2]);
     }
-    const line = parseInt(posMatches[1]) - 1;
-    const col = parseInt(posMatches[2]);
     messages.push(new DMessage(
         filePath,
         new vscode.Range(line, col, line, col),
-        textMatches[1]
+        message
     ));
     return 2;
 }
@@ -247,7 +256,7 @@ function buildJavaPath() {
     const javaHome = vscode.workspace.getConfiguration().get<string>('tlaplus.java.home');
     let javaPath = javaCmd;
     if (javaHome) {
-        const homeUri = vscode.Uri.parse(javaHome);
+        const homeUri = vscode.Uri.parse('file://' + javaHome);
         const javaPath = homeUri.fsPath + path.sep + 'bin' + path.sep + javaCmd;
         if (!fs.existsSync(javaPath)) {
             vscode.window.showErrorMessage('Java command not found. Check the Java Home configuration property.');
