@@ -1,0 +1,72 @@
+{   "scopeName": "source.tlaplus.pluscal",
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "PlusCal",
+	"patterns": [
+		{
+			"include": "#keywords"
+		},
+		{
+			"include": "#tlaplus_keywords"
+		},
+		{
+			"include": "#embedded_operators"
+		},
+		{
+			"include": "#labels"
+		},
+		{
+			"include": "#strings"
+		},
+		{
+			"include": "#line_comments"
+		},
+		{
+			"include": "#block_comments"
+		},
+		{
+			"include": "#constants"
+		}
+	],
+	"repository": {
+		"keywords": {
+			"name": "keyword.control",
+			"match": "\\b(if|then|elsif|else|while|variables|define|process|macro|procedure|begin|end|do|skip|assert|fair)\\b"
+		},
+		"tlaplus_keywords": {
+			"name": "keyword.control",
+			"match": "\\b(DOMAIN)\\b"
+		},
+		"embedded_operators": {
+			"name": "strong",
+			"match": "\\\\(in|A|E|X|union|o)"
+		},
+		"strings": {
+			"name": "string.quoted.double.tlaplus",
+			"begin": "\"",
+			"end": "\"",
+			"patterns": [
+				{
+					"name": "constant.character.escape.tlaplus",
+					"match": "\\\\."
+				}
+			]
+		},
+		"line_comments": {
+			"match": "\\\\\\*.*$",
+			"name": "comment.line"
+		},
+		"block_comments": {
+			"name": "comment.block",
+			"begin": "\\(\\*",
+			"end": "\\*\\)"
+		},
+		"constants": {
+			"name": "support.constant.tlaplus",
+			"match": "\\b(TRUE|FALSE|BOOLEAN)\\b"
+		},
+		"labels": {
+			"match": "^\\s*\\w+:",
+			"name": "variable.other"
+		}
+	}
+}
