@@ -76,12 +76,12 @@
         "commands": [
             {
                 "command": "tlaplus.parse",
-                "title": "Parse TLA+ module",
+                "title": "Parse module",
                 "category": "TLA+"
             },
             {
                 "command": "tlaplus.model.check",
-                "title": "Check TLA+ model",
+                "title": "Check model",
                 "category": "TLA+"
             }
         ],
