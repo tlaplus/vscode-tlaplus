@@ -2,6 +2,7 @@
     "name": "vscode-tlaplus",
     "displayName": "TLA+",
     "version": "0.0.1",
+    "preview": true,
     "description": "TLA+ language support.",
     "author": {
         "name": "Andrew Lygin"
@@ -16,7 +17,7 @@
         "Other"
     ],
     "keywords": [
-        "TLA+", "PlusCal", "Modeling", "Specification"
+        "TLA+", "PlusCal", "TLC", "Formal models", "Specification", "Modeling"
     ],
     "activationEvents": [
         "onLanguage:tlaplus",
