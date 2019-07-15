@@ -115,7 +115,30 @@
                     "markdownDescription": "Path to **Java 11** home directory that should be used to run TLA+ tools."
                 }
             }
-        }
+        },
+        "taskDefinitions": [{
+            "type": "tla",
+            "required": [
+                "filePath"
+            ],
+            "properties": {
+                "filePath": {
+                    "type": "string",
+                    "description": "The .tla file to process."
+                }
+            }
+        }],
+        "problemMatchers": [{
+            "name": "tla-pluscal-transpiler",
+            "owner": "tla",
+            "fileLocation": ["relative", "${workspaceFolder}"],
+            "pattern": [{
+
+            }, {
+                "regexp": "^Unrecoverable error:$",
+                "message": 1
+            }]
+        }]
     },
     "scripts": {
         "vscode:prepublish": "npm run compile",
