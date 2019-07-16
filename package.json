@@ -127,17 +127,6 @@
                     "description": "The .tla file to process."
                 }
             }
-        }],
-        "problemMatchers": [{
-            "name": "tla-pluscal-transpiler",
-            "owner": "tla",
-            "fileLocation": ["relative", "${workspaceFolder}"],
-            "pattern": [{
-
-            }, {
-                "regexp": "^Unrecoverable error:$",
-                "message": 1
-            }]
         }]
     },
     "scripts": {
