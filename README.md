@@ -17,8 +17,8 @@ In order to run various TLA<sup>+</sup> tools, you need Java 11 installed. If it
 
 The extension provides the following commands in the Command Palette (only available when working with a .tla-file):
 
-- `TLA+: Parse TLA+ module` for translating PlusCal to TLA<sup>+</sup> and checking syntax of the resulting specification.
-- `TLA+: Check TLA+ model` for running the TLC model checker on the TLA<sup>+</sup> specification.
+- `TLA+: Parse module` for translating PlusCal to TLA<sup>+</sup> and checking syntax of the resulting specification.
+- `TLA+: Check model` for running the TLC model checker on the TLA<sup>+</sup> specification.
 
 ## License
 

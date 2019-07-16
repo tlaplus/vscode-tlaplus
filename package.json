@@ -76,7 +76,12 @@
         "commands": [
             {
                 "command": "tlaplus.parse",
-                "title": "Parse TLA+ module",
+                "title": "Parse module",
+                "category": "TLA+"
+            },
+            {
+                "command": "tlaplus.model.check",
+                "title": "Check model",
                 "category": "TLA+"
             }
         ],
@@ -91,6 +96,9 @@
             "commandPalette": [
                 {
                     "command": "tlaplus.parse",
+                    "when": "editorLangId == tlaplus"
+                }, {
+                    "command": "tlaplus.model.check",
                     "when": "editorLangId == tlaplus"
                 }
             ]
@@ -107,7 +115,19 @@
                     "markdownDescription": "Path to **Java 11** home directory that should be used to run TLA+ tools."
                 }
             }
-        }
+        },
+        "taskDefinitions": [{
+            "type": "tla",
+            "required": [
+                "filePath"
+            ],
+            "properties": {
+                "filePath": {
+                    "type": "string",
+                    "description": "The .tla file to process."
+                }
+            }
+        }]
     },
     "scripts": {
         "vscode:prepublish": "npm run compile",
