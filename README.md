@@ -4,10 +4,10 @@ This extension adds support for the [TLA<sup>+</sup> formal specification langua
 
 ## Features
 
-- Powered by the [official TLA<sup>+</sup> toolbox](https://github.com/tlaplus/tlaplus).
 - TLA<sup>+</sup> and PlusCal syntax highlighting and code snippets.
-- Running the TLA<sup>+</sup>-to-PlusCal translator and module parser.
-- Running TLC model checker on TLA<sup>+</sup> models.
+- Running the PlusCal-to-TLA<sup>+</sup> translator and module parser.
+- Running TLC model checker on TLA<sup>+</sup> specifications.
+- Powered by the [official TLA<sup>+</sup> toolbox](https://github.com/tlaplus/tlaplus).
 
 ## Requirements
 
