@@ -1,7 +1,7 @@
 {
     "name": "vscode-tlaplus",
     "displayName": "TLA+",
-    "version": "0.0.1",
+    "version": "0.1.0",
     "preview": true,
     "description": "TLA+ language support.",
     "author": {
@@ -17,7 +17,12 @@
         "Other"
     ],
     "keywords": [
-        "TLA+", "PlusCal", "TLC", "Formal models", "Specification", "Modeling"
+        "TLA+",
+        "PlusCal",
+        "TLC",
+        "Formal models",
+        "Specification",
+        "Modeling"
     ],
     "activationEvents": [
         "onLanguage:tlaplus",
@@ -52,7 +57,9 @@
             {
                 "id": "cfg",
                 "aliases": [],
-                "extensions": [".cfg"],
+                "extensions": [
+                    ".cfg"
+                ],
                 "configuration": "./cfg-lang-config.json"
             }
         ],
@@ -97,7 +104,8 @@
                 {
                     "command": "tlaplus.parse",
                     "when": "editorLangId == tlaplus"
-                }, {
+                },
+                {
                     "command": "tlaplus.model.check",
                     "when": "editorLangId == tlaplus"
                 }
@@ -115,30 +123,24 @@
                     "markdownDescription": "Path to **Java 11** home directory that should be used to run TLA+ tools."
                 }
             }
-        },
-        "taskDefinitions": [{
-            "type": "tla",
-            "required": [
-                "filePath"
-            ],
-            "properties": {
-                "filePath": {
-                    "type": "string",
-                    "description": "The .tla file to process."
-                }
-            }
-        }]
+        }
     },
     "scripts": {
         "vscode:prepublish": "npm run compile",
         "compile": "tsc -p ./",
         "lint": "tslint -p ./",
-        "watch": "tsc -watch -p ./"
+        "watch": "tsc -watch -p ./",
+        "test": "node ./out/test/runTest.js"
     },
     "devDependencies": {
         "@types/node": "^8.10.25",
         "@types/vscode": "^1.34.0",
+        "@types/mocha": "^5.2.6",
+        "@types/glob": "^7.1.1",
         "tslint": "^5.16.0",
-        "typescript": "^3.5.1"
+        "typescript": "^3.5.1",
+        "mocha": "^6.1.4",
+        "glob": "^7.1.4",
+        "vscode-test": "^1.0.0"
     }
 }
