@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import {checkModel} from './cmd-check-model';
-import {parseModule} from './cmd-parse-module';
+import {checkModel} from './commands/checkModel';
+import {parseModule} from './commands/parseModule';
 
 
 // Holds all the error messages
