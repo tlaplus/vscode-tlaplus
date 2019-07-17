@@ -28,7 +28,7 @@ export function revealCheckResultView(checkResult: ModelCheckResult | null) {
     viewPanel.webview.html = createModelCheckResultView(checkResult);
 }
 
-function createModelCheckResultView(checkResult: ModelCheckResult | null): string {
+function createModelCheckResultView(res: ModelCheckResult | null): string {
     const html: string[] = [];
     html.push(`<!DOCTYPE html><html lang="en">
 <head>
@@ -37,9 +37,16 @@ function createModelCheckResultView(checkResult: ModelCheckResult | null): strin
     <title>Model checking</title>
 </head>
 <body>`);
-    if (checkResult !== null) {
-        html.push(`Process: ${checkResult.getProcessInfo()}<br/>`);
-        html.push(`Status: ${checkResult.getStatus()}<br/>`);
+    if (res !== null) {
+        html.push(`Process: ${res.getProcessInfo()}<br/>`);
+        html.push(`Status: ${res.getStatus()}<br/>`);
+        html.push(`Initial states: ${res.getInitialStatesCount()}`);
+        html.push('<table>');
+        html.push('<tr><td>Time</td><td>Diameter</td><td>Total</td><td>Distinct</td><td>Queue Size</td></tr>');
+        res.getInitialStatesStat().forEach(s => {
+            html.push(`<tr><td>${s.time}</td><td>${s.diameter}</td><td>${s.total}</td><td>${s.distinct}</td><td>${s.queueSize}</td></tr>`);
+        });
+        html.push('</table>');
     }
     html.push(`</body></html>`);
     return html.join('');
