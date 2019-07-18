@@ -3,13 +3,23 @@
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+    .state-R {
+        color: #36f;
+    }
+    .state-S {
+        color: #093;
+    }
+    .state-E {
+        color: #d33;
+    }
+</style>
 <title>Model checking</title>
 </head>
 <body>
-    <p>Process: <span id="proc-info">-</span></p>
-    <p>Status: <span id="check-status">-</span></p>
+    <h2>Status</h2>
+    <p><span id="check-status">-</span></p>
     <h2>States</h2>
-    <p>Found: <span id="init-states-count">-</span></p>
     <table>
         <thead>
             <tr>
@@ -25,27 +35,40 @@
     </table>
     <h2>Coverage</h2>
     <table>
-            <thead>
-                <tr>
-                    <td>Module</td>
-                    <td>Action</td>
-                    <td>Location</td>
-                    <td>Total</td>
-                    <td>Distinct</td>
-                </tr>
-            </thead>
-            <tbody id="coverage-stat">
-            </tbody>
-        </table>
+        <thead>
+            <tr>
+                <td>Module</td>
+                <td>Action</td>
+                <td>Location</td>
+                <td>Total</td>
+                <td>Distinct</td>
+            </tr>
+        </thead>
+        <tbody id="coverage-stat">
+        </tbody>
+    </table>
+    <h2>Errors</h2>
+    <p id="errors">-</p>
+    <h2>Error Trace</h2>
+    <table>
+        <thead>
+            <tr>
+                <td>Name</td>
+                <td>Value</td>
+            </tr>
+        </thead>
+        <tbody id="error-trace">
+        </tbody>
+    </table>
     </body>
 <script>
     const vscode = acquireVsCodeApi();
 
     const elStatus = document.getElementById('check-status');
-    const elProcInfo = document.getElementById('proc-info');
-    const elInitStates = document.getElementById('init-states-count');
     const elStatesStat = document.getElementById('states-stat');
     const elCoverageStat = document.getElementById('coverage-stat');
+    const elErrors = document.getElementById('errors');
+    const elErrorTrace = document.getElementById('error-trace');
 
     const prevState = vscode.getState();
     if (prevState) {
@@ -53,14 +76,16 @@
     }
 
     function updateCheckResult(res) {
-        elProcInfo.textContent = res.processInfo;
-        elStatus.textContent = res.status;
-        elInitStates.textContent = res.initialStatesCount;
+        elStatus.textContent = res.statusName + ' : ' + res.state;
+        elStatus.classList = ['state-' + res.state];
         elStatesStat.innerHTML = res.initialStatesStat
             .map(s => `<tr><td>${s.time}</td><td>${s.diameter}</td><td>${s.total}</td><td>${s.distinct}</td><td>${s.queueSize}</td></tr>`)
             .join('');
         elCoverageStat.innerHTML = res.coverageStat
             .map(s => `<tr><td>${s.module}</td><td>${s.action}</td><td>${s.location}</td><td>${s.total}</td><td>${s.distinct}</td></tr>`)
+            .join('');
+        elErrors.innerText = res.errors
+            .map(e => e.join('\n'))
             .join('');
     }
 

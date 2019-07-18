@@ -2,6 +2,13 @@ import { Range } from 'vscode';
 import { ProcessOutputParser } from "../tla2tools";
 import { Readable } from "stream";
 
+
+const STATUS_EMIT_TIMEOUT = 500;    // msec
+
+const STATE_RUNNING = 'R';
+const STATE_SUCCESS = 'S';
+const STATE_ERROR = 'E';
+
 export enum CheckStatus {
     NotStarted,
     Started,
@@ -13,6 +20,17 @@ export enum CheckStatus {
     TemporalPropertiesChecked,
     Finished
 }
+
+export const STATUS_NAMES = new Map<CheckStatus, string>();
+STATUS_NAMES.set(CheckStatus.NotStarted, 'Not started');
+STATUS_NAMES.set(CheckStatus.Started, 'Started');
+STATUS_NAMES.set(CheckStatus.SanyParsing, 'SANY parsing');
+STATUS_NAMES.set(CheckStatus.SanyFinished, 'SANY finished');
+STATUS_NAMES.set(CheckStatus.InitialStatesComputing, 'Computing initial states');
+STATUS_NAMES.set(CheckStatus.InitialStatesComputed, 'Initial states computed');
+STATUS_NAMES.set(CheckStatus.TemporalPropertiesChecking, 'Checking temporal properties');
+STATUS_NAMES.set(CheckStatus.TemporalPropertiesChecked, 'Temporal properties checked');
+STATUS_NAMES.set(CheckStatus.Finished, 'Finished');
 
 // TLC message types
 const NO_TYPE = -1;
@@ -31,7 +49,11 @@ const TLC_CHECKING_TEMPORAL_PROPS_END = 2267;
 const TLC_COVERAGE_NEXT = 2772;
 const TLC_COVERAGE_INIT = 2773;
 const TLC_PROGRESS_STATS = 2200;
+const TLC_TEMPORAL_PROPERTY_VIOLATED = 2116;
+const TLC_INITIAL_STATE = 2102;
+const TLC_NESTED_EXPRESSION = 2103;
 const TLC_FINISHED = 2186;
+const TLC_SUCCESS = 2193;
 
 /**
  * Statistics on initial state generation.
@@ -88,33 +110,57 @@ export class ErrorTraceItem {
  * Represents the state of a TLA model checking process.
  */
 export class ModelCheckResult {
+    readonly state: string;
+    readonly success: boolean;
+    readonly status: CheckStatus;
+    readonly statusName: string;
+    readonly processInfo: string | null;
+    readonly initialStatesStat: InitialStateStatItem[];
+    readonly coverageStat: CoverageItem[];
+    readonly errors: string[][];
+    readonly errorTrace: ErrorTraceItem[];
+
+    constructor(
+        success: boolean,
+        status: CheckStatus,
+        processInfo: string | null,
+        initialStatesStat: InitialStateStatItem[],
+        coverageStat: CoverageItem[],
+        errors: string[][],
+        errorTrace: ErrorTraceItem[]
+    ) {
+        if (status === CheckStatus.Finished) {
+            this.state = success ? STATE_SUCCESS : STATE_ERROR;
+        } else {
+            this.state = STATE_RUNNING;
+        }
+        this.success = success;
+        this.status = status;
+        this.statusName = STATUS_NAMES.get(status) || 'Working';
+        this.processInfo = processInfo;
+        this.initialStatesStat = initialStatesStat;
+        this.coverageStat = coverageStat;
+        this.errors = errors;
+        this.errorTrace = errorTrace;
+    }
+}
+
+/**
+ * Gradually builds ModelCheckResult by processing TLC output lines.
+ */
+class ModelCheckResultBuilder {
+    private success: boolean = false;
     private status: CheckStatus = CheckStatus.NotStarted;
     private processInfo: string | null = null;
     private initialStatesStat: InitialStateStatItem[] = [];
     private coverageStat: CoverageItem[] = [];
-    private errorTrace: ErrorTraceItem[] | null = null;
+    private errors: string[][] = [];
+    private errorTrace: ErrorTraceItem[] = [];
     private msgType: number = NO_TYPE;
     private msgBuffer: string[] = [];
-    private initialStatesCount: number = 0;
 
     getStatus(): CheckStatus {
         return this.status;
-    }
-
-    getProcessInfo(): string | null {
-        return this.processInfo;
-    }
-
-    getInitialStatesCount(): number {
-        return this.initialStatesCount;
-    }
-
-    getInitialStatesStat(): InitialStateStatItem[] {
-        return this.initialStatesStat;
-    }
-
-    getCoverageStat(): CoverageItem[] {
-        return this.coverageStat;
     }
 
     addLine(line: string) {
@@ -125,6 +171,18 @@ export class ModelCheckResult {
         } else {
             this.msgBuffer.push(line);
         }
+    }
+
+    build(): ModelCheckResult {
+        return new ModelCheckResult(
+            this.success,
+            this.status,
+            this.processInfo,
+            this.initialStatesStat,
+            this.coverageStat,
+            this.errors,
+            this.errorTrace
+        );
     }
 
     private handleMessageEnd() {
@@ -146,7 +204,6 @@ export class ModelCheckResult {
                 break;
             case TLC_COMPUTING_INIT_PROGRESS:
                 this.status = CheckStatus.InitialStatesComputing;
-                this.parseInitialStatesComputing();
                 break;
             case TLC_INIT_GENERATED1:
             case TLC_INIT_GENERATED2:
@@ -157,7 +214,6 @@ export class ModelCheckResult {
                 break;
             case TLC_CHECKING_TEMPORAL_PROPS:
                 this.status = CheckStatus.TemporalPropertiesChecking;
-                this.parseTemporalPropertiesChecking();
                 break;
             case TLC_CHECKING_TEMPORAL_PROPS_END:
                 this.status = CheckStatus.TemporalPropertiesChecked;
@@ -171,6 +227,14 @@ export class ModelCheckResult {
                 break;
             case TLC_COVERAGE_NEXT:
                 this.parseCoverage();
+                break;
+            case TLC_INITIAL_STATE:
+            case TLC_NESTED_EXPRESSION:
+            case TLC_TEMPORAL_PROPERTY_VIOLATED:
+                this.errors.push(this.msgBuffer.slice(0));
+                break;
+            case TLC_SUCCESS:
+                this.success = true;
                 break;
             case TLC_FINISHED:
                 this.status = CheckStatus.Finished;
@@ -196,26 +260,11 @@ export class ModelCheckResult {
         return line.startsWith('@!@!@ENDMSG ') && line.endsWith(' @!@!@');
     }
 
-    private parseInitialStatesComputing() {
-        const matches = this.tryMatchBufferLine(/^Computed (\d+) initial states\.\.\.$/g);
-        if (matches) {
-            this.initialStatesCount = parseInt(matches[1]);
-        }
-    }
-
     private parseInitialStatesComputed() {
         const matches = this.tryMatchBufferLine(/^Finished computing initial states: (\d+) distinct states generated at (\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*$/g);
         if (matches) {
             const count = parseInt(matches[1]);
-            this.initialStatesCount = count;
             this.initialStatesStat.push(new InitialStateStatItem(matches[2], 0, count, count, count));
-        }
-    }
-
-    private parseTemporalPropertiesChecking() {
-        const matches = this.tryMatchBufferLine(/^Checking temporal properties for the current state space with (\d+) total distinct states.*$/g);
-        if (matches) {
-            this.initialStatesCount = parseInt(matches[1]);
         }
     }
 
@@ -270,8 +319,10 @@ export class ModelCheckResult {
  * Parses stdout of TLC model checker.
  */
 export class TLCModelCheckerStdoutParser extends ProcessOutputParser {
-    checkResult = new ModelCheckResult();
+    checkResultBuilder = new ModelCheckResultBuilder();
     handler: (checkResult: ModelCheckResult) => void;
+    timer: NodeJS.Timer | undefined = undefined;
+    first: boolean = true;
 
     constructor(stdout: Readable, filePath: string, handler: (checkResult: ModelCheckResult) => void) {
         super(stdout, filePath);
@@ -281,13 +332,30 @@ export class TLCModelCheckerStdoutParser extends ProcessOutputParser {
     protected parseLine(line: string | null) {
         console.log('tlc> ' + (line === null ? ':END:' : line));
         if (line !== null) {
-            this.checkResult.addLine(line);
-            this.handler(this.checkResult);
+            this.checkResultBuilder.addLine(line);
+            this.scheduleUpdate();
         }
+    }
+
+    private scheduleUpdate() {
+        if (this.timer) {
+            return;
+        }
+        let timeout = STATUS_EMIT_TIMEOUT;
+        if (this.first && this.checkResultBuilder.getStatus() !== CheckStatus.NotStarted) {
+            // First status change, show immediately
+            this.first = false;
+            timeout = 0;
+        }
+        const me = this;
+        this.timer = setTimeout(() => {
+            me.handler(me.checkResultBuilder.build());
+            me.timer = undefined;
+        }, timeout);
     }
 }
 
 function parseIntWithComma(str: string): number {
-    const c = str.replace(',', '');
+    const c = str.split(',').join('');
     return parseInt(c);
 }
