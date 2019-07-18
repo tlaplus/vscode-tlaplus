@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
-import path = require('path');
-import { runTool } from './tla2tools';
-import { TLCModelCheckerStdoutParser } from './parsers/model-checker';
+import { runTool } from '../tla2tools';
+import { TLCModelCheckerStdoutParser } from '../parsers/modelChecker';
+import { revealCheckResultView, updateCheckResultView } from '../checkResultView';
 
 /**
  * Runs TLC on a TLA+ specification.
@@ -21,9 +21,10 @@ export function checkModel(diagnostic: vscode.DiagnosticCollection) {
 
 async function doCheckModel(fileUri: vscode.Uri, diagnostic: vscode.DiagnosticCollection) {
     try {
-        const proc = runTool('tlc2.TLC', fileUri.fsPath, ['-modelcheck', '-tool']);
-        const stdoutParser = new TLCModelCheckerStdoutParser(proc.stdout, fileUri.fsPath);
-        const messages = await stdoutParser.readAll();    
+        const proc = runTool('tlc2.TLC', fileUri.fsPath, ['-modelcheck', '-coverage', '1', '-tool']);
+        revealCheckResultView(null);
+        const stdoutParser = new TLCModelCheckerStdoutParser(proc.stdout, fileUri.fsPath, updateCheckResultView);
+        const messages = await stdoutParser.readAll();
         messages.apply(diagnostic);
     } catch (e) {
         vscode.window.showErrorMessage(e.message);

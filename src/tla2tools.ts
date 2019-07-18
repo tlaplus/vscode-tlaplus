@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
-import fs = require('fs');
-import path = require('path');
-import cp = require('child_process');
+import * as fs from 'fs';
+import * as path from 'path';
+import * as cp from 'child_process';
 import { Readable } from 'stream';
 import { DCollection } from './diagnostic';
 
@@ -28,7 +28,7 @@ export abstract class ProcessOutputParser {
     constructor(stream: Readable, filePath?: string) {
         this.filePath = filePath;
         const me = this;
-        stream.on('data', (chunk) => me.handleData(chunk));
+        stream.on('data', chunk => me.handleData(chunk));
         stream.on('close', () => me.handleData(null));
         if (filePath) {
             this.addDiagnosticFilePath(filePath);
@@ -40,7 +40,7 @@ export abstract class ProcessOutputParser {
      */
     async readAll(): Promise<DCollection> {
         const me = this;
-        return new Promise((resolve) => {
+        return new Promise(resolve => {
             me.resolve = resolve;
         });
     }

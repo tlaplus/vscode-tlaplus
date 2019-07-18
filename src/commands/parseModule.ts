@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
-import { DCollection } from './diagnostic';
-import { TranspilerStdoutParser } from './parsers/pluscal';
-import { TLAParserStdoutParser } from './parsers/tlc';
-import { runTool } from './tla2tools';
+import { DCollection } from '../diagnostic';
+import { TranspilerStdoutParser } from '../parsers/pluscal';
+import { TLAParserStdoutParser } from '../parsers/tlc';
+import { runTool } from '../tla2tools';
 
 // TODO: handle exit codes in parsers
 
