@@ -29,7 +29,7 @@ export function checkModel(diagnostic: vscode.DiagnosticCollection) {
 
 async function doCheckModel(fileUri: vscode.Uri, diagnostic: vscode.DiagnosticCollection) {
     try {
-        const proc = runTool('tlc2.TLC', fileUri.fsPath, ['-modelcheck', '-tool']);
+        const proc = runTool('tlc2.TLC', fileUri.fsPath, ['-modelcheck', '-coverage', '1', '-tool']);
         revealCheckResultView(null);
         const updInfo = new UpdateInfo();
         const viewUpdater = (checkResult: ModelCheckResult) => {

@@ -1,54 +1,64 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
 import { ModelCheckResult } from './parsers/modelChecker';
 
+// Cached HTML template for the WebView
+let viewHtml: string | undefined = undefined;
 let viewPanel: vscode.WebviewPanel | null = null;
+let lastCheckResult: ModelCheckResult | null;
 
 export function updateCheckResultView(checkResult: ModelCheckResult | null) {
-    if (viewPanel) {
-        viewPanel.webview.html = createModelCheckResultView(checkResult);
-    }
+    setCheckResultView(checkResult);
+    lastCheckResult = checkResult;
 }
 
 export function revealCheckResultView(checkResult: ModelCheckResult | null) {
-    const title = `TLA+ model checking`;
-    if (viewPanel !== null) {
-        viewPanel.title = title;
-        viewPanel.reveal();
+    if (viewPanel === null) {
+        createNewPanel();
+        ensurePanelBody();
     } else {
-        viewPanel = vscode.window.createWebviewPanel(
-            'modelChecking',
-            title,
-            vscode.ViewColumn.One,
-            {}
-        );    
-        viewPanel.onDidDispose(() => {
-            viewPanel = null;
-        });
+        viewPanel.reveal();
     }
-    viewPanel.webview.html = createModelCheckResultView(checkResult);
+    updateCheckResultView(checkResult);
 }
 
-function createModelCheckResultView(res: ModelCheckResult | null): string {
-    const html: string[] = [];
-    html.push(`<!DOCTYPE html><html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Model checking</title>
-</head>
-<body>`);
-    if (res !== null) {
-        html.push(`Process: ${res.getProcessInfo()}<br/>`);
-        html.push(`Status: ${res.getStatus()}<br/>`);
-        html.push(`Initial states: ${res.getInitialStatesCount()}`);
-        html.push('<table>');
-        html.push('<tr><td>Time</td><td>Diameter</td><td>Total</td><td>Distinct</td><td>Queue Size</td></tr>');
-        res.getInitialStatesStat().forEach(s => {
-            html.push(`<tr><td>${s.time}</td><td>${s.diameter}</td><td>${s.total}</td><td>${s.distinct}</td><td>${s.queueSize}</td></tr>`);
+function setCheckResultView(checkResult: ModelCheckResult | null) {
+    if (viewPanel) {
+        viewPanel.webview.postMessage({
+            checkResult: checkResult
         });
-        html.push('</table>');
     }
-    html.push(`</body></html>`);
-    return html.join('');
 }
 
+function createNewPanel() {
+    const title = `TLA+ model checking`;
+    viewPanel = vscode.window.createWebviewPanel(
+        'modelChecking',
+        title,
+        vscode.ViewColumn.One,
+        {
+            enableScripts: true,
+            localResourceRoots: [vscode.Uri.file(path.resolve(__dirname, '../assets'))]
+        }
+    );
+    viewPanel.onDidDispose(() => {
+        viewPanel = null;
+    });
+    viewPanel.onDidChangeViewState(e => {
+        if (e.webviewPanel.visible) {
+            // Show what has been missed while the panel was invisible
+            setCheckResultView(lastCheckResult);
+        }
+    });
+}
+
+function ensurePanelBody() {
+    if (!viewPanel) {
+        return;
+    }
+    if (!viewHtml) {
+        viewHtml = fs.readFileSync(path.resolve(__dirname, '../assets/check-result-view.html'), 'utf8');
+    }
+    viewPanel.webview.html = viewHtml;
+}

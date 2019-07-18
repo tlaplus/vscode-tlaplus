@@ -1,3 +1,4 @@
+import { Range } from 'vscode';
 import { ProcessOutputParser } from "../tla2tools";
 import { Readable } from "stream";
 
@@ -27,11 +28,13 @@ const TLC_INIT_GENERATED3 = 2207;
 const TLC_INIT_GENERATED4 = 2208;
 const TLC_CHECKING_TEMPORAL_PROPS = 2192;
 const TLC_CHECKING_TEMPORAL_PROPS_END = 2267;
+const TLC_COVERAGE_NEXT = 2772;
+const TLC_COVERAGE_INIT = 2773;
 const TLC_PROGRESS_STATS = 2200;
 const TLC_FINISHED = 2186;
 
 /**
- * Statistics on initial state generation;
+ * Statistics on initial state generation.
  */
 export class InitialStateStatItem {
     readonly time: string;
@@ -46,6 +49,25 @@ export class InitialStateStatItem {
         this.total = total;
         this.distinct = distinct;
         this.queueSize = queueSize;
+    }
+}
+
+/**
+ * Statistics on coverage.
+ */
+export class CoverageItem {
+    readonly module: string;
+    readonly action: string;
+    readonly location: Range;
+    readonly total: number;
+    readonly distinct: number;
+
+    constructor(module: string, action: string, location: Range, total: number, distinct: number) {
+        this.module = module;
+        this.action = action;
+        this.location = location;
+        this.total = total;
+        this.distinct = distinct;
     }
 }
 
@@ -68,8 +90,9 @@ export class ErrorTraceItem {
 export class ModelCheckResult {
     private status: CheckStatus = CheckStatus.NotStarted;
     private processInfo: string | null = null;
-    private errorTrace: ErrorTraceItem[] | null = null;
     private initialStatesStat: InitialStateStatItem[] = [];
+    private coverageStat: CoverageItem[] = [];
+    private errorTrace: ErrorTraceItem[] | null = null;
     private msgType: number = NO_TYPE;
     private msgBuffer: string[] = [];
     private initialStatesCount: number = 0;
@@ -88,6 +111,10 @@ export class ModelCheckResult {
 
     getInitialStatesStat(): InitialStateStatItem[] {
         return this.initialStatesStat;
+    }
+
+    getCoverageStat(): CoverageItem[] {
+        return this.coverageStat;
     }
 
     addLine(line: string) {
@@ -137,6 +164,13 @@ export class ModelCheckResult {
                 break;
             case TLC_PROGRESS_STATS:
                 this.parseProgressStats();
+                break;
+            case TLC_COVERAGE_INIT:
+                this.coverageStat.length = 0;
+                this.parseCoverage();
+                break;
+            case TLC_COVERAGE_NEXT:
+                this.parseCoverage();
                 break;
             case TLC_FINISHED:
                 this.status = CheckStatus.Finished;
@@ -195,6 +229,32 @@ export class ModelCheckResult {
                 parseIntWithComma(matches[4]),
                 parseIntWithComma(matches[5])
             ));
+        }
+    }
+
+    private parseCoverage() {
+        const matches = this.tryMatchBufferLine(/^<([a-zA-Z0-9_]+) line (\d+), col (\d+) to line (\d+), col (\d+) of module ([a-zA-Z0-9_]+)>: (\d+):(\d+)/g);
+        if (matches) {
+            this.coverageStat.push(new CoverageItem(
+                matches[6],
+                matches[1],
+                new Range(
+                    parseInt(matches[2]),
+                    parseInt(matches[3]),
+                    parseInt(matches[4]),
+                    parseInt(matches[5])
+                ),
+                parseInt(matches[7]),
+                parseInt(matches[8])
+            ));
+            const name = matches[1];
+            const fromLine = parseInt(matches[2]);
+            const fromCol = parseInt(matches[3]);
+            const toLine = parseInt(matches[4]);
+            const toCol = parseInt(matches[5]);
+            const module = matches[6];
+            const total = parseInt(matches[7]);
+            const distinct = parseInt(matches[8]);
         }
     }
 
