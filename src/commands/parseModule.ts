@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { DCollection } from '../diagnostic';
 import { TranspilerStdoutParser } from '../parsers/pluscal';
-import { TLAParserStdoutParser } from '../parsers/tlc';
+import { SanyStdoutParser } from '../parsers/sany';
 import { runTool } from '../tla2tools';
 
 // TODO: handle exit codes in parsers
@@ -49,6 +49,6 @@ async function transpilePlusCal(fileUri: vscode.Uri): Promise<DCollection> {
  */
 async function parseSpec(fileUri: vscode.Uri): Promise<DCollection> {
     const proc = runTool('tla2sany.SANY', fileUri.fsPath);
-    const stdoutParser = new TLAParserStdoutParser(proc.stdout);
+    const stdoutParser = new SanyStdoutParser(proc.stdout);
     return stdoutParser.readAll();
 }

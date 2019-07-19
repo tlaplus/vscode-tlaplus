@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { runTool } from '../tla2tools';
-import { TLCModelCheckerStdoutParser } from '../parsers/modelChecker';
+import { TLCModelCheckerStdoutParser } from '../parsers/tlc';
 import { revealCheckResultView, updateCheckResultView } from '../checkResultView';
 
 /**

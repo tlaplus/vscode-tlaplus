@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { ModelCheckResult } from './parsers/modelChecker';
+import { ModelCheckResult } from './model/check';
 
 // Cached HTML template for the WebView
 let viewHtml: string | undefined = undefined;

@@ -32,7 +32,7 @@ export class TranspilerStdoutParser extends ProcessOutputParser {
             this.errMessage = msg;
             return;
         }
-       if (this.errMessage) {
+        if (this.errMessage) {
             const rxPosition = /^\s+(?:at )?line (\d+), column (\d+).?\s*$/g;
             const posMatches = rxPosition.exec(line);
             if (posMatches) {

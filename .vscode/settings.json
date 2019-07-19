@@ -1,3 +1,7 @@
 {
-    "debug.node.autoAttach": "on"
+    "debug.node.autoAttach": "on",
+    "search.exclude": {
+        "**/node_modules": true,
+        "out/": true
+	},
 }

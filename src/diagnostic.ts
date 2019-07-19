@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { pathToUri } from './common';
 
 /**
  * Collection of DMessages that were generated during a single check run.
@@ -55,6 +56,3 @@ class DMessage {
     }
 }
 
-function pathToUri(path: string): vscode.Uri {
-    return vscode.Uri.parse('file://' + path);
-}

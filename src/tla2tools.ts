@@ -4,6 +4,7 @@ import * as path from 'path';
 import * as cp from 'child_process';
 import { Readable } from 'stream';
 import { DCollection } from './diagnostic';
+import { pathToUri } from './common';
 
 const toolsJarPath = path.resolve(__dirname, '../tools/tla2tools.jar');
 const javaCmd = 'java' + (process.platform === 'win32' ? '.exe' : '');
@@ -29,7 +30,7 @@ export abstract class ProcessOutputParser {
         this.filePath = filePath;
         const me = this;
         stream.on('data', chunk => me.handleData(chunk));
-        stream.on('close', () => me.handleData(null));
+        stream.on('end', () => me.handleData(null));
         if (filePath) {
             this.addDiagnosticFilePath(filePath);
         }
@@ -114,7 +115,7 @@ function buildJavaPath(): string {
     const javaHome = vscode.workspace.getConfiguration().get<string>('tlaplus.java.home');
     let javaPath = javaCmd;
     if (javaHome) {
-        const homeUri = vscode.Uri.parse('file://' + javaHome);
+        const homeUri = pathToUri(javaHome);
         const javaPath = homeUri.fsPath + path.sep + 'bin' + path.sep + javaCmd;
         if (!fs.existsSync(javaPath)) {
             throw new ToolingError('Java command not found. Check the Java Home configuration property.');
