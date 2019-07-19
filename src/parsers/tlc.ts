@@ -57,7 +57,7 @@ export class TLAParserStdoutParser extends ProcessOutputParser {
             }
         } else if (this.errBlock === 'errors') {
             if (this.errRange === null) {
-                const rxPosition = /^\s*line (\d+), col (\d+) to line (\d+), col (\d+) of module ([a-zA-Z0-9_]+)\s*$/g;
+                const rxPosition = /^\s*line (\d+), col (\d+) to line (\d+), col (\d+) of module (\w+)\s*$/g;
                 const posMatches = rxPosition.exec(line);
                 if (posMatches) {
                     this.errRange = new vscode.Range(

@@ -91,7 +91,7 @@
 		},
 		"module_start": {
 			"name": "comment.line",
-			"match": "^\\s*-{4,}\\s*(MODULE)\\s*([a-zA-Z0-9_]*)\\s*-{4,}",
+			"match": "^\\s*-{4,}\\s*(MODULE)\\s*(\\w*)\\s*-{4,}",
 			"captures": {
 				"1": {
 					"name": "keyword.control"

@@ -87,6 +87,14 @@
         elErrors.innerText = res.errors
             .map(e => e.join('\n'))
             .join('');
+        const errTraceRows = [];
+        res.errorTrace.forEach(item => {
+            errTraceRows.push(`<tr><td colspan='2'><b>${item.num}: ${item.title}</b></td></tr>`);
+            item.variables.forEach(v => {
+                errTraceRows.push(`<tr><td colspan='2'>${v}</td></tr>`);
+            });
+        });
+        elErrorTrace.innerHTML = errTraceRows.join('');
     }
 
     window.addEventListener('message', event => {

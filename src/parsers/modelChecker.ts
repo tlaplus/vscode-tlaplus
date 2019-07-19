@@ -1,40 +1,15 @@
 import { Range } from 'vscode';
 import { ProcessOutputParser } from "../tla2tools";
 import { Readable } from "stream";
+import { CheckStatus, ModelCheckResult, InitialStateStatItem, CoverageItem, ErrorTraceItem } from '../model/checking';
 
 
 const STATUS_EMIT_TIMEOUT = 500;    // msec
 
-const STATE_RUNNING = 'R';
-const STATE_SUCCESS = 'S';
-const STATE_ERROR = 'E';
-
-export enum CheckStatus {
-    NotStarted,
-    Started,
-    SanyParsing,
-    SanyFinished,
-    InitialStatesComputing,
-    InitialStatesComputed,
-    TemporalPropertiesChecking,
-    TemporalPropertiesChecked,
-    Finished
-}
-
-export const STATUS_NAMES = new Map<CheckStatus, string>();
-STATUS_NAMES.set(CheckStatus.NotStarted, 'Not started');
-STATUS_NAMES.set(CheckStatus.Started, 'Started');
-STATUS_NAMES.set(CheckStatus.SanyParsing, 'SANY parsing');
-STATUS_NAMES.set(CheckStatus.SanyFinished, 'SANY finished');
-STATUS_NAMES.set(CheckStatus.InitialStatesComputing, 'Computing initial states');
-STATUS_NAMES.set(CheckStatus.InitialStatesComputed, 'Initial states computed');
-STATUS_NAMES.set(CheckStatus.TemporalPropertiesChecking, 'Checking temporal properties');
-STATUS_NAMES.set(CheckStatus.TemporalPropertiesChecked, 'Temporal properties checked');
-STATUS_NAMES.set(CheckStatus.Finished, 'Finished');
-
 // TLC message types
 const NO_TYPE = -1;
 const TLC_UNKNOWN = -2;
+const GENERAL = 1000;
 const TLC_MODE_MC = 2187;
 const TLC_SANY_START = 2220;
 const TLC_SANY_END = 2219;
@@ -52,96 +27,50 @@ const TLC_PROGRESS_STATS = 2200;
 const TLC_TEMPORAL_PROPERTY_VIOLATED = 2116;
 const TLC_INITIAL_STATE = 2102;
 const TLC_NESTED_EXPRESSION = 2103;
+const TLC_VALUE_ASSERT_FAILED = 2132;
+const TLC_STATE_PRINT1 = 2216;
+const TLC_STATE_PRINT2 = 2217;
+const TLC_STATE_PRINT3 = 2218;
 const TLC_FINISHED = 2186;
 const TLC_SUCCESS = 2193;
 
 /**
- * Statistics on initial state generation.
+ * Parses stdout of TLC model checker.
  */
-export class InitialStateStatItem {
-    readonly time: string;
-    readonly diameter: number;
-    readonly total: number;
-    readonly distinct: number;
-    readonly queueSize: number;
+export class TLCModelCheckerStdoutParser extends ProcessOutputParser {
+    checkResultBuilder = new ModelCheckResultBuilder();
+    handler: (checkResult: ModelCheckResult) => void;
+    timer: NodeJS.Timer | undefined = undefined;
+    first: boolean = true;
 
-    constructor(time: string, diameter: number, total: number, distinct: number, queueSize: number) {
-        this.time = time;
-        this.diameter = diameter;
-        this.total = total;
-        this.distinct = distinct;
-        this.queueSize = queueSize;
+    constructor(stdout: Readable, filePath: string, handler: (checkResult: ModelCheckResult) => void) {
+        super(stdout, filePath);
+        this.handler = handler;
     }
-}
 
-/**
- * Statistics on coverage.
- */
-export class CoverageItem {
-    readonly module: string;
-    readonly action: string;
-    readonly location: Range;
-    readonly total: number;
-    readonly distinct: number;
-
-    constructor(module: string, action: string, location: Range, total: number, distinct: number) {
-        this.module = module;
-        this.action = action;
-        this.location = location;
-        this.total = total;
-        this.distinct = distinct;
-    }
-}
-
-/**
- * A state of a process in a particular moment of time.
- */
-export class ErrorTraceItem {
-    readonly title: string;
-    readonly variables: string[];
-
-    constructor(title: string, variables: string[]) {
-        this.title = title;
-        this.variables = variables;
-    }
-}
-
-/**
- * Represents the state of a TLA model checking process.
- */
-export class ModelCheckResult {
-    readonly state: string;
-    readonly success: boolean;
-    readonly status: CheckStatus;
-    readonly statusName: string;
-    readonly processInfo: string | null;
-    readonly initialStatesStat: InitialStateStatItem[];
-    readonly coverageStat: CoverageItem[];
-    readonly errors: string[][];
-    readonly errorTrace: ErrorTraceItem[];
-
-    constructor(
-        success: boolean,
-        status: CheckStatus,
-        processInfo: string | null,
-        initialStatesStat: InitialStateStatItem[],
-        coverageStat: CoverageItem[],
-        errors: string[][],
-        errorTrace: ErrorTraceItem[]
-    ) {
-        if (status === CheckStatus.Finished) {
-            this.state = success ? STATE_SUCCESS : STATE_ERROR;
-        } else {
-            this.state = STATE_RUNNING;
+    protected parseLine(line: string | null) {
+        console.log('tlc> ' + (line === null ? ':END:' : line));
+        if (line !== null) {
+            this.checkResultBuilder.addLine(line);
+            this.scheduleUpdate();
         }
-        this.success = success;
-        this.status = status;
-        this.statusName = STATUS_NAMES.get(status) || 'Working';
-        this.processInfo = processInfo;
-        this.initialStatesStat = initialStatesStat;
-        this.coverageStat = coverageStat;
-        this.errors = errors;
-        this.errorTrace = errorTrace;
+    }
+
+    private scheduleUpdate() {
+        if (this.timer) {
+            return;
+        }
+        let timeout = STATUS_EMIT_TIMEOUT;
+        if (this.first && this.checkResultBuilder.getStatus() !== CheckStatus.NotStarted) {
+            // First status change, show immediately
+            this.first = false;
+            timeout = 0;
+        }
+        const me = this;
+        this.timer = setTimeout(() => {
+            me.handler(me.checkResultBuilder.build());
+            me.timer = undefined;
+        }, timeout);
     }
 }
 
@@ -168,7 +97,7 @@ class ModelCheckResultBuilder {
             this.msgType = this.tryParseMessageStart(line);
         } else if (this.tryParseMessageEnd(line)) {
             this.handleMessageEnd();
-        } else {
+        } else if (line !== '') {
             this.msgBuffer.push(line);
         }
     }
@@ -228,10 +157,17 @@ class ModelCheckResultBuilder {
             case TLC_COVERAGE_NEXT:
                 this.parseCoverage();
                 break;
+            case GENERAL:
             case TLC_INITIAL_STATE:
             case TLC_NESTED_EXPRESSION:
             case TLC_TEMPORAL_PROPERTY_VIOLATED:
+            case TLC_VALUE_ASSERT_FAILED:
                 this.errors.push(this.msgBuffer.slice(0));
+                break;
+            case TLC_STATE_PRINT1:
+            case TLC_STATE_PRINT2:
+            case TLC_STATE_PRINT3:
+                this.parseErrorTraceItem();
                 break;
             case TLC_SUCCESS:
                 this.success = true;
@@ -244,6 +180,16 @@ class ModelCheckResultBuilder {
         this.msgBuffer.length = 0;
     }
 
+    // TODO: Sometimes messages start not on the new line: ""
+    // tlc> @!@!@STARTMSG 1000:1 @!@!@
+    // tlc> TLC threw an unexpected exception.
+    // tlc> This was probably caused by an error in the spec or model.
+    // tlc> See the User Output or TLC Console for clues to what happened.
+    // tlc> The exception was a tlc2.tool.EvalException
+    // tlc> : @!@!@STARTMSG 2132:0 @!@!@    <--------------------------- Here!
+    // tlc> The first argument of Assert evaluated to FALSE; the second argument was:
+    // tlc> "Failure of assertion at line 43, column 3."
+    // tlc> @!@!@ENDMSG 2132 @!@!@
     private tryParseMessageStart(line: string): number {
         if (!line.startsWith('@!@!@STARTMSG ') || !line.endsWith(' @!@!@')) {
             return NO_TYPE;
@@ -282,7 +228,7 @@ class ModelCheckResultBuilder {
     }
 
     private parseCoverage() {
-        const matches = this.tryMatchBufferLine(/^<([a-zA-Z0-9_]+) line (\d+), col (\d+) to line (\d+), col (\d+) of module ([a-zA-Z0-9_]+)>: (\d+):(\d+)/g);
+        const matches = this.tryMatchBufferLine(/^<(\w+) line (\d+), col (\d+) to line (\d+), col (\d+) of module (\w+)>: (\d+):(\d+)/g);
         if (matches) {
             this.coverageStat.push(new CoverageItem(
                 matches[6],
@@ -296,15 +242,44 @@ class ModelCheckResultBuilder {
                 parseInt(matches[7]),
                 parseInt(matches[8])
             ));
-            const name = matches[1];
-            const fromLine = parseInt(matches[2]);
-            const fromCol = parseInt(matches[3]);
-            const toLine = parseInt(matches[4]);
-            const toCol = parseInt(matches[5]);
-            const module = matches[6];
-            const total = parseInt(matches[7]);
-            const distinct = parseInt(matches[8]);
         }
+    }
+
+    private parseErrorTraceItem() {
+        if (this.msgBuffer.length === 0) {
+            console.log('Error trace expected but message buffer is empty');
+            return;
+        }
+        // Try special cases like <Initial predicate>, <Stuttering>, etc.
+        const sMatches = this.tryMatchBufferLine(/^(\d+): <([\w\s]+)>$/g);
+        if (sMatches) {
+            this.errorTrace.push(new ErrorTraceItem(
+                parseInt(sMatches[1]),
+                sMatches[2],
+                '', '', new Range(0, 0, 0, 0), this.parseErrorTraceVariables()));
+            return;
+        }
+        // Otherwise fall back to simple states
+        const matches = this.tryMatchBufferLine(/^(\d+): <(\w+) line (\d+), col (\d+) to line (\d+), col (\d+) of module (\w+)>$/g);
+        if (!matches) {
+            return;
+        }
+        this.errorTrace.push(new ErrorTraceItem(
+            parseInt(matches[1]),
+            `${matches[2]} in ${matches[7]}`,
+            matches[7],
+            matches[2],
+            new Range(
+                parseInt(matches[3]),
+                parseInt(matches[4]),
+                parseInt(matches[5]),
+                parseInt(matches[6])),
+            this.parseErrorTraceVariables()
+        ));
+    }
+
+    private parseErrorTraceVariables(): string[] {
+        return this.msgBuffer.slice(1);
     }
 
     private tryMatchBufferLine(regExp: RegExp): RegExpExecArray | null {
@@ -312,46 +287,6 @@ class ModelCheckResultBuilder {
             return null;
         }
         return regExp.exec(this.msgBuffer[0]);
-    }
-}
-
-/**
- * Parses stdout of TLC model checker.
- */
-export class TLCModelCheckerStdoutParser extends ProcessOutputParser {
-    checkResultBuilder = new ModelCheckResultBuilder();
-    handler: (checkResult: ModelCheckResult) => void;
-    timer: NodeJS.Timer | undefined = undefined;
-    first: boolean = true;
-
-    constructor(stdout: Readable, filePath: string, handler: (checkResult: ModelCheckResult) => void) {
-        super(stdout, filePath);
-        this.handler = handler;
-    }
-
-    protected parseLine(line: string | null) {
-        console.log('tlc> ' + (line === null ? ':END:' : line));
-        if (line !== null) {
-            this.checkResultBuilder.addLine(line);
-            this.scheduleUpdate();
-        }
-    }
-
-    private scheduleUpdate() {
-        if (this.timer) {
-            return;
-        }
-        let timeout = STATUS_EMIT_TIMEOUT;
-        if (this.first && this.checkResultBuilder.getStatus() !== CheckStatus.NotStarted) {
-            // First status change, show immediately
-            this.first = false;
-            timeout = 0;
-        }
-        const me = this;
-        this.timer = setTimeout(() => {
-            me.handler(me.checkResultBuilder.build());
-            me.timer = undefined;
-        }, timeout);
     }
 }
 
