@@ -13,7 +13,8 @@ export function checkModel(diagnostic: vscode.DiagnosticCollection) {
         return;
     }
     if (editor.document.languageId !== 'tlaplus') {
-        vscode.window.showWarningMessage('File in the active editor is not a TLA+ file, it cannot be checked as a model');
+        vscode.window.showWarningMessage(
+            'File in the active editor is not a TLA+ file, it cannot be checked as a model');
         return;
     }
     doCheckModel(editor.document.uri, diagnostic);

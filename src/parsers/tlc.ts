@@ -1,8 +1,7 @@
 import { Range } from 'vscode';
-import { ProcessOutputParser } from "../tla2tools";
-import { Readable } from "stream";
+import { ProcessOutputParser } from '../tla2tools';
+import { Readable } from 'stream';
 import { CheckStatus, ModelCheckResult, InitialStateStatItem, CoverageItem, ErrorTraceItem } from '../model/check';
-
 
 const STATUS_EMIT_TIMEOUT = 500;    // msec
 

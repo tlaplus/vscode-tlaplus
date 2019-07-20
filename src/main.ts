@@ -10,8 +10,8 @@ let diagnostic: vscode.DiagnosticCollection;
  */
 export function activate(context: vscode.ExtensionContext) {
     diagnostic = vscode.languages.createDiagnosticCollection('tlaplus');
-    let cmdParse = vscode.commands.registerCommand('tlaplus.parse', () => parseModule(diagnostic));
-    let cmdCheckModel = vscode.commands.registerCommand('tlaplus.model.check', () => checkModel(diagnostic));
+    const cmdParse = vscode.commands.registerCommand('tlaplus.parse', () => parseModule(diagnostic));
+    const cmdCheckModel = vscode.commands.registerCommand('tlaplus.model.check', () => checkModel(diagnostic));
     context.subscriptions.push(cmdParse);
     context.subscriptions.push(cmdCheckModel);
 }

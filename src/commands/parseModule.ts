@@ -26,8 +26,8 @@ export function parseModule(diagnostic: vscode.DiagnosticCollection) {
 
 async function doParseFile(fileUri: vscode.Uri, diagnostic: vscode.DiagnosticCollection) {
     try {
-        let messages = await transpilePlusCal(fileUri);
-        let specMessages = await parseSpec(fileUri);
+        const messages = await transpilePlusCal(fileUri);
+        const specMessages = await parseSpec(fileUri);
         messages.addAll(specMessages);
         messages.apply(diagnostic);
     } catch (e) {

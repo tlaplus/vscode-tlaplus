@@ -55,4 +55,3 @@ class DMessage {
         this.diagnostic = new vscode.Diagnostic(range, text, vscode.DiagnosticSeverity.Error);
     }
 }
-

@@ -130,6 +130,7 @@
         "vscode:prepublish": "npm run compile",
         "compile": "tsc -p ./",
         "lint": "tslint -p ./",
+        "lint-fix": "node ./node_modules/tslint/bin/tslint --fix --project ./tsconfig.json",
         "watch": "tsc -watch -p ./",
         "pretest": "npm run compile",
         "test": "node ./out/test/runTest.js"

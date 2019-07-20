@@ -92,7 +92,7 @@ export function runTool(
     toolArgs?: string[],
     token?: vscode.CancellationToken
 ): cp.ChildProcess {
-    const javaPath = buildJavaPath();
+/*
     let p: cp.ChildProcess;
     if (token) {
         token.onCancellationRequested(() => {
@@ -101,6 +101,8 @@ export function runTool(
             }
         });
     }
+*/
+    const javaPath = buildJavaPath();
     const eArgs = ['-XX:+UseParallelGC', '-cp', toolsJarPath, toolName].concat(toolArgs || []);
     eArgs.push(filePath);
     return cp.spawn(javaPath, eArgs, { cwd: path.dirname(filePath) });
@@ -113,7 +115,7 @@ export function reportBrokenToolchain(err: any) {
 
 function buildJavaPath(): string {
     const javaHome = vscode.workspace.getConfiguration().get<string>('tlaplus.java.home');
-    let javaPath = javaCmd;
+    const javaPath = javaCmd;
     if (javaHome) {
         const homeUri = pathToUri(javaHome);
         const javaPath = homeUri.fsPath + path.sep + 'bin' + path.sep + javaCmd;
@@ -123,7 +125,7 @@ function buildJavaPath(): string {
     }
     return javaPath;
 }
-
+/*
 function killProcessTree(processId: number): void {
     if (process.platform === 'win32') {
         const TASK_KILL = 'C:\\Windows\\System32\\taskkill.exe';
@@ -142,3 +144,4 @@ function killProcessTree(processId: number): void {
         }
     }
 }
+*/

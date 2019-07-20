@@ -4,7 +4,7 @@ import * as path from 'path';
 import { ModelCheckResult } from './model/check';
 
 // Cached HTML template for the WebView
-let viewHtml: string | undefined = undefined;
+let viewHtml: string | undefined;
 let viewPanel: vscode.WebviewPanel | null = null;
 let lastCheckResult: ModelCheckResult | null;
 
@@ -32,7 +32,7 @@ function setCheckResultView(checkResult: ModelCheckResult | null) {
 }
 
 function createNewPanel() {
-    const title = `TLA+ model checking`;
+    const title = 'TLA+ model checking';
     viewPanel = vscode.window.createWebviewPanel(
         'modelChecking',
         title,

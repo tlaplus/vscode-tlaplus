@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { ProcessOutputParser } from "../tla2tools";
-import { Readable } from "stream";
+import { ProcessOutputParser } from '../tla2tools';
+import { Readable } from 'stream';
 
 /**
  * Parses stdout of PlusCal transpiler.
@@ -38,7 +38,10 @@ export class TranspilerStdoutParser extends ProcessOutputParser {
             if (posMatches) {
                 const posLine = parseInt(posMatches[1]) - 1;
                 const posCol = parseInt(posMatches[2]);
-                this.addDiagnosticMessage(this.filePath!, new vscode.Range(posLine, posCol, posLine, posCol), this.errMessage);
+                this.addDiagnosticMessage(
+                    this.filePath!,
+                    new vscode.Range(posLine, posCol, posLine, posCol),
+                    this.errMessage);
             }
             this.errMessage = null;
             return;
