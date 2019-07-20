@@ -58,7 +58,7 @@ suite('TLC Values Output Parser Test Suite', () => {
         assertValue(['[]'], struct());
     });
 
-    test('Parses neste structures', () => {
+    test('Parses nested structures', () => {
         assertValue(
             ['[ a |-> [ b |-> [ hello |-> "world" ]]]'],
             struct(sit('a', struct(sit('b', struct(sit('hello', v('"world"'))))))));
