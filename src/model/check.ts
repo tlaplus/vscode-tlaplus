@@ -66,6 +66,104 @@ export class CoverageItem {
 }
 
 /**
+ * Represents a variable value in a particular model state.
+ */
+export class VariableValue {
+    readonly name: string;
+    readonly value: Value;
+
+    constructor(name: string, value: Value) {
+        this.name = name;
+        this.value = value;
+    }
+}
+
+/**
+ * Base class for values.
+ */
+export abstract class Value {
+    readonly abstract str: string;
+
+    toString() {
+        return this.str;
+    }
+}
+
+/**
+ * Value of a primitive type: 17, "foo", TRUE, etc.
+ */
+export class PrimitiveValue extends Value {
+    readonly str: string;
+
+    constructor(value: string) {
+        super();
+        this.str = value;
+    }
+}
+
+/**
+ * Value that is a collection of other values.
+ */
+abstract class CollectionValue extends Value {
+    readonly values: Value[];
+    readonly str: string;
+
+    constructor(values: Value[], prefix: string, postfix: string) {
+        super();
+        this.values = values;
+        // TODO: trim to fit into 100 symbols
+        const valuesStr = this.values.map(v => v.toString()).join(', ');
+        this.str = prefix + valuesStr + postfix;
+    }
+}
+
+/**
+ * Represents a set: {1, "b", <<TRUE, 5>>}, {}, etc.
+ */
+export class SetValue extends CollectionValue {
+    constructor(values: Value[]) {
+        super(values, '{', '}');
+    }
+}
+
+/**
+ * Represents a sequence/tuple: <<1, "b", TRUE>>, <<>>, etc.
+ */
+export class SequenceValue extends CollectionValue {
+    constructor(values: Value[]) {
+        super(values, '<<', '>>');
+    }
+}
+
+/**
+ * An item of a structure.
+ */
+export class StructureItem implements Value {
+    readonly key: string;
+    readonly value: Value;
+    readonly str: string;
+
+    constructor(key: string, value: Value) {
+        this.key = key;
+        this.value = value;
+        this.str = key + ' |-> ' + value;
+    }
+
+    toString() {
+        return `${this.key} |-> ${this.value}`;
+    }
+}
+
+/**
+ * Represents a structure: [a |-> 'A', b |-> 34, c |-> <<TRUE, 2>>], [], etc.
+ */
+export class StructureValue extends CollectionValue {
+    constructor(values: StructureItem[]) {
+        super(values, '[', ']');
+    }
+}
+
+/**
  * A state of a process in a particular moment of time.
  */
 export class ErrorTraceItem {
@@ -74,9 +172,9 @@ export class ErrorTraceItem {
     readonly module: string;
     readonly action: string;
     readonly range: Range;
-    readonly variables: string[];
+    readonly variables: ReadonlyArray<VariableValue>;
 
-    constructor(num: number, title: string, module: string, action: string, range: Range, variables: string[]) {
+    constructor(num: number, title: string, module: string, action: string, range: Range, variables: VariableValue[]) {
         this.num = num;
         this.title = title;
         this.module = module;
