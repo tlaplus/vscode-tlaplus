@@ -1,7 +1,9 @@
 import { Range } from 'vscode';
 import { ProcessOutputParser } from '../tla2tools';
 import { Readable } from 'stream';
-import { CheckStatus, ModelCheckResult, InitialStateStatItem, CoverageItem, ErrorTraceItem } from '../model/check';
+import { CheckStatus, ModelCheckResult, InitialStateStatItem, CoverageItem, ErrorTraceItem,
+    VariableValue } from '../model/check';
+import { parseValueLines } from './tlcValues';
 
 const STATUS_EMIT_TIMEOUT = 500;    // msec
 
@@ -277,8 +279,31 @@ class ModelCheckResultBuilder {
         ));
     }
 
-    private parseErrorTraceVariables(): string[] {
-        return this.msgBuffer.slice(1);
+    private parseErrorTraceVariables(): VariableValue[] {
+        const variables = [];
+        for (let i = 1; i < this.msgBuffer.length; i++) {
+            const line = this.msgBuffer[i];
+            const matches = /^\/\\ (\w+) = (.+)$/g.exec(line);
+            if (matches) {
+                const name = matches[1];
+                const valueLines = [matches[2]];
+                this.readValueLines(i + 1, valueLines);
+                i += valueLines.length - 1;
+                const value = parseValueLines(valueLines);
+                variables.push(new VariableValue(name, value));
+            }
+        }
+        return variables;
+    }
+
+    private readValueLines(startIdx: number, lines: string[]) {
+        for (let i = startIdx; i < this.msgBuffer.length; i++) {
+            const line = this.msgBuffer[i];
+            if (line.startsWith('/\\ ')) {
+                return i;
+            }
+            lines.push(line.trim());
+        }
     }
 
     private tryMatchBufferLine(regExp: RegExp): RegExpExecArray | null {

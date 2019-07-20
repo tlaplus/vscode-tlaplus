@@ -91,7 +91,7 @@
         res.errorTrace.forEach(item => {
             errTraceRows.push(`<tr><td colspan='2'><b>${item.num}: ${item.title}</b></td></tr>`);
             item.variables.forEach(v => {
-                errTraceRows.push(`<tr><td colspan='2'>${v}</td></tr>`);
+                errTraceRows.push(`<tr><td>${v.name}</td><td>${v.value.str}</td></tr>`);
             });
         });
         elErrorTrace.innerHTML = errTraceRows.join('');
