@@ -13,7 +13,7 @@ export class TranspilerStdoutParser extends ProcessOutputParser {
     }
 
     protected parseLine(line: string | null) {
-        console.log('pc> ' + (line === null ? ':END:' : line));
+        // console.log('pc> ' + (line === null ? ':END:' : line));
         if (line === null) {
             if (this.errMessage !== null) {
                 this.addDiagnosticMessage(this.filePath!, new vscode.Range(0, 0, 0, 0), this.errMessage);

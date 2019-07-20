@@ -49,7 +49,7 @@ export class TLCModelCheckerStdoutParser extends ProcessOutputParser {
     }
 
     protected parseLine(line: string | null) {
-        console.log('tlc> ' + (line === null ? ':END:' : line));
+        // console.log('tlc> ' + (line === null ? ':END:' : line));
         if (line !== null) {
             this.checkResultBuilder.addLine(line);
             this.scheduleUpdate();
