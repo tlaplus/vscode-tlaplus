@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { runTool } from '../tla2tools';
 import { TLCModelCheckerStdoutParser } from '../parsers/tlc';
 import { revealCheckResultView, updateCheckResultView } from '../checkResultView';
+import { applyDCollection } from '../diagnostic';
 
 /**
  * Runs TLC on a TLA+ specification.
@@ -25,8 +26,8 @@ async function doCheckModel(fileUri: vscode.Uri, diagnostic: vscode.DiagnosticCo
         const proc = runTool('tlc2.TLC', fileUri.fsPath, ['-modelcheck', '-coverage', '1', '-tool']);
         revealCheckResultView(null);
         const stdoutParser = new TLCModelCheckerStdoutParser(proc.stdout, fileUri.fsPath, updateCheckResultView);
-        const messages = await stdoutParser.readAll();
-        messages.apply(diagnostic);
+        const dCol = await stdoutParser.readAll();
+        applyDCollection(dCol, diagnostic);
     } catch (e) {
         vscode.window.showErrorMessage(e.message);
     }

@@ -8,8 +8,8 @@ import { Readable } from 'stream';
 export class TranspilerStdoutParser extends ProcessOutputParser {
     errMessage: string | null = null;
 
-    constructor(stdout: Readable, filePath: string) {
-        super(stdout, filePath);
+    constructor(source: Readable | string[], filePath: string) {
+        super(source, filePath);
     }
 
     protected parseLine(line: string | null) {

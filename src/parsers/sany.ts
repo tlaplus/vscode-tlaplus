@@ -13,8 +13,8 @@ export class SanyStdoutParser extends ProcessOutputParser {
     errRange: vscode.Range | null = null;
     errMessage: string | null = null;
 
-    constructor(stdout: Readable) {
-        super(stdout);
+    constructor(source: Readable | string[]) {
+        super(source);
     }
 
     protected parseLine(line: string | null): void {

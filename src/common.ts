@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { Readable } from 'stream';
 
 /**
  * Thrown when there's some problem with parsing.
