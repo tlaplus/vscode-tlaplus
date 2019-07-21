@@ -13,10 +13,10 @@ export function updateCheckResultView(checkResult: ModelCheckResult | null) {
     lastCheckResult = checkResult;
 }
 
-export function revealCheckResultView(checkResult: ModelCheckResult | null) {
+export function revealCheckResultView(checkResult: ModelCheckResult | null, extContext: vscode.ExtensionContext) {
     if (!viewPanel) {
         createNewPanel();
-        ensurePanelBody();
+        ensurePanelBody(extContext);
     } else {
         viewPanel.reveal();
     }
@@ -36,7 +36,7 @@ function createNewPanel() {
     viewPanel = vscode.window.createWebviewPanel(
         'modelChecking',
         title,
-        vscode.ViewColumn.One,
+        vscode.ViewColumn.Beside,
         {
             enableScripts: true,
             localResourceRoots: [vscode.Uri.file(path.resolve(__dirname, '../assets'))]
@@ -53,12 +53,17 @@ function createNewPanel() {
     });
 }
 
-function ensurePanelBody() {
+function ensurePanelBody(extContext: vscode.ExtensionContext) {
     if (!viewPanel) {
         return;
     }
+    const assetsDiskPath = vscode.Uri.file(
+        path.join(extContext.extensionPath, 'assets')
+    );
+    const assetsPath = assetsDiskPath.with({ scheme: 'vscode-resource' });
     if (!viewHtml) {
-        viewHtml = fs.readFileSync(path.resolve(__dirname, '../assets/check-result-view.html'), 'utf8');
+        viewHtml = fs.readFileSync(path.join(assetsPath.fsPath, 'check-result-view.html'), 'utf8');
     }
+    viewHtml = viewHtml.replace(/\${assetsPath}/g, String(assetsPath));
     viewPanel.webview.html = viewHtml;
 }

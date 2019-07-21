@@ -7,7 +7,7 @@ import { applyDCollection } from '../diagnostic';
 /**
  * Runs TLC on a TLA+ specification.
  */
-export function checkModel(diagnostic: vscode.DiagnosticCollection) {
+export function checkModel(diagnostic: vscode.DiagnosticCollection, extContext: vscode.ExtensionContext) {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
         vscode.window.showWarningMessage('No editor is active, cannot find a TLA+ model to check');
@@ -18,13 +18,17 @@ export function checkModel(diagnostic: vscode.DiagnosticCollection) {
             'File in the active editor is not a TLA+ file, it cannot be checked as a model');
         return;
     }
-    doCheckModel(editor.document.uri, diagnostic);
+    doCheckModel(editor.document.uri, extContext, diagnostic);
 }
 
-async function doCheckModel(fileUri: vscode.Uri, diagnostic: vscode.DiagnosticCollection) {
+async function doCheckModel(
+    fileUri: vscode.Uri,
+    extContext: vscode.ExtensionContext,
+    diagnostic: vscode.DiagnosticCollection
+) {
     try {
         const proc = runTool('tlc2.TLC', fileUri.fsPath, ['-modelcheck', '-coverage', '1', '-tool']);
-        revealCheckResultView(null);
+        revealCheckResultView(null, extContext);
         const stdoutParser = new TLCModelCheckerStdoutParser(proc.stdout, fileUri.fsPath, updateCheckResultView);
         const dCol = await stdoutParser.readAll();
         applyDCollection(dCol, diagnostic);

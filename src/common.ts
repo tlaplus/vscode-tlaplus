@@ -12,7 +12,7 @@ export class ParsingError extends Error {
 }
 
 export function pathToUri(path: string): vscode.Uri {
-    return vscode.Uri.parse('file://' + path);
+    return vscode.Uri.file(path).with({ scheme: 'file' });
 }
 
 export function pathToModuleName(path: string): string {
