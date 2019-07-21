@@ -1,4 +1,5 @@
 import { Range } from 'vscode';
+import { DCollection } from '../diagnostic';
 
 const STATE_RUNNING = 'R';
 const STATE_SUCCESS = 'S';
@@ -197,6 +198,7 @@ export class ModelCheckResult {
     readonly coverageStat: CoverageItem[];
     readonly errors: string[][];
     readonly errorTrace: ErrorTraceItem[];
+    readonly sanyMessages: DCollection | undefined;
 
     constructor(
         success: boolean,
@@ -205,7 +207,8 @@ export class ModelCheckResult {
         initialStatesStat: InitialStateStatItem[],
         coverageStat: CoverageItem[],
         errors: string[][],
-        errorTrace: ErrorTraceItem[]
+        errorTrace: ErrorTraceItem[],
+        sanyMessages: DCollection | undefined
     ) {
         if (status === CheckStatus.Finished) {
             this.state = success ? STATE_SUCCESS : STATE_ERROR;
@@ -220,5 +223,6 @@ export class ModelCheckResult {
         this.coverageStat = coverageStat;
         this.errors = errors;
         this.errorTrace = errorTrace;
+        this.sanyMessages = sanyMessages;
     }
 }

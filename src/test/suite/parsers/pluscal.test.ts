@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 import * as assert from 'assert';
-import { Readable } from 'stream';
 import { beforeEach } from 'mocha';
 import { TranspilerStdoutParser } from '../../../parsers/pluscal';
 import { pathToUri } from '../../../common';
+import { applyDCollection } from '../../../diagnostic';
 
 const dc = vscode.languages.createDiagnosticCollection('tlaplus');
 
@@ -23,7 +23,7 @@ suite('PlusCal Transpiler Output Parser Test Suite', () => {
             '    so new one not written.',
             'New file /Users/bob/TLA/test.cfg written.`'
         ].join('\n');
-        return assertOutput(stdout, '/Users/bob/TLA/test.tla', []);
+        assertOutput(stdout, '/Users/bob/TLA/test.tla', []);
     });
 
     test('Captures parsing error', () => {
@@ -35,7 +35,7 @@ suite('PlusCal Transpiler Output Parser Test Suite', () => {
             ' line 8, column 1.',
             ''
         ].join('\n');
-        return assertOutput(stdout, '/Users/bob/TLA/err.tla', [
+        assertOutput(stdout, '/Users/bob/TLA/err.tla', [
             new vscode.Diagnostic(
                 new vscode.Range(7, 1, 7, 1),
                 'Expected "begin" but found "variabless"',
@@ -51,22 +51,15 @@ suite('PlusCal Transpiler Output Parser Test Suite', () => {
             ' -- Beginning of algorithm string --algorithm not found..',
             ''
         ].join('\n');
-        return assertOutput(stdout, '/Users/bob/TLA/err.tla', []);
+        assertOutput(stdout, '/Users/bob/TLA/err.tla', []);
     });
 });
 
-async function assertOutput(out: string, filePath: string, expected: vscode.Diagnostic[]): Promise<void> {
-    const stream = new Readable();
-    stream._read = () => {};
-    stream.push(out);
-    stream.push(null);
-    const parser = new TranspilerStdoutParser(stream, filePath);
-    const promise = parser
-        .readAll()
-        .then(dCol => {
-            dCol.apply(dc);
-            const diagnostics = dc.get(pathToUri(filePath));
-            assert.deepEqual(diagnostics, expected);
-        });
-    return promise;
+function assertOutput(out: string, filePath: string, expected: vscode.Diagnostic[]) {
+    const outLines = out.split('\n');
+    const parser = new TranspilerStdoutParser(outLines, filePath);
+    const dCol = parser.readAllSync();
+    applyDCollection(dCol, dc);
+    const diagnostics = dc.get(pathToUri(filePath));
+    assert.deepEqual(diagnostics, expected);
 }

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { DCollection } from '../diagnostic';
+import { DCollection, applyDCollection } from '../diagnostic';
 import { TranspilerStdoutParser } from '../parsers/pluscal';
 import { SanyStdoutParser } from '../parsers/sany';
 import { runTool } from '../tla2tools';
@@ -29,7 +29,7 @@ async function doParseFile(fileUri: vscode.Uri, diagnostic: vscode.DiagnosticCol
         const messages = await transpilePlusCal(fileUri);
         const specMessages = await parseSpec(fileUri);
         messages.addAll(specMessages);
-        messages.apply(diagnostic);
+        applyDCollection(messages, diagnostic);
     } catch (e) {
         vscode.window.showErrorMessage(e.message);
     }

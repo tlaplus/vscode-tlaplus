@@ -4,6 +4,8 @@ import { Readable } from 'stream';
 import { CheckStatus, ModelCheckResult, InitialStateStatItem, CoverageItem, ErrorTraceItem,
     VariableValue } from '../model/check';
 import { parseValueLines } from './tlcValues';
+import { SanyStdoutParser } from './sany';
+import { DCollection } from '../diagnostic';
 
 const STATUS_EMIT_TIMEOUT = 500;    // msec
 
@@ -50,10 +52,16 @@ export class TLCModelCheckerStdoutParser extends ProcessOutputParser {
     }
 
     protected parseLine(line: string | null) {
-        // console.log('tlc> ' + (line === null ? ':END:' : line));
+        console.log('tlc> ' + (line === null ? ':END:' : line));
         if (line !== null) {
             this.checkResultBuilder.addLine(line);
             this.scheduleUpdate();
+        } else {
+            // Copy SANY messages
+            const dCol = this.checkResultBuilder.getSanyMessages();
+            if (dCol) {
+                this.addDiagnosticCollection(dCol);
+            }
         }
     }
 
@@ -88,14 +96,23 @@ class ModelCheckResultBuilder {
     private errorTrace: ErrorTraceItem[] = [];
     private msgType: number = NO_TYPE;
     private msgBuffer: string[] = [];
+    private sanyBuffer: string[] = [];
+    private sanyMessages: DCollection | undefined;
 
     getStatus(): CheckStatus {
         return this.status;
     }
 
+    getSanyMessages(): DCollection | undefined {
+        return this.sanyMessages;
+    }
+
     addLine(line: string) {
         if (this.msgType === NO_TYPE) {
             this.msgType = this.tryParseMessageStart(line);
+            if (this.msgType === NO_TYPE && this.status === CheckStatus.SanyParsing) {
+                this.sanyBuffer.push(line);
+            }
         } else if (this.tryParseMessageEnd(line)) {
             this.handleMessageEnd();
         } else if (line !== '') {
@@ -111,7 +128,8 @@ class ModelCheckResultBuilder {
             this.initialStatesStat,
             this.coverageStat,
             this.errors,
-            this.errorTrace
+            this.errorTrace,
+            this.sanyMessages
         );
     }
 
@@ -128,6 +146,7 @@ class ModelCheckResultBuilder {
                 break;
             case TLC_SANY_END:
                 this.status = CheckStatus.SanyFinished;
+                this.parseSanyOutput();
                 break;
             case TLC_COMPUTING_INIT:
                 this.status = CheckStatus.InitialStatesComputing;
@@ -205,6 +224,12 @@ class ModelCheckResultBuilder {
 
     private tryParseMessageEnd(line: string): boolean {
         return line.startsWith('@!@!@ENDMSG ') && line.endsWith(' @!@!@');
+    }
+
+    private parseSanyOutput() {
+        const sany = new SanyStdoutParser(this.sanyBuffer);
+        this.sanyMessages = sany.readAllSync();
+        this.sanyBuffer = [];
     }
 
     private parseInitialStatesComputed() {

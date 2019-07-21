@@ -4,7 +4,7 @@ import * as path from 'path';
 import * as cp from 'child_process';
 import { Readable } from 'stream';
 import { DCollection } from './diagnostic';
-import { pathToUri } from './common';
+import { pathToUri, ParsingError } from './common';
 
 const toolsJarPath = path.resolve(__dirname, '../tools/tla2tools.jar');
 const javaCmd = 'java' + (process.platform === 'win32' ? '.exe' : '');
@@ -24,13 +24,19 @@ export abstract class ProcessOutputParser {
     buf: string | null = null;
     resolve?: (result: DCollection) => void;
     dCol: DCollection = new DCollection();
+    lines: string[] | undefined;
+
     protected readonly filePath?: string;
 
-    constructor(stream: Readable, filePath?: string) {
+    constructor(source: Readable | string[], filePath?: string) {
         this.filePath = filePath;
-        const me = this;
-        stream.on('data', chunk => me.handleData(chunk));
-        stream.on('end', () => me.handleData(null));
+        if (source instanceof Readable) {
+            const me = this;
+            source.on('data', chunk => me.handleData(chunk));
+            source.on('end', () => me.handleData(null));
+        } else {
+            this.lines = source;
+        }
         if (filePath) {
             this.addDiagnosticFilePath(filePath);
         }
@@ -46,6 +52,20 @@ export abstract class ProcessOutputParser {
         });
     }
 
+    /**
+     * Parses the source synchronously.
+     * For this method to work, the source of the lines must be an array of l.
+     */
+    readAllSync(): DCollection {
+        if (!this.lines) {
+            throw new ParsingError('Cannot parse synchronously because the source is not a set of lines');
+        }
+        this.lines.forEach(l => {
+            this.parseLine(l);
+        });
+        return this.dCol;
+    }
+
     protected abstract parseLine(line: string | null): void;
 
     protected addDiagnosticFilePath(filePath: string) {
@@ -54,6 +74,11 @@ export abstract class ProcessOutputParser {
 
     protected addDiagnosticMessage(filePath: string, range: vscode.Range, text: string) {
         this.dCol.addMessage(filePath, range, text);
+    }
+
+    protected addDiagnosticCollection(dCol: DCollection) {
+        dCol.getFilePaths().forEach(fp => this.addDiagnosticFilePath(fp));
+        dCol.getMessages().forEach(m => this.dCol.addMessage(m.filePath, m.diagnostic.range, m.diagnostic.message));
     }
 
     private handleData(chunk: Buffer | string | null) {
