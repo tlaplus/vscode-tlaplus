@@ -1,9 +1,48 @@
+section:not(:first-child) {
+    padding-top: 0.4em;
+    margin-top: 0.5em;
+    border-top: solid 1px var(--vscode-panel-border);
+}
+
+h1 {
+    font-size: larger;
+    margin: 0 0 0.4em 0;
+}
+
+td:not(:first-child) {
+    padding-left: 0.75em;
+}
+
+thead {
+    color: var(--vscode-panelTitle-inactiveForeground);
+}
+
 .state-R {
     color: #39f;
 }
+
 .state-S {
     color: #093;
 }
+
 .state-E {
-    color: #d33;
+    color: var(--vscode-errorForeground);
+}
+
+.number-col {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.hidden {
+    display: none;
+}
+
+.error:not(:first-child) {
+    padding-top: 0.5em;
+}
+
+.error-line {
+    padding: 0;
+    margin: 0;
 }

@@ -1,5 +1,7 @@
 import { Range } from 'vscode';
 import { DCollection } from '../diagnostic';
+import { isNumber } from 'util';
+import * as dt from 'date-and-time';
 
 const STATE_RUNNING = 'R';
 const STATE_SUCCESS = 'S';
@@ -200,9 +202,9 @@ export class ModelCheckResult {
     readonly errors: string[][];
     readonly errorTrace: ErrorTraceItem[];
     readonly sanyMessages: DCollection | undefined;
-    readonly startDateTime: Date | undefined;
-    readonly endDateTime: Date | undefined;
-    readonly duration: number | undefined;       // msec
+    readonly startDateTimeStr: string | undefined;
+    readonly endDateTimeStr: string | undefined;
+    readonly durationStr: string | undefined;
 
     constructor(
         modelName: string,
@@ -233,8 +235,22 @@ export class ModelCheckResult {
         this.errors = errors;
         this.errorTrace = errorTrace;
         this.sanyMessages = sanyMessages;
-        this.startDateTime = startDateTime;
-        this.endDateTime = endDateTime;
-        this.duration = duration;
+        this.startDateTimeStr = dateTimeToStr(startDateTime);
+        this.endDateTimeStr = dateTimeToStr(endDateTime);
+        this.durationStr = durationToStr(duration);
     }
+}
+
+function dateTimeToStr(dateTime: Date | undefined): string {
+    if (!dateTime) {
+        return 'not yet';
+    }
+    return dt.format(dateTime, 'HH:mm:ss (MMM D)');
+}
+
+function durationToStr(dur: number | undefined): string {
+    if (!isNumber(dur)) {
+        return '';
+    }
+    return dur + ' msec';
 }
