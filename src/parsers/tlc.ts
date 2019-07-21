@@ -6,6 +6,7 @@ import { CheckStatus, ModelCheckResult, InitialStateStatItem, CoverageItem, Erro
 import { parseValueLines } from './tlcValues';
 import { SanyStdoutParser } from './sany';
 import { DCollection } from '../diagnostic';
+import { pathToModuleName, parseDateTime } from '../common';
 
 const STATUS_EMIT_TIMEOUT = 500;    // msec
 
@@ -16,6 +17,7 @@ const GENERAL = 1000;
 const TLC_MODE_MC = 2187;
 const TLC_SANY_START = 2220;
 const TLC_SANY_END = 2219;
+const TLC_STARTING = 2185;
 const TLC_COMPUTING_INIT = 2189;
 const TLC_COMPUTING_INIT_PROGRESS = 2269;
 const TLC_INIT_GENERATED1 = 2190;
@@ -41,7 +43,7 @@ const TLC_SUCCESS = 2193;
  * Parses stdout of TLC model checker.
  */
 export class TLCModelCheckerStdoutParser extends ProcessOutputParser {
-    checkResultBuilder = new ModelCheckResultBuilder();
+    checkResultBuilder: ModelCheckResultBuilder;
     handler: (checkResult: ModelCheckResult) => void;
     timer: NodeJS.Timer | undefined = undefined;
     first: boolean = true;
@@ -49,6 +51,8 @@ export class TLCModelCheckerStdoutParser extends ProcessOutputParser {
     constructor(stdout: Readable, filePath: string, handler: (checkResult: ModelCheckResult) => void) {
         super(stdout, filePath);
         this.handler = handler;
+        const moduleName = pathToModuleName(filePath);
+        this.checkResultBuilder = new ModelCheckResultBuilder(moduleName);
     }
 
     protected parseLine(line: string | null) {
@@ -87,8 +91,12 @@ export class TLCModelCheckerStdoutParser extends ProcessOutputParser {
  * Gradually builds ModelCheckResult by processing TLC output lines.
  */
 class ModelCheckResultBuilder {
+    private modelName: string;
     private success: boolean = false;
     private status: CheckStatus = CheckStatus.NotStarted;
+    private startDateTime: Date | undefined;
+    private endDateTime: Date | undefined;
+    private duration: number | undefined;       // msec
     private processInfo: string | null = null;
     private initialStatesStat: InitialStateStatItem[] = [];
     private coverageStat: CoverageItem[] = [];
@@ -98,6 +106,10 @@ class ModelCheckResultBuilder {
     private msgBuffer: string[] = [];
     private sanyBuffer: string[] = [];
     private sanyMessages: DCollection | undefined;
+
+    constructor(modelName: string) {
+        this.modelName = modelName;
+    }
 
     getStatus(): CheckStatus {
         return this.status;
@@ -122,6 +134,7 @@ class ModelCheckResultBuilder {
 
     build(): ModelCheckResult {
         return new ModelCheckResult(
+            this.modelName,
             this.success,
             this.status,
             this.processInfo,
@@ -129,7 +142,10 @@ class ModelCheckResultBuilder {
             this.coverageStat,
             this.errors,
             this.errorTrace,
-            this.sanyMessages
+            this.sanyMessages,
+            this.startDateTime,
+            this.endDateTime,
+            this.duration
         );
     }
 
@@ -147,6 +163,9 @@ class ModelCheckResultBuilder {
             case TLC_SANY_END:
                 this.status = CheckStatus.SanyFinished;
                 this.parseSanyOutput();
+                break;
+            case TLC_STARTING:
+                this.parseStarting();
                 break;
             case TLC_COMPUTING_INIT:
                 this.status = CheckStatus.InitialStatesComputing;
@@ -194,6 +213,7 @@ class ModelCheckResultBuilder {
                 break;
             case TLC_FINISHED:
                 this.status = CheckStatus.Finished;
+                this.parseFinished();
                 break;
             }
         this.msgType = NO_TYPE;
@@ -224,6 +244,21 @@ class ModelCheckResultBuilder {
 
     private tryParseMessageEnd(line: string): boolean {
         return line.startsWith('@!@!@ENDMSG ') && line.endsWith(' @!@!@');
+    }
+
+    private parseStarting() {
+        const matches = this.tryMatchBufferLine(/^Starting\.\.\. \((\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\)$/g);
+        if (matches) {
+            this.startDateTime = parseDateTime(matches[1]);
+        }
+    }
+
+    private parseFinished() {
+        const matches = this.tryMatchBufferLine(/^Finished in (\d+)ms at \((\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\)$/g);
+        if (matches) {
+            this.duration = parseInt(matches[1]);
+            this.endDateTime = parseDateTime(matches[2]);
+        }
     }
 
     private parseSanyOutput() {

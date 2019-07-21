@@ -19,6 +19,7 @@
 <body>
     <h2>Status</h2>
     <p><span id="check-status">-</span></p>
+    <p><span id="times">-</span></p>
     <h2>States</h2>
     <table>
         <thead>
@@ -64,6 +65,7 @@
 <script>
     const vscode = acquireVsCodeApi();
 
+    const elTimes = document.getElementById('times');
     const elStatus = document.getElementById('check-status');
     const elStatesStat = document.getElementById('states-stat');
     const elCoverageStat = document.getElementById('coverage-stat');
@@ -76,6 +78,7 @@
     }
 
     function updateCheckResult(res) {
+        elTimes.textContent = (res.startDateTime || '-') + ' - ' + (res.endDateTime || '-') + ', finished in ' + (res.duration || '?') + ' ms';
         elStatus.textContent = res.statusName + ' : ' + res.state;
         elStatus.classList = ['state-' + res.state];
         elStatesStat.innerHTML = res.initialStatesStat

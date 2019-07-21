@@ -146,5 +146,9 @@
         "tslint": "^5.18.0",
         "typescript": "^3.5.3",
         "vscode-test": "^1.0.2"
+    },
+    "dependencies": {
+        "@types/date-and-time": "^0.6.0",
+        "date-and-time": "^0.8.1"
     }
 }

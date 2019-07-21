@@ -189,6 +189,7 @@ export class ErrorTraceItem {
  * Represents the state of a TLA model checking process.
  */
 export class ModelCheckResult {
+    readonly modelName: string;
     readonly state: string;
     readonly success: boolean;
     readonly status: CheckStatus;
@@ -199,8 +200,12 @@ export class ModelCheckResult {
     readonly errors: string[][];
     readonly errorTrace: ErrorTraceItem[];
     readonly sanyMessages: DCollection | undefined;
+    readonly startDateTime: Date | undefined;
+    readonly endDateTime: Date | undefined;
+    readonly duration: number | undefined;       // msec
 
     constructor(
+        modelName: string,
         success: boolean,
         status: CheckStatus,
         processInfo: string | null,
@@ -208,8 +213,12 @@ export class ModelCheckResult {
         coverageStat: CoverageItem[],
         errors: string[][],
         errorTrace: ErrorTraceItem[],
-        sanyMessages: DCollection | undefined
+        sanyMessages: DCollection | undefined,
+        startDateTime: Date | undefined,
+        endDateTime: Date | undefined,
+        duration: number | undefined
     ) {
+        this.modelName = modelName;
         if (status === CheckStatus.Finished) {
             this.state = success ? STATE_SUCCESS : STATE_ERROR;
         } else {
@@ -224,5 +233,8 @@ export class ModelCheckResult {
         this.errors = errors;
         this.errorTrace = errorTrace;
         this.sanyMessages = sanyMessages;
+        this.startDateTime = startDateTime;
+        this.endDateTime = endDateTime;
+        this.duration = duration;
     }
 }
