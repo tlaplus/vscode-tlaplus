@@ -28,6 +28,9 @@ class Token {
     }
 }
 
+/**
+ * These tokens can be captured by comparing with constant strings.
+ */
 const CONST_TOKENS = [
     new Token(TokenType.SetStart, '{'),
     new Token(TokenType.SetEnd, '}'),
@@ -39,6 +42,9 @@ const CONST_TOKENS = [
     new Token(TokenType.Comma, ','),
 ];
 
+/**
+ * Breaks the given set of lines and allows to read them token-by-token.
+ */
 class Tokenizer {
     private lines: string[];
     private lineIdx: number = 0;
@@ -150,6 +156,11 @@ class Tokenizer {
     }
 }
 
+/**
+ * Parses a set of lines that contain a variable value.
+ * It's assumed that the given set of lines came from a TLC output, which means they follow
+ * certain simple rules, like no line breaks in the middle of a token, etc.
+ */
 export function parseValueLines(lines: string[]): Value {
     const tokenizer = new Tokenizer(lines);
     try {

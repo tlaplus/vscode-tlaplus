@@ -5,7 +5,7 @@ import { ModelCheckResult } from './model/check';
 
 // Cached HTML template for the WebView
 let viewHtml: string | undefined;
-let viewPanel: vscode.WebviewPanel | null = null;
+let viewPanel: vscode.WebviewPanel | undefined;
 let lastCheckResult: ModelCheckResult | null;
 
 export function updateCheckResultView(checkResult: ModelCheckResult | null) {
@@ -14,7 +14,7 @@ export function updateCheckResultView(checkResult: ModelCheckResult | null) {
 }
 
 export function revealCheckResultView(checkResult: ModelCheckResult | null) {
-    if (viewPanel === null) {
+    if (!viewPanel) {
         createNewPanel();
         ensurePanelBody();
     } else {
@@ -43,7 +43,7 @@ function createNewPanel() {
         }
     );
     viewPanel.onDidDispose(() => {
-        viewPanel = null;
+        viewPanel = undefined;
     });
     viewPanel.onDidChangeViewState(e => {
         if (e.webviewPanel.visible) {
