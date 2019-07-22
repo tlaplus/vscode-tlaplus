@@ -17,6 +17,7 @@ const GENERAL = 1000;
 const TLC_MODE_MC = 2187;
 const TLC_SANY_START = 2220;
 const TLC_SANY_END = 2219;
+const TLC_CHECKPOINT_START = 2195;
 const TLC_STARTING = 2185;
 const TLC_COMPUTING_INIT = 2189;
 const TLC_COMPUTING_INIT_PROGRESS = 2269;
@@ -25,7 +26,9 @@ const TLC_INIT_GENERATED2 = 2191;
 const TLC_INIT_GENERATED3 = 2207;
 const TLC_INIT_GENERATED4 = 2208;
 const TLC_CHECKING_TEMPORAL_PROPS = 2192;
-const TLC_CHECKING_TEMPORAL_PROPS_END = 2267;
+const TLC_DISTRIBUTED_SERVER_RUNNING = 7000;
+const TLC_DISTRIBUTED_WORKER_REGISTERED = 7001;
+const TLC_DISTRIBUTED_WORKER_DEREGISTERED = 7002;
 const TLC_COVERAGE_NEXT = 2772;
 const TLC_COVERAGE_INIT = 2773;
 const TLC_PROGRESS_STATS = 2200;
@@ -106,6 +109,7 @@ class ModelCheckResultBuilder {
     private msgBuffer: string[] = [];
     private sanyBuffer: string[] = [];
     private sanyMessages: DCollection | undefined;
+    private workersCount: number = 0;
 
     constructor(modelName: string) {
         this.modelName = modelName;
@@ -145,13 +149,14 @@ class ModelCheckResultBuilder {
             this.sanyMessages,
             this.startDateTime,
             this.endDateTime,
-            this.duration
+            this.duration,
+            this.workersCount
         );
     }
 
     private handleMessageEnd() {
         if (this.status === CheckStatus.NotStarted) {
-            this.status = CheckStatus.Started;
+            this.status = CheckStatus.Starting;
         }
         switch (this.msgType) {
             case TLC_MODE_MC:
@@ -163,6 +168,9 @@ class ModelCheckResultBuilder {
             case TLC_SANY_END:
                 this.status = CheckStatus.SanyFinished;
                 this.parseSanyOutput();
+                break;
+            case TLC_CHECKPOINT_START:
+                this.status = CheckStatus.Checkpointing;
                 break;
             case TLC_STARTING:
                 this.parseStarting();
@@ -177,14 +185,24 @@ class ModelCheckResultBuilder {
             case TLC_INIT_GENERATED2:
             case TLC_INIT_GENERATED3:
             case TLC_INIT_GENERATED4:
-                this.status = CheckStatus.InitialStatesComputed;
                 this.parseInitialStatesComputed();
                 break;
             case TLC_CHECKING_TEMPORAL_PROPS:
-                this.status = CheckStatus.TemporalPropertiesChecking;
+                if (this.msgBuffer.length > 0 && this.msgBuffer[0].indexOf('complete') >= 0) {
+                    this.status = CheckStatus.CheckingLivenessFinal;
+                } else {
+                    this.status = CheckStatus.CheckingLiveness;
+                }
                 break;
-            case TLC_CHECKING_TEMPORAL_PROPS_END:
-                this.status = CheckStatus.TemporalPropertiesChecked;
+            case TLC_DISTRIBUTED_SERVER_RUNNING:
+                this.status = CheckStatus.ServerRunning;
+                break;
+            case TLC_DISTRIBUTED_WORKER_REGISTERED:
+                this.status = CheckStatus.WorkersRegistered;
+                this.workersCount += 1;
+                break;
+            case TLC_DISTRIBUTED_WORKER_DEREGISTERED:
+                this.workersCount -= 1;
                 break;
             case TLC_PROGRESS_STATS:
                 this.parseProgressStats();

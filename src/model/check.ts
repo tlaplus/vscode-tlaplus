@@ -9,25 +9,29 @@ const STATE_ERROR = 'E';
 
 export enum CheckStatus {
     NotStarted,
-    Started,
+    Starting,
     SanyParsing,
     SanyFinished,
     InitialStatesComputing,
-    InitialStatesComputed,
-    TemporalPropertiesChecking,
-    TemporalPropertiesChecked,
+    Checkpointing,
+    CheckingLiveness,
+    CheckingLivenessFinal,
+    ServerRunning,
+    WorkersRegistered,
     Finished
 }
 
-export const STATUS_NAMES = new Map<CheckStatus, string>();
+const STATUS_NAMES = new Map<CheckStatus, string>();
 STATUS_NAMES.set(CheckStatus.NotStarted, 'Not started');
-STATUS_NAMES.set(CheckStatus.Started, 'Started');
+STATUS_NAMES.set(CheckStatus.Starting, 'Starting');
 STATUS_NAMES.set(CheckStatus.SanyParsing, 'SANY parsing');
 STATUS_NAMES.set(CheckStatus.SanyFinished, 'SANY finished');
 STATUS_NAMES.set(CheckStatus.InitialStatesComputing, 'Computing initial states');
-STATUS_NAMES.set(CheckStatus.InitialStatesComputed, 'Initial states computed');
-STATUS_NAMES.set(CheckStatus.TemporalPropertiesChecking, 'Checking temporal properties');
-STATUS_NAMES.set(CheckStatus.TemporalPropertiesChecked, 'Temporal properties checked');
+STATUS_NAMES.set(CheckStatus.Checkpointing, 'Checkpointing');
+STATUS_NAMES.set(CheckStatus.CheckingLiveness, 'Checking liveness');
+STATUS_NAMES.set(CheckStatus.CheckingLivenessFinal, 'Checking final liveness');
+STATUS_NAMES.set(CheckStatus.ServerRunning, 'Master waiting for workers');
+STATUS_NAMES.set(CheckStatus.WorkersRegistered, 'Workers connected');
 STATUS_NAMES.set(CheckStatus.Finished, 'Finished');
 
 /**
@@ -205,6 +209,7 @@ export class ModelCheckResult {
     readonly startDateTimeStr: string | undefined;
     readonly endDateTimeStr: string | undefined;
     readonly durationStr: string | undefined;
+    readonly workersCount: number;
 
     constructor(
         modelName: string,
@@ -218,7 +223,8 @@ export class ModelCheckResult {
         sanyMessages: DCollection | undefined,
         startDateTime: Date | undefined,
         endDateTime: Date | undefined,
-        duration: number | undefined
+        duration: number | undefined,
+        workersCount: number
     ) {
         this.modelName = modelName;
         if (status === CheckStatus.Finished) {
@@ -228,7 +234,7 @@ export class ModelCheckResult {
         }
         this.success = success;
         this.status = status;
-        this.statusName = STATUS_NAMES.get(status) || 'Working';
+        this.statusName = getStatusName(status);
         this.processInfo = processInfo;
         this.initialStatesStat = initialStatesStat;
         this.coverageStat = coverageStat;
@@ -238,7 +244,16 @@ export class ModelCheckResult {
         this.startDateTimeStr = dateTimeToStr(startDateTime);
         this.endDateTimeStr = dateTimeToStr(endDateTime);
         this.durationStr = durationToStr(duration);
+        this.workersCount = workersCount;
     }
+}
+
+export function getStatusName(status: CheckStatus): string {
+    const name = STATUS_NAMES.get(status);
+    if (name) {
+        return name;
+    }
+    throw new Error(`Name not defined for check status ${status}`);
 }
 
 function dateTimeToStr(dateTime: Date | undefined): string {
