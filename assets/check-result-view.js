@@ -1,35 +1,49 @@
 const vscode = acquireVsCodeApi();
 
-const elTimeStart = document.getElementById('time-start');
-const elTimeEnd = document.getElementById('time-end');
-const elStatus = document.getElementById('check-status');
-const elStatesStat = document.getElementById('states-stat');
-const elCoverageStat = document.getElementById('coverage-stat');
-
 const prevState = vscode.getState();
 if (prevState) {
-    updateCheckResult(prevState.checkResult);
+    displayCheckResult(prevState.checkResult);
 }
 
-function updateCheckResult(res) {
-    elTimeStart.textContent = res ? res.startDateTimeStr : '-';
-    elTimeEnd.textContent = res ? res.endDateTimeStr : '-';
-    elStatus.textContent = res ? res.statusName + ' : ' + res.state : '-';
-    elStatus.classList = res ? ['state-' + res.state] : [];
-    elStatesStat.innerHTML = res ? res.initialStatesStat
-        .map(s => `<tr><td>${s.timeStamp}</td><td class="number-col">${num(s.diameter)}</td><td class="number-col">${num(s.total)}</td><td class="number-col">${num(s.distinct)}</td><td class="number-col">${num(s.queueSize)}</td></tr>`)
-        .join('') : '';
-    elCoverageStat.innerHTML = res ? res.coverageStat
-        .map(s => `<tr><td>${s.module}</td><td>${s.action}</td><td class="number-col">${num(s.total)}</td><td class="number-col">${num(s.distinct)}</td></tr>`)
-        .join(''): '';
+function displayCheckResult(res) {
+    displayStatus(res);
+    displayStatesStat(res ? res.initialStatesStat : []);
+    displayCoverage(res ? res.coverageStat: []);
     displayErrors(res ? res.errors : []);
     displayErrorTrace(res ? res.errorTrace : []);
 }
 
+/**
+ * Recieves data from the extension.
+ */
 window.addEventListener('message', event => {
-    updateCheckResult(event.data.checkResult);
+    displayCheckResult(event.data.checkResult);
     vscode.setState(event.data);
 });
+
+function displayStatus(result) {
+    const elTimeStart = document.getElementById('time-start');
+    const elTimeEnd = document.getElementById('time-end');
+    const elStatus = document.getElementById('check-status');
+    elTimeStart.textContent = result ? result.startDateTimeStr : '-';
+    elTimeEnd.textContent = result ? result.endDateTimeStr : '-';
+    elStatus.textContent = result ? result.statusName + ' : ' + result.state : '-';
+    elStatus.classList = result ? ['state-' + result.state] : [];
+}
+
+function displayStatesStat(stat) {
+    const elStatesStat = document.getElementById('states-stat');
+    elStatesStat.innerHTML = stat
+        .map(s => `<tr><td class="val-col">${s.timeStamp}</td><td class="val-col">${num(s.diameter)}</td><td class="val-col">${num(s.total)}</td><td class="val-col">${num(s.distinct)}</td><td class="val-col">${num(s.queueSize)}</td></tr>`)
+        .join('');
+}
+
+function displayCoverage(stat) {
+    const elCoverageStat = document.getElementById('coverage-stat');
+    elCoverageStat.innerHTML = stat
+        .map(s => `<tr><td>${s.module}</td><td>${s.action}</td><td class="val-col">${num(s.total)}</td><td class="val-col">${num(s.distinct)}</td></tr>`)
+        .join('');
+}
 
 function displayErrors(errors) {
     const elErrors = document.getElementById('errors');
@@ -64,7 +78,7 @@ function displayErrorTrace(trace) {
     elErrorTrace.classList = [];
     const errTraceRows = [];
     trace.forEach(item => {
-        errTraceRows.push(`<tr><td colspan='2'><b>${item.num}: ${item.title}</b></td></tr>`);
+        errTraceRows.push(`<tr><td colspan="2" class="error-trace-item-title">${item.num}: ${item.title}</td></tr>`);
         item.variables.forEach(v => {
             errTraceRows.push(`<tr><td>${v.name}</td><td>${v.value.str}</td></tr>`);
         });
@@ -81,10 +95,22 @@ function num(n) {
     let en = Math.abs(n);
     while (en > 0) {
         const r = en % 1000;
-        parts.push(r);
         en = (en - r) / 1000;
+        let rStr = en > 0 ? lpadN(r) : String(r);
+        parts.push(rStr);
     }
     return sign + parts.reverse().join(' ');
+}
+
+function lpadN(n) {
+    if (n === 0) {
+        return '000';
+    } else if (n < 10) {
+        return '00' + n;
+    } else if (n < 100) {
+        return '0' + n;
+    }
+    return String(n);
 }
 
 function removeAllChildren(el) {

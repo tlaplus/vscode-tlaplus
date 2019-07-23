@@ -1,12 +1,11 @@
 section:not(:first-child) {
-    padding-top: 0.4em;
     margin-top: 0.5em;
     border-top: solid 1px var(--vscode-panel-border);
 }
 
 h1 {
     font-size: larger;
-    margin: 0 0 0.4em 0;
+    margin: 0.4em 0 0.4em 0;
 }
 
 td:not(:first-child) {
@@ -29,7 +28,12 @@ thead {
     color: var(--vscode-errorForeground);
 }
 
-.number-col {
+.stat {
+    display: inline-block;
+    margin-right: 1.2em;
+}
+
+.val-col {
     text-align: right;
     white-space: nowrap;
 }
@@ -45,4 +49,8 @@ thead {
 .error-line {
     padding: 0;
     margin: 0;
+}
+
+.error-trace-item-title {
+    font-weight: bold;
 }

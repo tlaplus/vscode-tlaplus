@@ -8,59 +8,52 @@
 <title>Model checking</title>
 </head>
 <body>
-    <section>
-        <h1>Status</h1>
-        <p><span id="check-status">-</span></p>
-        <p>Start: <span id="time-start">-</span>, end: <span id="time-end">-</span></p>
-    </section>
-    <section>
-        <h1>States</h1>
-        <table>
-            <thead>
-                <tr>
-                    <td>Time</td>
-                    <td class="number-col">Diameter</td>
-                    <td class="number-col">Found</td>
-                    <td class="number-col">Distinct</td>
-                    <td class="number-col">Queue</td>
-                </tr>
-            </thead>
-            <tbody id="states-stat">
-            </tbody>
-        </table>
-    </section>
-    <section>
-        <h1>Coverage</h1>
-        <table>
-            <thead>
-                <tr>
-                    <td>Module</td>
-                    <td>Action</td>
-                    <td class="number-col">Total</td>
-                    <td class="number-col">Distinct</td>
-                </tr>
-            </thead>
-            <tbody id="coverage-stat">
-            </tbody>
-        </table>
-    </section>
-    <section id="errors" class="hidden">
-        <h1>Errors</h1>
-        <div id="errors-list" />
-    </section>
-    <section id="error-trace" class="hidden">
-        <h1>Error Trace</h1>
-        <table>
-            <thead>
-                <tr>
-                    <td>Name</td>
-                    <td>Value</td>
-                </tr>
-            </thead>
-            <tbody id="error-trace-variables">
-            </tbody>
-        </table>
-    </section>
+  <section>
+    <h1>Status</h1>
+    <p><span id="check-status">-</span></p>
+    <p>Start: <span id="time-start">-</span>, end: <span id="time-end">-</span></p>
+  </section>
+  <section>
+    <div class="stat">
+      <h1>States</h1>
+      <table>
+        <thead>
+         <tr>
+           <td>Time</td>
+           <td class="val-col">Diameter</td>
+           <td class="val-col">Found</td>
+           <td class="val-col">Distinct</td>
+           <td class="val-col">Queue</td>
+         </tr>
+       </thead>
+       <tbody id="states-stat" />
+      </table>
+    </div>
+    <div class="stat">
+      <h1>Coverage</h1>
+      <table>
+        <thead>
+          <tr>
+            <td>Module</td>
+            <td>Action</td>
+            <td class="val-col">Total</td>
+            <td class="val-col">Distinct</td>
+          </tr>
+        </thead>
+        <tbody id="coverage-stat"/>
+      </table>
+    </div>
+  </section>
+  <section id="errors" class="hidden">
+    <h1>Errors</h1>
+    <div id="errors-list" />
+  </section>
+  <section id="error-trace" class="hidden">
+    <h1>Error Trace</h1>
+    <table>
+      <tbody id="error-trace-variables"/>
+    </table>
+  </section>
 </body>
 </html>
 <script src="${assetsPath}/check-result-view.js" />
