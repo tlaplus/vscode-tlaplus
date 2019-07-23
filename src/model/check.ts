@@ -38,14 +38,14 @@ STATUS_NAMES.set(CheckStatus.Finished, 'Finished');
  * Statistics on initial state generation.
  */
 export class InitialStateStatItem {
-    readonly time: string;
+    readonly timeStamp: string;
     readonly diameter: number;
     readonly total: number;
     readonly distinct: number;
     readonly queueSize: number;
 
-    constructor(time: string, diameter: number, total: number, distinct: number, queueSize: number) {
-        this.time = time;
+    constructor(timeStamp: string, diameter: number, total: number, distinct: number, queueSize: number) {
+        this.timeStamp = timeStamp;
         this.diameter = diameter;
         this.total = total;
         this.distinct = distinct;

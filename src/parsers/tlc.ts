@@ -7,7 +7,7 @@ import { parseValueLines } from './tlcValues';
 import { SanyStdoutParser } from './sany';
 import { DCollection } from '../diagnostic';
 import { pathToModuleName, parseDateTime } from '../common';
-import { Moment } from 'moment';
+import * as moment from 'moment/moment';
 
 const STATUS_EMIT_TIMEOUT = 500;    // msec
 
@@ -102,8 +102,8 @@ class ModelCheckResultBuilder {
     private modelName: string;
     private success: boolean = false;
     private status: CheckStatus = CheckStatus.NotStarted;
-    private startDateTime: Moment | undefined;
-    private endDateTime: Moment | undefined;
+    private startDateTime: moment.Moment | undefined;
+    private endDateTime: moment.Moment | undefined;
     private duration: number | undefined;       // msec
     private processInfo: string | null = null;
     private initialStatesStat: InitialStateStatItem[] = [];
@@ -115,6 +115,7 @@ class ModelCheckResultBuilder {
     private sanyBuffer: string[] = [];
     private sanyMessages: DCollection | undefined;
     private workersCount: number = 0;
+    private firstStatTime: moment.Moment | undefined;
 
     constructor(modelName: string) {
         this.modelName = modelName;
@@ -302,7 +303,8 @@ class ModelCheckResultBuilder {
         const matches = this.tryMatchBufferLine(/^Finished computing initial states: (\d+) distinct states generated at (\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*$/g);
         if (matches) {
             const count = parseInt(matches[1]);
-            this.initialStatesStat.push(new InitialStateStatItem(matches[2], 0, count, count, count));
+            this.firstStatTime = parseDateTime(matches[2]);
+            this.initialStatesStat.push(new InitialStateStatItem('00:00:00', 0, count, count, count));
         }
     }
 
@@ -310,7 +312,7 @@ class ModelCheckResultBuilder {
         const matches = this.tryMatchBufferLine(/^Progress\(([\d,]+)\) at (\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}): ([\d,]+) states generated.*, ([\d,]+) distinct states found.*, ([\d,]+) states left on queue.*/g);
         if (matches) {
             this.initialStatesStat.push(new InitialStateStatItem(
-                matches[2],
+                this.calcTimestamp(matches[2]),
                 parseIntWithComma(matches[1]),
                 parseIntWithComma(matches[3]),
                 parseIntWithComma(matches[4]),
@@ -403,9 +405,26 @@ class ModelCheckResultBuilder {
         }
         return regExp.exec(this.msgBuffer[0]);
     }
+
+    private calcTimestamp(timeStr: string): string {
+        if (!this.firstStatTime) {
+            return '??:??:??';
+        }
+        const time = parseDateTime(timeStr);
+        const durMsec = time.diff(this.firstStatTime);
+        const dur = moment.duration(durMsec);
+        const sec = leftPadTimeUnit(dur.seconds());
+        const min = leftPadTimeUnit(dur.minutes());
+        const hour = leftPadTimeUnit(Math.floor(dur.asHours())); // days are converted to hours
+        return `${hour}:${min}:${sec}`;
+    }
 }
 
 function parseIntWithComma(str: string): number {
     const c = str.split(',').join('');
     return parseInt(c);
+}
+
+function leftPadTimeUnit(n: number): string {
+    return n < 10 ? '0' + n : String(n);
 }

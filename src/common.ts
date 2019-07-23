@@ -21,10 +21,7 @@ export function pathToModuleName(path: string): string {
     return dotIdx > 0 ? baseName.substring(0, dotIdx) : baseName;
 }
 
-export function parseDateTime(str: string | undefined): moment.Moment | undefined {
-    if (!str) {
-        return undefined;
-    }
+export function parseDateTime(str: string): moment.Moment {
     const dateTime = moment(str, moment.ISO_8601, true);
     if (dateTime.isValid) {
         return dateTime;

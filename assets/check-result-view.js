@@ -20,7 +20,7 @@ function updateCheckResult(res) {
     elStatus.textContent = res.statusName + ' : ' + res.state;
     elStatus.classList = ['state-' + res.state];
     elStatesStat.innerHTML = res.initialStatesStat
-        .map(s => `<tr><td>${s.time}</td><td class="number-col">${num(s.diameter)}</td><td class="number-col">${num(s.total)}</td><td class="number-col">${num(s.distinct)}</td><td class="number-col">${num(s.queueSize)}</td></tr>`)
+        .map(s => `<tr><td>${s.timeStamp}</td><td class="number-col">${num(s.diameter)}</td><td class="number-col">${num(s.total)}</td><td class="number-col">${num(s.distinct)}</td><td class="number-col">${num(s.queueSize)}</td></tr>`)
         .join('');
     elCoverageStat.innerHTML = res.coverageStat
         .map(s => `<tr><td>${s.module}</td><td>${s.action}</td><td class="number-col">${num(s.total)}</td><td class="number-col">${num(s.distinct)}</td></tr>`)
