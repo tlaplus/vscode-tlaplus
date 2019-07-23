@@ -12,7 +12,6 @@ import * as moment from 'moment/moment';
 const STATUS_EMIT_TIMEOUT = 500;    // msec
 
 // TLC message types
-const NO_TYPE = -1;
 const TLC_UNKNOWN = -2;
 const GENERAL = 1000;
 const TLC_MODE_MC = 2187;
@@ -110,7 +109,7 @@ class ModelCheckResultBuilder {
     private coverageStat: CoverageItem[] = [];
     private errors: string[][] = [];
     private errorTrace: ErrorTraceItem[] = [];
-    private msgType: number = NO_TYPE;
+    private msgTypeStack: number[] = [];
     private msgBuffer: string[] = [];
     private sanyBuffer: string[] = [];
     private sanyMessages: DCollection | undefined;
@@ -130,13 +129,16 @@ class ModelCheckResultBuilder {
     }
 
     addLine(line: string) {
-        if (this.msgType === NO_TYPE) {
-            this.msgType = this.tryParseMessageStart(line);
-            if (this.msgType === NO_TYPE && this.status === CheckStatus.SanyParsing) {
-                this.sanyBuffer.push(line);
-            }
+        const newMsgType = this.tryParseMessageStart(line);
+        if (newMsgType != null) {
+            this.msgTypeStack.push(newMsgType);
         } else if (this.tryParseMessageEnd(line)) {
-            this.handleMessageEnd();
+            const msgType = this.msgTypeStack.pop();
+            if (msgType) {
+                this.handleMessageEnd(msgType);
+            } else {
+                console.log('Unexpected message end');
+            }
         } else if (line !== '') {
             this.msgBuffer.push(line);
         }
@@ -164,11 +166,11 @@ class ModelCheckResultBuilder {
         );
     }
 
-    private handleMessageEnd() {
+    private handleMessageEnd(msgType: number) {
         if (this.status === CheckStatus.NotStarted) {
             this.status = CheckStatus.Starting;
         }
-        switch (this.msgType) {
+        switch (msgType) {
             case TLC_MODE_MC:
                 this.processInfo = this.msgBuffer.join('');
                 break;
@@ -248,25 +250,20 @@ class ModelCheckResultBuilder {
     }
 
     private resetMessage() {
-        this.msgType = NO_TYPE;
+        this.msgTypeStack.pop();
         this.msgBuffer.length = 0;
     }
 
-    // TODO: Sometimes messages start not on the new line: ""
-    // tlc> @!@!@STARTMSG 1000:1 @!@!@
-    // tlc> TLC threw an unexpected exception.
-    // tlc> This was probably caused by an error in the spec or model.
-    // tlc> See the User Output or TLC Console for clues to what happened.
-    // tlc> The exception was a tlc2.tool.EvalException
-    // tlc> : @!@!@STARTMSG 2132:0 @!@!@    <--------------------------- Here!
-    // tlc> The first argument of Assert evaluated to FALSE; the second argument was:
-    // tlc> "Failure of assertion at line 43, column 3."
-    // tlc> @!@!@ENDMSG 2132 @!@!@
-    private tryParseMessageStart(line: string): number {
-        if (!line.startsWith('@!@!@STARTMSG ') || !line.endsWith(' @!@!@')) {
-            return NO_TYPE;
+    private tryParseMessageStart(line: string): number | null {
+        const markerIdx = line.indexOf('@!@!@STARTMSG ');
+        let markerBody = line;
+        if (markerIdx < 0 || !line.endsWith(' @!@!@')) {
+            return null;
+        } else if (markerIdx > 0) {
+            markerBody = line.substring(markerIdx);
+            this.msgBuffer.push(line.substring(0, markerIdx));
         }
-        const eLine = line.substring(14, line.length - 6);
+        const eLine = markerBody.substring(14, line.length - 6);
         const parts = eLine.split(':');
         if (parts.length > 0) {
             return parseInt(parts[0]);
