@@ -7,6 +7,7 @@ import { parseValueLines } from './tlcValues';
 import { SanyStdoutParser } from './sany';
 import { DCollection } from '../diagnostic';
 import { pathToModuleName, parseDateTime } from '../common';
+import { Moment } from 'moment';
 
 const STATUS_EMIT_TIMEOUT = 500;    // msec
 
@@ -59,7 +60,6 @@ export class TLCModelCheckerStdoutParser extends ProcessOutputParser {
     }
 
     protected parseLine(line: string | null) {
-        console.log('tlc> ' + (line === null ? ':END:' : line));
         if (line !== null) {
             this.checkResultBuilder.addLine(line);
             this.scheduleUpdate();
@@ -70,6 +70,11 @@ export class TLCModelCheckerStdoutParser extends ProcessOutputParser {
                 this.addDiagnosticCollection(dCol);
             }
         }
+    }
+
+    protected handleError(err: any) {
+        this.checkResultBuilder.handleError(err);
+        this.scheduleUpdate();
     }
 
     private scheduleUpdate() {
@@ -97,8 +102,8 @@ class ModelCheckResultBuilder {
     private modelName: string;
     private success: boolean = false;
     private status: CheckStatus = CheckStatus.NotStarted;
-    private startDateTime: Date | undefined;
-    private endDateTime: Date | undefined;
+    private startDateTime: Moment | undefined;
+    private endDateTime: Moment | undefined;
     private duration: number | undefined;       // msec
     private processInfo: string | null = null;
     private initialStatesStat: InitialStateStatItem[] = [];
@@ -134,6 +139,10 @@ class ModelCheckResultBuilder {
         } else if (line !== '') {
             this.msgBuffer.push(line);
         }
+    }
+
+    handleError(_: any) {
+        this.resetMessage();
     }
 
     build(): ModelCheckResult {
@@ -233,7 +242,11 @@ class ModelCheckResultBuilder {
                 this.status = CheckStatus.Finished;
                 this.parseFinished();
                 break;
-            }
+        }
+        this.resetMessage();
+    }
+
+    private resetMessage() {
         this.msgType = NO_TYPE;
         this.msgBuffer.length = 0;
     }

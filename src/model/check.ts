@@ -1,7 +1,7 @@
 import { Range } from 'vscode';
 import { DCollection } from '../diagnostic';
 import { isNumber } from 'util';
-import * as dt from 'date-and-time';
+import { Moment } from 'moment';
 
 const STATE_RUNNING = 'R';
 const STATE_SUCCESS = 'S';
@@ -221,8 +221,8 @@ export class ModelCheckResult {
         errors: string[][],
         errorTrace: ErrorTraceItem[],
         sanyMessages: DCollection | undefined,
-        startDateTime: Date | undefined,
-        endDateTime: Date | undefined,
+        startDateTime: Moment | undefined,
+        endDateTime: Moment | undefined,
         duration: number | undefined,
         workersCount: number
     ) {
@@ -256,11 +256,11 @@ export function getStatusName(status: CheckStatus): string {
     throw new Error(`Name not defined for check status ${status}`);
 }
 
-function dateTimeToStr(dateTime: Date | undefined): string {
+function dateTimeToStr(dateTime: Moment | undefined): string {
     if (!dateTime) {
         return 'not yet';
     }
-    return dt.format(dateTime, 'HH:mm:ss (MMM D)');
+    return dateTime.format('HH:mm:ss (MMM D)');
 }
 
 function durationToStr(dur: number | undefined): string {

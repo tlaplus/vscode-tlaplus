@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { basename } from 'path';
-import * as dt from 'date-and-time';
+import * as moment from 'moment';
 
 /**
  * Thrown when there's some problem with parsing.
@@ -21,13 +21,13 @@ export function pathToModuleName(path: string): string {
     return dotIdx > 0 ? baseName.substring(0, dotIdx) : baseName;
 }
 
-export function parseDateTime(str: string | undefined): Date | undefined {
+export function parseDateTime(str: string | undefined): moment.Moment | undefined {
     if (!str) {
         return undefined;
     }
-    const dateTime = dt.parse(str, 'YYYY-MM-DD HH:mm:ss');
-    if (dateTime instanceof Date) {
+    const dateTime = moment(str, moment.ISO_8601, true);
+    if (dateTime.isValid) {
         return dateTime;
     }
-    throw new ParsingError('Cannot parse date/time ' + dateTime);
+    throw new ParsingError('Cannot parse date/time ' + str);
 }
