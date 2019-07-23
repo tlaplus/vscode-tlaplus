@@ -12,21 +12,18 @@ if (prevState) {
 }
 
 function updateCheckResult(res) {
-    if (!res) {
-        return;
-    }
-    elTimeStart.textContent = res.startDateTimeStr;
-    elTimeEnd.textContent = res.endDateTimeStr;
-    elStatus.textContent = res.statusName + ' : ' + res.state;
-    elStatus.classList = ['state-' + res.state];
-    elStatesStat.innerHTML = res.initialStatesStat
+    elTimeStart.textContent = res ? res.startDateTimeStr : '-';
+    elTimeEnd.textContent = res ? res.endDateTimeStr : '-';
+    elStatus.textContent = res ? res.statusName + ' : ' + res.state : '-';
+    elStatus.classList = res ? ['state-' + res.state] : [];
+    elStatesStat.innerHTML = res ? res.initialStatesStat
         .map(s => `<tr><td>${s.timeStamp}</td><td class="number-col">${num(s.diameter)}</td><td class="number-col">${num(s.total)}</td><td class="number-col">${num(s.distinct)}</td><td class="number-col">${num(s.queueSize)}</td></tr>`)
-        .join('');
-    elCoverageStat.innerHTML = res.coverageStat
+        .join('') : '';
+    elCoverageStat.innerHTML = res ? res.coverageStat
         .map(s => `<tr><td>${s.module}</td><td>${s.action}</td><td class="number-col">${num(s.total)}</td><td class="number-col">${num(s.distinct)}</td></tr>`)
-        .join('');
-    displayErrors(res.errors);
-    displayErrorTrace(res.errorTrace);
+        .join(''): '';
+    displayErrors(res ? res.errors : []);
+    displayErrorTrace(res ? res.errorTrace : []);
 }
 
 window.addEventListener('message', event => {
@@ -36,12 +33,13 @@ window.addEventListener('message', event => {
 
 function displayErrors(errors) {
     const elErrors = document.getElementById('errors');
+    const elErrorsList = document.getElementById('errors-list');
+    removeAllChildren(elErrorsList);
     if (!errors || errors.length === 0) {
         elErrors.classList = ['hidden'];
         return;
     }
     elErrors.classList = [];
-    const elErrorsList = document.getElementById('errors-list');
     errors.forEach(err => {
         const elError = document.createElement('p');
         elError.classList = ['error'];
@@ -57,12 +55,13 @@ function displayErrors(errors) {
 
 function displayErrorTrace(trace) {
     const elErrorTrace = document.getElementById('error-trace');
+    const elErrorTraceVars = document.getElementById('error-trace-variables');
+    removeAllChildren(elErrorTraceVars);
     if (!trace || trace.length === 0) {
         elErrorTrace.classList = ['hidden'];
         return;
     }
     elErrorTrace.classList = [];
-    const elErrorTraceVars = document.getElementById('error-trace-variables');
     const errTraceRows = [];
     trace.forEach(item => {
         errTraceRows.push(`<tr><td colspan='2'><b>${item.num}: ${item.title}</b></td></tr>`);
@@ -86,4 +85,10 @@ function num(n) {
         en = (en - r) / 1000;
     }
     return sign + parts.reverse().join(' ');
+}
+
+function removeAllChildren(el) {
+    while (el.lastChild) {
+        el.removeChild(el.lastChild);
+    }
 }
