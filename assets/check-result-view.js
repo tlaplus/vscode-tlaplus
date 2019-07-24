@@ -2,22 +2,23 @@ const vscode = acquireVsCodeApi();
 
 const prevState = vscode.getState();
 if (prevState) {
-    displayCheckResult(prevState.checkResult);
+    displayCheckResult(prevState);
 }
 
-function displayCheckResult(res) {
+function displayCheckResult(data) {
+    const res = data.checkResult;
     displayStatus(res);
     displayStatesStat(res ? res.initialStatesStat : []);
     displayCoverage(res ? res.coverageStat: []);
     displayErrors(res ? res.errors : []);
-    displayErrorTrace(res ? res.errorTrace : []);
+    displayErrorTrace(res ? res.errorTrace : [], data);
 }
 
 /**
  * Recieves data from the extension.
  */
 window.addEventListener('message', event => {
-    displayCheckResult(event.data.checkResult);
+    displayCheckResult(event.data);
     vscode.setState(event.data);
 });
 
@@ -67,7 +68,7 @@ function displayErrors(errors) {
     });
 }
 
-function displayErrorTrace(trace) {
+function displayErrorTrace(trace, state) {
     const elErrorTrace = document.getElementById('error-trace');
     const elErrorTraceVars = document.getElementById('error-trace-variables');
     removeAllChildren(elErrorTraceVars);
@@ -76,14 +77,59 @@ function displayErrorTrace(trace) {
         return;
     }
     elErrorTrace.classList = [];
-    const errTraceRows = [];
     trace.forEach(item => {
-        errTraceRows.push(`<tr><td colspan="2" class="error-trace-item-title">${item.num}: ${item.title}</td></tr>`);
+        const elHeaderRow = document.createElement('tr');
+        const elHeaderCell = document.createElement('td');
+        elHeaderCell.classList.add('error-trace-item-title');
+        elHeaderCell.setAttribute('colspan', '2');
+        elHeaderCell.innerText = `${item.num}: ${item.title}`;
+        elHeaderRow.appendChild(elHeaderCell);
+        elErrorTraceVars.appendChild(elHeaderRow);
         item.variables.forEach(v => {
-            errTraceRows.push(`<tr><td>${v.name}</td><td>${v.value.str}</td></tr>`);
+            let nameHtml = v.name;
+            if (v.value.items) {
+                nameHtml += ' <span class="var-size">(' + v.value.items.length + ')</span>';
+            }
+            const elVarRow = document.createElement('tr');
+            const elVarNameCell = document.createElement('td');
+            elVarNameCell.classList.add('var-name');
+            const elVarNamePrefix = document.createElement('div');
+            elVarNamePrefix.classList.add('var-name-prefix');
+            if (v.value.items && v.value.items.length > 0) {
+                if (v.expanded === true) {
+                    elVarNamePrefix.classList.add('var-collection-expanded');
+                    elVarNamePrefix.innerText = '-';
+                } else {
+                    elVarNamePrefix.classList.add('var-collection-collapsed');
+                    elVarNamePrefix.innerText = '+';
+                }
+                elVarNamePrefix.onclick = e => {
+                    if (v.expanded === true) {
+                        v.expanded = false;
+                        e.srcElement.classList.remove('var-collection-expanded');
+                        e.srcElement.classList.add('var-collection-collapsed');
+                        e.srcElement.innerText = '+';
+                    } else {
+                        v.expanded = true;
+                        e.srcElement.classList.remove('var-collection-collapsed');
+                        e.srcElement.classList.add('var-collection-expanded');
+                        e.srcElement.innerText = '-';
+                    }
+                    vscode.setState(state);
+                };
+            }
+            elVarNameCell.appendChild(elVarNamePrefix);
+            const elVarNameText = document.createElement('span');
+            elVarNameText.innerHTML = nameHtml;
+            elVarNameCell.appendChild(elVarNameText);
+            elVarRow.appendChild(elVarNameCell);
+            const elVarValueCell = document.createElement('td');
+            elVarValueCell.classList.add('var-value');
+            elVarValueCell.innerText = v.value.str;
+            elVarRow.appendChild(elVarValueCell);
+            elErrorTraceVars.appendChild(elVarRow);
         });
     });
-    elErrorTraceVars.innerHTML = errTraceRows.join('');
 }
 
 function num(n) {

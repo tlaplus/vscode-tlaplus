@@ -112,14 +112,14 @@ export class PrimitiveValue extends Value {
  * Value that is a collection of other values.
  */
 abstract class CollectionValue extends Value {
-    readonly values: Value[];
+    readonly items: Value[];
     readonly str: string;
 
-    constructor(values: Value[], prefix: string, postfix: string) {
+    constructor(items: Value[], prefix: string, postfix: string) {
         super();
-        this.values = values;
+        this.items = items;
         // TODO: trim to fit into 100 symbols
-        const valuesStr = this.values.map(v => v.toString()).join(', ');
+        const valuesStr = this.items.map(i => i.toString()).join(', ');
         this.str = prefix + valuesStr + postfix;
     }
 }

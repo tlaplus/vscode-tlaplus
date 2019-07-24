@@ -1,3 +1,7 @@
+body {
+    padding-bottom: 1em;
+}
+
 section:not(:first-child) {
     margin-top: 0.5em;
     border-top: solid 1px var(--vscode-panel-border);
@@ -5,7 +9,7 @@ section:not(:first-child) {
 
 h1 {
     font-size: larger;
-    margin: 0.4em 0 0.4em 0;
+    margin: 0.6em 0 0.4em 0;
 }
 
 td:not(:first-child) {
@@ -13,7 +17,7 @@ td:not(:first-child) {
 }
 
 thead {
-    color: var(--vscode-panelTitle-inactiveForeground);
+    opacity: 0.5;
 }
 
 .state-R {
@@ -28,9 +32,21 @@ thead {
     color: var(--vscode-errorForeground);
 }
 
-.stat {
+.section-block {
     display: inline-block;
-    margin-right: 1.2em;
+    padding-right: 0;
+}
+
+.section-block:not(:last-child) {
+    margin-right: 1.5em;
+}
+
+.states-stat {
+    min-width: 23em;
+}
+
+.coverage-stat {
+    min-width: 15em;
 }
 
 .val-col {
@@ -51,6 +67,49 @@ thead {
     margin: 0;
 }
 
+.error-trace-table {
+    width: 100%;
+}
+
+.error-trace-name {
+    width: 10%;
+}
+
+.error-trace-value {
+    width: 90%;
+}
+
 .error-trace-item-title {
     font-weight: bold;
+}
+
+.var-name {
+    padding-right: 2em;
+    white-space: nowrap;
+}
+
+.var-size {
+    opacity: 0.5;
+}
+
+.var-name-prefix {
+    display: inline-block;
+    width: 20px;
+}
+
+.var-collection-collapsed {
+    color: red;
+    cursor: pointer;
+}
+
+.var-collection-expanded {
+    color: green;
+    cursor: pointer;
+}
+
+.var-value {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 0;
 }

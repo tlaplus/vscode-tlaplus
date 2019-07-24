@@ -6,11 +6,18 @@ import { ModelCheckResult } from './model/check';
 // Cached HTML template for the WebView
 let viewHtml: string | undefined;
 let viewPanel: vscode.WebviewPanel | undefined;
-let lastCheckResult: ModelCheckResult | null;
+let missingCheckResult: ModelCheckResult | null;
+let panelIsVisible = false;
 
 export function updateCheckResultView(checkResult: ModelCheckResult | null) {
-    setCheckResultView(checkResult);
-    lastCheckResult = checkResult;
+    if (viewPanel && viewPanel.visible) {
+        viewPanel.webview.postMessage({
+            checkResult: checkResult
+        });
+        missingCheckResult = null;
+    } else {
+        missingCheckResult = checkResult;
+    }
 }
 
 export function revealCheckResultView(checkResult: ModelCheckResult | null, extContext: vscode.ExtensionContext) {
@@ -21,14 +28,6 @@ export function revealCheckResultView(checkResult: ModelCheckResult | null, extC
         viewPanel.reveal();
     }
     updateCheckResultView(checkResult);
-}
-
-function setCheckResultView(checkResult: ModelCheckResult | null) {
-    if (viewPanel) {
-        viewPanel.webview.postMessage({
-            checkResult: checkResult
-        });
-    }
 }
 
 function createNewPanel() {
@@ -46,11 +45,13 @@ function createNewPanel() {
         viewPanel = undefined;
     });
     viewPanel.onDidChangeViewState(e => {
-        if (e.webviewPanel.visible) {
+        if (e.webviewPanel.visible && !panelIsVisible && missingCheckResult) {
             // Show what has been missed while the panel was invisible
-            setCheckResultView(lastCheckResult);
+            updateCheckResultView(missingCheckResult);
         }
+        panelIsVisible = e.webviewPanel.visible;
     });
+    panelIsVisible = true;
 }
 
 function ensurePanelBody(extContext: vscode.ExtensionContext) {

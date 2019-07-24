@@ -14,7 +14,7 @@
     <p>Start: <span id="time-start">-</span>, end: <span id="time-end">-</span></p>
   </section>
   <section>
-    <div class="stat">
+    <div class="section-block states-stat">
       <h1>States</h1>
       <table>
         <thead>
@@ -29,7 +29,7 @@
        <tbody id="states-stat" />
       </table>
     </div>
-    <div class="stat">
+    <div class="section-block coverage-stat">
       <h1>Coverage</h1>
       <table>
         <thead>
@@ -50,7 +50,11 @@
   </section>
   <section id="error-trace" class="hidden">
     <h1>Error Trace</h1>
-    <table>
+    <table class="error-trace-table">
+      <thead>
+          <td class="error-trace-name"></td>
+          <td class="error-trace-value"></td>
+      </thead>
       <tbody id="error-trace-variables"/>
     </table>
   </section>
