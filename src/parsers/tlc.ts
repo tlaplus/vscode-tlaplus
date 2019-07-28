@@ -115,6 +115,7 @@ class ModelCheckResultBuilder {
     private sanyMessages: DCollection | undefined;
     private workersCount: number = 0;
     private firstStatTime: moment.Moment | undefined;
+    private fingerprintCollisionProbability: string | undefined;
 
     constructor(modelName: string) {
         this.modelName = modelName;
@@ -162,7 +163,8 @@ class ModelCheckResultBuilder {
             this.startDateTime,
             this.endDateTime,
             this.duration,
-            this.workersCount
+            this.workersCount,
+            this.fingerprintCollisionProbability
         );
     }
 
@@ -240,6 +242,7 @@ class ModelCheckResultBuilder {
                 break;
             case TLC_SUCCESS:
                 this.success = true;
+                this.parseSuccess();
                 break;
             case TLC_FINISHED:
                 this.status = CheckStatus.Finished;
@@ -279,6 +282,13 @@ class ModelCheckResultBuilder {
         const matches = this.tryMatchBufferLine(/^Starting\.\.\. \((\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\)$/g);
         if (matches) {
             this.startDateTime = parseDateTime(matches[1]);
+        }
+    }
+
+    private parseSuccess() {
+        const matches = this.tryMatchBufferLine(/calculated \(optimistic\):\s+val = (.+)$/g, 3);
+        if (matches) {
+            this.fingerprintCollisionProbability = matches[1];
         }
     }
 
@@ -396,11 +406,12 @@ class ModelCheckResultBuilder {
         }
     }
 
-    private tryMatchBufferLine(regExp: RegExp): RegExpExecArray | null {
-        if (this.msgBuffer.length === 0) {
+    private tryMatchBufferLine(regExp: RegExp, n?: number): RegExpExecArray | null {
+        const en = n ? n : 0;
+        if (this.msgBuffer.length < en + 1) {
             return null;
         }
-        return regExp.exec(this.msgBuffer[0]);
+        return regExp.exec(this.msgBuffer[en]);
     }
 
     private calcTimestamp(timeStr: string): string {

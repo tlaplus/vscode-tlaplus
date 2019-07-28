@@ -26,9 +26,12 @@ function displayStatus(result) {
     const elTimeStart = document.getElementById('time-start');
     const elTimeEnd = document.getElementById('time-end');
     const elStatus = document.getElementById('check-status');
+    const elStatusDetails = document.getElementById('check-status-details');
     elTimeStart.textContent = result ? result.startDateTimeStr : '-';
     elTimeEnd.textContent = result ? result.endDateTimeStr : '-';
-    elStatus.textContent = result ? result.statusName + ' : ' + result.state : '-';
+    elStatus.textContent = result ? `${result.statusName} ${result.stateName}` : '-';
+    const fcp = result.fingerprintCollisionProbability ? `Fingerprint collission probability: ${result.fingerprintCollisionProbability}` : '';
+    elStatusDetails.textContent = result && result.state !== 'R' ? fcp : '';
     elStatus.classList = result ? ['state-' + result.state] : [];
 }
 

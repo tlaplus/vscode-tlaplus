@@ -3,9 +3,11 @@ import { DCollection } from '../diagnostic';
 import { isNumber } from 'util';
 import { Moment } from 'moment';
 
-const STATE_RUNNING = 'R';
-const STATE_SUCCESS = 'S';
-const STATE_ERROR = 'E';
+export enum CheckState {
+    Running = 'R',
+    Success = 'S',
+    Error = 'E'
+}
 
 export enum CheckStatus {
     NotStarted,
@@ -33,6 +35,11 @@ STATUS_NAMES.set(CheckStatus.CheckingLivenessFinal, 'Checking final liveness');
 STATUS_NAMES.set(CheckStatus.ServerRunning, 'Master waiting for workers');
 STATUS_NAMES.set(CheckStatus.WorkersRegistered, 'Workers connected');
 STATUS_NAMES.set(CheckStatus.Finished, 'Finished');
+
+const STATE_NAMES = new Map<CheckState, string>();
+STATE_NAMES.set(CheckState.Running, '');
+STATE_NAMES.set(CheckState.Success, 'successfully');
+STATE_NAMES.set(CheckState.Error, 'with errors');
 
 /**
  * Statistics on initial state generation.
@@ -196,7 +203,8 @@ export class ErrorTraceItem {
  */
 export class ModelCheckResult {
     readonly modelName: string;
-    readonly state: string;
+    readonly state: CheckState;
+    readonly stateName: string;
     readonly success: boolean;
     readonly status: CheckStatus;
     readonly statusName: string;
@@ -210,6 +218,7 @@ export class ModelCheckResult {
     readonly endDateTimeStr: string | undefined;
     readonly durationStr: string | undefined;
     readonly workersCount: number;
+    readonly fingerprintCollisionProbability: string | undefined;
 
     constructor(
         modelName: string,
@@ -224,14 +233,16 @@ export class ModelCheckResult {
         startDateTime: Moment | undefined,
         endDateTime: Moment | undefined,
         duration: number | undefined,
-        workersCount: number
+        workersCount: number,
+        fingerprintCollisionProbability: string | undefined
     ) {
         this.modelName = modelName;
         if (status === CheckStatus.Finished) {
-            this.state = success ? STATE_SUCCESS : STATE_ERROR;
+            this.state = success ? CheckState.Success : CheckState.Error;
         } else {
-            this.state = STATE_RUNNING;
+            this.state = CheckState.Running;
         }
+        this.stateName = getStateName(this.state);
         this.success = success;
         this.status = status;
         this.statusName = getStatusName(status);
@@ -245,7 +256,16 @@ export class ModelCheckResult {
         this.endDateTimeStr = dateTimeToStr(endDateTime);
         this.durationStr = durationToStr(duration);
         this.workersCount = workersCount;
+        this.fingerprintCollisionProbability = fingerprintCollisionProbability;
     }
+}
+
+function getStateName(state: CheckState): string {
+    const name = STATE_NAMES.get(state);
+    if (typeof name !== 'undefined') {
+        return name;
+    }
+    throw new Error(`Name not defined for check state ${state}`);
 }
 
 export function getStatusName(status: CheckStatus): string {
