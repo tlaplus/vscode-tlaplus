@@ -202,6 +202,10 @@ export class ErrorTraceItem {
  * Represents the state of a TLA model checking process.
  */
 export class ModelCheckResult {
+    static readonly EMPTY = new ModelCheckResult(
+        '', false, CheckStatus.Starting, null, [], [], [], [],
+        undefined, undefined, undefined, undefined, 0, undefined);
+
     readonly modelName: string;
     readonly state: CheckState;
     readonly stateName: string;
@@ -209,10 +213,10 @@ export class ModelCheckResult {
     readonly status: CheckStatus;
     readonly statusName: string;
     readonly processInfo: string | null;
-    readonly initialStatesStat: InitialStateStatItem[];
-    readonly coverageStat: CoverageItem[];
-    readonly errors: string[][];
-    readonly errorTrace: ErrorTraceItem[];
+    readonly initialStatesStat: ReadonlyArray<InitialStateStatItem>;
+    readonly coverageStat: ReadonlyArray<CoverageItem>;
+    readonly errors: ReadonlyArray<ReadonlyArray<string>>;
+    readonly errorTrace: ReadonlyArray<ErrorTraceItem>;
     readonly sanyMessages: DCollection | undefined;
     readonly startDateTimeStr: string | undefined;
     readonly endDateTimeStr: string | undefined;

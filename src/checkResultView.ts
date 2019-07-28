@@ -9,7 +9,7 @@ let viewPanel: vscode.WebviewPanel | undefined;
 let missingCheckResult: ModelCheckResult | null;
 let panelIsVisible = false;
 
-export function updateCheckResultView(checkResult: ModelCheckResult | null) {
+export function updateCheckResultView(checkResult: ModelCheckResult) {
     if (viewPanel && viewPanel.visible) {
         viewPanel.webview.postMessage({
             checkResult: checkResult
@@ -20,7 +20,7 @@ export function updateCheckResultView(checkResult: ModelCheckResult | null) {
     }
 }
 
-export function revealCheckResultView(checkResult: ModelCheckResult | null, extContext: vscode.ExtensionContext) {
+export function revealCheckResultView(checkResult: ModelCheckResult, extContext: vscode.ExtensionContext) {
     if (!viewPanel) {
         createNewPanel();
         ensurePanelBody(extContext);

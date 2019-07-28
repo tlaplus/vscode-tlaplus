@@ -3,6 +3,7 @@ import { runTool } from '../tla2tools';
 import { TLCModelCheckerStdoutParser } from '../parsers/tlc';
 import { revealCheckResultView, updateCheckResultView } from '../checkResultView';
 import { applyDCollection } from '../diagnostic';
+import { ModelCheckResult } from '../model/check';
 
 /**
  * Runs TLC on a TLA+ specification.
@@ -28,7 +29,7 @@ async function doCheckModel(
 ) {
     try {
         const proc = runTool('tlc2.TLC', fileUri.fsPath, ['-modelcheck', '-coverage', '1', '-tool']);
-        revealCheckResultView(null, extContext);
+        revealCheckResultView(ModelCheckResult.EMPTY, extContext);
         const stdoutParser = new TLCModelCheckerStdoutParser(proc.stdout, fileUri.fsPath, updateCheckResultView);
         const dCol = await stdoutParser.readAll();
         applyDCollection(dCol, diagnostic);

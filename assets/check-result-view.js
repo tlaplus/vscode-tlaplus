@@ -8,10 +8,10 @@ if (prevState) {
 function displayCheckResult(data) {
     const res = data.checkResult;
     displayStatus(res);
-    displayStatesStat(res ? res.initialStatesStat : []);
-    displayCoverage(res ? res.coverageStat: []);
-    displayErrors(res ? res.errors : []);
-    displayErrorTrace(res ? res.errorTrace : [], data);
+    displayStatesStat(res.initialStatesStat);
+    displayCoverage(res.coverageStat);
+    displayErrors(res.errors);
+    displayErrorTrace(res.errorTrace, data);
 }
 
 /**
@@ -27,12 +27,12 @@ function displayStatus(result) {
     const elTimeEnd = document.getElementById('time-end');
     const elStatus = document.getElementById('check-status');
     const elStatusDetails = document.getElementById('check-status-details');
-    elTimeStart.textContent = result ? result.startDateTimeStr : '-';
-    elTimeEnd.textContent = result ? result.endDateTimeStr : '-';
-    elStatus.textContent = result ? `${result.statusName} ${result.stateName}` : '-';
+    elTimeStart.textContent = result.startDateTimeStr;
+    elTimeEnd.textContent = result.endDateTimeStr;
+    elStatus.textContent = `${result.statusName} ${result.stateName}`;
     const fcp = result.fingerprintCollisionProbability ? `Fingerprint collission probability: ${result.fingerprintCollisionProbability}` : '';
-    elStatusDetails.textContent = result && result.state !== 'R' ? fcp : '';
-    elStatus.classList = result ? ['state-' + result.state] : [];
+    elStatusDetails.textContent = result.state !== 'R' ? fcp : '';
+    elStatus.classList = ['state-' + result.state];
 }
 
 function displayStatesStat(stat) {
