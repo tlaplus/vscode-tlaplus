@@ -70,66 +70,81 @@ function displayErrors(errors) {
 
 function displayErrorTrace(trace, state) {
     const elErrorTrace = document.getElementById('error-trace');
-    const elErrorTraceVars = document.getElementById('error-trace-variables');
-    removeAllChildren(elErrorTraceVars);
+    const elErrorTraceItems = document.getElementById('error-trace-items');
+    removeAllChildren(elErrorTraceItems);
     if (!trace || trace.length === 0) {
         elErrorTrace.classList = ['hidden'];
         return;
     }
     elErrorTrace.classList = [];
-    trace.forEach(item => {
-        const elHeaderRow = document.createElement('tr');
-        const elHeaderCell = document.createElement('td');
-        elHeaderCell.classList.add('error-trace-item-title');
-        elHeaderCell.setAttribute('colspan', '2');
-        elHeaderCell.innerText = `${item.num}: ${item.title}`;
-        elHeaderRow.appendChild(elHeaderCell);
-        elErrorTraceVars.appendChild(elHeaderRow);
-        item.variables.forEach(v => {
-            let nameHtml = v.name;
-            if (v.value.items) {
-                nameHtml += ' <span class="var-size">(' + v.value.items.length + ')</span>';
+    trace.forEach(item => displayErrorTraceItem(elErrorTraceItems, item, state));
+    const expNodes = document.getElementsByClassName('tree-expandable');
+    for (let i = 0; i < expNodes.length; i++) {
+        expNodes[i].onclick = (e) => {
+            const elName = e.target;
+            elName.parentElement.parentElement.querySelector('.tree-nodes').classList.toggle('shown');
+            elName.classList.toggle('tree-expandable-down');
+        };
+    }
+}
+
+function displayErrorTraceItem(elErrorTraceVars, item, state) {
+    const elItem = document.createElement('li');
+    const elItemBlock = document.createElement('div');
+    elItemBlock.classList.add('error-trace-item-block');
+    const elHeader = document.createElement('span');
+    elHeader.classList.add('tree-node');
+    elHeader.classList.add('tree-expandable');
+    elHeader.classList.add('tree-expandable-down');
+    elHeader.classList.add('error-trace-item-title');
+    elHeader.innerText = `${item.num}: ${item.title}`;
+    elItemBlock.appendChild(elHeader);
+    elItem.appendChild(elItemBlock);
+    const elVarList = document.createElement('ul');
+    elVarList.classList.add('tree-nodes');
+    elVarList.classList.add('hidden');
+    elVarList.classList.add('shown');
+    item.variables
+        .sort(compareVariables)
+        .forEach(v => displayVariable(elVarList, v.name, v.value, state));
+    elItem.appendChild(elVarList);
+    elErrorTraceVars.appendChild(elItem);
+}
+
+function displayVariable(elParent, name, value, state) {
+    let nameHtml = name;
+    if (value.items) {
+        nameHtml += ' <span class="var-size">(' + value.items.length + ')</span>';
+    }
+    const elVar = document.createElement('li');
+    const elVarValueBlock = document.createElement('div');
+    const elVarName = document.createElement('div');
+    elVarName.classList.add('var-name');
+    elVarName.classList.add('tree-node');
+    elVarName.innerHTML = nameHtml;
+    elVarValueBlock.appendChild(elVarName);
+    const elVarValue = document.createElement('div');
+    elVarValue.classList.add('var-value');
+    elVarValue.innerText = value.str;
+    elVarValueBlock.appendChild(elVarValue);
+    elVar.appendChild(elVarValueBlock);
+    if (value.items && value.items.length > 0) {
+        elVarName.classList.add('tree-expandable');
+        const elSubList = document.createElement('ul');
+        elSubList.classList.add('tree-nodes');
+        elSubList.classList.add('hidden');
+        let idx = 1;
+        value.items.forEach(it => {
+            if (it.key) {
+                displayVariable(elSubList, it.key, it.value, state);
+            } else {
+                displayVariable(elSubList, String(idx), it, state);
             }
-            const elVarRow = document.createElement('tr');
-            const elVarNameCell = document.createElement('td');
-            elVarNameCell.classList.add('var-name');
-            const elVarNamePrefix = document.createElement('div');
-            elVarNamePrefix.classList.add('var-name-prefix');
-            if (v.value.items && v.value.items.length > 0) {
-                if (v.expanded === true) {
-                    elVarNamePrefix.classList.add('var-collection-expanded');
-                    elVarNamePrefix.innerText = '-';
-                } else {
-                    elVarNamePrefix.classList.add('var-collection-collapsed');
-                    elVarNamePrefix.innerText = '+';
-                }
-                elVarNamePrefix.onclick = e => {
-                    if (v.expanded === true) {
-                        v.expanded = false;
-                        e.srcElement.classList.remove('var-collection-expanded');
-                        e.srcElement.classList.add('var-collection-collapsed');
-                        e.srcElement.innerText = '+';
-                    } else {
-                        v.expanded = true;
-                        e.srcElement.classList.remove('var-collection-collapsed');
-                        e.srcElement.classList.add('var-collection-expanded');
-                        e.srcElement.innerText = '-';
-                    }
-                    vscode.setState(state);
-                };
-            }
-            elVarNameCell.appendChild(elVarNamePrefix);
-            const elVarNameText = document.createElement('span');
-            elVarNameText.innerHTML = nameHtml;
-            elVarNameCell.appendChild(elVarNameText);
-            elVarRow.appendChild(elVarNameCell);
-            const elVarValueCell = document.createElement('td');
-            elVarValueCell.classList.add('var-value');
-            elVarValueCell.innerText = v.value.str;
-            elVarRow.appendChild(elVarValueCell);
-            elErrorTraceVars.appendChild(elVarRow);
+            idx += 1;
         });
-    });
+        elVar.appendChild(elSubList);
+    }
+    elParent.appendChild(elVar);
 }
 
 function num(n) {
@@ -163,4 +178,13 @@ function removeAllChildren(el) {
     while (el.lastChild) {
         el.removeChild(el.lastChild);
     }
+}
+
+function compareVariables(a, b) {
+    if (a.name < b.name) {
+        return -1;
+    } else if (a.name > b.name) {
+        return 1;
+    }
+    return 0;
 }
