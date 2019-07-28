@@ -1,0 +1,138 @@
+body {
+    padding-bottom: 1em;
+}
+
+section:not(:first-child) {
+    margin-top: 0.5em;
+    border-top: solid 1px var(--vscode-panel-border);
+}
+
+h1 {
+    font-size: larger;
+    margin: 0.6em 0 0.4em 0;
+}
+
+td:not(:first-child) {
+    padding-left: 0.75em;
+}
+
+thead {
+    opacity: 0.5;
+}
+
+.state-R {
+    color: #39f;
+}
+
+.state-S {
+    color: #093;
+}
+
+.state-E {
+    color: var(--vscode-errorForeground);
+}
+
+.section-block {
+    display: inline-block;
+    padding-right: 0;
+}
+
+.section-block:not(:last-child) {
+    margin-right: 1.5em;
+}
+
+.states-stat {
+    min-width: 23em;
+}
+
+.coverage-stat {
+    min-width: 15em;
+}
+
+.val-col {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.hidden {
+    display: none;
+}
+
+.shown {
+    display: block;
+}
+
+.error:not(:first-child) {
+    padding-top: 0.5em;
+}
+
+.error-line {
+    padding: 0;
+    margin: 0;
+}
+
+.error-trace-item-block {
+    margin-top: 0.5em;
+}
+
+.error-trace-item-title {
+    font-weight: bold;
+}
+
+.error-trace-var-value-block:after {
+    content: "";
+    display: table;
+    clear: both;
+}
+
+.var-name {
+    display: inline-block;
+    width: 25%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.var-size {
+    opacity: 0.5;
+}
+
+.var-value {
+    display: inline-block;
+    width: 75%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tree-nodes {
+    list-style-type: none;
+    padding-inline-start: 1em;
+}
+
+.tree-node::before {
+    content: '';
+    font-size: smaller;
+    display: inline-block;
+    width: 1.3em;
+}
+
+.tree-expandable {
+    cursor: pointer;
+    user-select: none;
+}
+
+.tree-expandable::before {
+    content: "\25B6";
+    opacity: 0.5;
+}
+
+.tree-expandable-down::before {
+    transform: translate(-0.2em, 0.2em) rotate(90deg);
+}
+
+.tree-top-level {
+    margin: 0;
+    padding: 0;
+    display: block;
+}

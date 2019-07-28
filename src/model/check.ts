@@ -1,45 +1,58 @@
 import { Range } from 'vscode';
 import { DCollection } from '../diagnostic';
+import { isNumber } from 'util';
+import { Moment } from 'moment';
 
-const STATE_RUNNING = 'R';
-const STATE_SUCCESS = 'S';
-const STATE_ERROR = 'E';
+export enum CheckState {
+    Running = 'R',
+    Success = 'S',
+    Error = 'E'
+}
 
 export enum CheckStatus {
     NotStarted,
-    Started,
+    Starting,
     SanyParsing,
     SanyFinished,
     InitialStatesComputing,
-    InitialStatesComputed,
-    TemporalPropertiesChecking,
-    TemporalPropertiesChecked,
+    Checkpointing,
+    CheckingLiveness,
+    CheckingLivenessFinal,
+    ServerRunning,
+    WorkersRegistered,
     Finished
 }
 
-export const STATUS_NAMES = new Map<CheckStatus, string>();
+const STATUS_NAMES = new Map<CheckStatus, string>();
 STATUS_NAMES.set(CheckStatus.NotStarted, 'Not started');
-STATUS_NAMES.set(CheckStatus.Started, 'Started');
+STATUS_NAMES.set(CheckStatus.Starting, 'Starting');
 STATUS_NAMES.set(CheckStatus.SanyParsing, 'SANY parsing');
 STATUS_NAMES.set(CheckStatus.SanyFinished, 'SANY finished');
 STATUS_NAMES.set(CheckStatus.InitialStatesComputing, 'Computing initial states');
-STATUS_NAMES.set(CheckStatus.InitialStatesComputed, 'Initial states computed');
-STATUS_NAMES.set(CheckStatus.TemporalPropertiesChecking, 'Checking temporal properties');
-STATUS_NAMES.set(CheckStatus.TemporalPropertiesChecked, 'Temporal properties checked');
+STATUS_NAMES.set(CheckStatus.Checkpointing, 'Checkpointing');
+STATUS_NAMES.set(CheckStatus.CheckingLiveness, 'Checking liveness');
+STATUS_NAMES.set(CheckStatus.CheckingLivenessFinal, 'Checking final liveness');
+STATUS_NAMES.set(CheckStatus.ServerRunning, 'Master waiting for workers');
+STATUS_NAMES.set(CheckStatus.WorkersRegistered, 'Workers connected');
 STATUS_NAMES.set(CheckStatus.Finished, 'Finished');
+
+const STATE_NAMES = new Map<CheckState, string>();
+STATE_NAMES.set(CheckState.Running, '');
+STATE_NAMES.set(CheckState.Success, 'successfully');
+STATE_NAMES.set(CheckState.Error, 'with errors');
 
 /**
  * Statistics on initial state generation.
  */
 export class InitialStateStatItem {
-    readonly time: string;
+    readonly timeStamp: string;
     readonly diameter: number;
     readonly total: number;
     readonly distinct: number;
     readonly queueSize: number;
 
-    constructor(time: string, diameter: number, total: number, distinct: number, queueSize: number) {
-        this.time = time;
+    constructor(timeStamp: string, diameter: number, total: number, distinct: number, queueSize: number) {
+        this.timeStamp = timeStamp;
         this.diameter = diameter;
         this.total = total;
         this.distinct = distinct;
@@ -106,14 +119,14 @@ export class PrimitiveValue extends Value {
  * Value that is a collection of other values.
  */
 abstract class CollectionValue extends Value {
-    readonly values: Value[];
+    readonly items: Value[];
     readonly str: string;
 
-    constructor(values: Value[], prefix: string, postfix: string) {
+    constructor(items: Value[], prefix: string, postfix: string) {
         super();
-        this.values = values;
+        this.items = items;
         // TODO: trim to fit into 100 symbols
-        const valuesStr = this.values.map(v => v.toString()).join(', ');
+        const valuesStr = this.items.map(i => i.toString()).join(', ');
         this.str = prefix + valuesStr + postfix;
     }
 }
@@ -189,18 +202,30 @@ export class ErrorTraceItem {
  * Represents the state of a TLA model checking process.
  */
 export class ModelCheckResult {
-    readonly state: string;
+    static readonly EMPTY = new ModelCheckResult(
+        '', false, CheckStatus.Starting, null, [], [], [], [],
+        undefined, undefined, undefined, undefined, 0, undefined);
+
+    readonly modelName: string;
+    readonly state: CheckState;
+    readonly stateName: string;
     readonly success: boolean;
     readonly status: CheckStatus;
     readonly statusName: string;
     readonly processInfo: string | null;
-    readonly initialStatesStat: InitialStateStatItem[];
-    readonly coverageStat: CoverageItem[];
-    readonly errors: string[][];
-    readonly errorTrace: ErrorTraceItem[];
+    readonly initialStatesStat: ReadonlyArray<InitialStateStatItem>;
+    readonly coverageStat: ReadonlyArray<CoverageItem>;
+    readonly errors: ReadonlyArray<ReadonlyArray<string>>;
+    readonly errorTrace: ReadonlyArray<ErrorTraceItem>;
     readonly sanyMessages: DCollection | undefined;
+    readonly startDateTimeStr: string | undefined;
+    readonly endDateTimeStr: string | undefined;
+    readonly durationStr: string | undefined;
+    readonly workersCount: number;
+    readonly fingerprintCollisionProbability: string | undefined;
 
     constructor(
+        modelName: string,
         success: boolean,
         status: CheckStatus,
         processInfo: string | null,
@@ -208,21 +233,63 @@ export class ModelCheckResult {
         coverageStat: CoverageItem[],
         errors: string[][],
         errorTrace: ErrorTraceItem[],
-        sanyMessages: DCollection | undefined
+        sanyMessages: DCollection | undefined,
+        startDateTime: Moment | undefined,
+        endDateTime: Moment | undefined,
+        duration: number | undefined,
+        workersCount: number,
+        fingerprintCollisionProbability: string | undefined
     ) {
+        this.modelName = modelName;
         if (status === CheckStatus.Finished) {
-            this.state = success ? STATE_SUCCESS : STATE_ERROR;
+            this.state = success ? CheckState.Success : CheckState.Error;
         } else {
-            this.state = STATE_RUNNING;
+            this.state = CheckState.Running;
         }
+        this.stateName = getStateName(this.state);
         this.success = success;
         this.status = status;
-        this.statusName = STATUS_NAMES.get(status) || 'Working';
+        this.statusName = getStatusName(status);
         this.processInfo = processInfo;
         this.initialStatesStat = initialStatesStat;
         this.coverageStat = coverageStat;
         this.errors = errors;
         this.errorTrace = errorTrace;
         this.sanyMessages = sanyMessages;
+        this.startDateTimeStr = dateTimeToStr(startDateTime);
+        this.endDateTimeStr = dateTimeToStr(endDateTime);
+        this.durationStr = durationToStr(duration);
+        this.workersCount = workersCount;
+        this.fingerprintCollisionProbability = fingerprintCollisionProbability;
     }
+}
+
+function getStateName(state: CheckState): string {
+    const name = STATE_NAMES.get(state);
+    if (typeof name !== 'undefined') {
+        return name;
+    }
+    throw new Error(`Name not defined for check state ${state}`);
+}
+
+export function getStatusName(status: CheckStatus): string {
+    const name = STATUS_NAMES.get(status);
+    if (name) {
+        return name;
+    }
+    throw new Error(`Name not defined for check status ${status}`);
+}
+
+function dateTimeToStr(dateTime: Moment | undefined): string {
+    if (!dateTime) {
+        return 'not yet';
+    }
+    return dateTime.format('HH:mm:ss (MMM D)');
+}
+
+function durationToStr(dur: number | undefined): string {
+    if (!isNumber(dur)) {
+        return '';
+    }
+    return dur + ' msec';
 }

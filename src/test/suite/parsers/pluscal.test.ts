@@ -4,12 +4,11 @@ import { beforeEach } from 'mocha';
 import { TranspilerStdoutParser } from '../../../parsers/pluscal';
 import { pathToUri } from '../../../common';
 import { applyDCollection } from '../../../diagnostic';
-
-const dc = vscode.languages.createDiagnosticCollection('tlaplus');
+import { getTlaDiagnostics } from './testUtils';
 
 suite('PlusCal Transpiler Output Parser Test Suite', () => {
     beforeEach(() => {
-        dc.clear();
+        getTlaDiagnostics().clear();
     });
 
     test('No errors on successfull run', () => {
@@ -59,7 +58,7 @@ function assertOutput(out: string, filePath: string, expected: vscode.Diagnostic
     const outLines = out.split('\n');
     const parser = new TranspilerStdoutParser(outLines, filePath);
     const dCol = parser.readAllSync();
-    applyDCollection(dCol, dc);
-    const diagnostics = dc.get(pathToUri(filePath));
+    applyDCollection(dCol, getTlaDiagnostics());
+    const diagnostics = getTlaDiagnostics().get(pathToUri(filePath));
     assert.deepEqual(diagnostics, expected);
 }

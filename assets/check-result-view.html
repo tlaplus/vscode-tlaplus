@@ -1,104 +1,57 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<style>
-    .state-R {
-        color: #36f;
-    }
-    .state-S {
-        color: #093;
-    }
-    .state-E {
-        color: #d33;
-    }
-</style>
+<link rel="stylesheet" type="text/css" href="${assetsPath}/check-result-view.css">
 <title>Model checking</title>
 </head>
 <body>
-    <h2>Status</h2>
-    <p><span id="check-status">-</span></p>
-    <h2>States</h2>
-    <table>
+  <section>
+    <h1>Status</h1>
+    <p><span id="check-status">-</span> <span id="check-status-details">-</span></p>
+    <p>Start: <span id="time-start">-</span>, end: <span id="time-end">-</span></p>
+  </section>
+  <section>
+    <div class="section-block states-stat">
+      <h1>States</h1>
+      <table>
         <thead>
-            <tr>
-                <td>Time</td>
-                <td>Diameter</td>
-                <td>Found</td>
-                <td>Distinct</td>
-                <td>Queue</td>
-            </tr>
-        </thead>
-        <tbody id="states-stat">
-        </tbody>
-    </table>
-    <h2>Coverage</h2>
-    <table>
+         <tr>
+           <td>Time</td>
+           <td class="val-col">Diameter</td>
+           <td class="val-col">Found</td>
+           <td class="val-col">Distinct</td>
+           <td class="val-col">Queue</td>
+         </tr>
+       </thead>
+       <tbody id="states-stat" />
+      </table>
+    </div>
+    <div class="section-block coverage-stat">
+      <h1>Coverage</h1>
+      <table>
         <thead>
-            <tr>
-                <td>Module</td>
-                <td>Action</td>
-                <td>Location</td>
-                <td>Total</td>
-                <td>Distinct</td>
-            </tr>
+          <tr>
+            <td>Module</td>
+            <td>Action</td>
+            <td class="val-col">Total</td>
+            <td class="val-col">Distinct</td>
+          </tr>
         </thead>
-        <tbody id="coverage-stat">
-        </tbody>
-    </table>
-    <h2>Errors</h2>
-    <p id="errors">-</p>
-    <h2>Error Trace</h2>
-    <table>
-        <thead>
-            <tr>
-                <td>Name</td>
-                <td>Value</td>
-            </tr>
-        </thead>
-        <tbody id="error-trace">
-        </tbody>
-    </table>
-    </body>
-<script>
-    const vscode = acquireVsCodeApi();
-
-    const elStatus = document.getElementById('check-status');
-    const elStatesStat = document.getElementById('states-stat');
-    const elCoverageStat = document.getElementById('coverage-stat');
-    const elErrors = document.getElementById('errors');
-    const elErrorTrace = document.getElementById('error-trace');
-
-    const prevState = vscode.getState();
-    if (prevState) {
-        updateCheckResult(prevState.checkResult);
-    }
-
-    function updateCheckResult(res) {
-        elStatus.textContent = res.statusName + ' : ' + res.state;
-        elStatus.classList = ['state-' + res.state];
-        elStatesStat.innerHTML = res.initialStatesStat
-            .map(s => `<tr><td>${s.time}</td><td>${s.diameter}</td><td>${s.total}</td><td>${s.distinct}</td><td>${s.queueSize}</td></tr>`)
-            .join('');
-        elCoverageStat.innerHTML = res.coverageStat
-            .map(s => `<tr><td>${s.module}</td><td>${s.action}</td><td>${s.location}</td><td>${s.total}</td><td>${s.distinct}</td></tr>`)
-            .join('');
-        elErrors.innerText = res.errors
-            .map(e => e.join('\n'))
-            .join('');
-        const errTraceRows = [];
-        res.errorTrace.forEach(item => {
-            errTraceRows.push(`<tr><td colspan='2'><b>${item.num}: ${item.title}</b></td></tr>`);
-            item.variables.forEach(v => {
-                errTraceRows.push(`<tr><td>${v.name}</td><td>${v.value.str}</td></tr>`);
-            });
-        });
-        elErrorTrace.innerHTML = errTraceRows.join('');
-    }
-
-    window.addEventListener('message', event => {
-        updateCheckResult(event.data.checkResult);
-        vscode.setState(event.data);
-    });
-</script>
+        <tbody id="coverage-stat"/>
+      </table>
+    </div>
+  </section>
+  <section id="errors" class="hidden">
+    <h1>Errors</h1>
+    <div id="errors-list" />
+  </section>
+  <section id="error-trace" class="hidden">
+    <h1>Error Trace</h1>
+    <ul id="error-trace-items" class="tree-nodes tree-top-level"/>
+  </section>
+</body>
+</html>
+<script src="${assetsPath}/check-result-view.js" />

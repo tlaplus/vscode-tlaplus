@@ -18,7 +18,6 @@ export class SanyStdoutParser extends ProcessOutputParser {
     }
 
     protected parseLine(line: string | null): void {
-        // console.log('sany> ' + (line === null ? ':END:' : line));
         if (line === null || line === '') {
             return;
         }

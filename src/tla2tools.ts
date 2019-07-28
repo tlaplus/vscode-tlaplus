@@ -61,12 +61,16 @@ export abstract class ProcessOutputParser {
             throw new ParsingError('Cannot parse synchronously because the source is not a set of lines');
         }
         this.lines.forEach(l => {
-            this.parseLine(l);
+            this.tryParseLine(l);
         });
         return this.dCol;
     }
 
     protected abstract parseLine(line: string | null): void;
+
+    protected handleError(err: any) {
+        // Do nothing by default
+    }
 
     protected addDiagnosticFilePath(filePath: string) {
         this.dCol.addFilePath(filePath);
@@ -86,7 +90,8 @@ export abstract class ProcessOutputParser {
             throw new Error('Stream is closed.');
         }
         if (chunk === null) {
-            this.parseLine(this.buf);
+            console.log(':END:');
+            this.tryParseLine(this.buf);
             this.buf = null;
             this.closed = true;
             if (this.resolve) {
@@ -104,7 +109,19 @@ export abstract class ProcessOutputParser {
             this.buf = lines.pop() || null;
         }
         const me = this;
-        lines.forEach(l => me.parseLine(l));
+        lines.forEach(line => {
+            console.log('> ' + line);
+            me.tryParseLine(line);
+        });
+    }
+
+    private tryParseLine(line: string | null) {
+        try {
+            this.parseLine(line);
+        } catch (err) {
+            this.handleError(err);
+            console.log(`Error parsing output line: ${err}`);
+        }
     }
 }
 
