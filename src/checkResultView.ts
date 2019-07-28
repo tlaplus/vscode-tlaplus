@@ -6,7 +6,8 @@ import { ModelCheckResult } from './model/check';
 // Cached HTML template for the WebView
 let viewHtml: string | undefined;
 let viewPanel: vscode.WebviewPanel | undefined;
-let missingCheckResult: ModelCheckResult | null;
+let missing: boolean;
+let lastCheckResult: ModelCheckResult | undefined;
 let panelIsVisible = false;
 
 export function updateCheckResultView(checkResult: ModelCheckResult) {
@@ -14,20 +15,30 @@ export function updateCheckResultView(checkResult: ModelCheckResult) {
         viewPanel.webview.postMessage({
             checkResult: checkResult
         });
-        missingCheckResult = null;
+        missing = false;
     } else {
-        missingCheckResult = checkResult;
+        missing = true;
     }
+    lastCheckResult = checkResult;
 }
 
-export function revealCheckResultView(checkResult: ModelCheckResult, extContext: vscode.ExtensionContext) {
+export function revealEmptyCheckResultView(extContext: vscode.ExtensionContext) {
+    doRevealCheckResultView(extContext);
+    updateCheckResultView(ModelCheckResult.EMPTY);
+}
+
+export function revealCheckResultView(extContext: vscode.ExtensionContext) {
+    doRevealCheckResultView(extContext);
+    updateCheckResultView(lastCheckResult ? lastCheckResult : ModelCheckResult.EMPTY);
+}
+
+function doRevealCheckResultView(extContext: vscode.ExtensionContext) {
     if (!viewPanel) {
         createNewPanel();
         ensurePanelBody(extContext);
     } else {
         viewPanel.reveal();
     }
-    updateCheckResultView(checkResult);
 }
 
 function createNewPanel() {
@@ -45,9 +56,9 @@ function createNewPanel() {
         viewPanel = undefined;
     });
     viewPanel.onDidChangeViewState(e => {
-        if (e.webviewPanel.visible && !panelIsVisible && missingCheckResult) {
+        if (e.webviewPanel.visible && !panelIsVisible && missing && lastCheckResult) {
             // Show what has been missed while the panel was invisible
-            updateCheckResultView(missingCheckResult);
+            updateCheckResultView(lastCheckResult);
         }
         panelIsVisible = e.webviewPanel.visible;
     });
