@@ -49,7 +49,7 @@ function createNewPanel() {
         vscode.ViewColumn.Beside,
         {
             enableScripts: true,
-            localResourceRoots: [vscode.Uri.file(path.resolve(__dirname, '../assets'))]
+            localResourceRoots: [vscode.Uri.file(path.resolve(__dirname, '../resources'))]
         }
     );
     viewPanel.onDidDispose(() => {
@@ -69,13 +69,13 @@ function ensurePanelBody(extContext: vscode.ExtensionContext) {
     if (!viewPanel) {
         return;
     }
-    const assetsDiskPath = vscode.Uri.file(
-        path.join(extContext.extensionPath, 'assets')
+    const resourcesDiskPath = vscode.Uri.file(
+        path.join(extContext.extensionPath, 'resources')
     );
-    const assetsPath = assetsDiskPath.with({ scheme: 'vscode-resource' });
+    const resourcesPath = resourcesDiskPath.with({ scheme: 'vscode-resource' });
     if (!viewHtml) {
-        viewHtml = fs.readFileSync(path.join(assetsPath.fsPath, 'check-result-view.html'), 'utf8');
+        viewHtml = fs.readFileSync(path.join(resourcesPath.fsPath, 'check-result-view.html'), 'utf8');
     }
-    viewHtml = viewHtml.replace(/\${assetsPath}/g, String(assetsPath));
+    viewHtml = viewHtml.replace(/\${resourcesPath}/g, String(resourcesPath));
     viewPanel.webview.html = viewHtml;
 }

@@ -41,25 +41,26 @@ async function doCheckModel(
     diagnostic: vscode.DiagnosticCollection
 ) {
     try {
-        showStatusBarItem();
+        updateStatusBarItem(true);
         checkProcess = runTool('tlc2.TLC', fileUri.fsPath, ['-modelcheck', '-coverage', '1', '-tool']);
         checkProcess.on('close', () => {
             checkProcess = undefined;
+            updateStatusBarItem(false);
         });
         revealEmptyCheckResultView(extContext);
         const stdoutParser = new TLCModelCheckerStdoutParser(
             checkProcess.stdout, fileUri.fsPath, updateCheckResultView);
         const dCol = await stdoutParser.readAll();
         applyDCollection(dCol, diagnostic);
-    } catch (e) {
+    } catch (err) {
         statusBarItem.hide();
-        vscode.window.showErrorMessage(e.message);
+        vscode.window.showErrorMessage(err.message);
     }
 }
 
-function showStatusBarItem() {
-    statusBarItem.text = 'TLC';
-    statusBarItem.tooltip = 'TLA+ model checking is in progress';
+function updateStatusBarItem(active: boolean) {
+    statusBarItem.text = 'TLC' + (active ? '\u25BA' : '');
+    statusBarItem.tooltip = 'TLA+ model checking' + (active ? ' is in progress' : ' result');
     statusBarItem.command = CMD_CHECK_MODEL_DISPLAY;
     statusBarItem.show();
 }
