@@ -26,11 +26,12 @@
     ],
     "activationEvents": [
         "onLanguage:tlaplus",
-        "onCommand:extension.tlaplus.pluscal.transpile"
+        "onCommand:extension.tlaplus.pluscal.transpile",
+        "tlaplus.model.check"
     ],
     "main": "./out/main.js",
     "filse": [
-        "assets",
+        "resources",
         "tools"
     ],
     "contributes": {
@@ -91,6 +92,11 @@
                 "command": "tlaplus.model.check",
                 "title": "Check model",
                 "category": "TLA+"
+            },
+            {
+                "command": "tlaplus.model.check.display",
+                "title": "Display model checking panel",
+                "category": "TLA+"
             }
         ],
         "snippets": [
@@ -109,6 +115,10 @@
                 {
                     "command": "tlaplus.model.check",
                     "when": "editorLangId == tlaplus"
+                },
+                {
+                    "command": "tlaplus.model.check.display",
+                    "when": "false"
                 }
             ]
         },

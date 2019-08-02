@@ -1,9 +1,15 @@
 import * as vscode from 'vscode';
 import { runTool } from '../tla2tools';
 import { TLCModelCheckerStdoutParser } from '../parsers/tlc';
-import { revealCheckResultView, updateCheckResultView } from '../checkResultView';
+import { revealCheckResultView, updateCheckResultView, revealEmptyCheckResultView } from '../checkResultView';
 import { applyDCollection } from '../diagnostic';
-import { ModelCheckResult } from '../model/check';
+import { ChildProcess } from 'child_process';
+
+export const CMD_CHECK_MODEL = 'tlaplus.model.check';
+export const CMD_CHECK_MODEL_DISPLAY = 'tlaplus.model.check.display';
+
+let checkProcess: ChildProcess | undefined;
+const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);
 
 /**
  * Runs TLC on a TLA+ specification.
@@ -22,18 +28,39 @@ export function checkModel(diagnostic: vscode.DiagnosticCollection, extContext: 
     doCheckModel(editor.document.uri, extContext, diagnostic);
 }
 
+/**
+ * Reveals model checking view panel.
+ */
+export function displayModelChecking(extContext: vscode.ExtensionContext) {
+    revealCheckResultView(extContext);
+}
+
 async function doCheckModel(
     fileUri: vscode.Uri,
     extContext: vscode.ExtensionContext,
     diagnostic: vscode.DiagnosticCollection
 ) {
     try {
-        const proc = runTool('tlc2.TLC', fileUri.fsPath, ['-modelcheck', '-coverage', '1', '-tool']);
-        revealCheckResultView(ModelCheckResult.EMPTY, extContext);
-        const stdoutParser = new TLCModelCheckerStdoutParser(proc.stdout, fileUri.fsPath, updateCheckResultView);
+        updateStatusBarItem(true);
+        checkProcess = runTool('tlc2.TLC', fileUri.fsPath, ['-modelcheck', '-coverage', '1', '-tool']);
+        checkProcess.on('close', () => {
+            checkProcess = undefined;
+            updateStatusBarItem(false);
+        });
+        revealEmptyCheckResultView(extContext);
+        const stdoutParser = new TLCModelCheckerStdoutParser(
+            checkProcess.stdout, fileUri.fsPath, updateCheckResultView);
         const dCol = await stdoutParser.readAll();
         applyDCollection(dCol, diagnostic);
-    } catch (e) {
-        vscode.window.showErrorMessage(e.message);
+    } catch (err) {
+        statusBarItem.hide();
+        vscode.window.showErrorMessage(err.message);
     }
+}
+
+function updateStatusBarItem(active: boolean) {
+    statusBarItem.text = 'TLC' + (active ? '\u25BA' : '');
+    statusBarItem.tooltip = 'TLA+ model checking' + (active ? ' is in progress' : ' result');
+    statusBarItem.command = CMD_CHECK_MODEL_DISPLAY;
+    statusBarItem.show();
 }

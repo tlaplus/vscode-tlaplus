@@ -6,6 +6,8 @@ import { runTool } from '../tla2tools';
 
 // TODO: handle exit codes in parsers to catch tooling problems
 
+export const CMD_PARSE_MODULE = 'tlaplus.parse';
+
 /**
  * Parses .tla module:
  * - Transpiles PlusCal to TLA+
