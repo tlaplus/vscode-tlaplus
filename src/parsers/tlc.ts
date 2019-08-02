@@ -2,12 +2,13 @@ import { Range } from 'vscode';
 import { ProcessOutputParser } from '../tla2tools';
 import { Readable } from 'stream';
 import { CheckStatus, ModelCheckResult, InitialStateStatItem, CoverageItem, ErrorTraceItem,
-    VariableValue } from '../model/check';
+    VariableValue, CheckState} from '../model/check';
 import { parseValueLines } from './tlcValues';
 import { SanyStdoutParser } from './sany';
 import { DCollection } from '../diagnostic';
 import { pathToModuleName, parseDateTime } from '../common';
 import * as moment from 'moment/moment';
+import { clearTimeout } from 'timers';
 
 const STATUS_EMIT_TIMEOUT = 500;    // msec
 
@@ -63,11 +64,14 @@ export class TLCModelCheckerStdoutParser extends ProcessOutputParser {
             this.checkResultBuilder.addLine(line);
             this.scheduleUpdate();
         } else {
+            this.checkResultBuilder.handleStop();
             // Copy SANY messages
             const dCol = this.checkResultBuilder.getSanyMessages();
             if (dCol) {
                 this.addDiagnosticCollection(dCol);
             }
+            // Issue the last update
+            this.issueUpdate();
         }
     }
 
@@ -88,9 +92,16 @@ export class TLCModelCheckerStdoutParser extends ProcessOutputParser {
         }
         const me = this;
         this.timer = setTimeout(() => {
-            me.handler(me.checkResultBuilder.build());
-            me.timer = undefined;
+            me.issueUpdate();
         }, timeout);
+    }
+
+    private issueUpdate() {
+        if (this.timer) {
+            clearTimeout(this.timer);
+        }
+        this.handler(this.checkResultBuilder.build());
+        this.timer = undefined;
     }
 }
 
@@ -99,7 +110,7 @@ export class TLCModelCheckerStdoutParser extends ProcessOutputParser {
  */
 class ModelCheckResultBuilder {
     private modelName: string;
-    private success: boolean = false;
+    private state: CheckState = CheckState.Running;
     private status: CheckStatus = CheckStatus.NotStarted;
     private startDateTime: moment.Moment | undefined;
     private endDateTime: moment.Moment | undefined;
@@ -145,6 +156,13 @@ class ModelCheckResultBuilder {
         }
     }
 
+    handleStop() {
+        if (this.status !== CheckStatus.Finished) {
+            // The process wasn't finished as expected, hence it was stopped manually
+            this.state = CheckState.Stopped;
+        }
+    }
+
     handleError(_: any) {
         this.resetMessage();
     }
@@ -152,7 +170,7 @@ class ModelCheckResultBuilder {
     build(): ModelCheckResult {
         return new ModelCheckResult(
             this.modelName,
-            this.success,
+            this.state,
             this.status,
             this.processInfo,
             this.initialStatesStat,
@@ -241,12 +259,15 @@ class ModelCheckResultBuilder {
                 this.parseErrorTraceItem();
                 break;
             case TLC_SUCCESS:
-                this.success = true;
                 this.parseSuccess();
+                this.state = CheckState.Success;
                 break;
             case TLC_FINISHED:
                 this.status = CheckStatus.Finished;
                 this.parseFinished();
+                if (this.state !== CheckState.Success) {
+                    this.state = CheckState.Error;
+                }
                 break;
         }
         this.resetMessage();
@@ -301,9 +322,8 @@ class ModelCheckResultBuilder {
     }
 
     private parseSanyOutput() {
-        const sany = new SanyStdoutParser(this.sanyBuffer);
+        const sany = new SanyStdoutParser(this.msgBuffer);
         this.sanyMessages = sany.readAllSync();
-        this.sanyBuffer = [];
     }
 
     private parseInitialStatesComputed() {

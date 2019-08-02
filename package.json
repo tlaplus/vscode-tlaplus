@@ -26,8 +26,8 @@
     ],
     "activationEvents": [
         "onLanguage:tlaplus",
-        "onCommand:extension.tlaplus.pluscal.transpile",
-        "tlaplus.model.check"
+        "onCommand:tlaplus.pluscal.transpile",
+        "onCommand:tlaplus.model.check.run"
     ],
     "main": "./out/main.js",
     "filse": [
@@ -89,8 +89,13 @@
                 "category": "TLA+"
             },
             {
-                "command": "tlaplus.model.check",
+                "command": "tlaplus.model.check.run",
                 "title": "Check model",
+                "category": "TLA+"
+            },
+            {
+                "command": "tlaplus.model.check.stop",
+                "title": "Stop model checking process",
                 "category": "TLA+"
             },
             {
@@ -113,8 +118,12 @@
                     "when": "editorLangId == tlaplus"
                 },
                 {
-                    "command": "tlaplus.model.check",
+                    "command": "tlaplus.model.check.run",
                     "when": "editorLangId == tlaplus"
+                },
+                {
+                    "command": "tlaplus.model.check.stop",
+                    "when": "false"
                 },
                 {
                     "command": "tlaplus.model.check.display",

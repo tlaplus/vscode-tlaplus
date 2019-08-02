@@ -1,11 +1,12 @@
 import * as vscode from 'vscode';
-import { runTool } from '../tla2tools';
+import { runTool, stopProcess } from '../tla2tools';
 import { TLCModelCheckerStdoutParser } from '../parsers/tlc';
 import { revealCheckResultView, updateCheckResultView, revealEmptyCheckResultView } from '../checkResultView';
 import { applyDCollection } from '../diagnostic';
 import { ChildProcess } from 'child_process';
 
-export const CMD_CHECK_MODEL = 'tlaplus.model.check';
+export const CMD_CHECK_MODEL_RUN = 'tlaplus.model.check.run';
+export const CMD_CHECK_MODEL_STOP = 'tlaplus.model.check.stop';
 export const CMD_CHECK_MODEL_DISPLAY = 'tlaplus.model.check.display';
 
 let checkProcess: ChildProcess | undefined;
@@ -33,6 +34,15 @@ export function checkModel(diagnostic: vscode.DiagnosticCollection, extContext: 
  */
 export function displayModelChecking(extContext: vscode.ExtensionContext) {
     revealCheckResultView(extContext);
+}
+
+/**
+ * Stops the current model checking process.
+ */
+export function stopModelChecking() {
+    if (checkProcess) {
+        stopProcess(checkProcess);
+    }
 }
 
 async function doCheckModel(

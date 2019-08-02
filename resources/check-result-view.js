@@ -14,6 +14,12 @@ function displayCheckResult(data) {
     displayErrorTrace(res.errorTrace, data);
 }
 
+function stopProcess() {
+    vscode.postMessage({
+        command: 'stop'
+    });
+}
+
 /**
  * Recieves data from the extension.
  */
@@ -25,14 +31,27 @@ window.addEventListener('message', event => {
 function displayStatus(result) {
     const elTimeStart = document.getElementById('time-start');
     const elTimeEnd = document.getElementById('time-end');
+    const elState = document.getElementById('check-state');
     const elStatus = document.getElementById('check-status');
     const elStatusDetails = document.getElementById('check-status-details');
+    const elCmdStop = document.getElementById('cmd-stop');
     elTimeStart.textContent = result.startDateTimeStr;
     elTimeEnd.textContent = result.endDateTimeStr;
-    elStatus.textContent = `${result.statusName} ${result.stateName}`;
-    const fcp = result.fingerprintCollisionProbability ? `Fingerprint collission probability: ${result.fingerprintCollisionProbability}` : '';
-    elStatusDetails.textContent = result.state !== 'R' ? fcp : '';
-    elStatus.classList = ['state-' + result.state];
+    elState.textContent = result.stateName;
+    elState.classList = ['state-' + result.state];
+    elStatus.textContent = ': ' + result.statusName;
+    if (result.state === 'R') {
+        // Still running
+        elStatus.classList = [];
+        elStatusDetails.classList = ['hidden'];
+        elCmdStop.classList = [];
+    } else {
+        const fcp = result.fingerprintCollisionProbability ? `Fingerprint collission probability: ${result.fingerprintCollisionProbability}` : '';
+        elStatus.classList = ['hidden'];
+        elStatusDetails.textContent = fcp;
+        elStatusDetails.classList = fcp ? [] : ['hidden'];
+        elCmdStop.classList = ['hidden'];
+    }
 }
 
 function displayStatesStat(stat) {
