@@ -1,12 +1,12 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { ProcessOutputParser } from '../tla2tools';
+import { TLAToolParser } from './base';
 import { Readable } from 'stream';
 
 /**
  * Parses stdout of TLA+ code parser.
  */
-export class SanyStdoutParser extends ProcessOutputParser {
+export class SanyStdoutParser extends TLAToolParser {
     modPaths: Map<string, string> = new Map();
     curFilePath: string | undefined = undefined;
     errBlock: string = 'no';                // no, errors, parse_errors
