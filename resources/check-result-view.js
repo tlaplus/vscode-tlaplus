@@ -12,6 +12,7 @@ function displayCheckResult(data) {
     displayCoverage(res.coverageStat);
     displayErrors(res.errors);
     displayErrorTrace(res.errorTrace, data);
+    displayOutput(res.outputLines);
 }
 
 function stopProcess() {
@@ -167,6 +168,35 @@ function displayVariable(elParent, name, value, state) {
         elVar.appendChild(elSubList);
     }
     elParent.appendChild(elVar);
+}
+
+function displayOutput(lines) {
+    const elOutput = document.getElementById('output');
+    const elLines = document.getElementById('output-lines');
+    removeAllChildren(elLines);
+    if (!lines || lines.length === 0) {
+        elOutput.classList = ['hidden'];
+        return;
+    }
+    elOutput.classList = [];
+    lines.forEach(line => {
+        const elLine = document.createElement('p');
+        elLine.classList = ['output-line'];
+        let elText;
+        if (line.count === 1) {
+            elText = elLine;
+        } else {
+            elText = document.createElement('span');
+            elLine.appendChild(elText);
+            elCount = document.createElement('span');
+            elCount.classList = ['output-line-count'];
+            elCount.innerText = String(line.count);
+            elCount.setAttribute('title', 'Number of consecutive occurrences');
+            elLine.appendChild(elCount);
+        }
+        elText.innerText = line.text;
+        elLines.appendChild(elLine);
+    });
 }
 
 function num(n) {

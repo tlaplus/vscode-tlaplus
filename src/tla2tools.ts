@@ -63,6 +63,7 @@ export abstract class ProcessOutputParser {
         this.lines.forEach(l => {
             this.tryParseLine(l);
         });
+        this.tryParseLine(null);
         return this.dCol;
     }
 

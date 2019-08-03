@@ -156,12 +156,26 @@ export class ErrorTraceItem {
 }
 
 /**
+ * An output line produced by Print/PrintT along with the number of consecutive occurrences.
+ */
+export class OutputLine {
+    count: number = 1;
+
+    constructor(readonly text: string) {
+    }
+
+    increment() {
+        this.count += 1;
+    }
+}
+
+/**
  * Represents the state of a TLA model checking process.
  */
 export class ModelCheckResult {
     static readonly EMPTY = new ModelCheckResult(
-        '', CheckState.Running, CheckStatus.Starting, null, [], [], [], [],
-        undefined, undefined, undefined, undefined, 0, undefined);
+        '', CheckState.Running, CheckStatus.Starting, undefined, [], [], [], [],
+        undefined, undefined, undefined, undefined, 0, undefined, []);
 
     readonly stateName: string;
     readonly statusName: string;
@@ -173,7 +187,7 @@ export class ModelCheckResult {
         readonly modelName: string,
         readonly state: CheckState,
         readonly status: CheckStatus,
-        readonly processInfo: string | null,
+        readonly processInfo: string | undefined,
         readonly initialStatesStat: InitialStateStatItem[],
         readonly coverageStat: CoverageItem[],
         readonly errors: string[][],
@@ -183,7 +197,8 @@ export class ModelCheckResult {
         readonly endDateTime: Moment | undefined,
         readonly duration: number | undefined,
         readonly workersCount: number,
-        readonly fingerprintCollisionProbability: string | undefined
+        readonly fingerprintCollisionProbability: string | undefined,
+        readonly outputLines: OutputLine[]
     ) {
         this.stateName = getStateName(this.state);
         this.statusName = getStatusName(status);
