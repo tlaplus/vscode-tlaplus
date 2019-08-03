@@ -1,0 +1,6 @@
+src/**/*
+out/test/
+**/*.map
+**/tsconfig.json
+**/tslint.json
+**/*.code-workspace

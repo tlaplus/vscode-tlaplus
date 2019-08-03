@@ -1,9 +1,10 @@
 # Change Log
 
-All notable changes to the "tlaplus" extension will be documented in this file.
+## 0.1.0 &ndash; 3rd August, 2019
 
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
+### Initial release
 
-## [Unreleased]
-
-- Initial release
+* TLA<sup>+</sup> and PlusCal syntax higlight.
+* PlusCal-to-TLA<sup>+</sup> translation and parsing.
+* Running TLC model checker.
+* Display model check results.
