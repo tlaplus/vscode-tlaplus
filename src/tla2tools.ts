@@ -131,23 +131,21 @@ export abstract class ProcessOutputParser {
 export function runTool(
     toolName: string,
     filePath: string,
-    toolArgs?: string[],
-    token?: vscode.CancellationToken
+    toolArgs?: string[]
 ): cp.ChildProcess {
-/*
-    let p: cp.ChildProcess;
-    if (token) {
-        token.onCancellationRequested(() => {
-            if (p) {
-                killProcessTree(p.pid);
-            }
-        });
-    }
-*/
     const javaPath = buildJavaPath();
     const eArgs = ['-XX:+UseParallelGC', '-cp', toolsJarPath, toolName].concat(toolArgs || []);
     eArgs.push(filePath);
     return cp.spawn(javaPath, eArgs, { cwd: path.dirname(filePath) });
+}
+
+/**
+ * Kills the given process.
+ */
+export function stopProcess(p: cp.ChildProcess) {
+    if (!p.killed) {
+        p.kill('SIGINT');
+    }
 }
 
 export function reportBrokenToolchain(err: any) {
@@ -167,23 +165,3 @@ function buildJavaPath(): string {
     }
     return javaPath;
 }
-/*
-function killProcessTree(processId: number): void {
-    if (process.platform === 'win32') {
-        const TASK_KILL = 'C:\\Windows\\System32\\taskkill.exe';
-        // when killing a process in Windows its child processes are *not* killed but become root processes.
-        // Therefore we use TASKKILL.EXE
-        try {
-            cp.execSync(`${TASK_KILL} /F /T /PID ${processId}`);
-        } catch (err) {
-        }
-    } else {
-        // on linux and OS X we kill all direct and indirect child processes as well
-        try {
-            const cmd = path.join(__dirname, '../../../scripts/terminateProcess.sh');
-            cp.spawnSync(cmd, [processId.toString()]);
-        } catch (err) {
-        }
-    }
-}
-*/

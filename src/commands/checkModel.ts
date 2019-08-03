@@ -1,11 +1,12 @@
 import * as vscode from 'vscode';
-import { runTool } from '../tla2tools';
+import { runTool, stopProcess } from '../tla2tools';
 import { TLCModelCheckerStdoutParser } from '../parsers/tlc';
 import { revealCheckResultView, updateCheckResultView, revealEmptyCheckResultView } from '../checkResultView';
 import { applyDCollection } from '../diagnostic';
 import { ChildProcess } from 'child_process';
 
-export const CMD_CHECK_MODEL = 'tlaplus.model.check';
+export const CMD_CHECK_MODEL_RUN = 'tlaplus.model.check.run';
+export const CMD_CHECK_MODEL_STOP = 'tlaplus.model.check.stop';
 export const CMD_CHECK_MODEL_DISPLAY = 'tlaplus.model.check.display';
 
 let checkProcess: ChildProcess | undefined;
@@ -15,6 +16,13 @@ const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignmen
  * Runs TLC on a TLA+ specification.
  */
 export function checkModel(diagnostic: vscode.DiagnosticCollection, extContext: vscode.ExtensionContext) {
+    if (checkProcess) {
+        vscode.window.showWarningMessage(
+                'Another model checking process is currently running',
+                'Show currently running process'
+            ).then(() => revealCheckResultView(extContext));
+        return;
+    }
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
         vscode.window.showWarningMessage('No editor is active, cannot find a TLA+ model to check');
@@ -33,6 +41,17 @@ export function checkModel(diagnostic: vscode.DiagnosticCollection, extContext: 
  */
 export function displayModelChecking(extContext: vscode.ExtensionContext) {
     revealCheckResultView(extContext);
+}
+
+/**
+ * Stops the current model checking process.
+ */
+export function stopModelChecking() {
+    if (checkProcess) {
+        stopProcess(checkProcess);
+    } else {
+        vscode.window.showInformationMessage("There're no currently running model checking processes");
+    }
 }
 
 async function doCheckModel(
@@ -60,7 +79,7 @@ async function doCheckModel(
 
 function updateStatusBarItem(active: boolean) {
     statusBarItem.text = 'TLC' + (active ? '\u25BA' : '');
-    statusBarItem.tooltip = 'TLA+ model checking' + (active ? ' is in progress' : ' result');
+    statusBarItem.tooltip = 'TLA+ model checking' + (active ? ' is running' : ' result');
     statusBarItem.command = CMD_CHECK_MODEL_DISPLAY;
     statusBarItem.show();
 }

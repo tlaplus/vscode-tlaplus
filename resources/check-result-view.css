@@ -21,11 +21,15 @@ thead {
 }
 
 .state-R {
-    color: #39f;
+    color: var(--vscode-foreground);
+}
+
+.state-X {
+    color: var(--vscode-foreground);
 }
 
 .state-S {
-    color: #093;
+    color: var(--vscode-foreground);
 }
 
 .state-E {

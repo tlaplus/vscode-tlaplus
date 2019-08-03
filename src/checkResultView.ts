@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { ModelCheckResult } from './model/check';
+import { CMD_CHECK_MODEL_STOP } from './commands/checkModel';
 
 // Cached HTML template for the WebView
 let viewHtml: string | undefined;
@@ -61,6 +62,11 @@ function createNewPanel() {
             updateCheckResultView(lastCheckResult);
         }
         panelIsVisible = e.webviewPanel.visible;
+    });
+    viewPanel.webview.onDidReceiveMessage(message => {
+        if (message.command === 'stop') {
+            vscode.commands.executeCommand(CMD_CHECK_MODEL_STOP);
+        }
     });
     panelIsVisible = true;
 }

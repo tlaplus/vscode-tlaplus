@@ -6,7 +6,8 @@ import { Moment } from 'moment';
 export enum CheckState {
     Running = 'R',
     Success = 'S',
-    Error = 'E'
+    Error = 'E',
+    Stopped = 'X'
 }
 
 export enum CheckStatus {
@@ -37,9 +38,10 @@ STATUS_NAMES.set(CheckStatus.WorkersRegistered, 'Workers connected');
 STATUS_NAMES.set(CheckStatus.Finished, 'Finished');
 
 const STATE_NAMES = new Map<CheckState, string>();
-STATE_NAMES.set(CheckState.Running, '');
-STATE_NAMES.set(CheckState.Success, 'successfully');
-STATE_NAMES.set(CheckState.Error, 'with errors');
+STATE_NAMES.set(CheckState.Running, 'Running');
+STATE_NAMES.set(CheckState.Success, 'Success');
+STATE_NAMES.set(CheckState.Error, 'Errors');
+STATE_NAMES.set(CheckState.Stopped, 'Stopped');
 
 /**
  * Statistics on initial state generation.
@@ -203,13 +205,12 @@ export class ErrorTraceItem {
  */
 export class ModelCheckResult {
     static readonly EMPTY = new ModelCheckResult(
-        '', false, CheckStatus.Starting, null, [], [], [], [],
+        '', CheckState.Running, CheckStatus.Starting, null, [], [], [], [],
         undefined, undefined, undefined, undefined, 0, undefined);
 
     readonly modelName: string;
     readonly state: CheckState;
     readonly stateName: string;
-    readonly success: boolean;
     readonly status: CheckStatus;
     readonly statusName: string;
     readonly processInfo: string | null;
@@ -226,7 +227,7 @@ export class ModelCheckResult {
 
     constructor(
         modelName: string,
-        success: boolean,
+        state: CheckState,
         status: CheckStatus,
         processInfo: string | null,
         initialStatesStat: InitialStateStatItem[],
@@ -241,13 +242,8 @@ export class ModelCheckResult {
         fingerprintCollisionProbability: string | undefined
     ) {
         this.modelName = modelName;
-        if (status === CheckStatus.Finished) {
-            this.state = success ? CheckState.Success : CheckState.Error;
-        } else {
-            this.state = CheckState.Running;
-        }
+        this.state = state;
         this.stateName = getStateName(this.state);
-        this.success = success;
         this.status = status;
         this.statusName = getStatusName(status);
         this.processInfo = processInfo;

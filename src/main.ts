@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { checkModel, CMD_CHECK_MODEL, CMD_CHECK_MODEL_DISPLAY, displayModelChecking } from './commands/checkModel';
+import { CMD_CHECK_MODEL_RUN, CMD_CHECK_MODEL_STOP, CMD_CHECK_MODEL_DISPLAY,
+    checkModel, displayModelChecking, stopModelChecking } from './commands/checkModel';
 import { parseModule, CMD_PARSE_MODULE } from './commands/parseModule';
 
 // Holds all the error messages
@@ -13,14 +14,18 @@ export function activate(context: vscode.ExtensionContext) {
     const cmdParse = vscode.commands.registerCommand(
         CMD_PARSE_MODULE,
         () => parseModule(diagnostic));
-    const cmdCheckModel = vscode.commands.registerCommand(
-        CMD_CHECK_MODEL,
+    const cmdCheckModelRun = vscode.commands.registerCommand(
+        CMD_CHECK_MODEL_RUN,
         () => checkModel(diagnostic, context));
+    const cmdCheckModelStop = vscode.commands.registerCommand(
+        CMD_CHECK_MODEL_STOP,
+        () => stopModelChecking());
     const cmdCheckModelDisplay = vscode.commands.registerCommand(
         CMD_CHECK_MODEL_DISPLAY,
         () => displayModelChecking(context));
     context.subscriptions.push(cmdParse);
-    context.subscriptions.push(cmdCheckModel);
+    context.subscriptions.push(cmdCheckModelRun);
+    context.subscriptions.push(cmdCheckModelStop);
     context.subscriptions.push(cmdCheckModelDisplay);
 }
 
