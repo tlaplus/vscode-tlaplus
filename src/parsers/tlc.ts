@@ -122,7 +122,6 @@ class ModelCheckResultBuilder {
     private errorTrace: ErrorTraceItem[] = [];
     private msgTypeStack: number[] = [];
     private msgBuffer: string[] = [];
-    private sanyBuffer: string[] = [];
     private sanyMessages: DCollection | undefined;
     private workersCount: number = 0;
     private firstStatTime: moment.Moment | undefined;

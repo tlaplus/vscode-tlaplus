@@ -1,4 +1,4 @@
-import { Value, StructureValue, SetValue, SequenceValue, PrimitiveValue, StructureItem } from '../model/check';
+import { Value, StructureValue, SetValue, SequenceValue, StructureItem } from '../model/check';
 import { ParsingError } from '../common';
 import { Position } from 'vscode';
 
@@ -167,7 +167,7 @@ export function parseValueLines(lines: string[]): Value {
         return parseValue(tokenizer.nextToken(), tokenizer);
     } catch (err) {
         console.log('Error parsing variable value: ' + err);
-        return new PrimitiveValue(lines.join(' '));
+        return new Value(lines.join(' '));
     }
 }
 
@@ -176,7 +176,7 @@ function parseValue(token: Token, tokenizer: Tokenizer): Value {
         throw new ParsingError(`Unexpected end while parsing variable value at ${tokenizer.getPosition()}`);
     }
     if (token.type === TokenType.Primitive) {
-        return new PrimitiveValue(token.str);
+        return new Value(token.str);
     }
     if (token.type === TokenType.SetStart) {
         const values = parseCollectionValues(tokenizer, TokenType.SetEnd, parseValue);
