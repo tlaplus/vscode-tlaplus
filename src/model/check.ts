@@ -47,58 +47,43 @@ STATE_NAMES.set(CheckState.Stopped, 'Stopped');
  * Statistics on initial state generation.
  */
 export class InitialStateStatItem {
-    readonly timeStamp: string;
-    readonly diameter: number;
-    readonly total: number;
-    readonly distinct: number;
-    readonly queueSize: number;
-
-    constructor(timeStamp: string, diameter: number, total: number, distinct: number, queueSize: number) {
-        this.timeStamp = timeStamp;
-        this.diameter = diameter;
-        this.total = total;
-        this.distinct = distinct;
-        this.queueSize = queueSize;
-    }
+    constructor(
+        readonly timeStamp: string,
+        readonly diameter: number,
+        readonly total: number,
+        readonly distinct: number,
+        readonly queueSize: number
+    ) {}
 }
 
 /**
  * Statistics on coverage.
  */
 export class CoverageItem {
-    readonly module: string;
-    readonly action: string;
-    readonly location: Range;
-    readonly total: number;
-    readonly distinct: number;
-
-    constructor(module: string, action: string, location: Range, total: number, distinct: number) {
-        this.module = module;
-        this.action = action;
-        this.location = location;
-        this.total = total;
-        this.distinct = distinct;
-    }
+    constructor(
+        readonly module: string,
+        readonly action: string,
+        readonly location: Range,
+        readonly total: number,
+        readonly distinct: number
+    ) {}
 }
 
 /**
  * Represents a variable value in a particular model state.
  */
 export class VariableValue {
-    readonly name: string;
-    readonly value: Value;
-
-    constructor(name: string, value: Value) {
-        this.name = name;
-        this.value = value;
-    }
+    constructor(
+        readonly name: string,
+        readonly value: Value
+    ) {}
 }
 
 /**
  * Base class for values.
  */
-export abstract class Value {
-    readonly abstract str: string;
+export class Value {
+    constructor(readonly str: string) {}
 
     toString() {
         return this.str;
@@ -106,30 +91,11 @@ export abstract class Value {
 }
 
 /**
- * Value of a primitive type: 17, "foo", TRUE, etc.
- */
-export class PrimitiveValue extends Value {
-    readonly str: string;
-
-    constructor(value: string) {
-        super();
-        this.str = value;
-    }
-}
-
-/**
  * Value that is a collection of other values.
  */
 abstract class CollectionValue extends Value {
-    readonly items: Value[];
-    readonly str: string;
-
-    constructor(items: Value[], prefix: string, postfix: string) {
-        super();
-        this.items = items;
-        // TODO: trim to fit into 100 symbols
-        const valuesStr = this.items.map(i => i.toString()).join(', ');
-        this.str = prefix + valuesStr + postfix;
+    constructor(readonly items: Value[], prefix: string, postfix: string) {
+        super(makeCollectionValueString(items, prefix, postfix));
     }
 }
 
@@ -155,13 +121,9 @@ export class SequenceValue extends CollectionValue {
  * An item of a structure.
  */
 export class StructureItem implements Value {
-    readonly key: string;
-    readonly value: Value;
     readonly str: string;
 
-    constructor(key: string, value: Value) {
-        this.key = key;
-        this.value = value;
+    constructor(readonly key: string, readonly value: Value) {
         this.str = key + ' |-> ' + value;
     }
 
@@ -183,20 +145,27 @@ export class StructureValue extends CollectionValue {
  * A state of a process in a particular moment of time.
  */
 export class ErrorTraceItem {
-    readonly num: number;
-    readonly title: string;
-    readonly module: string;
-    readonly action: string;
-    readonly range: Range;
-    readonly variables: ReadonlyArray<VariableValue>;
+    constructor(
+        readonly num: number,
+        readonly title: string,
+        readonly module: string,
+        readonly action: string,
+        readonly range: Range,
+        readonly variables: VariableValue[]
+    ) {}
+}
 
-    constructor(num: number, title: string, module: string, action: string, range: Range, variables: VariableValue[]) {
-        this.num = num;
-        this.title = title;
-        this.module = module;
-        this.action = action;
-        this.range = range;
-        this.variables = variables;
+/**
+ * An output line produced by Print/PrintT along with the number of consecutive occurrences.
+ */
+export class OutputLine {
+    count: number = 1;
+
+    constructor(readonly text: string) {
+    }
+
+    increment() {
+        this.count += 1;
     }
 }
 
@@ -205,58 +174,37 @@ export class ErrorTraceItem {
  */
 export class ModelCheckResult {
     static readonly EMPTY = new ModelCheckResult(
-        '', CheckState.Running, CheckStatus.Starting, null, [], [], [], [],
-        undefined, undefined, undefined, undefined, 0, undefined);
+        '', CheckState.Running, CheckStatus.Starting, undefined, [], [], [], [],
+        undefined, undefined, undefined, undefined, 0, undefined, []);
 
-    readonly modelName: string;
-    readonly state: CheckState;
     readonly stateName: string;
-    readonly status: CheckStatus;
     readonly statusName: string;
-    readonly processInfo: string | null;
-    readonly initialStatesStat: ReadonlyArray<InitialStateStatItem>;
-    readonly coverageStat: ReadonlyArray<CoverageItem>;
-    readonly errors: ReadonlyArray<ReadonlyArray<string>>;
-    readonly errorTrace: ReadonlyArray<ErrorTraceItem>;
-    readonly sanyMessages: DCollection | undefined;
     readonly startDateTimeStr: string | undefined;
     readonly endDateTimeStr: string | undefined;
     readonly durationStr: string | undefined;
-    readonly workersCount: number;
-    readonly fingerprintCollisionProbability: string | undefined;
 
     constructor(
-        modelName: string,
-        state: CheckState,
-        status: CheckStatus,
-        processInfo: string | null,
-        initialStatesStat: InitialStateStatItem[],
-        coverageStat: CoverageItem[],
-        errors: string[][],
-        errorTrace: ErrorTraceItem[],
-        sanyMessages: DCollection | undefined,
-        startDateTime: Moment | undefined,
-        endDateTime: Moment | undefined,
-        duration: number | undefined,
-        workersCount: number,
-        fingerprintCollisionProbability: string | undefined
+        readonly modelName: string,
+        readonly state: CheckState,
+        readonly status: CheckStatus,
+        readonly processInfo: string | undefined,
+        readonly initialStatesStat: InitialStateStatItem[],
+        readonly coverageStat: CoverageItem[],
+        readonly errors: string[][],
+        readonly errorTrace: ErrorTraceItem[],
+        readonly sanyMessages: DCollection | undefined,
+        readonly startDateTime: Moment | undefined,
+        readonly endDateTime: Moment | undefined,
+        readonly duration: number | undefined,
+        readonly workersCount: number,
+        readonly fingerprintCollisionProbability: string | undefined,
+        readonly outputLines: OutputLine[]
     ) {
-        this.modelName = modelName;
-        this.state = state;
         this.stateName = getStateName(this.state);
-        this.status = status;
         this.statusName = getStatusName(status);
-        this.processInfo = processInfo;
-        this.initialStatesStat = initialStatesStat;
-        this.coverageStat = coverageStat;
-        this.errors = errors;
-        this.errorTrace = errorTrace;
-        this.sanyMessages = sanyMessages;
         this.startDateTimeStr = dateTimeToStr(startDateTime);
         this.endDateTimeStr = dateTimeToStr(endDateTime);
         this.durationStr = durationToStr(duration);
-        this.workersCount = workersCount;
-        this.fingerprintCollisionProbability = fingerprintCollisionProbability;
     }
 }
 
@@ -288,4 +236,10 @@ function durationToStr(dur: number | undefined): string {
         return '';
     }
     return dur + ' msec';
+}
+
+function makeCollectionValueString(items: Value[], prefix: string, postfix: string) {
+    // TODO: trim to fit into 100 symbols
+    const valuesStr = items.map(i => i.toString()).join(', ');
+    return prefix + valuesStr + postfix;
 }

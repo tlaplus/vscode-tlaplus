@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import { parseValueLines } from '../../../parsers/tlcValues';
-import { PrimitiveValue, Value, SetValue, SequenceValue, StructureValue, StructureItem } from '../../../model/check';
+import { Value, SetValue, SequenceValue, StructureValue, StructureItem } from '../../../model/check';
 
 suite('TLC Values Output Parser Test Suite', () => {
 
@@ -127,8 +127,8 @@ function assertValue(lines: string[], expected: Value, message?: string) {
     assert.deepEqual(value, expected, message);
 }
 
-function v(value: string): PrimitiveValue {
-    return new PrimitiveValue(value);
+function v(value: string): Value {
+    return new Value(value);
 }
 
 function set(...values: Value[]): SetValue {

@@ -2,7 +2,7 @@ import { Range } from 'vscode';
 import { ProcessOutputParser } from '../tla2tools';
 import { Readable } from 'stream';
 import { CheckStatus, ModelCheckResult, InitialStateStatItem, CoverageItem, ErrorTraceItem,
-    VariableValue, CheckState} from '../model/check';
+    VariableValue, CheckState, OutputLine} from '../model/check';
 import { parseValueLines } from './tlcValues';
 import { SanyStdoutParser } from './sany';
 import { DCollection } from '../diagnostic';
@@ -13,6 +13,7 @@ import { clearTimeout } from 'timers';
 const STATUS_EMIT_TIMEOUT = 500;    // msec
 
 // TLC message types
+const NONE = -1;
 const TLC_UNKNOWN = -2;
 const GENERAL = 1000;
 const TLC_MODE_MC = 2187;
@@ -52,7 +53,7 @@ export class TLCModelCheckerStdoutParser extends ProcessOutputParser {
     timer: NodeJS.Timer | undefined = undefined;
     first: boolean = true;
 
-    constructor(stdout: Readable, filePath: string, handler: (checkResult: ModelCheckResult) => void) {
+    constructor(stdout: Readable | string[], filePath: string, handler: (checkResult: ModelCheckResult) => void) {
         super(stdout, filePath);
         this.handler = handler;
         const moduleName = pathToModuleName(filePath);
@@ -73,11 +74,6 @@ export class TLCModelCheckerStdoutParser extends ProcessOutputParser {
             // Issue the last update
             this.issueUpdate();
         }
-    }
-
-    protected handleError(err: any) {
-        this.checkResultBuilder.handleError(err);
-        this.scheduleUpdate();
     }
 
     private scheduleUpdate() {
@@ -106,30 +102,79 @@ export class TLCModelCheckerStdoutParser extends ProcessOutputParser {
 }
 
 /**
+ * TLC output message;
+ */
+class Message {
+    readonly lines: string[] = [];
+
+    constructor(readonly type: number) {}
+}
+
+/**
+ * Tracks hierarchy of TLC output messages.
+ */
+class MessageStack {
+    private static NO_MESSAGE = new Message(NONE);
+
+    private current: Message = MessageStack.NO_MESSAGE;
+    private previous: Message[] = [];
+
+    public getCurrentType(): number {
+        return this.current.type;
+    }
+
+    public start(type: number) {
+        if (type === NONE) {
+            throw Error('Cannot start message of type NONE');
+        }
+        if (this.current.type !== NONE) {
+            this.previous.push(this.current);
+        }
+        this.current = new Message(type);
+    }
+
+    public finish(): Message {
+        if (this.current.type === NONE) {
+            console.error('Unexpected message end');
+            return MessageStack.NO_MESSAGE;
+        }
+        const finished = this.current;
+        this.current = this.previous.pop() || MessageStack.NO_MESSAGE;
+        return finished;
+    }
+
+    public addLine(line: string) {
+        if (this.current.type === NONE) {
+            console.error("Unexpected line when there's no current message");
+            return;
+        }
+        this.current.lines.push(line);
+    }
+}
+
+/**
  * Gradually builds ModelCheckResult by processing TLC output lines.
  */
 class ModelCheckResultBuilder {
-    private modelName: string;
     private state: CheckState = CheckState.Running;
     private status: CheckStatus = CheckStatus.NotStarted;
     private startDateTime: moment.Moment | undefined;
     private endDateTime: moment.Moment | undefined;
     private duration: number | undefined;       // msec
-    private processInfo: string | null = null;
+    private processInfo: string | undefined;
     private initialStatesStat: InitialStateStatItem[] = [];
     private coverageStat: CoverageItem[] = [];
     private errors: string[][] = [];
     private errorTrace: ErrorTraceItem[] = [];
-    private msgTypeStack: number[] = [];
-    private msgBuffer: string[] = [];
-    private sanyBuffer: string[] = [];
+    private messages = new MessageStack();
+    private sanyLines: string[] = [];
     private sanyMessages: DCollection | undefined;
+    private outputLines: OutputLine[] = [];
     private workersCount: number = 0;
     private firstStatTime: moment.Moment | undefined;
     private fingerprintCollisionProbability: string | undefined;
 
-    constructor(modelName: string) {
-        this.modelName = modelName;
+    constructor(private modelName: string) {
     }
 
     getStatus(): CheckStatus {
@@ -143,17 +188,26 @@ class ModelCheckResultBuilder {
     addLine(line: string) {
         const newMsgType = this.tryParseMessageStart(line);
         if (newMsgType != null) {
-            this.msgTypeStack.push(newMsgType);
-        } else if (this.tryParseMessageEnd(line)) {
-            const msgType = this.msgTypeStack.pop();
-            if (msgType) {
-                this.handleMessageEnd(msgType);
-            } else {
-                console.log('Unexpected message end');
-            }
-        } else if (line !== '') {
-            this.msgBuffer.push(line);
+            this.messages.start(newMsgType);
+            return;
         }
+        if (this.tryParseMessageEnd(line)) {
+            const message = this.messages.finish();
+            this.handleMessageEnd(message);
+            return;
+        }
+        if (line === '') {
+            return;
+        }
+        if (this.status === CheckStatus.SanyParsing) {
+            this.sanyLines.push(line);
+            return;
+        }
+        if (this.messages.getCurrentType() !== NONE) {
+            this.messages.addLine(line);
+            return;
+        }
+        this.addOutputLine(line);
     }
 
     handleStop() {
@@ -161,10 +215,6 @@ class ModelCheckResultBuilder {
             // The process wasn't finished as expected, hence it was stopped manually
             this.state = CheckState.Stopped;
         }
-    }
-
-    handleError(_: any) {
-        this.resetMessage();
     }
 
     build(): ModelCheckResult {
@@ -182,17 +232,18 @@ class ModelCheckResultBuilder {
             this.endDateTime,
             this.duration,
             this.workersCount,
-            this.fingerprintCollisionProbability
+            this.fingerprintCollisionProbability,
+            this.outputLines
         );
     }
 
-    private handleMessageEnd(msgType: number) {
+    private handleMessageEnd(message: Message) {
         if (this.status === CheckStatus.NotStarted) {
             this.status = CheckStatus.Starting;
         }
-        switch (msgType) {
+        switch (message.type) {
             case TLC_MODE_MC:
-                this.processInfo = this.msgBuffer.join('');
+                this.processInfo = message.lines.join('');
                 break;
             case TLC_SANY_START:
                 this.status = CheckStatus.SanyParsing;
@@ -205,7 +256,7 @@ class ModelCheckResultBuilder {
                 this.status = CheckStatus.Checkpointing;
                 break;
             case TLC_STARTING:
-                this.parseStarting();
+                this.parseStarting(message.lines);
                 break;
             case TLC_COMPUTING_INIT:
                 this.status = CheckStatus.InitialStatesComputing;
@@ -217,10 +268,10 @@ class ModelCheckResultBuilder {
             case TLC_INIT_GENERATED2:
             case TLC_INIT_GENERATED3:
             case TLC_INIT_GENERATED4:
-                this.parseInitialStatesComputed();
+                this.parseInitialStatesComputed(message.lines);
                 break;
             case TLC_CHECKING_TEMPORAL_PROPS:
-                if (this.msgBuffer.length > 0 && this.msgBuffer[0].indexOf('complete') >= 0) {
+                if (message.lines.length > 0 && message.lines[0].indexOf('complete') >= 0) {
                     this.status = CheckStatus.CheckingLivenessFinal;
                 } else {
                     this.status = CheckStatus.CheckingLiveness;
@@ -237,45 +288,39 @@ class ModelCheckResultBuilder {
                 this.workersCount -= 1;
                 break;
             case TLC_PROGRESS_STATS:
-                this.parseProgressStats();
+                this.parseProgressStats(message.lines);
                 break;
             case TLC_COVERAGE_INIT:
                 this.coverageStat.length = 0;
-                this.parseCoverage();
+                this.parseCoverage(message.lines);
                 break;
             case TLC_COVERAGE_NEXT:
-                this.parseCoverage();
+                this.parseCoverage(message.lines);
                 break;
             case GENERAL:
             case TLC_INITIAL_STATE:
             case TLC_NESTED_EXPRESSION:
             case TLC_TEMPORAL_PROPERTY_VIOLATED:
             case TLC_VALUE_ASSERT_FAILED:
-                this.errors.push(this.msgBuffer.slice(0));
+                this.parseErrorMessage(message.lines);
                 break;
             case TLC_STATE_PRINT1:
             case TLC_STATE_PRINT2:
             case TLC_STATE_PRINT3:
-                this.parseErrorTraceItem();
+                this.parseErrorTraceItem(message.lines);
                 break;
             case TLC_SUCCESS:
-                this.parseSuccess();
+                this.parseSuccess(message.lines);
                 this.state = CheckState.Success;
                 break;
             case TLC_FINISHED:
                 this.status = CheckStatus.Finished;
-                this.parseFinished();
+                this.parseFinished(message.lines);
                 if (this.state !== CheckState.Success) {
                     this.state = CheckState.Error;
                 }
                 break;
         }
-        this.resetMessage();
-    }
-
-    private resetMessage() {
-        this.msgTypeStack.pop();
-        this.msgBuffer.length = 0;
     }
 
     private tryParseMessageStart(line: string): number | null {
@@ -285,7 +330,9 @@ class ModelCheckResultBuilder {
             return null;
         } else if (markerIdx > 0) {
             markerBody = line.substring(markerIdx);
-            this.msgBuffer.push(line.substring(0, markerIdx));
+            if (this.messages.getCurrentType() !== NONE) {
+                this.messages.addLine(line.substring(0, markerIdx));
+            }
         }
         const eLine = markerBody.substring(14, line.length - 6);
         const parts = eLine.split(':');
@@ -299,22 +346,22 @@ class ModelCheckResultBuilder {
         return line.startsWith('@!@!@ENDMSG ') && line.endsWith(' @!@!@');
     }
 
-    private parseStarting() {
-        const matches = this.tryMatchBufferLine(/^Starting\.\.\. \((\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\)$/g);
+    private parseStarting(lines: string[]) {
+        const matches = this.tryMatchBufferLine(lines, /^Starting\.\.\. \((\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\)$/g);
         if (matches) {
             this.startDateTime = parseDateTime(matches[1]);
         }
     }
 
-    private parseSuccess() {
-        const matches = this.tryMatchBufferLine(/calculated \(optimistic\):\s+val = (.+)$/g, 3);
+    private parseSuccess(lines: string[]) {
+        const matches = this.tryMatchBufferLine(lines, /calculated \(optimistic\):\s+val = (.+)$/g, 3);
         if (matches) {
             this.fingerprintCollisionProbability = matches[1];
         }
     }
 
-    private parseFinished() {
-        const matches = this.tryMatchBufferLine(/^Finished in (\d+)ms at \((\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\)$/g);
+    private parseFinished(lines: string[]) {
+        const matches = this.tryMatchBufferLine(lines, /^Finished in (\d+)ms at \((\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\)$/g);
         if (matches) {
             this.duration = parseInt(matches[1]);
             this.endDateTime = parseDateTime(matches[2]);
@@ -322,12 +369,12 @@ class ModelCheckResultBuilder {
     }
 
     private parseSanyOutput() {
-        const sany = new SanyStdoutParser(this.msgBuffer);
+        const sany = new SanyStdoutParser(this.sanyLines);
         this.sanyMessages = sany.readAllSync();
     }
 
-    private parseInitialStatesComputed() {
-        const matches = this.tryMatchBufferLine(/^Finished computing initial states: (\d+) distinct states generated at (\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*$/g);
+    private parseInitialStatesComputed(lines: string[]) {
+        const matches = this.tryMatchBufferLine(lines, /^Finished computing initial states: (\d+) distinct states generated at (\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*$/g);
         if (matches) {
             const count = parseInt(matches[1]);
             this.firstStatTime = parseDateTime(matches[2]);
@@ -335,8 +382,8 @@ class ModelCheckResultBuilder {
         }
     }
 
-    private parseProgressStats() {
-        const matches = this.tryMatchBufferLine(/^Progress\(([\d,]+)\) at (\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}): ([\d,]+) states generated.*, ([\d,]+) distinct states found.*, ([\d,]+) states left on queue.*/g);
+    private parseProgressStats(lines: string[]) {
+        const matches = this.tryMatchBufferLine(lines, /^Progress\(([\d,]+)\) at (\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}): ([\d,]+) states generated.*, ([\d,]+) distinct states found.*, ([\d,]+) states left on queue.*/g);
         if (matches) {
             this.initialStatesStat.push(new InitialStateStatItem(
                 this.calcTimestamp(matches[2]),
@@ -348,8 +395,8 @@ class ModelCheckResultBuilder {
         }
     }
 
-    private parseCoverage() {
-        const matches = this.tryMatchBufferLine(/^<(\w+) line (\d+), col (\d+) to line (\d+), col (\d+) of module (\w+)>: (\d+):(\d+)/g);
+    private parseCoverage(lines: string[]) {
+        const matches = this.tryMatchBufferLine(lines, /^<(\w+) line (\d+), col (\d+) to line (\d+), col (\d+) of module (\w+)>: (\d+):(\d+)/g);
         if (matches) {
             this.coverageStat.push(new CoverageItem(
                 matches[6],
@@ -366,22 +413,35 @@ class ModelCheckResultBuilder {
         }
     }
 
-    private parseErrorTraceItem() {
-        if (this.msgBuffer.length === 0) {
+    private parseErrorMessage(lines: string[]) {
+        if (lines.length === 0) {
+            return;
+        }
+        if (lines[0] === 'TLC threw an unexpected exception.' && this.errors.length > 0) {
+            // Such message must be combined with the previous one (that was actually nested)
+            const prevError = this.errors[this.errors.length - 1];
+            this.errors[this.errors.length - 1] = lines.concat(prevError);
+        } else {
+            this.errors.push(lines);
+        }
+    }
+
+    private parseErrorTraceItem(lines: string[]) {
+        if (lines.length === 0) {
             console.log('Error trace expected but message buffer is empty');
             return;
         }
         // Try special cases like <Initial predicate>, <Stuttering>, etc.
-        const sMatches = this.tryMatchBufferLine(/^(\d+): <([\w\s]+)>$/g);
+        const sMatches = this.tryMatchBufferLine(lines, /^(\d+): <([\w\s]+)>$/g);
         if (sMatches) {
             this.errorTrace.push(new ErrorTraceItem(
                 parseInt(sMatches[1]),
                 sMatches[2],
-                '', '', new Range(0, 0, 0, 0), this.parseErrorTraceVariables()));
+                '', '', new Range(0, 0, 0, 0), this.parseErrorTraceVariables(lines)));
             return;
         }
         // Otherwise fall back to simple states
-        const matches = this.tryMatchBufferLine(/^(\d+): <(\w+) line (\d+), col (\d+) to line (\d+), col (\d+) of module (\w+)>$/g);
+        const matches = this.tryMatchBufferLine(lines, /^(\d+): <(\w+) line (\d+), col (\d+) to line (\d+), col (\d+) of module (\w+)>$/g);
         if (!matches) {
             return;
         }
@@ -395,14 +455,14 @@ class ModelCheckResultBuilder {
                 parseInt(matches[4]),
                 parseInt(matches[5]),
                 parseInt(matches[6])),
-            this.parseErrorTraceVariables()
+            this.parseErrorTraceVariables(lines)
         ));
     }
 
-    private parseErrorTraceVariables(): VariableValue[] {
+    private parseErrorTraceVariables(lines: string[]): VariableValue[] {
         const variables = [];
-        for (let i = 1; i < this.msgBuffer.length; i++) {
-            const line = this.msgBuffer[i];
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i];
             const matches = /^\/\\ (\w+) = (.+)$/g.exec(line);
             if (matches) {
                 const name = matches[1];
@@ -417,8 +477,8 @@ class ModelCheckResultBuilder {
     }
 
     private readValueLines(startIdx: number, lines: string[]) {
-        for (let i = startIdx; i < this.msgBuffer.length; i++) {
-            const line = this.msgBuffer[i];
+        for (let i = startIdx; i < lines.length; i++) {
+            const line = lines[i];
             if (line.startsWith('/\\ ')) {
                 return i;
             }
@@ -426,12 +486,12 @@ class ModelCheckResultBuilder {
         }
     }
 
-    private tryMatchBufferLine(regExp: RegExp, n?: number): RegExpExecArray | null {
+    private tryMatchBufferLine(lines: string[], regExp: RegExp, n?: number): RegExpExecArray | null {
         const en = n ? n : 0;
-        if (this.msgBuffer.length < en + 1) {
+        if (lines.length < en + 1) {
             return null;
         }
-        return regExp.exec(this.msgBuffer[en]);
+        return regExp.exec(lines[en]);
     }
 
     private calcTimestamp(timeStr: string): string {
@@ -445,6 +505,15 @@ class ModelCheckResultBuilder {
         const min = leftPadTimeUnit(dur.minutes());
         const hour = leftPadTimeUnit(Math.floor(dur.asHours())); // days are converted to hours
         return `${hour}:${min}:${sec}`;
+    }
+
+    private addOutputLine(line: string) {
+        const prevLine = this.outputLines.length > 0 ? this.outputLines[this.outputLines.length - 1] : undefined;
+        if (prevLine && prevLine.text === line) {
+            prevLine.increment();
+        } else {
+            this.outputLines.push(new OutputLine(line));
+        }
     }
 }
 
