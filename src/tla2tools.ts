@@ -7,7 +7,6 @@ import { DCollection } from './diagnostic';
 import { pathToUri, ParsingError } from './common';
 
 const toolsJarPath = path.resolve(__dirname, '../tools/tla2tools.jar');
-const killProcessScriptPath = path.resolve(__dirname, '../tools/kill_process.sh');
 const javaCmd = 'java' + (process.platform === 'win32' ? '.exe' : '');
 
 export class ToolingError extends Error {
@@ -144,26 +143,8 @@ export function runTool(
  * Kills the given process.
  */
 export function stopProcess(p: cp.ChildProcess) {
-    console.log(`Stopping process #${p.pid}...`);
-    if (process.platform === 'win32') {
-        const TASK_KILL = 'C:\\Windows\\System32\\taskkill.exe';
-        // when killing a process in Windows its child processes are *not* killed but become root processes.
-        // Therefore we use TASKKILL.EXE
-        try {
-            cp.execSync(`${TASK_KILL} /F /T /PID ${p.pid}`);
-        } catch (err) {
-            console.log('Error killing Windows process: ' + err);
-        }
-    } else {
-        // on linux and OS X we kill all direct and indirect child processes as well
-        try {
-            const res = cp.spawnSync(killProcessScriptPath, [p.pid.toString()]);
-            if (res.error) {
-                throw res.error;
-            }
-        } catch (err) {
-            console.log('Error killing Unix process: ' + err);
-        }
+    if (!p.killed) {
+        p.kill('SIGINT');
     }
 }
 
