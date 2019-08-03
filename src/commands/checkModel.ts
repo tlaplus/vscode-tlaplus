@@ -16,6 +16,13 @@ const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignmen
  * Runs TLC on a TLA+ specification.
  */
 export function checkModel(diagnostic: vscode.DiagnosticCollection, extContext: vscode.ExtensionContext) {
+    if (checkProcess) {
+        vscode.window.showWarningMessage(
+                'Another model checking process is currently running',
+                'Show currently running process'
+            ).then(() => revealCheckResultView(extContext));
+        return;
+    }
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
         vscode.window.showWarningMessage('No editor is active, cannot find a TLA+ model to check');
@@ -42,6 +49,8 @@ export function displayModelChecking(extContext: vscode.ExtensionContext) {
 export function stopModelChecking() {
     if (checkProcess) {
         stopProcess(checkProcess);
+    } else {
+        vscode.window.showInformationMessage("There're no currently running model checking processes");
     }
 }
 
@@ -70,7 +79,7 @@ async function doCheckModel(
 
 function updateStatusBarItem(active: boolean) {
     statusBarItem.text = 'TLC' + (active ? '\u25BA' : '');
-    statusBarItem.tooltip = 'TLA+ model checking' + (active ? ' is in progress' : ' result');
+    statusBarItem.tooltip = 'TLA+ model checking' + (active ? ' is running' : ' result');
     statusBarItem.command = CMD_CHECK_MODEL_DISPLAY;
     statusBarItem.show();
 }
