@@ -96,6 +96,8 @@ export class Value {
  * Value that is a collection of other values.
  */
 export abstract class CollectionValue extends Value {
+    deletedItems: Value[] | undefined;
+
     constructor(key: ValueKey, readonly items: Value[], prefix: string, postfix: string, toStr?: (v: Value) => string) {
         super(key, makeCollectionValueString(items, prefix, postfix, toStr || CollectionValue.valueToString));
     }
@@ -104,10 +106,19 @@ export abstract class CollectionValue extends Value {
         return v.str;
     }
 
-    addDeletedItem(value: Value) {
-        const newValue = new Value(value.key, value.str);   // No need in deep copy here
-        newValue.changeType = Change.DELETED;
-        this.items.push(newValue);
+    addDeletedItems(items: Value[]) {
+        if (!items || items.length === 0) {
+            return;
+        }
+        if (!this.deletedItems) {
+            this.deletedItems = [];
+        }
+        const delItems = this.deletedItems;
+        items.forEach(delItem => {
+            const newValue = new Value(delItem.key, delItem.str);   // No need in deep copy here
+            newValue.changeType = Change.DELETED;
+            delItems.push(newValue);
+        });
     }
 }
 
@@ -287,10 +298,8 @@ export function findChanges(prev: CollectionValue, state: CollectionValue): bool
     for (; pi < prev.items.length; pi++) {
         deletedItems.push(prev.items[pi]);
     }
-    for (const delValue of deletedItems) {
-        state.addDeletedItem(delValue);
-        modified = true;
-    }
+    state.addDeletedItems(deletedItems);
+    modified = modified || deletedItems.length > 0;
     if (modified) {
         state.changeType = Change.MODIFIED;
     }

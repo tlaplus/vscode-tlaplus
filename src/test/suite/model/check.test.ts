@@ -54,14 +54,14 @@ suite('Check Model Test Suite', () => {
     });
 
     test('Detects deleted items in struct', () => {
+        const expected = structX(ROOT, Change.MODIFIED,
+            vX('bar', Change.NOT_CHANGED, 'BAR'),
+            vX('foo', Change.NOT_CHANGED, 'FOO'));
+        expected.addDeletedItems([v('baz', 'BAZ')]);
         assertChanges(
             struct(ROOT, v('bar', 'BAR'), v('baz', 'BAZ'), v('foo', 'FOO')),
             struct(ROOT, v('bar', 'BAR'), v('foo', 'FOO')),
-            structX(ROOT, Change.MODIFIED,
-                vX('bar', Change.NOT_CHANGED, 'BAR'),
-                vX('foo', Change.NOT_CHANGED, 'FOO'),
-                vX('baz', Change.DELETED, 'BAZ')
-            )
+            expected
         );
     });
 
@@ -143,20 +143,20 @@ function vX(key: ValueKey, change: Change, str: string) {
     return value;
 }
 
-function seqX(key: ValueKey, change: Change, ...values: Value[]) {
-    const value = seq(key, ...values);
+function seqX(key: ValueKey, change: Change, ...items: Value[]) {
+    const value = seq(key, ...items);
     value.changeType = change;
     return value;
 }
 
-function setX(key: ValueKey, change: Change, ...values: Value[]) {
-    const value = set(key, ...values);
+function setX(key: ValueKey, change: Change, ...items: Value[]) {
+    const value = set(key, ...items);
     value.changeType = change;
     return value;
 }
 
-function structX(key: ValueKey, change: Change, ...values: Value[]) {
-    const value = new StructureValue(key, values, true);
+function structX(key: ValueKey, change: Change, ...items: Value[]) {
+    const value = new StructureValue(key, items, true);
     value.changeType = change;
     return value;
 }
