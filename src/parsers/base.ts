@@ -8,11 +8,11 @@ import { DCollection } from '../diagnostic';
  * and sends them to the parsing method line by line.
  */
 export abstract class ProcessOutputParser<T> {
-    closed: boolean = false;
-    buf: string | null = null;
-    resolve?: (result: T) => void;
-    lines: string[] | undefined;
     protected result: T;
+    private closed: boolean = false;
+    private buf: string | null = null;
+    private resolve?: (result: T) => void;
+    private lines: string[] | undefined;
 
     constructor(source: Readable | string[], initialResult: T) {
         if (source instanceof Readable) {

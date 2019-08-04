@@ -6,9 +6,15 @@ import { ChildProcess, SpawnOptions, spawn, exec } from 'child_process';
 import { pathToUri } from './common';
 import { JavaVersionParser } from './parsers/javaVersion';
 
+export const CFG_JAVA_HOME = 'tlaplus.java.home';
+
+const LOWEST_JAVA_VERSION = 8;
 const javaCmd = 'java' + (process.platform === 'win32' ? '.exe' : '');
-const javaBaseArgs = ['-XX:+UseParallelGC'];
 const toolsJarPath = path.resolve(__dirname, '../tools/tla2tools.jar');
+const toolsBaseArgs: ReadonlyArray<string> = ['-XX:+UseParallelGC', '-cp', toolsJarPath];
+
+let lastUsedJavaHome: string | undefined;
+let cachedJavaPath: string | undefined;
 
 /**
  * Thrown when there's some problem with Java or TLA+ tooling.
@@ -19,17 +25,27 @@ export class ToolingError extends Error {
     }
 }
 
+export class JavaVersion {
+    static UNKNOWN_VERSION = '?';
+
+    constructor(
+        readonly version: string,
+        readonly fullOutput: string[]
+    ) {}
+}
+
 /**
  * Executes a TLA+ tool.
  */
-export function runTool(toolName: string, filePath: string, toolArgs?: string[]): cp.ChildProcess {
-    const eArgs = ['-cp', toolsJarPath, toolName].concat(toolArgs || []);
-    eArgs.push(filePath);
-    const process = executeJavaProcess(eArgs, { cwd: path.dirname(filePath) });
-    process.on('close', (code) => {
-        console.log('Java exit code ' + code);
-    });
-    return process;
+export async function runTool(toolName: string, filePath: string, toolArgs?: string[]): Promise<ChildProcess> {
+    const javaPath = await obtainJavaPath();
+    const args = toolsBaseArgs.slice(0);
+    args.push(toolName);
+    if (toolArgs) {
+        toolArgs.forEach(arg => args.push(arg));
+    }
+    args.push(filePath);
+    return spawn(javaPath, args, { cwd: path.dirname(filePath) });
 }
 
 /**
@@ -41,33 +57,59 @@ export function stopProcess(p: cp.ChildProcess) {
     }
 }
 
-function checkJavaVersion() {
-    const proc = executeJavaProcess(['-version']);
-    const parser = new JavaVersionParser(proc.stderr);
-    parser.readAll()
-        .then(ver => console.log('Java version ' + ver));
-}
-
 export function reportBrokenToolchain(err: any) {
     console.log('Toolchain problem: ' + err.message);
     vscode.window.showErrorMessage('Toolchain is broken');
 }
 
-function executeJavaProcess(args: string[], options?: SpawnOptions): ChildProcess {
+async function obtainJavaPath(): Promise<string> {
+    const javaHome = vscode.workspace.getConfiguration().get<string>(CFG_JAVA_HOME);
+    if (cachedJavaPath && javaHome === lastUsedJavaHome) {
+        return cachedJavaPath;
+    }
     const javaPath = buildJavaPath();
-    const eArgs = javaBaseArgs.concat(args);
-    return spawn(javaPath, eArgs, options);
+    cachedJavaPath = javaPath;
+    lastUsedJavaHome = javaHome;
+    await checkJavaVersion(javaPath);
+    return javaPath;
 }
 
+/**
+ * Builds path to the Java executable based on the configuration.
+ */
 function buildJavaPath(): string {
-    const javaHome = vscode.workspace.getConfiguration().get<string>('tlaplus.java.home');
-    const javaPath = javaCmd;
+    let javaPath = javaCmd;
+    const javaHome = vscode.workspace.getConfiguration().get<string>(CFG_JAVA_HOME);
     if (javaHome) {
         const homeUri = pathToUri(javaHome);
-        const javaPath = homeUri.fsPath + path.sep + 'bin' + path.sep + javaCmd;
+        javaPath = homeUri.fsPath + path.sep + 'bin' + path.sep + javaCmd;
         if (!fs.existsSync(javaPath)) {
-            throw new ToolingError('Java command not found. Check the Java Home configuration property.');
+            throw new ToolingError('Java executable not found. Check the Java Home configuration property.');
         }
     }
     return javaPath;
+}
+
+/**
+ * Executes java -version and analyzes, if the version is 1.8 or higher.
+ */
+async function checkJavaVersion(javaPath: string) {
+    const proc = spawn(javaPath, ['-version']);
+    const parser = new JavaVersionParser(proc.stderr);
+    const ver = await parser.readAll();
+    if (ver.version === JavaVersion.UNKNOWN_VERSION) {
+        console.debug('Java version output:');
+        ver.fullOutput.forEach(line => console.debug(line));
+        throw new ToolingError('Error while obtaining Java version. Check the Java Home configuration property.');
+    }
+    console.log(`Java version: ${ver.version}`);
+    let num = ver.version;
+    if (num.startsWith('1.')) {
+        num = num.substring(2);
+    }
+    const pIdx = num.indexOf('.');
+    if (pIdx > 0 && parseInt(num.substring(0, pIdx), 10) >= LOWEST_JAVA_VERSION) {
+        return;
+    }
+    vscode.window.showWarningMessage(`Unexpected Java version: ${ver.version}`);
 }

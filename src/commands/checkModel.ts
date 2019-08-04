@@ -61,7 +61,7 @@ async function doCheckModel(
 ) {
     try {
         updateStatusBarItem(true);
-        checkProcess = runTool('tlc2.TLC', fileUri.fsPath, ['-modelcheck', '-coverage', '1', '-tool']);
+        checkProcess = await runTool('tlc2.TLC', fileUri.fsPath, ['-modelcheck', '-coverage', '1', '-tool']);
         checkProcess.on('close', () => {
             checkProcess = undefined;
             updateStatusBarItem(false);
