@@ -131,7 +131,7 @@ class Tokenizer {
             }
             i += 1;
         }
-        throw new ParsingError(`Unexpected end of line while parsing string t ${this.getPosition()}`);
+        throw new ParsingError(`Unexpected end of line while parsing string at ${this.getPosition()}`);
     }
 
     private tryReadNumberToken(str: string): Token | null {

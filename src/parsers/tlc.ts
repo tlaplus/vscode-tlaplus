@@ -467,7 +467,7 @@ class ModelCheckResultBuilder {
             if (matches) {
                 const name = matches[1];
                 const valueLines = [matches[2]];
-                this.readValueLines(i + 1, valueLines);
+                this.readValueLines(i + 1, lines, valueLines);
                 i += valueLines.length - 1;
                 const value = parseValueLines(valueLines);
                 variables.push(new VariableValue(name, value));
@@ -476,13 +476,13 @@ class ModelCheckResultBuilder {
         return variables;
     }
 
-    private readValueLines(startIdx: number, lines: string[]) {
+    private readValueLines(startIdx: number, lines: string[], valueLines: string[]) {
         for (let i = startIdx; i < lines.length; i++) {
             const line = lines[i];
             if (line.startsWith('/\\ ')) {
-                return i;
+                return;
             }
-            lines.push(line.trim());
+            valueLines.push(line.trim());
         }
     }
 
