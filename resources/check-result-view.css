@@ -106,6 +106,9 @@ thead {
 
 .error-trace-item-title {
     font-weight: bold;
+    background-color: var(--vscode-editor-lineHighlightBackground);
+    padding-bottom: 0.1em;
+    margin-bottom: 0.1em;
 }
 
 .error-trace-var-value-block:after {
@@ -116,22 +119,45 @@ thead {
 
 .var-name {
     display: inline-block;
-    width: 25%;
+    width: 30%;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
 }
 
 .var-size {
+    display: inline-block;
+    margin-left: 0.3em;
     opacity: 0.5;
 }
 
 .var-value {
     display: inline-block;
-    width: 75%;
+    width: 70%;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.change-marker {
+    margin-left: 0.3em;
+}
+
+.change-marker-A {
+    color: var(--vscode-gitDecoration-addedResourceForeground);
+}
+
+.change-marker-M {
+    color: var(--vscode-gitDecoration-modifiedResourceForeground);
+}
+
+.change-marker-D {
+    color: var(--vscode-gitDecoration-deletedResourceForeground);
+}
+
+.value-deleted {
+    opacity: 0.6;
+    text-decoration: line-through;
 }
 
 .tree-nodes {

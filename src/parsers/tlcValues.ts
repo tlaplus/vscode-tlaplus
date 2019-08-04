@@ -1,4 +1,4 @@
-import { Value, StructureValue, SetValue, SequenceValue, StructureItem } from '../model/check';
+import { Value, StructureValue, SetValue, SequenceValue, ValueKey } from '../model/check';
 import { ParsingError } from '../common';
 import { Position } from 'vscode';
 
@@ -161,39 +161,39 @@ class Tokenizer {
  * It's assumed that the given set of lines came from a TLC output, which means they follow
  * certain simple rules, like no line breaks in the middle of a token, etc.
  */
-export function parseValueLines(lines: string[]): Value {
+export function parseVariableValue(name: string, lines: string[]): Value {
     const tokenizer = new Tokenizer(lines);
     try {
-        return parseValue(tokenizer.nextToken(), tokenizer);
+        return parseValue(name, tokenizer.nextToken(), tokenizer);
     } catch (err) {
-        console.log('Error parsing variable value: ' + err);
-        return new Value(lines.join(' '));
+        console.log(`Error parsing value of variable \`${name}\`: ${err}`);
+        return new Value(name, lines.join(' '));
     }
 }
 
-function parseValue(token: Token, tokenizer: Tokenizer): Value {
+function parseValue(key: ValueKey, token: Token, tokenizer: Tokenizer): Value {
     if (token.type === TokenType.End) {
-        throw new ParsingError(`Unexpected end while parsing variable value at ${tokenizer.getPosition()}`);
+        throw new ParsingError(`Unexpected end while parsing value at ${tokenizer.getPosition()}`);
     }
     if (token.type === TokenType.Primitive) {
-        return new Value(token.str);
+        return new Value(key, token.str);
     }
     if (token.type === TokenType.SetStart) {
         const values = parseCollectionValues(tokenizer, TokenType.SetEnd, parseValue);
-        return new SetValue(values);
+        return new SetValue(key, values);
     }
     if (token.type === TokenType.SequenceStart) {
         const values = parseCollectionValues(tokenizer, TokenType.SequenceEnd, parseValue);
-        return new SequenceValue(values);
+        return new SequenceValue(key, values);
     }
     if (token.type === TokenType.StructureStart) {
         const values = parseCollectionValues(tokenizer, TokenType.StructureEnd, parseStructureItem);
-        return new StructureValue(values);
+        return new StructureValue(key, values);
     }
     throw new ParsingError(`Unexpected token at ${tokenizer.getPosition()}: ${token.str}`);
 }
 
-function parseStructureItem(token: Token, tokenizer: Tokenizer): StructureItem {
+function parseStructureItem(_: ValueKey, token: Token, tokenizer: Tokenizer): Value {
     if (token.type !== TokenType.Name) {
         throw new ParsingError(`Expected structure item at ${tokenizer.getPosition()}, found ${token.str}`);
     }
@@ -201,14 +201,13 @@ function parseStructureItem(token: Token, tokenizer: Tokenizer): StructureItem {
     if (nextToken.type !== TokenType.StructureItemSeparator) {
         throw new ParsingError(`Expected structure item separator at ${tokenizer.getPosition()}, found ${token.str}`);
     }
-    const value = parseValue(tokenizer.nextToken(), tokenizer);
-    return new StructureItem(token.str, value);
+    return parseValue(token.str, tokenizer.nextToken(), tokenizer);
 }
 
 function parseCollectionValues<T>(
     tokenizer: Tokenizer,
     endTokenType: TokenType,
-    valueParser: (token: Token, tokenizer: Tokenizer) => T
+    valueParser: (key: ValueKey, token: Token, tokenizer: Tokenizer) => T
 ): T[] {
     const values = [];
     let canClose = true;
@@ -230,7 +229,7 @@ function parseCollectionValues<T>(
             canComma = false;
             canClose = false;
         } else {
-            values.push(valueParser(token, tokenizer));
+            values.push(valueParser(values.length + 1, token, tokenizer));
             canClose = true;
             canComma = true;
         }

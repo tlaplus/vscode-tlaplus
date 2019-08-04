@@ -1,5 +1,11 @@
 const vscode = acquireVsCodeApi();
 
+const changeHints = {
+    A: 'This item has been added since the previous state',
+    M: 'This item has been modified since the previous state',
+    D: 'This item has been deleted since the previous state'
+}
+
 const prevState = vscode.getState();
 if (prevState) {
     displayCheckResult(prevState);
@@ -113,7 +119,7 @@ function displayErrorTraceItem(elErrorTraceVars, item, state) {
     const elItem = document.createElement('li');
     const elItemBlock = document.createElement('div');
     elItemBlock.classList.add('error-trace-item-block');
-    const elHeader = document.createElement('span');
+    const elHeader = document.createElement('div');
     elHeader.classList.add('tree-node');
     elHeader.classList.add('tree-expandable');
     elHeader.classList.add('tree-expandable-down');
@@ -125,47 +131,64 @@ function displayErrorTraceItem(elErrorTraceVars, item, state) {
     elVarList.classList.add('tree-nodes');
     elVarList.classList.add('hidden');
     elVarList.classList.add('shown');
-    item.variables
-        .sort(compareVariables)
-        .forEach(v => displayVariable(elVarList, v.name, v.value, state));
+    item.variables.items.forEach(v => displayValue(elVarList, v, state));
     elItem.appendChild(elVarList);
     elErrorTraceVars.appendChild(elItem);
 }
 
-function displayVariable(elParent, name, value, state) {
-    let nameHtml = name;
-    if (value.items) {
-        nameHtml += ' <span class="var-size">(' + value.items.length + ')</span>';
-    }
+function displayValue(elParent, value, state) {
     const elVar = document.createElement('li');
     const elVarValueBlock = document.createElement('div');
-    const elVarName = document.createElement('div');
-    elVarName.classList.add('var-name');
-    elVarName.classList.add('tree-node');
-    elVarName.innerHTML = nameHtml;
-    elVarValueBlock.appendChild(elVarName);
+    const elVarKey = renderValueTitle(value, elVarValueBlock);
+    elVarValueBlock.appendChild(elVarKey);
     const elVarValue = document.createElement('div');
     elVarValue.classList.add('var-value');
     elVarValue.innerText = value.str;
+    if (value.changeType === 'D') {
+        elVarValue.classList.add('value-deleted');
+    }
     elVarValueBlock.appendChild(elVarValue);
     elVar.appendChild(elVarValueBlock);
     if (value.items && value.items.length > 0) {
-        elVarName.classList.add('tree-expandable');
+        elVarKey.classList.add('tree-expandable');
         const elSubList = document.createElement('ul');
         elSubList.classList.add('tree-nodes');
         elSubList.classList.add('hidden');
-        let idx = 1;
-        value.items.forEach(it => {
-            if (it.key) {
-                displayVariable(elSubList, it.key, it.value, state);
-            } else {
-                displayVariable(elSubList, String(idx), it, state);
-            }
-            idx += 1;
-        });
+        value.items.forEach(it => displayValue(elSubList, it, state));
+        if (value.deletedItems) {
+            value.deletedItems.forEach(dit => displayValue(elSubList, dit, state));
+        }
         elVar.appendChild(elSubList);
     }
     elParent.appendChild(elVar);
+}
+
+function renderValueTitle(value) {
+    const elVarTitle = document.createElement('div');
+    elVarTitle.classList.add('var-name');
+    elVarTitle.classList.add('tree-node');
+    const elVarKey = document.createElement('span');
+    elVarKey.textContent = value.key;
+    if (value.changeType === 'D') {
+        elVarKey.classList.add('value-deleted');
+    }
+    elVarTitle.appendChild(elVarKey);
+    if (value.items) {
+        const elVarSize = document.createElement('span');
+        elVarSize.classList.add('var-size');
+        elVarSize.textContent = `(${value.items.length})`;
+        elVarSize.setAttribute('title', 'Size of the collection');
+        elVarTitle.appendChild(elVarSize);
+    }
+    const elVarChange = document.createElement('span');
+    if (value.changeType !== 'N') {
+        elVarChange.classList.add('change-marker');
+        elVarChange.classList.add('change-marker-' + value.changeType);
+        elVarChange.textContent = value.changeType;
+        elVarChange.setAttribute('title', changeHints[value.changeType]);
+    }
+    elVarTitle.appendChild(elVarChange);
+    return elVarTitle;
 }
 
 function displayOutput(lines) {
@@ -228,13 +251,4 @@ function removeAllChildren(el) {
     while (el.lastChild) {
         el.removeChild(el.lastChild);
     }
-}
-
-function compareVariables(a, b) {
-    if (a.name < b.name) {
-        return -1;
-    } else if (a.name > b.name) {
-        return 1;
-    }
-    return 0;
 }

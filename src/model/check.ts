@@ -69,33 +69,56 @@ export class CoverageItem {
     ) {}
 }
 
+export type ValueKey = string | number;
+
 /**
- * Represents a variable value in a particular model state.
+ * Type of value change between two consecutive states.
  */
-export class VariableValue {
-    constructor(
-        readonly name: string,
-        readonly value: Value
-    ) {}
+export enum Change {
+    NOT_CHANGED = 'N',
+    ADDED = 'A',
+    MODIFIED = 'M',
+    DELETED = 'D'
 }
 
 /**
  * Base class for values.
  */
 export class Value {
-    constructor(readonly str: string) {}
-
-    toString() {
-        return this.str;
-    }
+    changeType = Change.NOT_CHANGED;
+    constructor(
+        readonly key: ValueKey,
+        readonly str: string
+    ) {}
 }
 
 /**
  * Value that is a collection of other values.
  */
-abstract class CollectionValue extends Value {
-    constructor(readonly items: Value[], prefix: string, postfix: string) {
-        super(makeCollectionValueString(items, prefix, postfix));
+export abstract class CollectionValue extends Value {
+    deletedItems: Value[] | undefined;
+
+    constructor(key: ValueKey, readonly items: Value[], prefix: string, postfix: string, toStr?: (v: Value) => string) {
+        super(key, makeCollectionValueString(items, prefix, postfix, toStr || CollectionValue.valueToString));
+    }
+
+    static valueToString(v: Value) {
+        return v.str;
+    }
+
+    addDeletedItems(items: Value[]) {
+        if (!items || items.length === 0) {
+            return;
+        }
+        if (!this.deletedItems) {
+            this.deletedItems = [];
+        }
+        const delItems = this.deletedItems;
+        items.forEach(delItem => {
+            const newValue = new Value(delItem.key, delItem.str);   // No need in deep copy here
+            newValue.changeType = Change.DELETED;
+            delItems.push(newValue);
+        });
     }
 }
 
@@ -103,8 +126,8 @@ abstract class CollectionValue extends Value {
  * Represents a set: {1, "b", <<TRUE, 5>>}, {}, etc.
  */
 export class SetValue extends CollectionValue {
-    constructor(values: Value[]) {
-        super(values, '{', '}');
+    constructor(key: ValueKey, items: Value[]) {
+        super(key, items, '{', '}');
     }
 }
 
@@ -112,23 +135,8 @@ export class SetValue extends CollectionValue {
  * Represents a sequence/tuple: <<1, "b", TRUE>>, <<>>, etc.
  */
 export class SequenceValue extends CollectionValue {
-    constructor(values: Value[]) {
-        super(values, '<<', '>>');
-    }
-}
-
-/**
- * An item of a structure.
- */
-export class StructureItem implements Value {
-    readonly str: string;
-
-    constructor(readonly key: string, readonly value: Value) {
-        this.str = key + ' |-> ' + value;
-    }
-
-    toString() {
-        return `${this.key} |-> ${this.value}`;
+    constructor(key: ValueKey, items: Value[]) {
+        super(key, items, '<<', '>>');
     }
 }
 
@@ -136,8 +144,24 @@ export class StructureItem implements Value {
  * Represents a structure: [a |-> 'A', b |-> 34, c |-> <<TRUE, 2>>], [], etc.
  */
 export class StructureValue extends CollectionValue {
-    constructor(values: StructureItem[]) {
-        super(values, '[', ']');
+    constructor(key: ValueKey, items: Value[], preserveOrder?: boolean) {
+        if (!preserveOrder) {
+            items.sort(StructureValue.compareItems);
+        }
+        super(key, items, '[', ']', StructureValue.itemToString);
+    }
+
+    static itemToString(item: Value) {
+        return `${item.key} |-> ${item.str}`;
+    }
+
+    static compareItems(a: Value, b: Value): number {
+        if (a.key < b.key) {
+            return -1;
+        } else if (a.key > b.key) {
+            return 1;
+        }
+        return 0;
     }
 }
 
@@ -151,7 +175,7 @@ export class ErrorTraceItem {
         readonly module: string,
         readonly action: string,
         readonly range: Range,
-        readonly variables: VariableValue[]
+        readonly variables: StructureValue  // Variables are presented as items of a structure
     ) {}
 }
 
@@ -238,6 +262,50 @@ export function getStatusName(status: CheckStatus): string {
     throw new Error(`Name not defined for check status ${status}`);
 }
 
+/**
+ * Recursively finds and marks all the changes between two collections.
+ */
+export function findChanges(prev: CollectionValue, state: CollectionValue): boolean {
+    let pi = 0;
+    let si = 0;
+    let modified = false;
+    const deletedItems = [];
+    while (pi < prev.items.length && si < state.items.length) {
+        const prevValue = prev.items[pi];
+        const stateValue = state.items[si];
+        if (prevValue.key > stateValue.key) {
+            stateValue.changeType = Change.ADDED;
+            modified = true;
+            si += 1;
+        } else if (prevValue.key < stateValue.key) {
+            deletedItems.push(prevValue);
+            pi += 1;
+        } else {
+            if (prevValue instanceof CollectionValue && stateValue instanceof CollectionValue) {
+                modified = findChanges(prevValue, stateValue) || modified;
+            } else if (prevValue.str !== stateValue.str) {
+                stateValue.changeType = Change.MODIFIED;
+                modified = true;
+            }
+            si += 1;
+            pi += 1;
+        }
+    }
+    for (; si < state.items.length; si++) {
+        state.items[si].changeType = Change.ADDED;
+        modified = true;
+    }
+    for (; pi < prev.items.length; pi++) {
+        deletedItems.push(prev.items[pi]);
+    }
+    state.addDeletedItems(deletedItems);
+    modified = modified || deletedItems.length > 0;
+    if (modified) {
+        state.changeType = Change.MODIFIED;
+    }
+    return modified;
+}
+
 function dateTimeToStr(dateTime: Moment | undefined): string {
     if (!dateTime) {
         return 'not yet';
@@ -252,8 +320,11 @@ function durationToStr(dur: number | undefined): string {
     return dur + ' msec';
 }
 
-function makeCollectionValueString(items: Value[], prefix: string, postfix: string) {
+function makeCollectionValueString(items: Value[], prefix: string, postfix: string, toStr: (v: Value) => string) {
     // TODO: trim to fit into 100 symbols
-    const valuesStr = items.map(i => i.toString()).join(', ');
+    const valuesStr = items
+        .filter(i => i.changeType !== Change.DELETED)
+        .map(i => toStr(i))
+        .join(', ');
     return prefix + valuesStr + postfix;
 }
