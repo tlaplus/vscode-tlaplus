@@ -21,19 +21,44 @@ thead {
 }
 
 .state-R {
-    color: var(--vscode-editor-oreground);
-}
-
-.state-X {
     color: var(--vscode-editor-foreground);
 }
 
-.state-S {
-    color: var(--vscode-editor-foreground);
+.vscode-light .state-X {
+    color: #c60;
+}
+
+.vscode-dark .state-X {
+    color: #f93;
+}
+
+.vscode-high-contrast .state-X {
+    color: #fa6;
+}
+
+.vscode-light .state-S {
+    color: #393;
+}
+
+.vscode-dark .state-S {
+    color: #6c6;
+}
+
+.vscode-high-contrast .state-S {
+    color: #3f3;
 }
 
 .state-E {
     color: var(--vscode-errorForeground);
+}
+
+.check-status-details {
+    display: inline-block;
+}
+
+.check-status-details::before {
+    content: ':';
+    margin-right: 1em;
 }
 
 .section-block {

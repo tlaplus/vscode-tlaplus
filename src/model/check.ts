@@ -178,10 +178,10 @@ export class ModelCheckResult {
         undefined, undefined, undefined, undefined, 0, undefined, []);
 
     readonly stateName: string;
-    readonly statusName: string;
     readonly startDateTimeStr: string | undefined;
     readonly endDateTimeStr: string | undefined;
     readonly durationStr: string | undefined;
+    readonly statusDetails: string | undefined;
 
     constructor(
         readonly modelName: string,
@@ -197,14 +197,28 @@ export class ModelCheckResult {
         readonly endDateTime: Moment | undefined,
         readonly duration: number | undefined,
         readonly workersCount: number,
-        readonly fingerprintCollisionProbability: string | undefined,
+        readonly collisionProbability: string | undefined,
         readonly outputLines: OutputLine[]
     ) {
         this.stateName = getStateName(this.state);
-        this.statusName = getStatusName(status);
         this.startDateTimeStr = dateTimeToStr(startDateTime);
         this.endDateTimeStr = dateTimeToStr(endDateTime);
         this.durationStr = durationToStr(duration);
+        let statusDetails;
+        switch (state) {
+            case CheckState.Running:
+                statusDetails = getStatusName(status);
+                break;
+            case CheckState.Success:
+                statusDetails = collisionProbability
+                    ? `Fingerprint collission probability: ${collisionProbability}`
+                    : '';
+                break;
+            case CheckState.Error:
+                statusDetails = `${errors.length} error(s)`;
+                break;
+        }
+        this.statusDetails = statusDetails;
     }
 }
 

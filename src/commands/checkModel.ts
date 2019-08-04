@@ -78,7 +78,7 @@ async function doCheckModel(
 }
 
 function updateStatusBarItem(active: boolean) {
-    statusBarItem.text = 'TLC' + (active ? '\u25BA' : '');
+    statusBarItem.text = 'TLC' + (active ? ' $(gear~spin)' : '');
     statusBarItem.tooltip = 'TLA+ model checking' + (active ? ' is running' : ' result');
     statusBarItem.command = CMD_CHECK_MODEL_DISPLAY;
     statusBarItem.show();
