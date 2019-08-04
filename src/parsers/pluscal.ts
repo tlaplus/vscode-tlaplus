@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
-import { ProcessOutputParser } from '../tla2tools';
+import { TLAToolParser } from './base';
 import { Readable } from 'stream';
 
 /**
  * Parses stdout of PlusCal transpiler.
  */
-export class TranspilerStdoutParser extends ProcessOutputParser {
+export class TranspilerStdoutParser extends TLAToolParser {
     errMessage: string | null = null;
 
     constructor(source: Readable | string[], filePath: string) {

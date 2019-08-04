@@ -145,7 +145,7 @@
                     "scope": "application",
                     "default": "",
                     "format": "uri",
-                    "markdownDescription": "Path to **Java 11** home directory that should be used to run TLA+ tools."
+                    "markdownDescription": "Path to Java (8 or higher) home directory that should be used to run TLA+ tools."
                 }
             }
         }

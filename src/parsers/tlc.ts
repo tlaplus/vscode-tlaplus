@@ -1,5 +1,5 @@
 import { Range } from 'vscode';
-import { ProcessOutputParser } from '../tla2tools';
+import { TLAToolParser } from './base';
 import { Readable } from 'stream';
 import { CheckStatus, ModelCheckResult, InitialStateStatItem, CoverageItem, ErrorTraceItem,
     VariableValue, CheckState, OutputLine} from '../model/check';
@@ -47,7 +47,7 @@ const TLC_SUCCESS = 2193;
 /**
  * Parses stdout of TLC model checker.
  */
-export class TLCModelCheckerStdoutParser extends ProcessOutputParser {
+export class TLCModelCheckerStdoutParser extends TLAToolParser {
     checkResultBuilder: ModelCheckResultBuilder;
     handler: (checkResult: ModelCheckResult) => void;
     timer: NodeJS.Timer | undefined = undefined;

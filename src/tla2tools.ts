@@ -1,143 +1,51 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
 import * as path from 'path';
 import * as cp from 'child_process';
-import { Readable } from 'stream';
-import { DCollection } from './diagnostic';
-import { pathToUri, ParsingError } from './common';
+import * as fs from 'fs';
+import { ChildProcess, SpawnOptions, spawn, exec } from 'child_process';
+import { pathToUri } from './common';
+import { JavaVersionParser } from './parsers/javaVersion';
 
-const toolsJarPath = path.resolve(__dirname, '../tools/tla2tools.jar');
+export const CFG_JAVA_HOME = 'tlaplus.java.home';
+
+const LOWEST_JAVA_VERSION = 8;
 const javaCmd = 'java' + (process.platform === 'win32' ? '.exe' : '');
+const toolsJarPath = path.resolve(__dirname, '../tools/tla2tools.jar');
+const toolsBaseArgs: ReadonlyArray<string> = ['-XX:+UseParallelGC', '-cp', toolsJarPath];
 
+let lastUsedJavaHome: string | undefined;
+let cachedJavaPath: string | undefined;
+
+/**
+ * Thrown when there's some problem with Java or TLA+ tooling.
+ */
 export class ToolingError extends Error {
     constructor(message: string) {
         super(message);
     }
 }
 
-/**
- * Auxiliary class that reads chunks from the given stream, breaks data into lines
- * and sends them to the parsing method line by line.
- */
-export abstract class ProcessOutputParser {
-    closed: boolean = false;
-    buf: string | null = null;
-    resolve?: (result: DCollection) => void;
-    dCol: DCollection = new DCollection();
-    lines: string[] | undefined;
+export class JavaVersion {
+    static UNKNOWN_VERSION = '?';
 
-    protected readonly filePath?: string;
-
-    constructor(source: Readable | string[], filePath?: string) {
-        this.filePath = filePath;
-        if (source instanceof Readable) {
-            const me = this;
-            source.on('data', chunk => me.handleData(chunk));
-            source.on('end', () => me.handleData(null));
-        } else {
-            this.lines = source;
-        }
-        if (filePath) {
-            this.addDiagnosticFilePath(filePath);
-        }
-    }
-
-    /**
-     * Reads the stream to the end, parsing all the lines.
-     */
-    async readAll(): Promise<DCollection> {
-        const me = this;
-        return new Promise(resolve => {
-            me.resolve = resolve;
-        });
-    }
-
-    /**
-     * Parses the source synchronously.
-     * For this method to work, the source of the lines must be an array of l.
-     */
-    readAllSync(): DCollection {
-        if (!this.lines) {
-            throw new ParsingError('Cannot parse synchronously because the source is not a set of lines');
-        }
-        this.lines.forEach(l => {
-            this.tryParseLine(l);
-        });
-        this.tryParseLine(null);
-        return this.dCol;
-    }
-
-    protected abstract parseLine(line: string | null): void;
-
-    protected handleError(err: any) {
-        // Do nothing by default
-    }
-
-    protected addDiagnosticFilePath(filePath: string) {
-        this.dCol.addFilePath(filePath);
-    }
-
-    protected addDiagnosticMessage(filePath: string, range: vscode.Range, text: string) {
-        this.dCol.addMessage(filePath, range, text);
-    }
-
-    protected addDiagnosticCollection(dCol: DCollection) {
-        dCol.getFilePaths().forEach(fp => this.addDiagnosticFilePath(fp));
-        dCol.getMessages().forEach(m => this.dCol.addMessage(m.filePath, m.diagnostic.range, m.diagnostic.message));
-    }
-
-    private handleData(chunk: Buffer | string | null) {
-        if (this.closed) {
-            throw new Error('Stream is closed.');
-        }
-        if (chunk === null) {
-            console.log(':END:');
-            this.tryParseLine(this.buf);
-            this.buf = null;
-            this.closed = true;
-            if (this.resolve) {
-                this.resolve(this.dCol);
-            }
-            return;
-        }
-        const str = String(chunk);
-        const eChunk = this.buf === null ? str : this.buf + str;
-        const lines = eChunk.split('\n');
-        if (str.endsWith('\n')) {
-            this.buf = null;
-            lines.pop();
-        } else {
-            this.buf = lines.pop() || null;
-        }
-        const me = this;
-        lines.forEach(line => {
-            console.log('> ' + line);
-            me.tryParseLine(line);
-        });
-    }
-
-    private tryParseLine(line: string | null) {
-        try {
-            this.parseLine(line);
-        } catch (err) {
-            this.handleError(err);
-            console.log(`Error parsing output line: ${err}`);
-        }
-    }
+    constructor(
+        readonly version: string,
+        readonly fullOutput: string[]
+    ) {}
 }
 
 /**
- * Executes a Java process.
+ * Executes a TLA+ tool.
  */
-export function runTool(
-    toolName: string,
-    filePath: string,
-    toolArgs?: string[]
-): cp.ChildProcess {
-    const javaPath = buildJavaPath();
-    const eArgs = ['-XX:+UseParallelGC', '-cp', toolsJarPath, toolName].concat(toolArgs || []);
-    eArgs.push(filePath);
-    return cp.spawn(javaPath, eArgs, { cwd: path.dirname(filePath) });
+export async function runTool(toolName: string, filePath: string, toolArgs?: string[]): Promise<ChildProcess> {
+    const javaPath = await obtainJavaPath();
+    const args = toolsBaseArgs.slice(0);
+    args.push(toolName);
+    if (toolArgs) {
+        toolArgs.forEach(arg => args.push(arg));
+    }
+    args.push(filePath);
+    return spawn(javaPath, args, { cwd: path.dirname(filePath) });
 }
 
 /**
@@ -154,15 +62,54 @@ export function reportBrokenToolchain(err: any) {
     vscode.window.showErrorMessage('Toolchain is broken');
 }
 
+async function obtainJavaPath(): Promise<string> {
+    const javaHome = vscode.workspace.getConfiguration().get<string>(CFG_JAVA_HOME);
+    if (cachedJavaPath && javaHome === lastUsedJavaHome) {
+        return cachedJavaPath;
+    }
+    const javaPath = buildJavaPath();
+    cachedJavaPath = javaPath;
+    lastUsedJavaHome = javaHome;
+    await checkJavaVersion(javaPath);
+    return javaPath;
+}
+
+/**
+ * Builds path to the Java executable based on the configuration.
+ */
 function buildJavaPath(): string {
-    const javaHome = vscode.workspace.getConfiguration().get<string>('tlaplus.java.home');
-    const javaPath = javaCmd;
+    let javaPath = javaCmd;
+    const javaHome = vscode.workspace.getConfiguration().get<string>(CFG_JAVA_HOME);
     if (javaHome) {
         const homeUri = pathToUri(javaHome);
-        const javaPath = homeUri.fsPath + path.sep + 'bin' + path.sep + javaCmd;
+        javaPath = homeUri.fsPath + path.sep + 'bin' + path.sep + javaCmd;
         if (!fs.existsSync(javaPath)) {
-            throw new ToolingError('Java command not found. Check the Java Home configuration property.');
+            throw new ToolingError('Java executable not found. Check the Java Home configuration property.');
         }
     }
     return javaPath;
+}
+
+/**
+ * Executes java -version and analyzes, if the version is 1.8 or higher.
+ */
+async function checkJavaVersion(javaPath: string) {
+    const proc = spawn(javaPath, ['-version']);
+    const parser = new JavaVersionParser(proc.stderr);
+    const ver = await parser.readAll();
+    if (ver.version === JavaVersion.UNKNOWN_VERSION) {
+        console.debug('Java version output:');
+        ver.fullOutput.forEach(line => console.debug(line));
+        throw new ToolingError('Error while obtaining Java version. Check the Java Home configuration property.');
+    }
+    console.log(`Java version: ${ver.version}`);
+    let num = ver.version;
+    if (num.startsWith('1.')) {
+        num = num.substring(2);
+    }
+    const pIdx = num.indexOf('.');
+    if (pIdx > 0 && parseInt(num.substring(0, pIdx), 10) >= LOWEST_JAVA_VERSION) {
+        return;
+    }
+    vscode.window.showWarningMessage(`Unexpected Java version: ${ver.version}`);
 }
