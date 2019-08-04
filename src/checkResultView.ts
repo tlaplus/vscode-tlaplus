@@ -53,6 +53,7 @@ function createNewPanel() {
             localResourceRoots: [vscode.Uri.file(path.resolve(__dirname, '../resources'))]
         }
     );
+    viewPanel.iconPath = vscode.Uri.file(path.resolve(__dirname, '../resources/images/result-ico.svg'));
     viewPanel.onDidDispose(() => {
         viewPanel = undefined;
     });

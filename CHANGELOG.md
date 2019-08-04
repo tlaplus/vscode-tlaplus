@@ -2,7 +2,10 @@
 
 ## [Unreleased]
 
-## 0.1.0 &ndash; 3rd August, 2019
+* Java version checking.
+* Model check panel UI improvements.
+
+## 0.1.0 &ndash; 4rd August, 2019
 
 ### Initial release
 

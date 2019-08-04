@@ -33,25 +33,23 @@ function displayStatus(result) {
     const elTimeStart = document.getElementById('time-start');
     const elTimeEnd = document.getElementById('time-end');
     const elState = document.getElementById('check-state');
-    const elStatus = document.getElementById('check-status');
     const elStatusDetails = document.getElementById('check-status-details');
     const elCmdStop = document.getElementById('cmd-stop');
     elTimeStart.textContent = result.startDateTimeStr;
     elTimeEnd.textContent = result.endDateTimeStr;
     elState.textContent = result.stateName;
     elState.classList = ['state-' + result.state];
-    elStatus.textContent = ': ' + result.statusName;
     if (result.state === 'R') {
         // Still running
-        elStatus.classList = [];
-        elStatusDetails.classList = ['hidden'];
-        elCmdStop.classList = [];
+        elCmdStop.classList.remove('hidden');
     } else {
-        const fcp = result.fingerprintCollisionProbability ? `Fingerprint collission probability: ${result.fingerprintCollisionProbability}` : '';
-        elStatus.classList = ['hidden'];
-        elStatusDetails.textContent = fcp;
-        elStatusDetails.classList = fcp ? [] : ['hidden'];
-        elCmdStop.classList = ['hidden'];
+        elCmdStop.classList.add('hidden');
+    }
+    if (result.statusDetails) {
+        elStatusDetails.classList.remove('hidden');
+        elStatusDetails.textContent = result.statusDetails;
+    } else {
+        elStatusDetails.classList.add('hidden');
     }
 }
 
@@ -74,17 +72,17 @@ function displayErrors(errors) {
     const elErrorsList = document.getElementById('errors-list');
     removeAllChildren(elErrorsList);
     if (!errors || errors.length === 0) {
-        elErrors.classList = ['hidden'];
+        elErrors.classList.add('hidden');
         return;
     }
-    elErrors.classList = [];
+    elErrors.classList.remove('hidden');
     errors.forEach(err => {
         const elError = document.createElement('p');
         elError.classList = ['error'];
         err.forEach(line => {
             const elErrorLine = document.createElement("p");
             elErrorLine.innerText = line;
-            elErrorLine.classList = ['error-line'];
+            elErrorLine.classList.add('error-line');
             elError.appendChild(elErrorLine);
         });
         elErrorsList.appendChild(elError);
@@ -96,10 +94,10 @@ function displayErrorTrace(trace, state) {
     const elErrorTraceItems = document.getElementById('error-trace-items');
     removeAllChildren(elErrorTraceItems);
     if (!trace || trace.length === 0) {
-        elErrorTrace.classList = ['hidden'];
+        elErrorTrace.classList.add('hidden');
         return;
     }
-    elErrorTrace.classList = [];
+    elErrorTrace.classList.remove('hidden');
     trace.forEach(item => displayErrorTraceItem(elErrorTraceItems, item, state));
     const expNodes = document.getElementsByClassName('tree-expandable');
     for (let i = 0; i < expNodes.length; i++) {
@@ -175,13 +173,13 @@ function displayOutput(lines) {
     const elLines = document.getElementById('output-lines');
     removeAllChildren(elLines);
     if (!lines || lines.length === 0) {
-        elOutput.classList = ['hidden'];
+        elOutput.classList.add('hidden');
         return;
     }
-    elOutput.classList = [];
+    elOutput.classList.remove('hidden');
     lines.forEach(line => {
         const elLine = document.createElement('p');
-        elLine.classList = ['output-line'];
+        elLine.classList.add('output-line');
         let elText;
         if (line.count === 1) {
             elText = elLine;
