@@ -1,79 +1,104 @@
 import * as assert from 'assert';
-import { parseValueLines } from '../../../parsers/tlcValues';
-import { Value, SetValue, SequenceValue, StructureValue, StructureItem } from '../../../model/check';
+import { parseVariableValue } from '../../../parsers/tlcValues';
+import { ValueKey, Value, SetValue, SequenceValue, StructureValue } from '../../../model/check';
+
+const ROOT = 'root';
 
 suite('TLC Values Output Parser Test Suite', () => {
 
     test('Parses primitive number values', () => {
         for (const val of ['0', '9', '3994829384736', '-1', '-392832']) {
-            assertValue([val], v(val), `Failed to parse primitive number value: ${val}`);
+            assertValue([val], v(ROOT, val), `Failed to parse primitive number value: ${val}`);
         }
     });
 
     test('Parses primitive boolean values', () => {
         for (const val of ['TRUE', 'FALSE']) {
-            assertValue([val], v(val), `Failed to parse primitive boolean value: ${val}`);
+            assertValue([val], v(ROOT, val), `Failed to parse primitive boolean value: ${val}`);
         }
     });
 
     test('Parses primitive string values', () => {
         for (const val of ['""', '"Hello, string"', '"How about \\\"escaped\\\" symbols \\\\?"']) {
-            assertValue([val], v(val), `Failed to parse primitive string value: ${val}`);
+            assertValue([val], v(ROOT, val), `Failed to parse primitive string value: ${val}`);
         }
     });
 
     test('Parses empty set', () => {
-        assertValue(['{}'], set());
+        assertValue(['{}'], set(ROOT));
     });
 
     test('Parses nested sets', () => {
-        assertValue(['{{{0}}}'], set(set(set(v('0')))));
+        assertValue(['{{{0}}}'], set(ROOT, set(1, set(1, v(1, '0')))));
     });
 
     test('Parses set of primitives', () => {
-        assertValue(['{1, TRUE, "set"}'], set(v('1'), v('TRUE'), v('\"set\"')));
+        assertValue(['{1, TRUE, "set"}'], set(ROOT, v(1, '1'), v(2, 'TRUE'), v(3, '\"set\"')));
     });
 
     test('Parses set with collections', () => {
-        assertValue(['{<<5>>, [a |-> \"A\"], {9}}'], set(seq(v('5')), struct(sit('a', v('"A"'))), set(v('9'))));
+        assertValue(
+            ['{<<5>>, [a |-> \"A\"], {9}}'],
+            set(ROOT,
+                seq(1, v(1, '5')),
+                struct(2, v('a', '"A"')),
+                set(3, v(1, '9')
+            )
+        ));
     });
 
     test('Parses empty sequence', () => {
-        assertValue(['<<>>'], seq());
+        assertValue(['<<>>'], seq(ROOT));
     });
 
     test('Parses nested sequences', () => {
-        assertValue(['<<<<<<0>>>>>>'], seq(seq(seq(v('0')))));
+        assertValue(['<<<<<<8>>>>>>'], seq(ROOT, seq(1, seq(1, v(1, '8')))));
     });
 
     test('Parses sequence of primitives', () => {
-        assertValue(['<<19, FALSE, "sequence">>'], seq(v('19'), v('FALSE'), v('\"sequence\"')));
+        assertValue(
+            ['<<19, FALSE, "sequence">>'],
+            seq(ROOT, v(1, '19'), v(2, 'FALSE'), v(3, '\"sequence\"')
+        ));
     });
 
     test('Parses sequence with collections', () => {
-        assertValue(['<<[ p |-> 8 ], <<7>>, {"a"}>>'], seq(struct(sit('p', v('8'))), seq(v('7')), set(v('"a"'))));
+        assertValue(
+            ['<<[ p |-> 8 ], <<7>>, {"a"}>>'],
+            seq(ROOT,
+                struct(1, v('p', '8')),
+                seq(2, v(1, '7')),
+                set(3, v(1, '"a"'))
+        ));
     });
 
     test('Parses empty structure', () => {
-        assertValue(['[]'], struct());
+        assertValue(['[]'], struct(ROOT));
     });
 
     test('Parses nested structures', () => {
         assertValue(
             ['[ a |-> [ b |-> [ hello |-> "world" ]]]'],
-            struct(sit('a', struct(sit('b', struct(sit('hello', v('"world"'))))))));
+            struct(ROOT, struct('a', struct('b', v('hello', '"world"'))))
+        );
     });
 
     test('Parses structure with primitives', () => {
         assertValue(
             ['[ foo |-> 84, bar |-> TRUE, baz |-> "BAZ" ]'],
-            struct(sit('foo', v('84')), sit('bar', v('TRUE')), sit('baz', v('"BAZ"'))));
+            struct(ROOT, v('foo', '84'), v('bar', 'TRUE'), v('baz', '"BAZ"'))
+        );
     });
 
     test('Parses structure with collections', () => {
         assertValue(
             ['[ foo |-> <<84>>, bar |-> {TRUE}, baz |-> [ e |-> 0 ] ]'],
-            struct(sit('foo', seq(v('84'))), sit('bar', set(v('TRUE'))), sit('baz', struct(sit('e', v('0'))))));
+            struct(ROOT,
+                seq('foo', v(1, '84')),
+                set('bar', v(1, 'TRUE')),
+                struct('baz', v('e', '0'))
+            )
+        );
     });
 
     test('Parses multiline collections', () => {
@@ -82,10 +107,10 @@ suite('TLC Values Output Parser Test Suite', () => {
             '  eng |-> "ten",',
             '  ger |-> "zehn"]'
         ];
-        const expect = struct(
-            sit('num', v('10')),
-            sit('eng', v('"ten"')),
-            sit('ger', v('"zehn"'))
+        const expect = struct(ROOT,
+            v('num', '10'),
+            v('eng', '"ten"'),
+            v('ger', '"zehn"')
         );
         assertValue(lines, expect);
     });
@@ -107,42 +132,38 @@ suite('TLC Values Output Parser Test Suite', () => {
             '   [ foo |-> {TRUE} ]',
             '>>}}',
         ];
-        const expect = set(
-            v('12'),
-            struct(
-                sit('key_1', seq(v('"one"'), v('"two"'))),
-                sit('key_2', set(v('3'), v('4'), v('"five"'), v('TRUE'))),
-                sit('key_3', struct(sit('subkey_41', seq(v('-299384')))))
+        const expect = set(ROOT,
+            v(1, '12'),
+            struct(2,
+                seq('key_1', v(1, '"one"'), v(2, '"two"')),
+                set('key_2', v(1, '3'), v(2, '4'), v(3, '"five"'), v('4', 'TRUE')),
+                struct('key_3', seq('subkey_41', v(1, '-299384')))
             ),
-            seq(set()),
-            v('"long long \\" string"'),
-            set(seq(struct(sit('foo', set(v('TRUE')))))),
+            seq(3, set('1')),
+            v('4', '"long long \\" string"'),
+            set('5', seq(1, struct(1, set('foo', v(1, 'TRUE'))))),
         );
         assertValue(lines, expect);
     });
 });
 
 function assertValue(lines: string[], expected: Value, message?: string) {
-    const value = parseValueLines(lines);
+    const value = parseVariableValue(ROOT, lines);
     assert.deepEqual(value, expected, message);
 }
 
-function v(value: string): Value {
-    return new Value(value);
+function v(key: ValueKey, value: string): Value {
+    return new Value(String(key), value);
 }
 
-function set(...values: Value[]): SetValue {
-    return new SetValue(values);
+function set(key: ValueKey, ...values: Value[]): SetValue {
+    return new SetValue(key, values);
 }
 
-function seq(...values: Value[]): SequenceValue {
-    return new SequenceValue(values);
+function seq(key: ValueKey, ...values: Value[]): SequenceValue {
+    return new SequenceValue(key, values);
 }
 
-function struct(...values: StructureItem[]): StructureValue {
-    return new StructureValue(values);
-}
-
-function sit(key: string, value: Value): StructureItem {
-    return new StructureItem(key, value);
+function struct(key: ValueKey, ...values: Value[]): StructureValue {
+    return new StructureValue(key, values);
 }

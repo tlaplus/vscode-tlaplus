@@ -2,8 +2,8 @@ import { Range } from 'vscode';
 import { TLAToolParser } from './base';
 import { Readable } from 'stream';
 import { CheckStatus, ModelCheckResult, InitialStateStatItem, CoverageItem, ErrorTraceItem,
-    VariableValue, CheckState, OutputLine} from '../model/check';
-import { parseValueLines } from './tlcValues';
+    CheckState, OutputLine, StructureValue} from '../model/check';
+import { parseVariableValue } from './tlcValues';
 import { SanyStdoutParser } from './sany';
 import { DCollection } from '../diagnostic';
 import { pathToModuleName, parseDateTime } from '../common';
@@ -445,6 +445,7 @@ class ModelCheckResultBuilder {
         if (!matches) {
             return;
         }
+        const itemVars = this.parseErrorTraceVariables(lines);
         this.errorTrace.push(new ErrorTraceItem(
             parseInt(matches[1]),
             `${matches[2]} in ${matches[7]}`,
@@ -455,11 +456,11 @@ class ModelCheckResultBuilder {
                 parseInt(matches[4]),
                 parseInt(matches[5]),
                 parseInt(matches[6])),
-            this.parseErrorTraceVariables(lines)
+            itemVars
         ));
     }
 
-    private parseErrorTraceVariables(lines: string[]): VariableValue[] {
+    private parseErrorTraceVariables(lines: string[]): StructureValue {
         const variables = [];
         for (let i = 1; i < lines.length; i++) {
             const line = lines[i];
@@ -469,11 +470,11 @@ class ModelCheckResultBuilder {
                 const valueLines = [matches[2]];
                 this.readValueLines(i + 1, lines, valueLines);
                 i += valueLines.length - 1;
-                const value = parseValueLines(valueLines);
-                variables.push(new VariableValue(name, value));
+                const value = parseVariableValue(name, valueLines);
+                variables.push(value);
             }
         }
-        return variables;
+        return new StructureValue('', variables);
     }
 
     private readValueLines(startIdx: number, lines: string[], valueLines: string[]) {

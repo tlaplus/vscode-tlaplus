@@ -69,33 +69,28 @@ export class CoverageItem {
     ) {}
 }
 
-/**
- * Represents a variable value in a particular model state.
- */
-export class VariableValue {
-    constructor(
-        readonly name: string,
-        readonly value: Value
-    ) {}
-}
+export type ValueKey = string | number;
 
 /**
  * Base class for values.
  */
 export class Value {
-    constructor(readonly str: string) {}
-
-    toString() {
-        return this.str;
-    }
+    constructor(
+        readonly key: ValueKey,
+        readonly str: string
+    ) {}
 }
 
 /**
  * Value that is a collection of other values.
  */
 abstract class CollectionValue extends Value {
-    constructor(readonly items: Value[], prefix: string, postfix: string) {
-        super(makeCollectionValueString(items, prefix, postfix));
+    constructor(key: ValueKey, readonly items: Value[], prefix: string, postfix: string, toStr?: (v: Value) => string) {
+        super(key, makeCollectionValueString(items, prefix, postfix, toStr || CollectionValue.valueToString));
+    }
+
+    static valueToString(v: Value) {
+        return v.str;
     }
 }
 
@@ -103,8 +98,8 @@ abstract class CollectionValue extends Value {
  * Represents a set: {1, "b", <<TRUE, 5>>}, {}, etc.
  */
 export class SetValue extends CollectionValue {
-    constructor(values: Value[]) {
-        super(values, '{', '}');
+    constructor(key: ValueKey, items: Value[]) {
+        super(key, items, '{', '}');
     }
 }
 
@@ -112,23 +107,8 @@ export class SetValue extends CollectionValue {
  * Represents a sequence/tuple: <<1, "b", TRUE>>, <<>>, etc.
  */
 export class SequenceValue extends CollectionValue {
-    constructor(values: Value[]) {
-        super(values, '<<', '>>');
-    }
-}
-
-/**
- * An item of a structure.
- */
-export class StructureItem implements Value {
-    readonly str: string;
-
-    constructor(readonly key: string, readonly value: Value) {
-        this.str = key + ' |-> ' + value;
-    }
-
-    toString() {
-        return `${this.key} |-> ${this.value}`;
+    constructor(key: ValueKey, items: Value[]) {
+        super(key, items, '<<', '>>');
     }
 }
 
@@ -136,8 +116,21 @@ export class StructureItem implements Value {
  * Represents a structure: [a |-> 'A', b |-> 34, c |-> <<TRUE, 2>>], [], etc.
  */
 export class StructureValue extends CollectionValue {
-    constructor(values: StructureItem[]) {
-        super(values, '[', ']');
+    constructor(key: ValueKey, items: Value[]) {
+        super(key, items.sort(StructureValue.compareItems), '[', ']', StructureValue.itemToString);
+    }
+
+    static itemToString(item: Value) {
+        return `${item.key} |-> ${item.str}`;
+    }
+
+    static compareItems(a: Value, b: Value): number {
+        if (a.key < b.key) {
+            return -1;
+        } else if (a.key > b.key) {
+            return 1;
+        }
+        return 0;
     }
 }
 
@@ -151,7 +144,7 @@ export class ErrorTraceItem {
         readonly module: string,
         readonly action: string,
         readonly range: Range,
-        readonly variables: VariableValue[]
+        readonly variables: StructureValue  // Variables are presented as items of a structure
     ) {}
 }
 
@@ -252,8 +245,8 @@ function durationToStr(dur: number | undefined): string {
     return dur + ' msec';
 }
 
-function makeCollectionValueString(items: Value[], prefix: string, postfix: string) {
+function makeCollectionValueString(items: Value[], prefix: string, postfix: string, toStr: (v: Value) => string) {
     // TODO: trim to fit into 100 symbols
-    const valuesStr = items.map(i => i.toString()).join(', ');
+    const valuesStr = items.map(i => toStr(i)).join(', ');
     return prefix + valuesStr + postfix;
 }

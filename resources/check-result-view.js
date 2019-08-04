@@ -125,15 +125,13 @@ function displayErrorTraceItem(elErrorTraceVars, item, state) {
     elVarList.classList.add('tree-nodes');
     elVarList.classList.add('hidden');
     elVarList.classList.add('shown');
-    item.variables
-        .sort(compareVariables)
-        .forEach(v => displayVariable(elVarList, v.name, v.value, state));
+    item.variables.items.forEach(v => displayValue(elVarList, v, state));
     elItem.appendChild(elVarList);
     elErrorTraceVars.appendChild(elItem);
 }
 
-function displayVariable(elParent, name, value, state) {
-    let nameHtml = name;
+function displayValue(elParent, value, state) {
+    let nameHtml = value.key;
     if (value.items) {
         nameHtml += ' <span class="var-size">(' + value.items.length + ')</span>';
     }
@@ -154,15 +152,7 @@ function displayVariable(elParent, name, value, state) {
         const elSubList = document.createElement('ul');
         elSubList.classList.add('tree-nodes');
         elSubList.classList.add('hidden');
-        let idx = 1;
-        value.items.forEach(it => {
-            if (it.key) {
-                displayVariable(elSubList, it.key, it.value, state);
-            } else {
-                displayVariable(elSubList, String(idx), it, state);
-            }
-            idx += 1;
-        });
+        value.items.forEach(it => displayValue(elSubList, it, state));
         elVar.appendChild(elSubList);
     }
     elParent.appendChild(elVar);
@@ -228,13 +218,4 @@ function removeAllChildren(el) {
     while (el.lastChild) {
         el.removeChild(el.lastChild);
     }
-}
-
-function compareVariables(a, b) {
-    if (a.name < b.name) {
-        return -1;
-    } else if (a.name > b.name) {
-        return 1;
-    }
-    return 0;
 }
