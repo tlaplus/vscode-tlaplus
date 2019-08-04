@@ -72,9 +72,20 @@ export class CoverageItem {
 export type ValueKey = string | number;
 
 /**
+ * Type of value change between two consecutive states.
+ */
+export enum Change {
+    NOT_CHANGED = 'N',
+    ADDED = 'A',
+    MODIFIED = 'M',
+    DELETED = 'D'
+}
+
+/**
  * Base class for values.
  */
 export class Value {
+    changeType = Change.NOT_CHANGED;
     constructor(
         readonly key: ValueKey,
         readonly str: string
@@ -84,13 +95,19 @@ export class Value {
 /**
  * Value that is a collection of other values.
  */
-abstract class CollectionValue extends Value {
+export abstract class CollectionValue extends Value {
     constructor(key: ValueKey, readonly items: Value[], prefix: string, postfix: string, toStr?: (v: Value) => string) {
         super(key, makeCollectionValueString(items, prefix, postfix, toStr || CollectionValue.valueToString));
     }
 
     static valueToString(v: Value) {
         return v.str;
+    }
+
+    addDeletedItem(value: Value) {
+        const newValue = new Value(value.key, value.str);   // No need in deep copy here
+        newValue.changeType = Change.DELETED;
+        this.items.push(newValue);
     }
 }
 
@@ -116,8 +133,11 @@ export class SequenceValue extends CollectionValue {
  * Represents a structure: [a |-> 'A', b |-> 34, c |-> <<TRUE, 2>>], [], etc.
  */
 export class StructureValue extends CollectionValue {
-    constructor(key: ValueKey, items: Value[]) {
-        super(key, items.sort(StructureValue.compareItems), '[', ']', StructureValue.itemToString);
+    constructor(key: ValueKey, items: Value[], preserveOrder?: boolean) {
+        if (!preserveOrder) {
+            items.sort(StructureValue.compareItems);
+        }
+        super(key, items, '[', ']', StructureValue.itemToString);
     }
 
     static itemToString(item: Value) {
@@ -231,6 +251,52 @@ export function getStatusName(status: CheckStatus): string {
     throw new Error(`Name not defined for check status ${status}`);
 }
 
+/**
+ * Recursively finds and marks all the changes between two collections.
+ */
+export function findChanges(prev: CollectionValue, state: CollectionValue): boolean {
+    let pi = 0;
+    let si = 0;
+    let modified = false;
+    const deletedItems = [];
+    while (pi < prev.items.length && si < state.items.length) {
+        const prevValue = prev.items[pi];
+        const stateValue = state.items[si];
+        if (prevValue.key > stateValue.key) {
+            stateValue.changeType = Change.ADDED;
+            modified = true;
+            si += 1;
+        } else if (prevValue.key < stateValue.key) {
+            deletedItems.push(prevValue);
+            pi += 1;
+        } else {
+            if (prevValue instanceof CollectionValue && stateValue instanceof CollectionValue) {
+                modified = findChanges(prevValue, stateValue) || modified;
+            } else if (prevValue.str !== stateValue.str) {
+                stateValue.changeType = Change.MODIFIED;
+                modified = true;
+            }
+            si += 1;
+            pi += 1;
+        }
+    }
+    for (; si < state.items.length; si++) {
+        state.items[si].changeType = Change.ADDED;
+        modified = true;
+    }
+    for (; pi < prev.items.length; pi++) {
+        deletedItems.push(prev.items[pi]);
+    }
+    for (const delValue of deletedItems) {
+        state.addDeletedItem(delValue);
+        modified = true;
+    }
+    if (modified) {
+        state.changeType = Change.MODIFIED;
+    }
+    return modified;
+}
+
 function dateTimeToStr(dateTime: Moment | undefined): string {
     if (!dateTime) {
         return 'not yet';
@@ -247,6 +313,9 @@ function durationToStr(dur: number | undefined): string {
 
 function makeCollectionValueString(items: Value[], prefix: string, postfix: string, toStr: (v: Value) => string) {
     // TODO: trim to fit into 100 symbols
-    const valuesStr = items.map(i => toStr(i)).join(', ');
+    const valuesStr = items
+        .filter(i => i.changeType !== Change.DELETED)
+        .map(i => toStr(i))
+        .join(', ');
     return prefix + valuesStr + postfix;
 }

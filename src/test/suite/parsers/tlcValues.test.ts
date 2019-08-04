@@ -1,6 +1,7 @@
 import * as assert from 'assert';
 import { parseVariableValue } from '../../../parsers/tlcValues';
-import { ValueKey, Value, SetValue, SequenceValue, StructureValue } from '../../../model/check';
+import { Value } from '../../../model/check';
+import { v, set, seq, struct } from '../testUtils';
 
 const ROOT = 'root';
 
@@ -150,20 +151,4 @@ suite('TLC Values Output Parser Test Suite', () => {
 function assertValue(lines: string[], expected: Value, message?: string) {
     const value = parseVariableValue(ROOT, lines);
     assert.deepEqual(value, expected, message);
-}
-
-function v(key: ValueKey, value: string): Value {
-    return new Value(String(key), value);
-}
-
-function set(key: ValueKey, ...values: Value[]): SetValue {
-    return new SetValue(key, values);
-}
-
-function seq(key: ValueKey, ...values: Value[]): SequenceValue {
-    return new SequenceValue(key, values);
-}
-
-function struct(key: ValueKey, ...values: Value[]): StructureValue {
-    return new StructureValue(key, values);
 }

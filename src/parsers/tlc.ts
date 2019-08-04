@@ -2,7 +2,7 @@ import { Range } from 'vscode';
 import { TLAToolParser } from './base';
 import { Readable } from 'stream';
 import { CheckStatus, ModelCheckResult, InitialStateStatItem, CoverageItem, ErrorTraceItem,
-    CheckState, OutputLine, StructureValue} from '../model/check';
+    CheckState, OutputLine, StructureValue, findChanges} from '../model/check';
 import { parseVariableValue } from './tlcValues';
 import { SanyStdoutParser } from './sany';
 import { DCollection } from '../diagnostic';
@@ -431,33 +431,39 @@ class ModelCheckResultBuilder {
             console.log('Error trace expected but message buffer is empty');
             return;
         }
+        let traceItem;
         // Try special cases like <Initial predicate>, <Stuttering>, etc.
         const sMatches = this.tryMatchBufferLine(lines, /^(\d+): <([\w\s]+)>$/g);
         if (sMatches) {
-            this.errorTrace.push(new ErrorTraceItem(
+            const itemVars = this.parseErrorTraceVariables(lines);
+            traceItem = new ErrorTraceItem(
                 parseInt(sMatches[1]),
                 sMatches[2],
-                '', '', new Range(0, 0, 0, 0), this.parseErrorTraceVariables(lines)));
-            return;
+                '', '', new Range(0, 0, 0, 0), itemVars);
+        } else {
+            // Otherwise fall back to simple states
+            const matches = this.tryMatchBufferLine(lines, /^(\d+): <(\w+) line (\d+), col (\d+) to line (\d+), col (\d+) of module (\w+)>$/g);
+            if (!matches) {
+                return;
+            }
+            const itemVars = this.parseErrorTraceVariables(lines);
+            traceItem = new ErrorTraceItem(
+                parseInt(matches[1]),
+                `${matches[2]} in ${matches[7]}`,
+                matches[7],
+                matches[2],
+                new Range(
+                    parseInt(matches[3]),
+                    parseInt(matches[4]),
+                    parseInt(matches[5]),
+                    parseInt(matches[6])),
+                itemVars
+            );
         }
-        // Otherwise fall back to simple states
-        const matches = this.tryMatchBufferLine(lines, /^(\d+): <(\w+) line (\d+), col (\d+) to line (\d+), col (\d+) of module (\w+)>$/g);
-        if (!matches) {
-            return;
+        if (this.errorTrace.length > 0) {
+            findChanges(this.errorTrace[this.errorTrace.length - 1].variables, traceItem.variables);
         }
-        const itemVars = this.parseErrorTraceVariables(lines);
-        this.errorTrace.push(new ErrorTraceItem(
-            parseInt(matches[1]),
-            `${matches[2]} in ${matches[7]}`,
-            matches[7],
-            matches[2],
-            new Range(
-                parseInt(matches[3]),
-                parseInt(matches[4]),
-                parseInt(matches[5]),
-                parseInt(matches[6])),
-            itemVars
-        ));
+        this.errorTrace.push(traceItem);
     }
 
     private parseErrorTraceVariables(lines: string[]): StructureValue {

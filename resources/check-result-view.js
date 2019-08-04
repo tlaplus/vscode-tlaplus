@@ -133,14 +133,14 @@ function displayErrorTraceItem(elErrorTraceVars, item, state) {
 function displayValue(elParent, value, state) {
     let nameHtml = value.key;
     if (value.items) {
-        nameHtml += ' <span class="var-size">(' + value.items.length + ')</span>';
+        nameHtml += ' <span class="var-size">(' + value.items.length + ')</span> ';
     }
     const elVar = document.createElement('li');
     const elVarValueBlock = document.createElement('div');
     const elVarName = document.createElement('div');
     elVarName.classList.add('var-name');
     elVarName.classList.add('tree-node');
-    elVarName.innerHTML = nameHtml;
+    elVarName.innerHTML = nameHtml + ' ' + value.changeType;
     elVarValueBlock.appendChild(elVarName);
     const elVarValue = document.createElement('div');
     elVarValue.classList.add('var-value');
