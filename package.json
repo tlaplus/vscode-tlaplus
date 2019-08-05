@@ -125,7 +125,7 @@
                 },
                 {
                     "command": "tlaplus.model.check.run",
-                    "when": "editorLangId == tlaplus"
+                    "when": "editorLangId == tlaplus || editorLangId == cfg"
                 },
                 {
                     "command": "tlaplus.model.check.stop"
