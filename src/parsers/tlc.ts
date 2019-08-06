@@ -6,7 +6,7 @@ import { CheckStatus, ModelCheckResult, InitialStateStatItem, CoverageItem, Erro
 import { parseVariableValue } from './tlcValues';
 import { SanyStdoutParser } from './sany';
 import { DCollection } from '../diagnostic';
-import { pathToModuleName, parseDateTime } from '../common';
+import { parseDateTime } from '../common';
 import * as moment from 'moment/moment';
 import { clearTimeout } from 'timers';
 
@@ -49,15 +49,18 @@ const TLC_SUCCESS = 2193;
  */
 export class TLCModelCheckerStdoutParser extends TLAToolParser {
     checkResultBuilder: ModelCheckResultBuilder;
-    handler: (checkResult: ModelCheckResult) => void;
     timer: NodeJS.Timer | undefined = undefined;
     first: boolean = true;
 
-    constructor(stdout: Readable | string[], filePath: string, handler: (checkResult: ModelCheckResult) => void) {
-        super(stdout, filePath);
+    constructor(
+        stdout: Readable | string[],
+        tlaFilePath: string,
+        outFilePath: string,
+        private handler: (checkResult: ModelCheckResult) => void
+    ) {
+        super(stdout, tlaFilePath);
         this.handler = handler;
-        const moduleName = pathToModuleName(filePath);
-        this.checkResultBuilder = new ModelCheckResultBuilder(moduleName);
+        this.checkResultBuilder = new ModelCheckResultBuilder(outFilePath);
     }
 
     protected parseLine(line: string | null) {
@@ -174,7 +177,7 @@ class ModelCheckResultBuilder {
     private firstStatTime: moment.Moment | undefined;
     private fingerprintCollisionProbability: string | undefined;
 
-    constructor(private modelName: string) {
+    constructor(private outFilePath: string) {
     }
 
     getStatus(): CheckStatus {
@@ -219,7 +222,7 @@ class ModelCheckResultBuilder {
 
     build(): ModelCheckResult {
         return new ModelCheckResult(
-            this.modelName,
+            this.outFilePath,
             this.state,
             this.status,
             this.processInfo,

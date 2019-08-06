@@ -67,6 +67,8 @@ function createNewPanel() {
     viewPanel.webview.onDidReceiveMessage(message => {
         if (message.command === 'stop') {
             vscode.commands.executeCommand(CMD_CHECK_MODEL_STOP);
+        } else if (message.command === 'openFile') {
+            revealFile(message.filePath, message.line, message.character);
         }
     });
     panelIsVisible = true;
@@ -85,4 +87,13 @@ function ensurePanelBody(extContext: vscode.ExtensionContext) {
     }
     viewHtml = viewHtml.replace(/\${resourcesPath}/g, String(resourcesPath));
     viewPanel.webview.html = viewHtml;
+}
+
+function revealFile(filePath: string, line: number, character: number) {
+    const location = new vscode.Position(line, character);
+    const showOpts: vscode.TextDocumentShowOptions = {
+        selection: new vscode.Range(location, location)
+    };
+    vscode.workspace.openTextDocument(filePath)
+        .then(doc => vscode.window.showTextDocument(doc, showOpts));
 }

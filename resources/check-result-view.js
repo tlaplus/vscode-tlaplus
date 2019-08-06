@@ -27,6 +27,15 @@ function stopProcess() {
     });
 }
 
+function openFile(filePath, line, character) {
+    vscode.postMessage({
+        command: 'openFile',
+        filePath: filePath,
+        line: line,
+        character: character
+    });
+}
+
 /**
  * Recieves data from the extension.
  */
@@ -36,6 +45,7 @@ window.addEventListener('message', event => {
 });
 
 function displayStatus(result) {
+    displayStatusHeader(result.outFilePath);
     const elTimeStart = document.getElementById('time-start');
     const elTimeEnd = document.getElementById('time-end');
     const elState = document.getElementById('check-state');
@@ -56,6 +66,16 @@ function displayStatus(result) {
         elStatusDetails.textContent = result.statusDetails;
     } else {
         elStatusDetails.classList.add('hidden');
+    }
+}
+
+function displayStatusHeader(outFilePath) {
+    elOutFileLink = document.getElementById('out-file-link');
+    if (outFilePath) {
+        elOutFileLink.classList.remove('hidden');
+        elOutFileLink.onclick = () => openFile(outFilePath, 0, 0);
+    } else {
+        elOutFileLink.classList.add('hidden');
     }
 }
 

@@ -198,7 +198,7 @@ export class OutputLine {
  */
 export class ModelCheckResult {
     static readonly EMPTY = new ModelCheckResult(
-        '', CheckState.Running, CheckStatus.Starting, undefined, [], [], [], [],
+        undefined, CheckState.Running, CheckStatus.Starting, undefined, [], [], [], [],
         undefined, undefined, undefined, undefined, 0, undefined, []);
 
     readonly stateName: string;
@@ -208,7 +208,7 @@ export class ModelCheckResult {
     readonly statusDetails: string | undefined;
 
     constructor(
-        readonly modelName: string,
+        readonly outFilePath: string | undefined,
         readonly state: CheckState,
         readonly status: CheckStatus,
         readonly processInfo: string | undefined,

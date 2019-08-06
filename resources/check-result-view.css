@@ -12,6 +12,14 @@ h1 {
     margin: 0.6em 0 0.4em 0;
 }
 
+#status-header::after {
+    clear: both;
+}
+
+#out-file-link {
+    float: right;
+}
+
 td:not(:first-child) {
     padding-left: 0.75em;
 }
