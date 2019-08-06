@@ -11,7 +11,7 @@ This extension adds support for the [TLA<sup>+</sup> formal specification langua
 
 ## Requirements
 
-In order to run various TLA<sup>+</sup> tools, you need Java 11 installed. If it's not your default Java SDK, configure the proper Java Home path in the extension settings.
+In order to run various TLA<sup>+</sup> tools, you need Java 8 or higher installed. If it's not your default Java SDK, configure the proper Java Home path in the extension settings.
 
 ## Commands
 

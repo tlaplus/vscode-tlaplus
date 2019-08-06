@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+* Show variable values changes between states.
+* TLC output is now saved to a .out file.
+* Check .tla and .cfg existence before running TLC.
+* Allow the user to create a .cfg file from a template.
 * Java version checking.
 * Model check panel UI improvements.
 
