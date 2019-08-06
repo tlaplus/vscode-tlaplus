@@ -2,12 +2,15 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as cp from 'child_process';
 import * as fs from 'fs';
-import { ChildProcess, SpawnOptions, spawn, exec } from 'child_process';
+import { ChildProcess, spawn } from 'child_process';
 import { pathToUri } from './common';
 import { JavaVersionParser } from './parsers/javaVersion';
 
 export const CFG_JAVA_HOME = 'tlaplus.java.home';
 
+const NO_ERROR = 0;
+const SYSTEM_ERROR = 255;           // Return code that means a problem with tooling
+const MIN_TLA_ERROR = 10;           // Exit codes not related to tooling start from this number
 const LOWEST_JAVA_VERSION = 8;
 const javaCmd = 'java' + (process.platform === 'win32' ? '.exe' : '');
 const toolsJarPath = path.resolve(__dirname, '../tools/tla2tools.jar');
@@ -45,7 +48,9 @@ export async function runTool(toolName: string, filePath: string, toolArgs?: str
         toolArgs.forEach(arg => args.push(arg));
     }
     args.push(filePath);
-    return spawn(javaPath, args, { cwd: path.dirname(filePath) });
+    const proc = spawn(javaPath, args, { cwd: path.dirname(filePath) });
+    addReturnCodeHandler(proc, toolName);
+    return proc;
 }
 
 /**
@@ -112,4 +117,18 @@ async function checkJavaVersion(javaPath: string) {
         return;
     }
     vscode.window.showWarningMessage(`Unexpected Java version: ${ver.version}`);
+}
+
+/**
+ * Adds a handler to the given TLA+ tooling process that captures various system errors.
+ */
+function addReturnCodeHandler(proc: ChildProcess, toolName?: string) {
+    proc.on('close', (exitCode) => {
+        if (exitCode === NO_ERROR) {
+            return;
+        }
+        if (exitCode === SYSTEM_ERROR || exitCode < MIN_TLA_ERROR) {
+            vscode.window.showErrorMessage(`Error running ${toolName} (exit code ${exitCode})`);
+        }
+    });
 }
