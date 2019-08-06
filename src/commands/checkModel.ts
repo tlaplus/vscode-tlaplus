@@ -6,6 +6,8 @@ import { TLCModelCheckerStdoutParser } from '../parsers/tlc';
 import { revealCheckResultView, updateCheckResultView, revealEmptyCheckResultView } from '../checkResultView';
 import { applyDCollection } from '../diagnostic';
 import { ChildProcess } from 'child_process';
+import { saveStreamToFile } from '../outputSaver';
+import { replaceExtension } from '../common';
 
 export const CMD_CHECK_MODEL_RUN = 'tlaplus.model.check.run';
 export const CMD_CHECK_MODEL_STOP = 'tlaplus.model.check.stop';
@@ -84,9 +86,11 @@ async function doCheckModel(
             checkProcess = undefined;
             updateStatusBarItem(false);
         });
+        const outFilePath = replaceExtension(specFiles.tlaFilePath, 'out');
+        saveStreamToFile(checkProcess.stdout, outFilePath);
         revealEmptyCheckResultView(extContext);
         const stdoutParser = new TLCModelCheckerStdoutParser(
-            checkProcess.stdout, specFiles.tlaFilePath, updateCheckResultView);
+            checkProcess.stdout, specFiles.tlaFilePath, outFilePath, updateCheckResultView);
         const dCol = await stdoutParser.readAll();
         applyDCollection(dCol, diagnostic);
     } catch (err) {
@@ -102,6 +106,7 @@ async function getSpecFiles(fileUri: vscode.Uri): Promise<SpecFiles | undefined>
     const filePath = fileUri.fsPath;
     let specFiles;
     let canRun = true;
+    const outFilePath = replaceExtension(filePath, 'out');
     if (filePath.endsWith('.cfg')) {
         specFiles = new SpecFiles(replaceExtension(filePath, 'tla'), filePath);
         canRun = await checkModuleExists(specFiles.tlaFilePath);
@@ -140,12 +145,6 @@ function updateStatusBarItem(active: boolean) {
     statusBarItem.tooltip = 'TLA+ model checking' + (active ? ' is running' : ' result');
     statusBarItem.command = CMD_CHECK_MODEL_DISPLAY;
     statusBarItem.show();
-}
-
-function replaceExtension(filePath: string, newExt: string): string {
-    const lastDotIdx = filePath.lastIndexOf('.');
-    const basePath = lastDotIdx < 0 ? filePath : filePath.substring(0, lastDotIdx);
-    return basePath + '.' + newExt;
 }
 
 function showConfigAbsenceWarning(cfgPath: string) {

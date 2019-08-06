@@ -2,6 +2,7 @@ import * as assert from 'assert';
 import { ModelCheckResult, CheckState, CheckStatus, OutputLine, InitialStateStatItem } from '../../../model/check';
 import { TLCModelCheckerStdoutParser } from '../../../parsers/tlc';
 import moment = require('moment');
+import { replaceExtension } from '../../../common';
 
 const ROOT_PATH = '/Users/alice/TLA/foo.tla';
 
@@ -58,10 +59,11 @@ class CheckResultHolder {
     checkResult: ModelCheckResult = ModelCheckResult.EMPTY;
 }
 
-function assertOutput(out: string, filePath: string, expected: ModelCheckResult) {
+function assertOutput(out: string, tlaFilePath: string, expected: ModelCheckResult) {
     const outLines = out.split('\n');
     const crh = new CheckResultHolder();
-    const parser = new TLCModelCheckerStdoutParser(outLines, filePath, (cr) => {
+    const outFilePath = replaceExtension(tlaFilePath, 'out');
+    const parser = new TLCModelCheckerStdoutParser(outLines, tlaFilePath, outFilePath, (cr) => {
         crh.checkResult = cr;
     });
     parser.readAllSync();
@@ -69,7 +71,6 @@ function assertOutput(out: string, filePath: string, expected: ModelCheckResult)
 }
 
 function assertEquals(actual: ModelCheckResult, expected: ModelCheckResult) {
-    assert.equal(actual.modelName, expected.modelName);
     assert.equal(actual.state, expected.state);
     assert.equal(actual.status, expected.status);
     assert.equal(actual.processInfo, expected.processInfo);

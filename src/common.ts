@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import { basename } from 'path';
 import * as moment from 'moment';
 
 /**
@@ -15,10 +14,10 @@ export function pathToUri(path: string): vscode.Uri {
     return vscode.Uri.file(path).with({ scheme: 'file' });
 }
 
-export function pathToModuleName(path: string): string {
-    const baseName = basename(path);
-    const dotIdx = baseName.lastIndexOf('.');
-    return dotIdx > 0 ? baseName.substring(0, dotIdx) : baseName;
+export function replaceExtension(filePath: string, newExt: string): string {
+    const lastDotIdx = filePath.lastIndexOf('.');
+    const basePath = lastDotIdx < 0 ? filePath : filePath.substring(0, lastDotIdx);
+    return basePath + '.' + newExt;
 }
 
 export function parseDateTime(str: string): moment.Moment {
