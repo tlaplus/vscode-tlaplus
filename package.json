@@ -33,7 +33,8 @@
     "activationEvents": [
         "onLanguage:tlaplus",
         "onCommand:tlaplus.pluscal.transpile",
-        "onCommand:tlaplus.model.check.run"
+        "onCommand:tlaplus.model.check.run",
+        "workspaceContains:**/*.tla"
     ],
     "main": "./out/main.js",
     "filse": [
@@ -108,6 +109,11 @@
                 "command": "tlaplus.model.check.display",
                 "title": "Display model checking panel",
                 "category": "TLA+"
+            },
+            {
+                "command": "tlaplus.out.visualize",
+                "title": "Visualize TLC output",
+                "category": "TLA+"
             }
         ],
         "snippets": [
@@ -133,6 +139,10 @@
                 {
                     "command": "tlaplus.model.check.display",
                     "when": "false"
+                },
+                {
+                    "command": "tlaplus.out.visualize",
+                    "when": "resourceExtname == .out"
                 }
             ]
         },

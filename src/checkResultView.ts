@@ -24,13 +24,18 @@ export function updateCheckResultView(checkResult: ModelCheckResult) {
 }
 
 export function revealEmptyCheckResultView(extContext: vscode.ExtensionContext) {
-    doRevealCheckResultView(extContext);
-    updateCheckResultView(ModelCheckResult.EMPTY);
+    revealCheckResultView(extContext, ModelCheckResult.EMPTY);
 }
 
-export function revealCheckResultView(extContext: vscode.ExtensionContext) {
+export function revealLastCheckResultView(extContext: vscode.ExtensionContext) {
+    if (lastCheckResult) {
+        revealCheckResultView(extContext, lastCheckResult);
+    }
+}
+
+export function revealCheckResultView(extContext: vscode.ExtensionContext, checkResult: ModelCheckResult) {
     doRevealCheckResultView(extContext);
-    updateCheckResultView(lastCheckResult ? lastCheckResult : ModelCheckResult.EMPTY);
+    updateCheckResultView(checkResult);
 }
 
 function doRevealCheckResultView(extContext: vscode.ExtensionContext) {

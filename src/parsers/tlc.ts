@@ -54,7 +54,7 @@ export class TLCModelCheckerStdoutParser extends TLAToolParser {
 
     constructor(
         stdout: Readable | string[],
-        tlaFilePath: string,
+        tlaFilePath: string | undefined,
         outFilePath: string,
         private handler: (checkResult: ModelCheckResult) => void
     ) {
