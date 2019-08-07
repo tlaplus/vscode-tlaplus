@@ -20,12 +20,12 @@ export function saveStreamToFile(src: Readable, filePath: string) {
             return;
         }
         const sw = new StreamWriter(fd);
-        src.on('data', (data) => writeToFile(sw, data, src));
+        src.on('data', (data) => writeToFile(sw, data));
         src.on('end', () => closeFile(sw));
     });
 }
 
-function writeToFile(sw: StreamWriter, chunk: Buffer | string, src: Readable) {
+function writeToFile(sw: StreamWriter, chunk: Buffer | string) {
     if (!sw.fd) {
         return;
     }

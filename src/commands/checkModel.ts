@@ -3,7 +3,7 @@ import * as path from 'path';
 import { exists, copyFile } from 'fs';
 import { runTool, stopProcess } from '../tla2tools';
 import { TLCModelCheckerStdoutParser } from '../parsers/tlc';
-import { revealCheckResultView, updateCheckResultView, revealEmptyCheckResultView } from '../checkResultView';
+import { updateCheckResultView, revealEmptyCheckResultView, revealLastCheckResultView } from '../checkResultView';
 import { applyDCollection } from '../diagnostic';
 import { ChildProcess } from 'child_process';
 import { saveStreamToFile } from '../outputSaver';
@@ -33,7 +33,7 @@ export function checkModel(diagnostic: vscode.DiagnosticCollection, extContext: 
         vscode.window.showWarningMessage(
                 'Another model checking process is currently running',
                 'Show currently running process'
-            ).then(() => revealCheckResultView(extContext));
+            ).then(() => revealLastCheckResultView(extContext));
         return;
     }
     const editor = vscode.window.activeTextEditor;
@@ -53,7 +53,7 @@ export function checkModel(diagnostic: vscode.DiagnosticCollection, extContext: 
  * Reveals model checking view panel.
  */
 export function displayModelChecking(extContext: vscode.ExtensionContext) {
-    revealCheckResultView(extContext);
+    revealLastCheckResultView(extContext);
 }
 
 /**
