@@ -70,6 +70,12 @@
                     ".cfg"
                 ],
                 "configuration": "./cfg-lang-config.json"
+            },
+            {
+                "id": "tlaplus.out",
+                "extensions": [
+                    ".out"
+                ]
             }
         ],
         "grammars": [
@@ -87,6 +93,11 @@
                 "language": "cfg",
                 "scopeName": "source.cfg",
                 "path": "./syntaxes/cfg.tmLanguage.json"
+            },
+            {
+                "language": "tlaplus.out",
+                "scopeName": "source.tlaplus.out",
+                "path": "./syntaxes/out.tmLanguage.json"
             }
         ],
         "commands": [

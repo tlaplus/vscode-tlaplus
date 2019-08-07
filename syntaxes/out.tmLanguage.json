@@ -1,0 +1,11 @@
+{   "scopeName": "source.tlaplus.out",
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "name": "TLC output",
+    "patterns": [
+        {
+            "name": "comment.block",
+            "begin": "@!@!@(STARTMSG|ENDMSG) ",
+            "end": "@!@!@"
+        }
+    ]
+}
