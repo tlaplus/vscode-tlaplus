@@ -3,7 +3,7 @@
         "prefix": "macro",
         "body": [
             "macro ${1:name}(${2:params}) begin",
-            "  ${0:body}",
+            "    ${0:body}",
             "end macro;"
         ],
         "description": "Create new macro"
@@ -12,7 +12,7 @@
         "prefix": "define",
         "body": [
             "define",
-            "  $0",
+            "    $0",
             "end define;"
         ],
         "description": "Create new define block"
@@ -21,7 +21,7 @@
         "prefix": "while",
         "body": [
             "while ${1:condition} do",
-            "  ${0:body}",
+            "    ${0:body}",
             "end while;"
         ],
         "description": "Create new while loop"
@@ -30,7 +30,7 @@
         "prefix": "if",
         "body": [
             "if ${1:condition} then",
-            "  ${0:body}",
+            "    ${0:body}",
             "end if;"
         ],
         "description": "If block"
@@ -39,11 +39,31 @@
         "prefix": "ifel",
         "body": [
             "if ${1:condition} then",
-            "  ${2:body}",
+            "    ${2:body}",
             "elseif",
-            "  ${0:body}",
+            "    ${0:body}",
             "end if;"
         ],
         "description": "If-else block"
+    },
+    "With": {
+        "prefix": "with",
+        "body": [
+            "with ${1:variable} do",
+            "    ${0:body}",
+            "end with;"
+        ],
+        "description": "With block"
+    },
+    "Either": {
+        "prefix": "either",
+        "body": [
+            "either",
+            "    ${1:block1}",
+            "or",
+            "    ${0:block2}",
+            "end either;"
+        ],
+        "description": "Either block"
     }
 }
