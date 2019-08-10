@@ -132,6 +132,11 @@
                 "language": "tlaplus",
                 "scopeName": "source.tlaplus.pluscal",
                 "path": "./pluscal-snippets.json"
+            },
+            {
+                "language": "tlaplus",
+                "scopeName": "source.tlaplus",
+                "path": "./tlaplus-snippets.json"
             }
         ],
         "menus": {

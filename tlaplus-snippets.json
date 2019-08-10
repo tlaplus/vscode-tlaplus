@@ -1,0 +1,24 @@
+{
+    "Module": {
+        "prefix": "module",
+        "body": [
+            "---- MODULE $TM_FILENAME_BASE ----",
+            "EXTENDS TLC",
+            "",
+            "$0",
+            "===="
+        ],
+        "description": "Create new module"
+    },
+    "PlusCal": {
+        "prefix": "pluscal",
+        "body": [
+            "(*--algorithm $TM_FILENAME_BASE",
+            "$0",
+            "begin",
+            "    skip;",
+            "end algorithm; *)"
+        ],
+        "description": "Create PlusCal block"
+    }
+}
