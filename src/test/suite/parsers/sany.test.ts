@@ -162,8 +162,8 @@ suite('SANY Output Parser Test Suite', () => {
 function assertOutput(out: string, ...expected: Expectation[]) {
     const outLines = out.split('\n');
     const parser = new SanyStdoutParser(outLines);
-    const dCol = parser.readAllSync();
-    applyDCollection(dCol, getTlaDiagnostics());
+    const sanyData = parser.readAllSync();
+    applyDCollection(sanyData.dCollection, getTlaDiagnostics());
     for (const exp of expected) {
         const actDiags = getTlaDiagnostics().get(pathToUri(exp.filePath));
         assert.deepEqual(actDiags, exp.diagnostics);

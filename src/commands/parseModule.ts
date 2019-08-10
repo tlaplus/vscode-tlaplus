@@ -1,10 +1,8 @@
 import * as vscode from 'vscode';
 import { DCollection, applyDCollection } from '../diagnostic';
 import { TranspilerStdoutParser } from '../parsers/pluscal';
-import { SanyStdoutParser } from '../parsers/sany';
+import { SanyData, SanyStdoutParser } from '../parsers/sany';
 import { runTool } from '../tla2tools';
-
-// TODO: handle exit codes in parsers to catch tooling problems
 
 export const CMD_PARSE_MODULE = 'tlaplus.parse';
 
@@ -29,8 +27,8 @@ export function parseModule(diagnostic: vscode.DiagnosticCollection) {
 async function doParseFile(fileUri: vscode.Uri, diagnostic: vscode.DiagnosticCollection) {
     try {
         const messages = await transpilePlusCal(fileUri);
-        const specMessages = await parseSpec(fileUri);
-        messages.addAll(specMessages);
+        const specData = await parseSpec(fileUri);
+        messages.addAll(specData.dCollection);
         applyDCollection(messages, diagnostic);
     } catch (e) {
         vscode.window.showErrorMessage(e.message);
@@ -49,7 +47,7 @@ async function transpilePlusCal(fileUri: vscode.Uri): Promise<DCollection> {
 /**
  * Parses the resulting TLA+ spec.
  */
-async function parseSpec(fileUri: vscode.Uri): Promise<DCollection> {
+async function parseSpec(fileUri: vscode.Uri): Promise<SanyData> {
     const proc = await runTool('tla2sany.SANY', fileUri.fsPath);
     const stdoutParser = new SanyStdoutParser(proc.stdout);
     return stdoutParser.readAll();

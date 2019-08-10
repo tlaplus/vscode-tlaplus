@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-import { PassThrough, Readable } from 'stream';
-import { TLCModelCheckerStdoutParser } from '../parsers/tlc';
-import { revealCheckResultView, revealEmptyCheckResultView, updateCheckResultView } from '../checkResultView';
+import { PassThrough } from 'stream';
+import { TlcModelCheckerStdoutParser } from '../parsers/tlc';
+import { revealEmptyCheckResultView, updateCheckResultView } from '../checkResultView';
 
 export const CMD_VISUALIZE_TLC_OUTPUT = 'tlaplus.out.visualize';
 
@@ -34,6 +34,6 @@ function showOutput(outFilePath: string, buffer: Buffer, extContext: vscode.Exte
     const stream = new PassThrough();
     stream.end(buffer);
     revealEmptyCheckResultView(extContext);
-    const parser = new TLCModelCheckerStdoutParser(stream, undefined, outFilePath, updateCheckResultView);
+    const parser = new TlcModelCheckerStdoutParser(stream, undefined, outFilePath, updateCheckResultView);
     parser.readAll();
 }

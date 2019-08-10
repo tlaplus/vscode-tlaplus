@@ -52,6 +52,14 @@ export function applyDCollection(dCol: DCollection, dc: vscode.DiagnosticCollect
 }
 
 /**
+ * Adds all diagnostics from one collection to another.
+ */
+export function addDiagnostics(from: DCollection, to: DCollection) {
+    from.getFilePaths().forEach(fp => to.addFilePath(fp));
+    from.getMessages().forEach(m => to.addMessage(m.filePath, m.diagnostic.range, m.diagnostic.message));
+}
+
+/**
  * A Diagnostic instance linked to the corresponding file.
  */
 class DMessage {

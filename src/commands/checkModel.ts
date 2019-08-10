@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { exists, copyFile } from 'fs';
 import { runTool, stopProcess } from '../tla2tools';
-import { TLCModelCheckerStdoutParser } from '../parsers/tlc';
+import { TlcModelCheckerStdoutParser } from '../parsers/tlc';
 import { updateCheckResultView, revealEmptyCheckResultView, revealLastCheckResultView } from '../checkResultView';
 import { applyDCollection } from '../diagnostic';
 import { ChildProcess } from 'child_process';
@@ -89,7 +89,7 @@ async function doCheckModel(
         const outFilePath = replaceExtension(specFiles.tlaFilePath, 'out');
         saveStreamToFile(checkProcess.stdout, outFilePath);
         revealEmptyCheckResultView(extContext);
-        const stdoutParser = new TLCModelCheckerStdoutParser(
+        const stdoutParser = new TlcModelCheckerStdoutParser(
             checkProcess.stdout, specFiles.tlaFilePath, outFilePath, updateCheckResultView);
         const dCol = await stdoutParser.readAll();
         applyDCollection(dCol, diagnostic);

@@ -97,7 +97,10 @@ function ensurePanelBody(extContext: vscode.ExtensionContext) {
 function revealFile(filePath: string, line: number, character: number) {
     const location = new vscode.Position(line, character);
     const showOpts: vscode.TextDocumentShowOptions = {
-        selection: new vscode.Range(location, location)
+        selection: new vscode.Range(location, location),
+        // `One` is used here because at the moment, VSCode doesn't provide API
+        // for revealing existing document, so we're speculating here to reduce open documents duplication.
+        viewColumn: vscode.ViewColumn.One
     };
     vscode.workspace.openTextDocument(filePath)
         .then(doc => vscode.window.showTextDocument(doc, showOpts));

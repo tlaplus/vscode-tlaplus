@@ -1,5 +1,6 @@
 const vscode = acquireVsCodeApi();
 
+const VAL_COL = ['val-col'];
 const changeHints = {
     A: 'This item has been added since the previous state',
     M: 'This item has been modified since the previous state',
@@ -27,7 +28,9 @@ function stopProcess() {
     });
 }
 
-function openFile(filePath, line, character) {
+function openFile(event, filePath, line, character) {
+    event.preventDefault();
+    event.stopPropagation();
     vscode.postMessage({
         command: 'openFile',
         filePath: filePath,
@@ -51,9 +54,9 @@ function displayStatus(result) {
     const elState = document.getElementById('check-state');
     const elStatusDetails = document.getElementById('check-status-details');
     const elCmdStop = document.getElementById('cmd-stop');
-    elTimeStart.textContent = result.startDateTimeStr;
-    elTimeEnd.textContent = result.endDateTimeStr;
-    elState.textContent = result.stateName;
+    elTimeStart.innerText = result.startDateTimeStr;
+    elTimeEnd.innerText = result.endDateTimeStr;
+    elState.innerText = result.stateName;
     elState.classList = ['state-' + result.state];
     if (result.state === 'R') {
         // Still running
@@ -63,7 +66,7 @@ function displayStatus(result) {
     }
     if (result.statusDetails) {
         elStatusDetails.classList.remove('hidden');
-        elStatusDetails.textContent = result.statusDetails;
+        elStatusDetails.innerText = result.statusDetails;
     } else {
         elStatusDetails.classList.add('hidden');
     }
@@ -73,7 +76,7 @@ function displayStatusHeader(outFilePath) {
     elOutFileLink = document.getElementById('out-file-link');
     if (outFilePath) {
         elOutFileLink.classList.remove('hidden');
-        elOutFileLink.onclick = () => openFile(outFilePath, 0, 0);
+        elOutFileLink.onclick = (e) => openFile(e, outFilePath, 0, 0);
     } else {
         elOutFileLink.classList.add('hidden');
     }
@@ -81,16 +84,29 @@ function displayStatusHeader(outFilePath) {
 
 function displayStatesStat(stat) {
     const elStatesStat = document.getElementById('states-stat');
-    elStatesStat.innerHTML = stat
-        .map(s => `<tr><td class="val-col">${s.timeStamp}</td><td class="val-col">${num(s.diameter)}</td><td class="val-col">${num(s.total)}</td><td class="val-col">${num(s.distinct)}</td><td class="val-col">${num(s.queueSize)}</td></tr>`)
-        .join('');
+    removeAllChildren(elStatesStat);
+    stat.forEach(item => {
+        const elRow = document.createElement('tr');
+        appendTextChild(elRow, 'td', item.timeStamp, VAL_COL);
+        appendTextChild(elRow, 'td', num(item.diameter), VAL_COL);
+        appendTextChild(elRow, 'td', num(item.total), VAL_COL);
+        appendTextChild(elRow, 'td', num(item.distinct), VAL_COL);
+        appendTextChild(elRow, 'td', num(item.queueSize), VAL_COL);
+        elStatesStat.appendChild(elRow);
+    });
 }
 
 function displayCoverage(stat) {
     const elCoverageStat = document.getElementById('coverage-stat');
-    elCoverageStat.innerHTML = stat
-        .map(s => `<tr><td>${s.module}</td><td>${s.action}</td><td class="val-col">${num(s.total)}</td><td class="val-col">${num(s.distinct)}</td></tr>`)
-        .join('');
+    removeAllChildren(elCoverageStat);
+    stat.forEach(item => {
+        const elRow = document.createElement('tr');
+        appendTextChild(elRow, 'td', item.module);
+        appendCodeLinkChild(elRow, 'td', item.action, item.filePath, item.range);
+        appendTextChild(elRow, 'td', num(item.total), VAL_COL);
+        appendTextChild(elRow, 'td', num(item.distinct), VAL_COL);
+        elCoverageStat.appendChild(elRow);
+    });
 }
 
 function displayErrors(errors) {
@@ -105,12 +121,7 @@ function displayErrors(errors) {
     errors.forEach(err => {
         const elError = document.createElement('p');
         elError.classList = ['error'];
-        err.forEach(line => {
-            const elErrorLine = document.createElement("p");
-            elErrorLine.innerText = line;
-            elErrorLine.classList.add('error-line');
-            elError.appendChild(elErrorLine);
-        });
+        err.forEach(line => appendTextChild(elError, 'p', line, ['error-line']));
         elErrorsList.appendChild(elError);
     });
 }
@@ -144,7 +155,10 @@ function displayErrorTraceItem(elErrorTraceVars, item, state) {
     elHeader.classList.add('tree-expandable');
     elHeader.classList.add('tree-expandable-down');
     elHeader.classList.add('error-trace-item-title');
-    elHeader.innerText = `${item.num}: ${item.title}`;
+    elHeader.innerText = `${item.num}: ${item.title} `;
+    if (item.filePath && item.range) {
+        appendCodeLinkChild(elHeader, 'span', '>>', item.filePath, item.range);
+    }
     elItemBlock.appendChild(elHeader);
     elItem.appendChild(elItemBlock);
     const elVarList = document.createElement('ul');
@@ -188,7 +202,7 @@ function renderValueTitle(value) {
     elVarTitle.classList.add('var-name');
     elVarTitle.classList.add('tree-node');
     const elVarKey = document.createElement('span');
-    elVarKey.textContent = value.key;
+    elVarKey.innerText = value.key;
     if (value.changeType === 'D') {
         elVarKey.classList.add('value-deleted');
     }
@@ -196,7 +210,7 @@ function renderValueTitle(value) {
     if (value.items) {
         const elVarSize = document.createElement('span');
         elVarSize.classList.add('var-size');
-        elVarSize.textContent = `(${value.items.length})`;
+        elVarSize.innerText = `(${value.items.length})`;
         elVarSize.setAttribute('title', 'Size of the collection');
         elVarTitle.appendChild(elVarSize);
     }
@@ -204,7 +218,7 @@ function renderValueTitle(value) {
     if (value.changeType !== 'N') {
         elVarChange.classList.add('change-marker');
         elVarChange.classList.add('change-marker-' + value.changeType);
-        elVarChange.textContent = value.changeType;
+        elVarChange.innerText = value.changeType;
         elVarChange.setAttribute('title', changeHints[value.changeType]);
     }
     elVarTitle.appendChild(elVarChange);
@@ -229,11 +243,8 @@ function displayOutput(lines) {
         } else {
             elText = document.createElement('span');
             elLine.appendChild(elText);
-            elCount = document.createElement('span');
-            elCount.classList = ['output-line-count'];
-            elCount.innerText = String(line.count);
+            const elCount = appendTextChild(elLine, 'span', String(line.count), ['output-line-count']);
             elCount.setAttribute('title', 'Number of consecutive occurrences');
-            elLine.appendChild(elCount);
         }
         elText.innerText = line.text;
         elLines.appendChild(elLine);
@@ -271,4 +282,27 @@ function removeAllChildren(el) {
     while (el.lastChild) {
         el.removeChild(el.lastChild);
     }
+}
+
+function appendTextChild(elParent, tag, innerText, classes) {
+    const el = document.createElement(tag);
+    el.innerText = innerText;
+    if (classes) {
+        classes.forEach(c => el.classList.add(c));
+    }
+    elParent.appendChild(el);
+    return el;
+}
+
+function appendCodeLinkChild(elParent, tag, innerText, filePath, range) {
+    const el = document.createElement(tag);
+    if (filePath && range[0]) {
+        const elLink = appendTextChild(el, 'a', innerText);
+        elLink.onclick = (e) => openFile(e, filePath, range[0].line, range[0].character);
+        elLink.setAttribute('href', '#');
+    } else {
+        el.innerText = innerText;
+    }
+    elParent.appendChild(el);
+    return el;
 }

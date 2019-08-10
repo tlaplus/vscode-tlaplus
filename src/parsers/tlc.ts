@@ -1,11 +1,11 @@
 import { Range } from 'vscode';
-import { TLAToolParser } from './base';
+import { ProcessOutputParser } from './base';
 import { Readable } from 'stream';
 import { CheckStatus, ModelCheckResult, InitialStateStatItem, CoverageItem, ErrorTraceItem,
     CheckState, OutputLine, StructureValue, findChanges} from '../model/check';
 import { parseVariableValue } from './tlcValues';
-import { SanyStdoutParser } from './sany';
-import { DCollection } from '../diagnostic';
+import { SanyData, SanyStdoutParser } from './sany';
+import { DCollection, addDiagnostics } from '../diagnostic';
 import { parseDateTime } from '../common';
 import * as moment from 'moment/moment';
 import { clearTimeout } from 'timers';
@@ -47,7 +47,7 @@ const TLC_SUCCESS = 2193;
 /**
  * Parses stdout of TLC model checker.
  */
-export class TLCModelCheckerStdoutParser extends TLAToolParser {
+export class TlcModelCheckerStdoutParser extends ProcessOutputParser<DCollection> {
     checkResultBuilder: ModelCheckResultBuilder;
     timer: NodeJS.Timer | undefined = undefined;
     first: boolean = true;
@@ -58,9 +58,12 @@ export class TLCModelCheckerStdoutParser extends TLAToolParser {
         outFilePath: string,
         private handler: (checkResult: ModelCheckResult) => void
     ) {
-        super(stdout, tlaFilePath);
+        super(stdout, new DCollection());
         this.handler = handler;
         this.checkResultBuilder = new ModelCheckResultBuilder(outFilePath);
+        if (tlaFilePath) {
+            this.result.addFilePath(tlaFilePath);
+        }
     }
 
     protected parseLine(line: string | null) {
@@ -72,7 +75,7 @@ export class TLCModelCheckerStdoutParser extends TLAToolParser {
             // Copy SANY messages
             const dCol = this.checkResultBuilder.getSanyMessages();
             if (dCol) {
-                this.addDiagnosticCollection(dCol);
+                addDiagnostics(dCol, this.result);
             }
             // Issue the last update
             this.issueUpdate();
@@ -171,7 +174,7 @@ class ModelCheckResultBuilder {
     private errorTrace: ErrorTraceItem[] = [];
     private messages = new MessageStack();
     private sanyLines: string[] = [];
-    private sanyMessages: DCollection | undefined;
+    private sanyData: SanyData | undefined;
     private outputLines: OutputLine[] = [];
     private workersCount: number = 0;
     private firstStatTime: moment.Moment | undefined;
@@ -185,7 +188,7 @@ class ModelCheckResultBuilder {
     }
 
     getSanyMessages(): DCollection | undefined {
-        return this.sanyMessages;
+        return this.sanyData ? this.sanyData.dCollection : undefined;
     }
 
     addLine(line: string) {
@@ -230,7 +233,7 @@ class ModelCheckResultBuilder {
             this.coverageStat,
             this.errors,
             this.errorTrace,
-            this.sanyMessages,
+            this.sanyData ? this.sanyData.dCollection : undefined,
             this.startDateTime,
             this.endDateTime,
             this.duration,
@@ -373,7 +376,7 @@ class ModelCheckResultBuilder {
 
     private parseSanyOutput() {
         const sany = new SanyStdoutParser(this.sanyLines);
-        this.sanyMessages = sany.readAllSync();
+        this.sanyData = sany.readAllSync();
     }
 
     private parseInitialStatesComputed(lines: string[]) {
@@ -401,13 +404,16 @@ class ModelCheckResultBuilder {
     private parseCoverage(lines: string[]) {
         const matches = this.tryMatchBufferLine(lines, /^<(\w+) line (\d+), col (\d+) to line (\d+), col (\d+) of module (\w+)>: (\d+):(\d+)/g);
         if (matches) {
+            const moduleName = matches[6];
+            const actionName = matches[1];
             this.coverageStat.push(new CoverageItem(
-                matches[6],
-                matches[1],
+                moduleName,
+                actionName,
+                this.getModulePath(moduleName),
                 new Range(
-                    parseInt(matches[2]),
-                    parseInt(matches[3]),
-                    parseInt(matches[4]),
+                    parseInt(matches[2]) - 1,
+                    parseInt(matches[3]) - 1,
+                    parseInt(matches[4]) - 1,
                     parseInt(matches[5])
                 ),
                 parseInt(matches[7]),
@@ -442,7 +448,7 @@ class ModelCheckResultBuilder {
             traceItem = new ErrorTraceItem(
                 parseInt(sMatches[1]),
                 sMatches[2],
-                '', '', new Range(0, 0, 0, 0), itemVars);
+                '', '', undefined, new Range(0, 0, 0, 0), itemVars);
         } else {
             // Otherwise fall back to simple states
             const matches = this.tryMatchBufferLine(lines, /^(\d+): <(\w+) line (\d+), col (\d+) to line (\d+), col (\d+) of module (\w+)>$/g);
@@ -450,15 +456,18 @@ class ModelCheckResultBuilder {
                 return;
             }
             const itemVars = this.parseErrorTraceVariables(lines);
+            const actionName = matches[2];
+            const moduleName = matches[7];
             traceItem = new ErrorTraceItem(
                 parseInt(matches[1]),
-                `${matches[2]} in ${matches[7]}`,
-                matches[7],
-                matches[2],
+                `${actionName} in ${moduleName}`,
+                moduleName,
+                actionName,
+                this.getModulePath(moduleName),
                 new Range(
-                    parseInt(matches[3]),
-                    parseInt(matches[4]),
-                    parseInt(matches[5]),
+                    parseInt(matches[3]) - 1,
+                    parseInt(matches[4]) - 1,
+                    parseInt(matches[5]) - 1,
                     parseInt(matches[6])),
                 itemVars
             );
@@ -524,6 +533,10 @@ class ModelCheckResultBuilder {
         } else {
             this.outputLines.push(new OutputLine(line));
         }
+    }
+
+    private getModulePath(moduleName: string): string | undefined {
+        return this.sanyData ? this.sanyData.modulePaths.get(moduleName) : undefined;
     }
 }
 
