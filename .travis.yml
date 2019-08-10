@@ -1,0 +1,23 @@
+language: node_js
+node_js:
+  - "8.12"
+
+os:
+  - osx
+  - linux
+
+services:
+  - xvfb
+
+before_install:
+  - if [ $TRAVIS_OS_NAME == "linux" ]; then
+      export DISPLAY=:99.0;
+    fi
+
+install:
+  - npm install
+  - npm run vscode:prepublish
+
+script:
+  - npm run lint
+  - npm test --silent
