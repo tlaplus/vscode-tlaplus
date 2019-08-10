@@ -1,5 +1,7 @@
 # TLA<sup>+</sup> for Visual Studio Code
 
+[![Build Status](https://travis-ci.com/alygin/vscode-tlaplus.svg?branch=master)](https://travis-ci.com/alygin/vscode-tlaplus)
+
 This extension adds support for the [TLA<sup>+</sup> formal specification language](http://research.microsoft.com/en-us/um/people/lamport/tla/tla.html) to VS Code. It also supports running the TLC model checker on TLA<sup>+</sup> specifications.
 
 ## Features
