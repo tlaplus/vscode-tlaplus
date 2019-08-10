@@ -380,10 +380,10 @@ class ModelCheckResultBuilder {
     }
 
     private parseInitialStatesComputed(lines: string[]) {
-        const matches = this.tryMatchBufferLine(lines, /^Finished computing initial states: (\d+) distinct states generated at (\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*$/g);
+        const matches = this.tryMatchBufferLine(lines, /^Finished computing initial states: (\d+) distinct state(s)? generated at (\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*$/g);
         if (matches) {
             const count = parseInt(matches[1]);
-            this.firstStatTime = parseDateTime(matches[2]);
+            this.firstStatTime = parseDateTime(matches[3]);
             this.initialStatesStat.push(new InitialStateStatItem('00:00:00', 0, count, count, count));
         }
     }
