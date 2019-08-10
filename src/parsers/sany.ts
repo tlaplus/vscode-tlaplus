@@ -1,12 +1,13 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { TLAToolParser } from './base';
 import { Readable } from 'stream';
+import { ProcessOutputParser } from './base';
+import { DCollection } from '../diagnostic';
 
 /**
  * Parses stdout of TLA+ code parser.
  */
-export class SanyStdoutParser extends TLAToolParser {
+export class SanyStdoutParser extends ProcessOutputParser<DCollection> {
     modPaths: Map<string, string> = new Map();
     curFilePath: string | undefined = undefined;
     errBlock: string = 'no';                // no, errors, parse_errors
@@ -14,7 +15,7 @@ export class SanyStdoutParser extends TLAToolParser {
     errMessage: string | null = null;
 
     constructor(source: Readable | string[]) {
-        super(source);
+        super(source, new DCollection());
     }
 
     protected parseLine(line: string | null): void {
@@ -26,7 +27,7 @@ export class SanyStdoutParser extends TLAToolParser {
             const sid = modPath.lastIndexOf(path.sep);
             const modName = modPath.substring(sid + 1, modPath.length - 4);   // remove path and .tla
             this.modPaths.set(modName, modPath);
-            this.addDiagnosticFilePath(modPath);
+            this.result.addFilePath(modPath);
             this.curFilePath = modPath;
             return;
         }
@@ -92,7 +93,7 @@ export class SanyStdoutParser extends TLAToolParser {
 
     private tryAddMessage() {
         if (this.curFilePath && this.errMessage && this.errRange) {
-            this.addDiagnosticMessage(this.curFilePath, this.errRange, this.errMessage);
+            this.result.addMessage(this.curFilePath, this.errRange, this.errMessage);
             this.resetErrData();
         }
     }

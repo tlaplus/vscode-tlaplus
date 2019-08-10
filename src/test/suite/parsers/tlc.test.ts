@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import { ModelCheckResult, CheckState, CheckStatus, OutputLine, InitialStateStatItem } from '../../../model/check';
-import { TLCModelCheckerStdoutParser } from '../../../parsers/tlc';
+import { TlcModelCheckerStdoutParser } from '../../../parsers/tlc';
 import moment = require('moment');
 import { replaceExtension } from '../../../common';
 
@@ -63,7 +63,7 @@ function assertOutput(out: string, tlaFilePath: string, expected: ModelCheckResu
     const outLines = out.split('\n');
     const crh = new CheckResultHolder();
     const outFilePath = replaceExtension(tlaFilePath, 'out');
-    const parser = new TLCModelCheckerStdoutParser(outLines, tlaFilePath, outFilePath, (cr) => {
+    const parser = new TlcModelCheckerStdoutParser(outLines, tlaFilePath, outFilePath, (cr) => {
         crh.checkResult = cr;
     });
     parser.readAllSync();

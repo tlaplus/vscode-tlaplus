@@ -1,11 +1,11 @@
 import { Range } from 'vscode';
-import { TLAToolParser } from './base';
+import { ProcessOutputParser } from './base';
 import { Readable } from 'stream';
 import { CheckStatus, ModelCheckResult, InitialStateStatItem, CoverageItem, ErrorTraceItem,
     CheckState, OutputLine, StructureValue, findChanges} from '../model/check';
 import { parseVariableValue } from './tlcValues';
 import { SanyStdoutParser } from './sany';
-import { DCollection } from '../diagnostic';
+import { DCollection, addDiagnostics } from '../diagnostic';
 import { parseDateTime } from '../common';
 import * as moment from 'moment/moment';
 import { clearTimeout } from 'timers';
@@ -47,7 +47,7 @@ const TLC_SUCCESS = 2193;
 /**
  * Parses stdout of TLC model checker.
  */
-export class TLCModelCheckerStdoutParser extends TLAToolParser {
+export class TlcModelCheckerStdoutParser extends ProcessOutputParser<DCollection> {
     checkResultBuilder: ModelCheckResultBuilder;
     timer: NodeJS.Timer | undefined = undefined;
     first: boolean = true;
@@ -58,9 +58,12 @@ export class TLCModelCheckerStdoutParser extends TLAToolParser {
         outFilePath: string,
         private handler: (checkResult: ModelCheckResult) => void
     ) {
-        super(stdout, tlaFilePath);
+        super(stdout, new DCollection());
         this.handler = handler;
         this.checkResultBuilder = new ModelCheckResultBuilder(outFilePath);
+        if (tlaFilePath) {
+            this.result.addFilePath(tlaFilePath);
+        }
     }
 
     protected parseLine(line: string | null) {
@@ -72,7 +75,7 @@ export class TLCModelCheckerStdoutParser extends TLAToolParser {
             // Copy SANY messages
             const dCol = this.checkResultBuilder.getSanyMessages();
             if (dCol) {
-                this.addDiagnosticCollection(dCol);
+                addDiagnostics(dCol, this.result);
             }
             // Issue the last update
             this.issueUpdate();
@@ -442,7 +445,7 @@ class ModelCheckResultBuilder {
             traceItem = new ErrorTraceItem(
                 parseInt(sMatches[1]),
                 sMatches[2],
-                '', '', new Range(0, 0, 0, 0), itemVars);
+                '', '', undefined, new Range(0, 0, 0, 0), itemVars);
         } else {
             // Otherwise fall back to simple states
             const matches = this.tryMatchBufferLine(lines, /^(\d+): <(\w+) line (\d+), col (\d+) to line (\d+), col (\d+) of module (\w+)>$/g);
@@ -450,11 +453,14 @@ class ModelCheckResultBuilder {
                 return;
             }
             const itemVars = this.parseErrorTraceVariables(lines);
+            const actionName = matches[2];
+            const moduleName = matches[7];
             traceItem = new ErrorTraceItem(
                 parseInt(matches[1]),
-                `${matches[2]} in ${matches[7]}`,
-                matches[7],
-                matches[2],
+                `${actionName} in ${moduleName}`,
+                moduleName,
+                actionName,
+                undefined,
                 new Range(
                     parseInt(matches[3]),
                     parseInt(matches[4]),

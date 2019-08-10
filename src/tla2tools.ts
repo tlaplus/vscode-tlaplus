@@ -103,7 +103,6 @@ async function checkJavaVersion(javaPath: string) {
     const parser = new JavaVersionParser(proc.stderr);
     const ver = await parser.readAll();
     if (ver.version === JavaVersion.UNKNOWN_VERSION) {
-        console.debug('Java version output:');
         ver.fullOutput.forEach(line => console.debug(line));
         throw new ToolingError('Error while obtaining Java version. Check the Java Home configuration property.');
     }

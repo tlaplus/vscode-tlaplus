@@ -1,21 +1,25 @@
 import * as vscode from 'vscode';
-import { TLAToolParser } from './base';
+import { ProcessOutputParser } from './base';
 import { Readable } from 'stream';
+import { DCollection } from '../diagnostic';
 
 /**
  * Parses stdout of PlusCal transpiler.
  */
-export class TranspilerStdoutParser extends TLAToolParser {
-    errMessage: string | null = null;
+export class TranspilerStdoutParser extends ProcessOutputParser<DCollection> {
+    private readonly filePath: string;
+    private errMessage: string | null = null;
 
     constructor(source: Readable | string[], filePath: string) {
-        super(source, filePath);
+        super(source, new DCollection());
+        this.result.addFilePath(filePath);
+        this.filePath = filePath;
     }
 
     protected parseLine(line: string | null) {
         if (line === null) {
             if (this.errMessage !== null) {
-                this.addDiagnosticMessage(this.filePath!, new vscode.Range(0, 0, 0, 0), this.errMessage);
+                this.result.addMessage(this.filePath, new vscode.Range(0, 0, 0, 0), this.errMessage);
             }
             return;
         }
@@ -37,7 +41,7 @@ export class TranspilerStdoutParser extends TLAToolParser {
             if (posMatches) {
                 const posLine = parseInt(posMatches[1]) - 1;
                 const posCol = parseInt(posMatches[2]);
-                this.addDiagnosticMessage(
+                this.result.addMessage(
                     this.filePath!,
                     new vscode.Range(posLine, posCol, posLine, posCol),
                     this.errMessage);

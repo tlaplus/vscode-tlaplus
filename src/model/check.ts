@@ -174,6 +174,7 @@ export class ErrorTraceItem {
         readonly title: string,
         readonly module: string,
         readonly action: string,
+        readonly filePath: string | undefined,
         readonly range: Range,
         readonly variables: StructureValue  // Variables are presented as items of a structure
     ) {}

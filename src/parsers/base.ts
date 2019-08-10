@@ -1,7 +1,5 @@
-import * as vscode from 'vscode';
 import { Readable } from 'stream';
 import { ParsingError } from '../common';
-import { DCollection } from '../diagnostic';
 
 /**
  * Auxiliary class that reads chunks from the given stream or array, breaks data into lines
@@ -96,34 +94,5 @@ export abstract class ProcessOutputParser<T> {
             this.handleError(err);
             console.error(`Error parsing output line: ${err}`);
         }
-    }
-}
-
-/**
- * Parser that reads output of a TLA+ tool.
- */
-export abstract class TLAToolParser extends ProcessOutputParser<DCollection> {
-
-    protected readonly filePath?: string;
-
-    constructor(source: Readable | string[], filePath?: string) {
-        super(source, new DCollection());
-        this.filePath = filePath;
-        if (filePath) {
-            this.addDiagnosticFilePath(filePath);
-        }
-    }
-
-    protected addDiagnosticFilePath(filePath: string) {
-        this.result.addFilePath(filePath);
-    }
-
-    protected addDiagnosticMessage(filePath: string, range: vscode.Range, text: string) {
-        this.result.addMessage(filePath, range, text);
-    }
-
-    protected addDiagnosticCollection(dCol: DCollection) {
-        dCol.getFilePaths().forEach(fp => this.addDiagnosticFilePath(fp));
-        dCol.getMessages().forEach(m => this.result.addMessage(m.filePath, m.diagnostic.range, m.diagnostic.message));
     }
 }
