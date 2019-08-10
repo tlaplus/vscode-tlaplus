@@ -515,7 +515,7 @@ class ModelCheckResultBuilder {
 
     private calcTimestamp(timeStr: string): string {
         if (!this.firstStatTime) {
-            return '??:??:??';
+            return '00:00:00';
         }
         const time = parseDateTime(timeStr);
         const durMsec = time.diff(this.firstStatTime);
