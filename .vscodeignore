@@ -1,5 +1,6 @@
 src/**/*
 out/test/
+scripts/
 **/*.map
 **/tsconfig.json
 **/tslint.json
