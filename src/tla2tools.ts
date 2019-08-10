@@ -8,6 +8,12 @@ import { JavaVersionParser } from './parsers/javaVersion';
 
 export const CFG_JAVA_HOME = 'tlaplus.java.home';
 
+export enum TlaTool {
+    PLUS_CAL = 'pcal.trans',
+    SANY = 'tla2sany.SANY',
+    TLC = 'tlc2.TLC'
+}
+
 const NO_ERROR = 0;
 const SYSTEM_ERROR = 255;           // Return code that means a problem with tooling
 const MIN_TLA_ERROR = 10;           // Exit codes not related to tooling start from this number
@@ -125,7 +131,7 @@ function addReturnCodeHandler(proc: ChildProcess, toolName?: string) {
         if (exitCode === NO_ERROR) {
             return;
         }
-        if (exitCode === SYSTEM_ERROR || exitCode < MIN_TLA_ERROR) {
+        if ((exitCode === SYSTEM_ERROR && toolName !== TlaTool.PLUS_CAL) || exitCode < MIN_TLA_ERROR) {
             vscode.window.showErrorMessage(`Error running ${toolName} (exit code ${exitCode})`);
         }
     });
