@@ -30,7 +30,7 @@
 	"repository": {
 		"keywords": {
 			"name": "keyword.control",
-			"match": "\\b(if|then|elsif|else|while|variables|define|process|macro|procedure|begin|end|do|skip|assert|fair)\\b"
+			"match": "\\b(if|then|elsif|else|while|variables|define|process|macro|procedure|begin|end|do|skip|assert|fair|either|or|with)\\b"
 		},
 		"tlaplus_keywords": {
 			"name": "keyword.control",

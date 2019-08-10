@@ -34,7 +34,7 @@
 	],
 	"repository": {
 		"pluscal": {
-			"begin": "(\\(\\*) --(algorithm)\\s*.*",
+			"begin": "(\\(\\*)\\s*--(algorithm)\\s*.*",
 			"beginCaptures": {
 				"1": {
 					"name": "comment.line"
@@ -62,7 +62,7 @@
 		},
 		"embedded_operators": {
 			"name": "strong",
-			"match": "\\\\(in|A|E|X|union|o|~)"
+			"match": "\\\\(in|notin|subseteq|union|intersect|cup|cap|o|A|E|X|~)"
 		},
 		"constants": {
 			"name": "support.constant.tlaplus",
@@ -103,7 +103,7 @@
 		},
 		"module_end": {
 			"name": "comment.line",
-			"match": "^={4,}\\s*$"	
+			"match": "^={4,}\\s*$"
 		}
 	}
 }

@@ -27,7 +27,7 @@
         }
     },
     "indentationRules": {
-        "increaseIndentPattern": "^((?!\\/\\/).)*(if\\s+|variables|define|while\\s+|macro\\s+|begin|\\w+:).*$",
+        "increaseIndentPattern": "^((?!\\/\\/).)*(if\\s+|variables|define|while\\s+|macro\\s+|with\\s+|either\\s+|begin|\\w+:).*$",
         "decreaseIndentPattern": "$a"
     }
 }
