@@ -7,6 +7,7 @@ This extension adds support for the [TLA<sup>+</sup> formal specification langua
 - TLA<sup>+</sup> and PlusCal syntax highlighting and code snippets.
 - Running the PlusCal-to-TLA<sup>+</sup> translator and module parser.
 - Running TLC model checker on TLA<sup>+</sup> specifications.
+- Model checking process and result visualization.
 - Powered by the [official TLA<sup>+</sup> toolbox](https://github.com/tlaplus/tlaplus).
 
 ## Requirements
@@ -15,10 +16,11 @@ In order to run various TLA<sup>+</sup> tools, you need Java 8 or higher install
 
 ## Commands
 
-The extension provides the following commands in the Command Palette (only available when working with a .tla-file):
+The extension provides the following commands in the Command Palette:
 
 - `TLA+: Parse module` for translating PlusCal to TLA<sup>+</sup> and checking syntax of the resulting specification.
 - `TLA+: Check model` for running the TLC model checker on the TLA<sup>+</sup> specification.
+- `TLA+: Visualize TLC output` for presenting model checking results.
 
 ## License
 
