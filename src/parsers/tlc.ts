@@ -38,6 +38,7 @@ const TLC_TEMPORAL_PROPERTY_VIOLATED = 2116;
 const TLC_INITIAL_STATE = 2102;
 const TLC_NESTED_EXPRESSION = 2103;
 const TLC_VALUE_ASSERT_FAILED = 2132;
+const TLC_DEADLOCK_REACHED = 2114;
 const TLC_STATE_PRINT1 = 2216;
 const TLC_STATE_PRINT2 = 2217;
 const TLC_STATE_PRINT3 = 2218;
@@ -308,6 +309,7 @@ class ModelCheckResultBuilder {
             case TLC_NESTED_EXPRESSION:
             case TLC_TEMPORAL_PROPERTY_VIOLATED:
             case TLC_VALUE_ASSERT_FAILED:
+            case TLC_DEADLOCK_REACHED:
                 this.parseErrorMessage(message.lines);
                 break;
             case TLC_STATE_PRINT1:
