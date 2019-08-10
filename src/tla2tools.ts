@@ -106,7 +106,6 @@ async function checkJavaVersion(javaPath: string) {
         ver.fullOutput.forEach(line => console.debug(line));
         throw new ToolingError('Error while obtaining Java version. Check the Java Home configuration property.');
     }
-    console.log(`Java version: ${ver.version}`);
     let num = ver.version;
     if (num.startsWith('1.')) {
         num = num.substring(2);

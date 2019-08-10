@@ -4,18 +4,22 @@ import { Readable } from 'stream';
 import { ProcessOutputParser } from './base';
 import { DCollection } from '../diagnostic';
 
+export class SanyData {
+    readonly dCollection = new DCollection();
+    readonly modulePaths = new Map<string, string>();
+}
+
 /**
  * Parses stdout of TLA+ code parser.
  */
-export class SanyStdoutParser extends ProcessOutputParser<DCollection> {
-    modPaths: Map<string, string> = new Map();
+export class SanyStdoutParser extends ProcessOutputParser<SanyData> {
     curFilePath: string | undefined = undefined;
     errBlock: string = 'no';                // no, errors, parse_errors
     errRange: vscode.Range | null = null;
     errMessage: string | null = null;
 
     constructor(source: Readable | string[]) {
-        super(source, new DCollection());
+        super(source, new SanyData());
     }
 
     protected parseLine(line: string | null): void {
@@ -26,14 +30,14 @@ export class SanyStdoutParser extends ProcessOutputParser<DCollection> {
             const modPath = line.substring(13);
             const sid = modPath.lastIndexOf(path.sep);
             const modName = modPath.substring(sid + 1, modPath.length - 4);   // remove path and .tla
-            this.modPaths.set(modName, modPath);
-            this.result.addFilePath(modPath);
+            this.result.modulePaths.set(modName, modPath);
+            this.result.dCollection.addFilePath(modPath);
             this.curFilePath = modPath;
             return;
         }
         if (line.startsWith('Semantic processing of module ')) {
             const curMod = line.substring(30);
-            this.curFilePath = this.modPaths.get(curMod);
+            this.curFilePath = this.result.modulePaths.get(curMod);
             return;
         }
         if (line.startsWith('*** Errors:')) {
@@ -93,7 +97,7 @@ export class SanyStdoutParser extends ProcessOutputParser<DCollection> {
 
     private tryAddMessage() {
         if (this.curFilePath && this.errMessage && this.errRange) {
-            this.result.addMessage(this.curFilePath, this.errRange, this.errMessage);
+            this.result.dCollection.addMessage(this.curFilePath, this.errRange, this.errMessage);
             this.resetErrData();
         }
     }

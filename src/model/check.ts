@@ -63,7 +63,8 @@ export class CoverageItem {
     constructor(
         readonly module: string,
         readonly action: string,
-        readonly location: Range,
+        readonly filePath: string | undefined,
+        readonly range: Range,
         readonly total: number,
         readonly distinct: number
     ) {}
