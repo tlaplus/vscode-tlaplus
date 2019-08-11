@@ -136,11 +136,32 @@ suite('SANY Output Parser Test Suite', () => {
             ]));
     });
 
+    test('Captures parsing errors with no text line', () => {
+        const stdout = [
+            `Parsing file ${ROOT_PATH}`,
+            '***Parse Error***',
+            'Encountered "Beginning of definition" at line 21, column 38 and token ":"',
+            '',
+            'Residual stack trace follows:',
+            'ExtendableExpr starting at line 21, column 38.',
+            'Definition starting at line 21, column 1.',
+            '',
+            'Fatal errors while parsing TLA+ spec in file operators',
+            '',
+            'tla2sany.semantic.AbortException',
+            '*** Abort messages: 1',
+            'In module operators',
+        ].join('\n');
+        assertOutput(
+            stdout,
+            expectDiag(ROOT_PATH, [
+                diagError(range(20, 37, 20, 37),
+                'Encountered "Beginning of definition" at line 21, column 38 and token ":"')
+            ]));
+    });
+
     test('Captures lexical errors in root module', () => {
         const stdout = [
-            '',
-            '****** SANY2 Version 2.1 created 24 February 2014',
-            '',
             `Parsing file ${ROOT_PATH}`,
             'Lexical error at line 102, column 15.  Encountered: "=" (61), after : "?"',
             '',

@@ -77,7 +77,6 @@ export class SanyStdoutParser extends ProcessOutputParser<SanyData> {
         } else if (this.errBlock === 'parse_errors') {
             if (this.errMessage === null) {
                 this.errMessage = line.trim();
-                return;
             }
             const rxPosition = /^.*\s+at line (\d+), column (\d+)\s+.*$/g;
             const posMatches = rxPosition.exec(line);
