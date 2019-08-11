@@ -379,6 +379,8 @@ class ModelCheckResultBuilder {
     private parseSanyOutput() {
         const sany = new SanyStdoutParser(this.sanyLines);
         this.sanyData = sany.readAllSync();
+        // Display SANY error messages as model checking errors
+        this.sanyData.dCollection.getMessages().forEach(diag => this.errors.push([diag.diagnostic.message]));
     }
 
     private parseInitialStatesComputed(lines: string[]) {
