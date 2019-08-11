@@ -52,7 +52,7 @@
                 "extensions": [
                     ".tla"
                 ],
-                "configuration": "./tlaplus-lang-config.json"
+                "configuration": "./languages/tlaplus-lang-config.json"
             },
             {
                 "id": "pluscal",
@@ -61,7 +61,7 @@
                     "pluscal"
                 ],
                 "extensions": [],
-                "configuration": "./pluscal-lang-config.json"
+                "configuration": "./languages/pluscal-lang-config.json"
             },
             {
                 "id": "cfg",
@@ -69,7 +69,7 @@
                 "extensions": [
                     ".cfg"
                 ],
-                "configuration": "./cfg-lang-config.json"
+                "configuration": "./languages/cfg-lang-config.json"
             },
             {
                 "id": "tlaplus.out",
@@ -82,22 +82,22 @@
             {
                 "language": "tlaplus",
                 "scopeName": "source.tlaplus",
-                "path": "./syntaxes/tlaplus.tmLanguage.json"
+                "path": "./languages/tlaplus-grammar.json"
             },
             {
                 "language": "pluscal",
                 "scopeName": "source.tlaplus.pluscal",
-                "path": "./syntaxes/pluscal.tmLanguage.json"
+                "path": "./languages/pluscal-grammar.json"
             },
             {
                 "language": "cfg",
                 "scopeName": "source.cfg",
-                "path": "./syntaxes/cfg.tmLanguage.json"
+                "path": "./languages/cfg-grammar.json"
             },
             {
                 "language": "tlaplus.out",
                 "scopeName": "source.tlaplus.out",
-                "path": "./syntaxes/out.tmLanguage.json"
+                "path": "./languages/out-grammar.json"
             }
         ],
         "commands": [
@@ -131,12 +131,12 @@
             {
                 "language": "tlaplus",
                 "scopeName": "source.tlaplus.pluscal",
-                "path": "./pluscal-snippets.json"
+                "path": "./languages/pluscal-snippets.json"
             },
             {
                 "language": "tlaplus",
                 "scopeName": "source.tlaplus",
-                "path": "./tlaplus-snippets.json"
+                "path": "./languages/tlaplus-snippets.json"
             }
         ],
         "menus": {
