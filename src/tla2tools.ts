@@ -131,7 +131,8 @@ function addReturnCodeHandler(proc: ChildProcess, toolName?: string) {
         if (exitCode === NO_ERROR) {
             return;
         }
-        if ((exitCode === SYSTEM_ERROR && toolName !== TlaTool.PLUS_CAL) || exitCode < MIN_TLA_ERROR) {
+        if ((exitCode === SYSTEM_ERROR && toolName !== TlaTool.PLUS_CAL && toolName !== TlaTool.SANY)
+            || exitCode < MIN_TLA_ERROR) {
             vscode.window.showErrorMessage(`Error running ${toolName} (exit code ${exitCode})`);
         }
     });
