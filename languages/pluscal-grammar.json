@@ -34,7 +34,7 @@
 		},
 		"tlaplus_keywords": {
 			"name": "keyword.control",
-			"match": "\\b(DOMAIN)\\b"
+			"match": "\\b(IF|THEN|ELSE|CASE|OTHER|LET|IN|EXCEPT|ENABLED|UNCHANGED|CHOOSE|LAMBDA|DOMAIN|CONSTANTS|ASSUME|RECURSIVE|INSTANCE|WITH|THEOREM|LOCAL|SUBSET|UNION)\\b"
 		},
 		"embedded_operators": {
 			"name": "strong",
@@ -62,7 +62,7 @@
 		},
 		"constants": {
 			"name": "support.constant.tlaplus",
-			"match": "\\b(TRUE|FALSE|BOOLEAN)\\b"
+			"match": "\\b(TRUE|FALSE|BOOLEAN|numbers)\\b"
 		},
 		"labels": {
 			"match": "^\\s*\\w+:",
