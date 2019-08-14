@@ -167,6 +167,15 @@ export class StructureValue extends CollectionValue {
 }
 
 /**
+ * Represents a simple function: (10 :> TRUE), ("foo" :> "bar"), etc
+ */
+export class SimpleFunction extends Value {
+    constructor(key: ValueKey, readonly from: Value, readonly to: Value) {
+        super(key, `(${from.str} :> ${to.str})`);
+    }
+}
+
+/**
  * A state of a process in a particular moment of time.
  */
 export class ErrorTraceItem {
