@@ -15,7 +15,6 @@ export enum TlaTool {
 }
 
 const NO_ERROR = 0;
-const SYSTEM_ERROR = 255;           // Return code that means a problem with tooling
 const MIN_TLA_ERROR = 10;           // Exit codes not related to tooling start from this number
 const LOWEST_JAVA_VERSION = 8;
 const javaCmd = 'java' + (process.platform === 'win32' ? '.exe' : '');
@@ -128,11 +127,7 @@ async function checkJavaVersion(javaPath: string) {
  */
 function addReturnCodeHandler(proc: ChildProcess, toolName?: string) {
     proc.on('close', (exitCode) => {
-        if (exitCode === NO_ERROR) {
-            return;
-        }
-        if ((exitCode === SYSTEM_ERROR && toolName !== TlaTool.PLUS_CAL && toolName !== TlaTool.SANY)
-            || exitCode < MIN_TLA_ERROR) {
+        if (exitCode !== NO_ERROR && exitCode < MIN_TLA_ERROR) {
             vscode.window.showErrorMessage(`Error running ${toolName} (exit code ${exitCode})`);
         }
     });
