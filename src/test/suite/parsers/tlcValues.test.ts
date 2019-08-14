@@ -25,6 +25,12 @@ suite('TLC Values Output Parser Test Suite', () => {
         }
     });
 
+    test('Parses ranges', () => {
+        for (const val of ['0..72', '-4..-1', '0..0']) {
+            assertValue([val], v(ROOT, val), `Failed to parse range value: ${val}`);
+        }
+    });
+
     test('Parses empty set', () => {
         assertValue(['{}'], set(ROOT));
     });
@@ -130,7 +136,7 @@ suite('TLC Values Output Parser Test Suite', () => {
             ' "long long \\" string"',
             '{<<',
             '',
-            '   [ foo |-> {TRUE} ]',
+            '   [ foo |-> {TRUE}, bar |-> -2..5 ]',
             '>>}}',
         ];
         const expect = set(ROOT,
@@ -142,7 +148,7 @@ suite('TLC Values Output Parser Test Suite', () => {
             ),
             seq(3, set('1')),
             v('4', '"long long \\" string"'),
-            set('5', seq(1, struct(1, set('foo', v(1, 'TRUE'))))),
+            set('5', seq(1, struct(1, set('foo', v(1, 'TRUE')), v('bar', '-2..5')))),
         );
         assertValue(lines, expect);
     });

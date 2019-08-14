@@ -4,6 +4,7 @@ import { Position } from 'vscode';
 
 enum TokenType {
     Primitive,
+    Range,
     Name,
     SetStart,
     SetEnd,
@@ -56,6 +57,7 @@ class Tokenizer {
         this.tryReadNumberToken = this.tryReadNumberToken.bind(this);
         this.tryReadStringToken = this.tryReadStringToken.bind(this);
         this.tryReadBooleanToken = this.tryReadBooleanToken.bind(this);
+        this.tryReadRangeToken = this.tryReadRangeToken.bind(this);
         this.tryReadNameToken = this.tryReadNameToken.bind(this);
     }
 
@@ -71,6 +73,7 @@ class Tokenizer {
             }
         }
         const tokenFuncs = [
+            this.tryReadRangeToken,
             this.tryReadNumberToken,
             this.tryReadStringToken,
             this.tryReadBooleanToken,
@@ -142,6 +145,10 @@ class Tokenizer {
         return this.tryRegexpToken(str, /^(TRUE|FALSE)/g, TokenType.Primitive);
     }
 
+    private tryReadRangeToken(str: string): Token | null {
+        return this.tryRegexpToken(str, /^(-?\d+\.\.-?\d+)/g, TokenType.Range);
+    }
+
     private tryReadNameToken(str: string): Token | null {
         return this.tryRegexpToken(str, /^(\w+)/g, TokenType.Name);
     }
@@ -175,7 +182,7 @@ function parseValue(key: ValueKey, token: Token, tokenizer: Tokenizer): Value {
     if (token.type === TokenType.End) {
         throw new ParsingError(`Unexpected end while parsing value at ${tokenizer.getPosition()}`);
     }
-    if (token.type === TokenType.Primitive) {
+    if (token.type === TokenType.Primitive || token.type === TokenType.Range) {
         return new Value(key, token.str);
     }
     if (token.type === TokenType.SetStart) {
