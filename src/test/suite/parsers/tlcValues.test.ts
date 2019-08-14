@@ -1,7 +1,7 @@
 import * as assert from 'assert';
 import { parseVariableValue } from '../../../parsers/tlcValues';
 import { Value } from '../../../model/check';
-import { v, set, seq, struct } from '../testUtils';
+import { v, set, seq, struct, func } from '../testUtils';
 
 const ROOT = 'root';
 
@@ -122,6 +122,27 @@ suite('TLC Values Output Parser Test Suite', () => {
         assertValue(lines, expect);
     });
 
+    test('Parses simple functions', () => {
+        assertValue(
+            ['("foo" :> -7)'],
+            func(ROOT, v('from', '"foo"'), v('to', '-7')));
+        assertValue(
+            ['(TRUE :> <<{FALSE}>>)'],
+            func(ROOT, v('from', 'TRUE'), seq('to', set(1, v(1, 'FALSE')))));
+    });
+
+    test('Parses nested simple functions', () => {
+        assertValue(
+            ['("foo" :> (TRUE :> (10 :> FALSE)))'],
+            func(ROOT,
+                v('from', '"foo"'),
+                func('to',
+                    v('from', 'TRUE'),
+                    func('to',
+                        v('from', '10'),
+                        v('to', 'FALSE')))));
+    });
+
     test('Parses complex case', () => {
         const lines = [
             '{ 12,',
@@ -132,6 +153,7 @@ suite('TLC Values Output Parser Test Suite', () => {
             '          subkey_41 |-> <<',
             '     -299384>>',
             ' ]],',
+            '(TRUE :> {(10 :> <<"foo">>)})',
             '<<{}>>,',
             ' "long long \\" string"',
             '{<<',
@@ -146,9 +168,12 @@ suite('TLC Values Output Parser Test Suite', () => {
                 set('key_2', v(1, '3'), v(2, '4'), v(3, '"five"'), v('4', 'TRUE')),
                 struct('key_3', seq('subkey_41', v(1, '-299384')))
             ),
-            seq(3, set('1')),
-            v('4', '"long long \\" string"'),
-            set('5', seq(1, struct(1, set('foo', v(1, 'TRUE')), v('bar', '-2..5')))),
+            func(3,
+                v('from', 'TRUE'),
+                set('to', func(1, v('from', '10'), seq('to', v(1, '"foo"'))))),
+            seq(4, set('1')),
+            v(5, '"long long \\" string"'),
+            set(6, seq(1, struct(1, set('foo', v(1, 'TRUE')), v('bar', '-2..5')))),
         );
         assertValue(lines, expect);
     });
