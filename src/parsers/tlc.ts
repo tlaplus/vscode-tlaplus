@@ -91,6 +91,13 @@ const TLC_CONFIG_NO_STATE_TYPE = 2243;
 const TLC_CANT_HANDLE_REAL_NUMBERS = 2244;
 const TLC_NO_MODULES = 2245;
 
+const CFG_ERROR_READING_FILE = 5001;
+const CFG_GENERAL = 5002;
+const CFG_MISSING_ID = 5003;
+const CFG_TWICE_KEYWORD = 5004;
+const CFG_EXPECT_ID = 5005;
+const CFG_EXPECTED_SYMBOL = 5006;
+
 const TLC_FINISHED = 2186;
 const TLC_SUCCESS = 2193;
 
@@ -404,6 +411,13 @@ class ModelCheckResultBuilder {
             case TLC_CONFIG_NO_STATE_TYPE:
             case TLC_CANT_HANDLE_REAL_NUMBERS:
             case TLC_NO_MODULES:
+            // --
+            case CFG_ERROR_READING_FILE:
+            case CFG_GENERAL:
+            case CFG_MISSING_ID:
+            case CFG_TWICE_KEYWORD:
+            case CFG_EXPECT_ID:
+            case CFG_EXPECTED_SYMBOL:
                 this.parseErrorMessage(message.lines);
                 break;
             case TLC_STATE_PRINT1:
