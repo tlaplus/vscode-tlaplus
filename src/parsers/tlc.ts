@@ -405,7 +405,7 @@ class ModelCheckResultBuilder {
             case TLC_CANT_HANDLE_REAL_NUMBERS:
             case TLC_NO_MODULES:
                 this.parseErrorMessage(message.lines);
-            break;
+                break;
             case TLC_STATE_PRINT1:
             case TLC_STATE_PRINT2:
             case TLC_STATE_PRINT3:
