@@ -165,7 +165,7 @@ suite('SANY Output Parser Test Suite', () => {
             `Parsing file ${ROOT_PATH}`,
             'Lexical error at line 102, column 15.  Encountered: "=" (61), after : "?"',
             '',
-            'Fatal errors while parsing TLA+ spec in file sorting',
+            `Fatal errors while parsing TLA+ spec in file ${ROOT_NAME}`,
             '',
             'tla2sany.semantic.AbortException',
             '*** Abort messages: 1',
@@ -176,6 +176,77 @@ suite('SANY Output Parser Test Suite', () => {
             stdout,
             expectDiag(ROOT_PATH, [
                 diagError(range(101, 14, 101, 14), 'Encountered: "=" (61), after : "?"')
+            ]));
+    });
+
+    test ('Captures module-not-found error', () => {
+        const stdout = [
+            `Parsing file ${ROOT_PATH}`,
+            '',
+            `Fatal errors while parsing TLA+ spec in file ${ROOT_NAME}`,
+            '',
+            'tla2sany.semantic.AbortException',
+            '*** Abort messages: 1',
+            '',
+            'Unknown location',
+            '',
+            `Cannot find source file for module FooBar imported in module ${ROOT_NAME}.`
+        ].join('\n');
+        assertOutput(
+            stdout,
+            expectDiag(ROOT_PATH, [
+                diagError(
+                    range(0, 0, 0, 0),
+                    `Cannot find source file for module FooBar imported in module ${ROOT_NAME}.`
+                )
+            ]));
+    });
+
+    test ('Captures module-file-name-mismatch error', () => {
+        const stdout = [
+            `Parsing file ${ROOT_PATH}`,
+            '',
+            `Fatal errors while parsing TLA+ spec in file ${ROOT_NAME}`,
+            '',
+            'tla2sany.semantic.AbortException',
+            '*** Abort messages: 1',
+            '',
+            'Unknown location',
+            '',
+            "File name 'Foo' does not match the name 'foo' of the top level module it contains."
+        ].join('\n');
+        assertOutput(
+            stdout,
+            expectDiag(ROOT_PATH, [
+                diagError(
+                    range(0, 0, 0, 0),
+                    "File name 'Foo' does not match the name 'foo' of the top level module it contains."
+                )
+            ]));
+    });
+
+    test ('Captures circular-dependencies error', () => {
+        const stdout = [
+            `Parsing file ${ROOT_PATH}`,
+            '',
+            `Fatal errors while parsing TLA+ spec in file ${ROOT_NAME}`,
+            '',
+            'tla2sany.semantic.AbortException',
+            '*** Abort messages: 1',
+            '',
+            'Unknown location',
+            '',
+            'Circular dependency among .tla files; dependency cycle is:',
+            '',
+            '  foo.tla --> bar.tla --> foo.tla'
+        ].join('\n');
+        assertOutput(
+            stdout,
+            expectDiag(ROOT_PATH, [
+                diagError(
+                    range(0, 0, 0, 0),
+                    'Circular dependency among .tla files; dependency cycle is:\n  foo.tla --> bar.tla --> foo.tla'
+                )
             ]));
     });
 });

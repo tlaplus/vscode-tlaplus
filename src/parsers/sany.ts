@@ -4,6 +4,13 @@ import { Readable } from 'stream';
 import { ProcessOutputParser } from './base';
 import { DCollection } from '../diagnostic';
 
+enum OutBlock {
+    Parsing,
+    Errors,
+    ParseError,
+    AbortMessages
+}
+
 export class SanyData {
     readonly dCollection = new DCollection();
     readonly modulePaths = new Map<string, string>();
@@ -13,10 +20,12 @@ export class SanyData {
  * Parses stdout of TLA+ code parser.
  */
 export class SanyStdoutParser extends ProcessOutputParser<SanyData> {
-    curFilePath: string | undefined = undefined;
-    errBlock: string = 'no';                // no, errors, parse_errors
-    errRange: vscode.Range | null = null;
-    errMessage: string | null = null;
+    rootModulePath: string | undefined;
+    curFilePath: string | undefined;
+    outBlock = OutBlock.Parsing;
+    errRange: vscode.Range | undefined;
+    errMessage: string | undefined;
+    pendingAbortMessage: boolean = false;
 
     constructor(source: Readable | string[]) {
         super(source, new SanyData());
@@ -28,11 +37,7 @@ export class SanyStdoutParser extends ProcessOutputParser<SanyData> {
         }
         if (line.startsWith('Parsing file ')) {
             const modPath = line.substring(13);
-            const sid = modPath.lastIndexOf(path.sep);
-            const modName = modPath.substring(sid + 1, modPath.length - 4);   // remove path and .tla
-            this.result.modulePaths.set(modName, modPath);
-            this.result.dCollection.addFilePath(modPath);
-            this.curFilePath = modPath;
+            this.rememberParsedModule(modPath);
             return;
         }
         if (line.startsWith('Semantic processing of module ')) {
@@ -41,57 +46,47 @@ export class SanyStdoutParser extends ProcessOutputParser<SanyData> {
             return;
         }
         if (line.startsWith('*** Errors:')) {
-            this.errBlock = 'errors';
+            this.outBlock = OutBlock.Errors;
             this.resetErrData();
             return;
         }
         if (line.startsWith('***Parse Error***')) {
-            this.errBlock = 'parse_errors';
+            this.outBlock = OutBlock.ParseError;
             this.resetErrData();
             return;
         }
-        if (this.errBlock === 'no') {
-            const rxError = /^\s*Lexical error at line (\d+), column (\d+).\s*(.*)$/g;
-            const errMatches = rxError.exec(line);
-            if (errMatches) {
-                const errLine = parseInt(errMatches[1]) - 1;
-                const errCol = parseInt(errMatches[2]) - 1;
-                this.errMessage = errMatches[3];
-                this.errRange = new vscode.Range(errLine, errCol, errLine, errCol);
-            }
-        } else if (this.errBlock === 'errors') {
-            if (this.errRange === null) {
-                const rxPosition = /^\s*line (\d+), col (\d+) to line (\d+), col (\d+) of module (\w+)\s*$/g;
-                const posMatches = rxPosition.exec(line);
-                if (posMatches) {
-                    this.errRange = new vscode.Range(
-                        parseInt(posMatches[1]) - 1,
-                        parseInt(posMatches[2]) - 1,
-                        parseInt(posMatches[3]) - 1,
-                        parseInt(posMatches[4])
-                    );
-                }
+        if (line.startsWith('*** Abort messages:')) {
+            this.outBlock = OutBlock.AbortMessages;
+            this.resetErrData();
+            return;
+        }
+        this.tryParseOutLine(line);
+    }
+
+    private tryParseOutLine(line: string) {
+        if (this.outBlock === OutBlock.Parsing) {
+            this.tryParseLexicalError(line);
+        } else if (this.outBlock === OutBlock.Errors) {
+            if (!this.errRange) {
+                this.tryParseErrorRange(line);
                 return;
             }
             this.errMessage = line.trim();
-        } else if (this.errBlock === 'parse_errors') {
-            if (this.errMessage === null) {
+        } else if (this.outBlock === OutBlock.ParseError) {
+            if (!this.errMessage) {
                 this.errMessage = line.trim();
             }
-            const rxPosition = /^.*\s+at line (\d+), column (\d+)\s+.*$/g;
-            const posMatches = rxPosition.exec(line);
-            if (posMatches) {
-                const errLine = parseInt(posMatches[1]) - 1;
-                const errCol = parseInt(posMatches[2]) - 1;
-                this.errRange = new vscode.Range(errLine, errCol, errLine, errCol);
-            }
+            this.tryParseParseErrorRange(line);
+        } else if (this.outBlock === OutBlock.AbortMessages) {
+            this.tryParseAbortError(line);
         }
         this.tryAddMessage();
     }
 
     private resetErrData() {
-        this.errRange = null;
-        this.errMessage = null;
+        this.errRange = undefined;
+        this.errMessage = undefined;
+        this.pendingAbortMessage = false;
     }
 
     private tryAddMessage() {
@@ -99,5 +94,72 @@ export class SanyStdoutParser extends ProcessOutputParser<SanyData> {
             this.result.dCollection.addMessage(this.curFilePath, this.errRange, this.errMessage);
             this.resetErrData();
         }
+    }
+
+    private rememberParsedModule(modulePath: string) {
+        const sid = modulePath.lastIndexOf(path.sep);
+        const modName = modulePath.substring(sid + 1, modulePath.length - 4);   // remove path and .tla
+        this.result.modulePaths.set(modName, modulePath);
+        this.result.dCollection.addFilePath(modulePath);
+        this.curFilePath = modulePath;
+        if (!this.rootModulePath) {
+            this.rootModulePath = modulePath;
+        }
+    }
+
+    private tryParseLexicalError(line: string) {
+        const rxError = /^\s*Lexical error at line (\d+), column (\d+).\s*(.*)$/g;
+        const errMatches = rxError.exec(line);
+        if (!errMatches) {
+            return;
+        }
+        const errLine = parseInt(errMatches[1]) - 1;
+        const errCol = parseInt(errMatches[2]) - 1;
+        this.errMessage = errMatches[3];
+        this.errRange = new vscode.Range(errLine, errCol, errLine, errCol);
+    }
+
+    private tryParseErrorRange(line: string) {
+        const rxPosition = /^\s*line (\d+), col (\d+) to line (\d+), col (\d+) of module (\w+)\s*$/g;
+        const posMatches = rxPosition.exec(line);
+        if (!posMatches) {
+            return;
+        }
+        this.errRange = new vscode.Range(
+            parseInt(posMatches[1]) - 1,
+            parseInt(posMatches[2]) - 1,
+            parseInt(posMatches[3]) - 1,
+            parseInt(posMatches[4])
+        );
+    }
+
+    private tryParseParseErrorRange(line: string) {
+        const rxPosition = /^.*\s+at line (\d+), column (\d+)\s+.*$/g;
+        const posMatches = rxPosition.exec(line);
+        if (!posMatches) {
+            return;
+        }
+        const errLine = parseInt(posMatches[1]) - 1;
+        const errCol = parseInt(posMatches[2]) - 1;
+        this.errRange = new vscode.Range(errLine, errCol, errLine, errCol);
+    }
+
+    // Parses abort messages with unknown locations
+    private tryParseAbortError(line: string) {
+        if (line === 'Unknown location') {
+            this.pendingAbortMessage = true;
+            return;
+        }
+        if (!this.pendingAbortMessage || !this.rootModulePath) {
+            return;
+        }
+        if (line.startsWith('Circular dependency')) {
+            // Have to wait for the next line that will contain the recursion description
+            this.errMessage = line;
+            return;
+        }
+        const message = this.errMessage ? this.errMessage + '\n' + line : line;
+        this.result.dCollection.addMessage(this.rootModulePath, new vscode.Range(0, 0, 0, 0), message);
+        this.resetErrData();
     }
 }
