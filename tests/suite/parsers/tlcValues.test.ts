@@ -1,6 +1,6 @@
 import * as assert from 'assert';
-import { parseVariableValue } from '../../../parsers/tlcValues';
-import { Value } from '../../../model/check';
+import { parseVariableValue } from '../../../src/parsers/tlcValues';
+import { Value } from '../../../src/model/check';
 import { v, set, seq, struct, func } from '../testUtils';
 
 const ROOT = 'root';

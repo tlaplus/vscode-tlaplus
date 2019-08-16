@@ -1,4 +1,4 @@
-import { Value, ValueKey, SetValue, SequenceValue, StructureValue, SimpleFunction } from '../../model/check';
+import { Value, ValueKey, SetValue, SequenceValue, StructureValue, SimpleFunction } from '../../src/model/check';
 
 export function v(key: ValueKey, value: string): Value {
     return new Value(String(key), value);

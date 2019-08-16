@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 import * as assert from 'assert';
 import { beforeEach } from 'mocha';
-import { TranspilerStdoutParser } from '../../../parsers/pluscal';
-import { pathToUri } from '../../../common';
-import { applyDCollection } from '../../../diagnostic';
+import { TranspilerStdoutParser } from '../../../src/parsers/pluscal';
+import { pathToUri } from '../../../src/common';
+import { applyDCollection } from '../../../src/diagnostic';
 import { getTlaDiagnostics } from './testUtils';
 
 suite('PlusCal Transpiler Output Parser Test Suite', () => {

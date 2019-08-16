@@ -1,8 +1,8 @@
 import * as assert from 'assert';
-import { ModelCheckResult, CheckState, CheckStatus, OutputLine, InitialStateStatItem } from '../../../model/check';
-import { TlcModelCheckerStdoutParser } from '../../../parsers/tlc';
+import { ModelCheckResult, CheckState, CheckStatus, OutputLine, InitialStateStatItem } from '../../../src/model/check';
+import { TlcModelCheckerStdoutParser } from '../../../src/parsers/tlc';
 import moment = require('moment');
-import { replaceExtension } from '../../../common';
+import { replaceExtension } from '../../../src/common';
 
 const ROOT_PATH = '/Users/alice/TLA/foo.tla';
 

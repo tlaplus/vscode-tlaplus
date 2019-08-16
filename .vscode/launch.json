@@ -24,9 +24,9 @@
             "args": [
                 "--disable-extensions",
                 "--extensionDevelopmentPath=${workspaceFolder}",
-                "--extensionTestsPath=${workspaceFolder}/out/test/suite/index"
+                "--extensionTestsPath=${workspaceFolder}/out/tests/suite/index"
             ],
-            "outFiles": ["${workspaceFolder}/out/test/**/*.js"],
+            "outFiles": ["${workspaceFolder}/out/tests/**/*.js"],
             "preLaunchTask": "npm: watch"
         }
     ]
