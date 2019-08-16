@@ -55,10 +55,10 @@ function createNewPanel() {
         vscode.ViewColumn.Beside,
         {
             enableScripts: true,
-            localResourceRoots: [vscode.Uri.file(path.resolve(__dirname, '../resources'))]
+            localResourceRoots: [vscode.Uri.file(path.resolve(__dirname, '../../resources'))]
         }
     );
-    viewPanel.iconPath = vscode.Uri.file(path.resolve(__dirname, '../resources/images/result-ico.svg'));
+    viewPanel.iconPath = vscode.Uri.file(path.resolve(__dirname, '../../resources/images/result-ico.svg'));
     viewPanel.onDidDispose(() => {
         viewPanel = undefined;
     });

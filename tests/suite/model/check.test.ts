@@ -1,7 +1,7 @@
 import * as assert from 'assert';
 import { CheckStatus, getStatusName, findChanges, Change, ValueKey, Value,
     CollectionValue, StructureValue} from '../../../src/model/check';
-import { v, set, seq, struct } from '../testUtils';
+import { v, set, seq, struct } from '../shortcuts';
 
 const ROOT = 'root';
 

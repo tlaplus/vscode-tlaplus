@@ -36,7 +36,7 @@
         "onCommand:tlaplus.model.check.run",
         "workspaceContains:**/*.tla"
     ],
-    "main": "./out/main.js",
+    "main": "./out/src/main.js",
     "filse": [
         "resources",
         "tools"
