@@ -13,6 +13,7 @@ import { clearTimeout } from 'timers';
 const STATUS_EMIT_TIMEOUT = 500;    // msec
 
 // TLC message types
+// Declared in https://github.com/tlaplus/tlaplus/blob/master/tlatools/src/tlc2/output/EC.java
 const NONE = -1;
 const TLC_UNKNOWN = -2;
 const GENERAL = 1000;
