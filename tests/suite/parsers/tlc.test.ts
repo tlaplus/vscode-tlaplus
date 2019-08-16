@@ -1,73 +1,58 @@
 import * as assert from 'assert';
-import { ModelCheckResult, CheckState, CheckStatus, OutputLine, InitialStateStatItem } from '../../../src/model/check';
+import * as path from 'path';
+import * as fs from 'fs';
+import { PassThrough } from 'stream';
+import { ModelCheckResult, CheckState, CheckStatus } from '../../../src/model/check';
 import { TlcModelCheckerStdoutParser } from '../../../src/parsers/tlc';
-import moment = require('moment');
 import { replaceExtension } from '../../../src/common';
+import { range, CheckResultBuilder } from '../shortcuts';
 
 const ROOT_PATH = '/Users/alice/TLA/foo.tla';
+const FIXTURES_PATH = path.resolve(__dirname, '../../../../tests/fixtures/parsers/tlc');
 
 suite('TLC Output Parser Test Suite', () => {
 
+    test('Parses minimal PlusCal output', () => {
+        return assertOutput('empty-calplus.out', ROOT_PATH,
+            new CheckResultBuilder('empty-calplus.out', CheckState.Success, CheckStatus.Finished)
+                .addDColFilePath('/Users/bob/example.tla')
+                .addDColFilePath('/private/var/folders/tla/T/TLC.tla')
+                .addDColFilePath('/private/var/folders/tla/T/Naturals.tla')
+                .addDColFilePath('/private/var/folders/tla/T/Sequences.tla')
+                .addDColFilePath('/private/var/folders/tla/T/FiniteSets.tla')
+                .setStartDateTime('2019-08-17 00:11:08')
+                .setEndDateTime('2019-08-17 00:11:09')
+                .setDuration(886)
+                .setProcessInfo(
+                    'Running breadth-first search Model-Checking with fp 22 and seed -5755320172003082571'
+                        + ' with 1 worker on 4 cores with 1820MB heap and 64MB offheap memory [pid: 91333]'
+                        + ' (Mac OS X 10.14.5 x86_64, Amazon.com Inc. 11.0.3 x86_64, MSBDiskFPSet, DiskStateQueue).')
+                .addInitState('00:00:00', 0, 1, 1, 1)
+                .addInitState('00:00:00', 2, 3, 2, 0)
+                .addCoverage('example', 'Init', '/Users/bob/example.tla', range(13, 0, 13, 4), 1, 1)
+                .addCoverage('example', 'Lbl_1', '/Users/bob/example.tla', range(15, 0, 15, 5), 1, 1)
+                .addCoverage('example', 'Terminating', '/Users/bob/example.tla', range(20, 0, 20, 11), 0, 1)
+                .build()
+            );
+    });
+
     test('Captures Print/PrintT output', () => {
-        const stdout = [
-            '@!@!@STARTMSG 2262:0 @!@!@',
-            'TLC2 Version X.Y of 1 Jan 2019 (rev: 0000000)',
-            '@!@!@ENDMSG 2262 @!@!@',
-            '@!@!@STARTMSG 2185:0 @!@!@',
-            'Starting... (2019-01-01 01:02:03)',
-            '@!@!@ENDMSG 2185 @!@!@',
-            '@!@!@STARTMSG 2190:0 @!@!@',
-            'Finished computing initial states: 5184 distinct states generated at 2019-01-01 00:02:03.',
-            '@!@!@ENDMSG 2190 @!@!@',
-            'Foo',
-            'Bar',
-            '@!@!@STARTMSG 999999:1 @!@!@',
-            'Some message.',
-            '@!@!@ENDMSG 999999 @!@!@',
-            'Bar',
-            'Baz',
-            '@!@!@STARTMSG 2193:0 @!@!@',
-            'Model checking completed. No error has been found.',
-            'Estimates of the probability that TLC did not check all reachable states',
-            'because two distinct states had the same fingerprint:',
-            'calculated (optimistic):  val = 5.0E-13',
-            '@!@!@ENDMSG 2193 @!@!@',
-            '@!@!@STARTMSG 2186:0 @!@!@',
-            'Finished in 2345ms at (2019-01-01 01:02:05)',
-            '@!@!@ENDMSG 2186 @!@!@'
-        ].join('\n');
-        assertOutput(stdout, ROOT_PATH, new ModelCheckResult(
-            'foo',
-            CheckState.Success,
-            CheckStatus.Finished,
-            undefined,
-            [ new InitialStateStatItem('00:00:00', 0, 5184, 5184, 5184) ],
-            [], [], [], undefined,
-            moment('2019-01-01 01:02:03'),
-            moment('2019-01-01 01:02:05'),
-            2345,
-            0, undefined, [
-                outLine('Foo'),
-                outLine('Bar', 2),
-                outLine('Baz')
-            ]
-        ));
+        return assertOutput('print-output.out', ROOT_PATH,
+            new CheckResultBuilder('foo', CheckState.Success, CheckStatus.Finished)
+                .setStartDateTime('2019-01-01 01:02:03')
+                .setEndDateTime('2019-01-01 01:02:05')
+                .setDuration(2345)
+                .addInitState('00:00:00', 0, 5184, 5184, 5184)
+                .addOutLine('Foo')
+                .addOutLine('Bar', 2)
+                .addOutLine('Baz')
+                .build()
+        );
     });
 });
 
 class CheckResultHolder {
     checkResult: ModelCheckResult = ModelCheckResult.EMPTY;
-}
-
-function assertOutput(out: string, tlaFilePath: string, expected: ModelCheckResult) {
-    const outLines = out.split('\n');
-    const crh = new CheckResultHolder();
-    const outFilePath = replaceExtension(tlaFilePath, 'out');
-    const parser = new TlcModelCheckerStdoutParser(outLines, tlaFilePath, outFilePath, (cr) => {
-        crh.checkResult = cr;
-    });
-    parser.readAllSync();
-    assertEquals(crh.checkResult, expected);
 }
 
 function assertEquals(actual: ModelCheckResult, expected: ModelCheckResult) {
@@ -85,12 +70,15 @@ function assertEquals(actual: ModelCheckResult, expected: ModelCheckResult) {
     assert.deepEqual(actual.sanyMessages, expected.sanyMessages);
 }
 
-function outLine(text: string, count?: number): OutputLine {
-    const line = new OutputLine(text);
-    if (count && count > 1) {
-        for (let i = 0; i < count - 1; i++) {
-            line.increment();
-        }
-    }
-    return line;
+async function assertOutput(fileName: string, tlaFilePath: string, expected: ModelCheckResult): Promise<void> {
+    const filePath = path.join(FIXTURES_PATH, fileName);
+    const buffer = fs.readFileSync(filePath);
+    const stream = new PassThrough();
+    stream.end(buffer);
+    const crh = new CheckResultHolder();
+    const outFilePath = replaceExtension(tlaFilePath, 'out');
+    const parser = new TlcModelCheckerStdoutParser(stream, tlaFilePath, outFilePath, (cr) => {
+        crh.checkResult = cr;
+    });
+    return parser.readAll().then(() => assertEquals(crh.checkResult, expected));
 }

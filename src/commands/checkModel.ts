@@ -118,7 +118,7 @@ async function getSpecFiles(fileUri: vscode.Uri): Promise<SpecFiles | undefined>
 }
 
 async function checkModuleExists(modulePath: string): Promise<boolean> {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
         exists(modulePath, (exists) => {
             if (!exists) {
                 const moduleFile = path.basename(modulePath);
@@ -130,7 +130,7 @@ async function checkModuleExists(modulePath: string): Promise<boolean> {
 }
 
 async function checkModelExists(cfgPath: string): Promise<boolean> {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
         exists(cfgPath, (exists) => {
             if (!exists) {
                 showConfigAbsenceWarning(cfgPath);
