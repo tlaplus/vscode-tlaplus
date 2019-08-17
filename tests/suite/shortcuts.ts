@@ -3,12 +3,11 @@ import moment = require('moment');
 import { Moment } from 'moment';
 import { Value, ValueKey, SetValue, SequenceValue, StructureValue, SimpleFunction,
     InitialStateStatItem, CoverageItem, ModelCheckResult, CheckState, CheckStatus,
-    ErrorTraceItem,
-    OutputLine} from '../../src/model/check';
+    ErrorTraceItem, OutputLine } from '../../src/model/check';
 import { DCollection } from '../../src/diagnostic';
 
 export function v(key: ValueKey, value: string): Value {
-    return new Value(String(key), value);
+    return new Value(key, value);
 }
 
 export function set(key: ValueKey, ...items: Value[]): SetValue {
@@ -126,11 +125,39 @@ export class CheckResultBuilder {
         return this;
     }
 
+    addError(lines: string[]): CheckResultBuilder {
+        this.errors.push(lines);
+        return this;
+    }
+
     addDColFilePath(path: string): CheckResultBuilder {
+        this.ensureSanyMessages();
+        this.sanyMessages!.addFilePath(path);
+        return this;
+    }
+
+    addDColMessage(filePath: string, range: vscode.Range, text: string): CheckResultBuilder {
+        this.ensureSanyMessages();
+        this.sanyMessages!.addMessage(filePath, range, text);
+        return this;
+    }
+
+    addTraceItem(
+        title: string,
+        module: string,
+        action: string,
+        filePath: string | undefined,
+        range: vscode.Range,
+        variables: StructureValue  // Variables are presented as items of a structure
+    ): CheckResultBuilder {
+        const num = this.errorTrace.length + 1;
+        this.errorTrace.push(new ErrorTraceItem(num, title, module, action, filePath, range, variables));
+        return this;
+    }
+
+    private ensureSanyMessages() {
         if (!this.sanyMessages) {
             this.sanyMessages = new DCollection();
         }
-        this.sanyMessages.addFilePath(path);
-        return this;
     }
 }

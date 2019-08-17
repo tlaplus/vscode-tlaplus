@@ -2,10 +2,10 @@ import * as assert from 'assert';
 import * as path from 'path';
 import * as fs from 'fs';
 import { PassThrough } from 'stream';
-import { ModelCheckResult, CheckState, CheckStatus } from '../../../src/model/check';
+import { ModelCheckResult, CheckState, CheckStatus, Change } from '../../../src/model/check';
 import { TlcModelCheckerStdoutParser } from '../../../src/parsers/tlc';
 import { replaceExtension } from '../../../src/common';
-import { range, CheckResultBuilder } from '../shortcuts';
+import { CheckResultBuilder, range, struct, v, set } from '../shortcuts';
 
 const ROOT_PATH = '/Users/alice/TLA/foo.tla';
 const FIXTURES_PATH = path.resolve(__dirname, '../../../../tests/fixtures/parsers/tlc');
@@ -49,6 +49,60 @@ suite('TLC Output Parser Test Suite', () => {
                 .build()
         );
     });
+
+    test('Captures SANY errors', () => {
+        return assertOutput('sany-error.out', ROOT_PATH,
+            new CheckResultBuilder('sany-error.out', CheckState.Error, CheckStatus.Finished)
+                .setProcessInfo('Running breadth-first search Model-Checking with fp 86 and seed -5126315020031287108.')
+                .addDColFilePath(ROOT_PATH)
+                .setStartDateTime('2019-08-17 02:04:44')
+                .setEndDateTime('2019-08-17 02:04:44')
+                .setDuration(380)
+                .addDColMessage(ROOT_PATH, range(4, 7, 4, 8), "Unknown operator: `a'.")
+                .addError(["Unknown operator: `a'."])
+                .build()
+        );
+    });
+
+    test('Parses error trace', () => {
+        return assertOutput('error-trace.out', '/Users/bob/error_trace.tla',
+            new CheckResultBuilder('error-trace.out', CheckState.Error, CheckStatus.Finished)
+                .addDColFilePath('/Users/bob/error_trace.tla')
+                .addDColFilePath('/private/var/folders/tla/Integers.tla')
+                .addDColFilePath('/private/var/folders/tla/Naturals.tla')
+                .setProcessInfo('Running breadth-first search Model-Checking with fp 6 and seed -9020681683977717109.')
+                .setStartDateTime('2019-08-17 02:37:50')
+                .setEndDateTime('2019-08-17 02:37:51')
+                .setDuration(1041)
+                .addInitState('00:00:00', 0, 1, 1, 1)
+                .addInitState('00:00:00', 3, 4, 4, 1)
+                .addCoverage('error_trace', 'Init', '/Users/bob/error_trace.tla', range(7, 0, 7, 4), 2, 2)
+                .addCoverage('error_trace', 'SomeFunc', '/Users/bob/error_trace.tla', range(11, 0, 11, 11), 3, 5)
+                .addError(['Invariant FooInvariant is violated.'])
+                .addTraceItem('Initial predicate', '', '', undefined, range(0, 0, 0, 0),
+                    struct('', v('FooVar', '1..2'), v('BarVar', '-1'))
+                )
+                .addTraceItem(
+                    'SomeFunc in error_trace', 'error_trace', 'SomeFunc',
+                    '/Users/bob/error_trace.tla', range(12, 8, 14, 24),
+                    struct('',
+                        set('FooVar', v(1, '1')).setModified(),
+                        v('BarVar', '1').setModified()
+                    ).setModified()
+                )
+                .addTraceItem(
+                    'SomeFunc in error_trace', 'error_trace', 'SomeFunc',
+                    '/Users/bob/error_trace.tla', range(12, 8, 14, 24),
+                    struct('',
+                        set('FooVar',
+                            v(1, '4').setModified(),
+                            v(2, 'TRUE').setAdded()).setModified(),
+                        v('BarVar', '40').setModified()
+                    ).setModified()
+                )
+                .build()
+        );
+    });
 });
 
 class CheckResultHolder {
@@ -65,9 +119,9 @@ function assertEquals(actual: ModelCheckResult, expected: ModelCheckResult) {
     assert.deepEqual(actual.outputLines, expected.outputLines);
     assert.deepEqual(actual.initialStatesStat, expected.initialStatesStat);
     assert.deepEqual(actual.coverageStat, expected.coverageStat);
+    assert.deepEqual(actual.sanyMessages, expected.sanyMessages);
     assert.deepEqual(actual.errors, expected.errors);
     assert.deepEqual(actual.errorTrace, expected.errorTrace);
-    assert.deepEqual(actual.sanyMessages, expected.sanyMessages);
 }
 
 async function assertOutput(fileName: string, tlaFilePath: string, expected: ModelCheckResult): Promise<void> {
