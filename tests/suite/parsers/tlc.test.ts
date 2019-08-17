@@ -103,6 +103,44 @@ suite('TLC Output Parser Test Suite', () => {
                 .build()
         );
     });
+
+    test('Handles no-line-break message end', () => {
+        // bla-bla-bla@!@!@ENDMSG 2193 @!@!@
+        return assertOutput('no-line-break-end.out', ROOT_PATH,
+            new CheckResultBuilder('no-line-break-end.out', CheckState.Success, CheckStatus.Finished)
+                .addDColFilePath('/Users/bob/example.tla')
+                .setStartDateTime('2019-08-17 00:12:01')
+                .setEndDateTime('2019-08-17 00:12:02')
+                .setDuration(400)
+                .setProcessInfo(
+                    'Running breadth-first search Model-Checking with fp 22 and seed -5755320172003082571'
+                        + ' with 1 worker on 4 cores with 1820MB heap and 64MB offheap memory [pid: 91333]'
+                        + ' (Mac OS X 10.14.5 x86_64, Amazon.com Inc. 11.0.3 x86_64, MSBDiskFPSet, DiskStateQueue).')
+                .addInitState('00:00:00', 0, 1, 1, 1)
+                .addInitState('00:00:00', 2, 3, 2, 0)
+                .addCoverage('example', 'Init', '/Users/bob/example.tla', range(13, 0, 13, 4), 1, 1)
+                .build()
+            );
+    });
+
+    test('Handles no-line-break message switch', () => {
+        // https://github.com/alygin/vscode-tlaplus/issues/47
+        return assertOutput('no-line-break-switch.out', ROOT_PATH,
+            new CheckResultBuilder('no-line-break-switch.out', CheckState.Success, CheckStatus.Finished)
+                .addDColFilePath('/Users/bob/example.tla')
+                .setStartDateTime('2019-08-17 00:12:01')
+                .setEndDateTime('2019-08-17 00:12:02')
+                .setDuration(400)
+                .setProcessInfo(
+                    'Running breadth-first search Model-Checking with fp 22 and seed -5755320172003082571'
+                        + ' with 1 worker on 4 cores with 1820MB heap and 64MB offheap memory [pid: 91333]'
+                        + ' (Mac OS X 10.14.5 x86_64, Amazon.com Inc. 11.0.3 x86_64, MSBDiskFPSet, DiskStateQueue).')
+                .addInitState('00:00:00', 0, 1, 1, 1)
+                .addInitState('00:00:00', 2, 3, 2, 0)
+                .addCoverage('example', 'Init', '/Users/bob/example.tla', range(13, 0, 13, 4), 1, 1)
+                .build()
+            );
+    });
 });
 
 class CheckResultHolder {

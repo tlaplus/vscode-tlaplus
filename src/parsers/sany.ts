@@ -97,7 +97,10 @@ export class SanyStdoutParser extends ProcessOutputParser<SanyData> {
     }
 
     private rememberParsedModule(modulePath: string) {
-        const sid = modulePath.lastIndexOf(path.sep);
+        // It's necessary to check both separators here, not just `path.sep`
+        // to support .out files portability. TLA+ doesn't support slashes in module names,
+        // so it breaks nothing.
+        const sid = Math.max(modulePath.lastIndexOf('/'), modulePath.lastIndexOf('\\'));
         const modName = modulePath.substring(sid + 1, modulePath.length - 4);   // remove path and .tla
         this.result.modulePaths.set(modName, modulePath);
         this.result.dCollection.addFilePath(modulePath);

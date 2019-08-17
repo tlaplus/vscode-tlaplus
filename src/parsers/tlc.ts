@@ -165,6 +165,13 @@ export class TlcModelCheckerStdoutParser extends ProcessOutputParser<DCollection
     }
 }
 
+class LineParsingResult {
+    constructor(
+        readonly success: boolean,
+        readonly remainingLine: string
+    ) {}
+}
+
 /**
  * TLC output message;
  */
@@ -250,28 +257,30 @@ class ModelCheckResultBuilder {
     }
 
     addLine(line: string) {
-        const newMsgType = this.tryParseMessageStart(line);
-        if (newMsgType != null) {
+        const endRes = this.tryParseMessageEnd(line);
+        let eLine = line;
+        if (endRes.success) {
+            const message = this.messages.finish();
+            this.handleMessageEnd(message);
+            eLine = endRes.remainingLine;
+        }
+        const newMsgType = this.tryParseMessageStart(eLine);
+        if (newMsgType) {
             this.messages.start(newMsgType);
             return;
         }
-        if (this.tryParseMessageEnd(line)) {
-            const message = this.messages.finish();
-            this.handleMessageEnd(message);
-            return;
-        }
-        if (line === '') {
+        if (eLine === '') {
             return;
         }
         if (this.status === CheckStatus.SanyParsing) {
-            this.sanyLines.push(line);
+            this.sanyLines.push(eLine);
             return;
         }
         if (this.messages.getCurrentType() !== NONE) {
-            this.messages.addLine(line);
+            this.messages.addLine(eLine);
             return;
         }
-        this.addOutputLine(line);
+        this.addOutputLine(eLine);
     }
 
     handleStop() {
@@ -440,27 +449,23 @@ class ModelCheckResultBuilder {
         }
     }
 
-    private tryParseMessageStart(line: string): number | null {
-        const markerIdx = line.indexOf('@!@!@STARTMSG ');
-        let markerBody = line;
-        if (markerIdx < 0 || !line.endsWith(' @!@!@')) {
-            return null;
-        } else if (markerIdx > 0) {
-            markerBody = line.substring(markerIdx);
-            if (this.messages.getCurrentType() !== NONE) {
-                this.messages.addLine(line.substring(0, markerIdx));
-            }
+    private tryParseMessageStart(line: string): number | undefined {
+        const matches = /^@!@!@STARTMSG (\d+)(:\d+)? @!@!@$/g.exec(line);
+        if (!matches) {
+            return undefined;
         }
-        const eLine = markerBody.substring(14, line.length - 6);
-        const parts = eLine.split(':');
-        if (parts.length > 0) {
-            return parseInt(parts[0]);
-        }
-        return TLC_UNKNOWN;
+        return parseInt(matches[1]);
     }
 
-    private tryParseMessageEnd(line: string): boolean {
-        return line.startsWith('@!@!@ENDMSG ') && line.endsWith(' @!@!@');
+    private tryParseMessageEnd(line: string): LineParsingResult {
+        const matches = /^(.*)@!@!@ENDMSG \d+ @!@!@(.*)$/g.exec(line);
+        if (!matches) {
+            return new LineParsingResult(false, line);
+        }
+        if (matches[1] !== '') {
+            this.messages.addLine(matches[1]);
+        }
+        return new LineParsingResult(true, matches[2]);
     }
 
     private parseStarting(lines: string[]) {
