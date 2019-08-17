@@ -18,7 +18,7 @@ const NO_ERROR = 0;
 const MIN_TLA_ERROR = 10;           // Exit codes not related to tooling start from this number
 const LOWEST_JAVA_VERSION = 8;
 const javaCmd = 'java' + (process.platform === 'win32' ? '.exe' : '');
-const toolsJarPath = path.resolve(__dirname, '../tools/tla2tools.jar');
+const toolsJarPath = path.resolve(__dirname, '../../tools/tla2tools.jar');
 const toolsBaseArgs: ReadonlyArray<string> = ['-XX:+UseParallelGC', '-cp', toolsJarPath];
 
 let lastUsedJavaHome: string | undefined;

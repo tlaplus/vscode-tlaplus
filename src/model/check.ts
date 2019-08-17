@@ -87,10 +87,26 @@ export enum Change {
  */
 export class Value {
     changeType = Change.NOT_CHANGED;
+
     constructor(
         readonly key: ValueKey,
         readonly str: string
     ) {}
+
+    setModified(): Value {
+        this.changeType = Change.MODIFIED;
+        return this;
+    }
+
+    setAdded(): Value {
+        this.changeType = Change.ADDED;
+        return this;
+    }
+
+    setDeleted(): Value {
+        this.changeType = Change.MODIFIED;
+        return this;
+    }
 }
 
 /**
@@ -130,6 +146,11 @@ export class SetValue extends CollectionValue {
     constructor(key: ValueKey, items: Value[]) {
         super(key, items, '{', '}');
     }
+
+    setModified(): SetValue {
+        super.setModified();
+        return this;
+    }
 }
 
 /**
@@ -163,6 +184,11 @@ export class StructureValue extends CollectionValue {
             return 1;
         }
         return 0;
+    }
+
+    setModified(): StructureValue {
+        super.setModified();
+        return this;
     }
 }
 

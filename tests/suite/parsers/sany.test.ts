@@ -1,8 +1,8 @@
 import * as assert from 'assert';
 import { beforeEach } from 'mocha';
-import { SanyStdoutParser } from '../../../parsers/sany';
-import { pathToUri } from '../../../common';
-import { applyDCollection } from '../../../diagnostic';
+import { SanyStdoutParser } from '../../../src/parsers/sany';
+import { pathToUri } from '../../../src/common';
+import { applyDCollection } from '../../../src/diagnostic';
 import { Expectation, diagError, range, expectDiag, getTlaDiagnostics } from './testUtils';
 
 const ROOT_PATH = '/Users/alice/TLA/foo.tla';

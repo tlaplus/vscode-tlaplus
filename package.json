@@ -36,7 +36,7 @@
         "onCommand:tlaplus.model.check.run",
         "workspaceContains:**/*.tla"
     ],
-    "main": "./out/main.js",
+    "main": "./out/src/main.js",
     "filse": [
         "resources",
         "tools"
@@ -183,7 +183,7 @@
         "lint-fix": "node ./node_modules/tslint/bin/tslint --fix --project ./tsconfig.json",
         "watch": "tsc -watch -p ./",
         "pretest": "npm run compile",
-        "test": "node ./out/test/runTest.js"
+        "test": "node ./out/tests/runTest.js"
     },
     "devDependencies": {
         "@types/glob": "^7.1.1",
