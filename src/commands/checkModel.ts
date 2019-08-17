@@ -13,7 +13,7 @@ export const CMD_CHECK_MODEL_RUN = 'tlaplus.model.check.run';
 export const CMD_CHECK_MODEL_STOP = 'tlaplus.model.check.stop';
 export const CMD_CHECK_MODEL_DISPLAY = 'tlaplus.model.check.display';
 
-const TEMPLATE_CFG_PATH = path.resolve(__dirname, '../../tools/template.cfg');
+const TEMPLATE_CFG_PATH = path.resolve(__dirname, '../../../tools/template.cfg');
 
 let checkProcess: ChildProcess | undefined;
 const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);

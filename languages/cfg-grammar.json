@@ -12,7 +12,7 @@
 	"repository": {
 		"keywords": {
 			"name": "keyword.control",
-			"match": "\\b(SPECIFICATION|INVARIANT|PROPERTY|CONSTANTS|INIT|NEXT)\\b"
+			"match": "\\b(SPECIFICATION|INVARIANT|PROPERTY|CONSTANT|CONSTANTS|INIT|NEXT)\\b"
 		},
 		"line_comments": {
 			"name": "comment.line",
