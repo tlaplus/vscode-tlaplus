@@ -110,6 +110,15 @@ export class Value {
 }
 
 /**
+ * A value that is represented by some variable name.
+ */
+export class NameValue extends Value {
+    constructor(key: ValueKey, name: string) {
+        super(key, name);
+    }
+}
+
+/**
  * Value that is a collection of other values.
  */
 export abstract class CollectionValue extends Value {

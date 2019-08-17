@@ -1,7 +1,7 @@
 import * as assert from 'assert';
 import { parseVariableValue } from '../../../src/parsers/tlcValues';
 import { Value } from '../../../src/model/check';
-import { v, set, seq, struct, func } from '../shortcuts';
+import { v, set, seq, struct, func, n } from '../shortcuts';
 
 const ROOT = 'root';
 
@@ -97,6 +97,13 @@ suite('TLC Values Output Parser Test Suite', () => {
         );
     });
 
+    test('Parses structure with var-values', () => {
+        assertValue(
+            ['[ foo |-> bar ]'],
+            struct(ROOT, n('foo', 'bar'))
+        );
+    });
+
     test('Parses structure with collections', () => {
         assertValue(
             ['[ foo |-> <<84>>, bar |-> {TRUE}, baz |-> [ e |-> 0 ] ]'],
@@ -130,6 +137,15 @@ suite('TLC Values Output Parser Test Suite', () => {
             ['(TRUE :> <<{FALSE}>>)'],
             func(ROOT, v('from', 'TRUE'), seq('to', set(1, v(1, 'FALSE')))));
     });
+
+    test('Parses simple functions with var-names and var-values', () => {
+        assertValue(
+            ['(a1 :> 30)'],
+            func(ROOT, n('from', 'a1'), v('to', '30')));
+        assertValue(
+            ['(foo :> bar)'],
+            func(ROOT, n('from', 'foo'), n('to', 'bar')));
+        });
 
     test('Parses nested simple functions', () => {
         assertValue(

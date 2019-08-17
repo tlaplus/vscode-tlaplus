@@ -10,6 +10,10 @@ export function v(key: ValueKey, value: string): Value {
     return new Value(key, value);
 }
 
+export function n(key: ValueKey, name: string): Value {
+    return new Value(key, name);
+}
+
 export function set(key: ValueKey, ...items: Value[]): SetValue {
     return new SetValue(key, items);
 }
