@@ -1,6 +1,8 @@
 import { Readable } from 'stream';
 import { ParsingError } from '../common';
 
+const CHAR_RETURN = 13;
+
 /**
  * Auxiliary class that reads chunks from the given stream or array, breaks data into lines
  * and sends them to the parsing method line by line.
@@ -89,7 +91,11 @@ export abstract class ProcessOutputParser<T> {
 
     private tryParseLine(line: string | null) {
         try {
-            this.parseLine(line);
+            // On Windows, the last 0x0A character is still in the line, cut it off
+            const eLine = line && line.charCodeAt(line.length - 1) === CHAR_RETURN
+                ? line.substring(0, line.length - 1)
+                : line;
+            this.parseLine(eLine);
         } catch (err) {
             this.handleError(err);
             console.error(`Error parsing output line: ${err}`);
