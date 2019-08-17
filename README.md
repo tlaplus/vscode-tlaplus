@@ -12,6 +12,8 @@ This extension adds support for the [TLA<sup>+</sup> formal specification langua
 - Model checking process and result visualization.
 - Powered by the [official TLA<sup>+</sup> toolbox](https://github.com/tlaplus/tlaplus).
 
+<img src="https://raw.githubusercontent.com/alygin/vscode-tlaplus/master/resources/images/screencast.gif?token=AAQBAAQS3VG6S7DWAQW26K25K7J4M" width="775" height="auto">
+
 ## Requirements
 
 In order to run various TLA<sup>+</sup> tools, you need Java 8 or higher installed. If it's not your default Java SDK, configure the proper Java Home path in the extension settings.
