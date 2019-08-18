@@ -1,4 +1,4 @@
-import { Range } from 'vscode';
+import { Range, window } from 'vscode';
 import { ProcessOutputParser } from './base';
 import { Readable } from 'stream';
 import { CheckStatus, ModelCheckResult, InitialStateStatItem, CoverageItem, ErrorTraceItem,
@@ -34,8 +34,14 @@ const TLC_DISTRIBUTED_WORKER_DEREGISTERED = 7002;
 const TLC_COVERAGE_NEXT = 2772;
 const TLC_COVERAGE_INIT = 2773;
 const TLC_PROGRESS_STATS = 2200;
+
+const TLC_METADIR_EXISTS = 2100;
+const TLC_METADIR_CAN_NOT_BE_CREATED = 2101;
 const TLC_INITIAL_STATE = 2102;
 const TLC_NESTED_EXPRESSION = 2103;
+const TLC_ASSUMPTION_FALSE = 2104;
+const TLC_ASSUMPTION_EVALUATION_ERROR = 2105;
+const TLC_STATE_NOT_COMPLETELY_SPECIFIED_INITIAL = 2106;
 
 const TLC_INVARIANT_VIOLATED_INITIAL = 2107;
 const TLC_PROPERTY_VIOLATED_INITIAL = 2108;
@@ -211,6 +217,7 @@ class MessageStack {
 
     public finish(): Message {
         if (this.current.type === NONE) {
+            window.showErrorMessage('Unexpected message end');
             console.error('Unexpected message end');
             return MessageStack.NO_MESSAGE;
         }
@@ -376,8 +383,14 @@ class ModelCheckResultBuilder {
                 this.parseCoverage(message.lines);
                 break;
             case GENERAL:
+            case TLC_METADIR_EXISTS:
+            case TLC_METADIR_CAN_NOT_BE_CREATED:
             case TLC_INITIAL_STATE:
             case TLC_NESTED_EXPRESSION:
+            case TLC_ASSUMPTION_FALSE:
+            case TLC_ASSUMPTION_EVALUATION_ERROR:
+            case TLC_STATE_NOT_COMPLETELY_SPECIFIED_INITIAL:
+            // --
             case TLC_VALUE_ASSERT_FAILED:
             case TLC_MODULE_VALUE_JAVA_METHOD_OVERRIDE:
             case TLC_MODULE_VALUE_JAVA_METHOD_OVERRIDE_LOADED:
