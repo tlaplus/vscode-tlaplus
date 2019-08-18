@@ -460,11 +460,14 @@ class ModelCheckResultBuilder {
     }
 
     private tryParseMessageStart(line: string): number | undefined {
-        const matches = /^@!@!@STARTMSG (\d+)(:\d+)? @!@!@$/g.exec(line);
+        const matches = /^(.*)@!@!@STARTMSG (\d+)(:\d+)? @!@!@$/g.exec(line);
         if (!matches) {
             return undefined;
         }
-        return parseInt(matches[1]);
+        if (matches[1] !== '') {
+            this.messages.addLine(matches[1]);
+        }
+        return parseInt(matches[2]);
     }
 
     private tryParseMessageEnd(line: string): LineParsingResult {

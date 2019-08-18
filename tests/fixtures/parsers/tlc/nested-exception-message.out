@@ -1,0 +1,19 @@
+@!@!@STARTMSG 2262:0 @!@!@
+TLC2 Version 2.14 of 10 July 2019 (rev: 0cae24f)
+@!@!@ENDMSG 2262 @!@!@
+@!@!@STARTMSG 2187:0 @!@!@
+Running breadth-first search Model-Checking with fp 95 and seed -5827499341661814189.
+@!@!@ENDMSG 2187 @!@!@
+@!@!@STARTMSG 1000:1 @!@!@
+TLC threw an unexpected exception.
+This was probably caused by an error in the spec or model.
+See the User Output or TLC Console for clues to what happened.
+The exception was a tlc2.tool.ConfigFileException
+: @!@!@STARTMSG 5006:0 @!@!@
+TLC found an error in the configuration file at line 6
+It was expecting = or <-, but did not find it.
+@!@!@ENDMSG 5006 @!@!@
+@!@!@ENDMSG 1000 @!@!@
+@!@!@STARTMSG 2186:0 @!@!@
+Finished in 262ms at (2019-08-18 21:16:19)
+@!@!@ENDMSG 2186 @!@!@

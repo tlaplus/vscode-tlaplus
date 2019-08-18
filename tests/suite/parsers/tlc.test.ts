@@ -123,6 +123,27 @@ suite('TLC Output Parser Test Suite', () => {
         );
     });
 
+    test('Handles nested exception messages', () => {
+        // Messages 1000 `TLC threw an unexpected exception...`
+        // contains a nested message with details that must be combined with the outer one.
+        return assertOutput('nested-exception-message.out', ROOT_PATH,
+            new CheckResultBuilder('nested-exception-message.out', CheckState.Error, CheckStatus.Finished)
+                .setProcessInfo('Running breadth-first search Model-Checking with fp 95 and seed -5827499341661814189.')
+                .setEndDateTime('2019-08-18 21:16:19')
+                .setDuration(262)
+                .addError([
+                    'TLC threw an unexpected exception.',
+                    'This was probably caused by an error in the spec or model.',
+                    'See the User Output or TLC Console for clues to what happened.',
+                    'The exception was a tlc2.tool.ConfigFileException',
+                    ': ',
+                    'TLC found an error in the configuration file at line 6',
+                    'It was expecting = or <-, but did not find it.'
+                ])
+                .build()
+            );
+    });
+
     test('Handles no-line-break message end', () => {
         // bla-bla-bla@!@!@ENDMSG 2193 @!@!@
         return assertOutput('no-line-break-end.out', ROOT_PATH,
