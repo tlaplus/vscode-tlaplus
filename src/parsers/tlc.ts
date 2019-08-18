@@ -610,7 +610,7 @@ class ModelCheckResultBuilder {
         const variables = [];
         for (let i = 1; i < lines.length; i++) {
             const line = lines[i];
-            const matches = /^\/\\ (\w+) = (.+)$/g.exec(line);
+            const matches = /^(?:\/\\ )?(\w+) = (.+)$/g.exec(line);
             if (matches) {
                 const name = matches[1];
                 const valueLines = [matches[2]];

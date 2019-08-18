@@ -104,6 +104,25 @@ suite('TLC Output Parser Test Suite', () => {
         );
     });
 
+    test('Parses error trace with a single variable', () => {
+        // Such variables has no `/\` at the beginning
+        return assertOutput('error-trace-single.out', '/Users/bob/error_trace.tla',
+            new CheckResultBuilder('error-trace-single.out', CheckState.Error, CheckStatus.Finished)
+                .addDColFilePath('/Users/bob/error_trace.tla')
+                .setProcessInfo('Running breadth-first search Model-Checking with fp 6 and seed -9020681683977717109.')
+                .setStartDateTime('2019-08-17 02:37:50')
+                .setEndDateTime('2019-08-17 02:37:51')
+                .setDuration(1041)
+                .addInitState('00:00:00', 0, 1, 1, 1)
+                .addInitState('00:00:00', 3, 4, 4, 1)
+                .addError(['Invariant FooInvariant is violated.'])
+                .addTraceItem('Initial predicate', '', '', undefined, range(0, 0, 0, 0),
+                    struct('', struct('Var', v('foo', '1'), v('bar', '2')))
+                )
+                .build()
+        );
+    });
+
     test('Handles no-line-break message end', () => {
         // bla-bla-bla@!@!@ENDMSG 2193 @!@!@
         return assertOutput('no-line-break-end.out', ROOT_PATH,
