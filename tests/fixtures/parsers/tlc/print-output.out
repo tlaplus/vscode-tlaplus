@@ -9,9 +9,9 @@ Finished computing initial states: 5184 distinct states generated at 2019-01-01 
 @!@!@ENDMSG 2190 @!@!@
 Foo
 Bar
-@!@!@STARTMSG 999999:1 @!@!@
+@!@!@STARTMSG -123456:1 @!@!@
 Some message.
-@!@!@ENDMSG 999999 @!@!@
+@!@!@ENDMSG -123456 @!@!@
 Bar
 Baz
 @!@!@STARTMSG 2193:0 @!@!@

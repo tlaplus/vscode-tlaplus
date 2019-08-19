@@ -60,6 +60,7 @@ suite('TLC Output Parser Test Suite', () => {
                 .setDuration(380)
                 .addDColMessage(ROOT_PATH, range(4, 7, 4, 8), "Unknown operator: `a'.")
                 .addError(["Unknown operator: `a'."])
+                .addError(['Parsing or semantic analysis failed.'])
                 .build()
         );
     });

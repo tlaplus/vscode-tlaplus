@@ -1,117 +1,19 @@
 import { Range, window } from 'vscode';
-import { ProcessOutputParser } from './base';
+import * as moment from 'moment/moment';
 import { Readable } from 'stream';
+import { clearTimeout } from 'timers';
 import { CheckStatus, ModelCheckResult, InitialStateStatItem, CoverageItem, ErrorTraceItem,
     CheckState, OutputLine, StructureValue, findChanges} from '../model/check';
+import { ProcessOutputParser } from './base';
 import { parseVariableValue } from './tlcValues';
 import { SanyData, SanyStdoutParser } from './sany';
 import { DCollection, addDiagnostics } from '../diagnostic';
 import { parseDateTime } from '../common';
-import * as moment from 'moment/moment';
-import { clearTimeout } from 'timers';
+import * as msg from './tlcCodes';
+import { getTlcCode, TlcCodeType } from './tlcCodes';
 
 const STATUS_EMIT_TIMEOUT = 500;    // msec
-
-// TLC message types
-// Declared in https://github.com/tlaplus/tlaplus/blob/master/tlatools/src/tlc2/output/EC.java
-const NONE = -1;
-const GENERAL = 1000;
-const TLC_MODE_MC = 2187;
-const TLC_SANY_START = 2220;
-const TLC_SANY_END = 2219;
-const TLC_CHECKPOINT_START = 2195;
-const TLC_STARTING = 2185;
-const TLC_COMPUTING_INIT = 2189;
-const TLC_COMPUTING_INIT_PROGRESS = 2269;
-const TLC_INIT_GENERATED1 = 2190;
-const TLC_INIT_GENERATED2 = 2191;
-const TLC_INIT_GENERATED3 = 2207;
-const TLC_INIT_GENERATED4 = 2208;
-const TLC_CHECKING_TEMPORAL_PROPS = 2192;
-const TLC_DISTRIBUTED_SERVER_RUNNING = 7000;
-const TLC_DISTRIBUTED_WORKER_REGISTERED = 7001;
-const TLC_DISTRIBUTED_WORKER_DEREGISTERED = 7002;
-const TLC_COVERAGE_NEXT = 2772;
-const TLC_COVERAGE_INIT = 2773;
-const TLC_PROGRESS_STATS = 2200;
-
-const TLC_METADIR_EXISTS = 2100;
-const TLC_METADIR_CAN_NOT_BE_CREATED = 2101;
-const TLC_INITIAL_STATE = 2102;
-const TLC_NESTED_EXPRESSION = 2103;
-const TLC_ASSUMPTION_FALSE = 2104;
-const TLC_ASSUMPTION_EVALUATION_ERROR = 2105;
-const TLC_STATE_NOT_COMPLETELY_SPECIFIED_INITIAL = 2106;
-
-const TLC_INVARIANT_VIOLATED_INITIAL = 2107;
-const TLC_PROPERTY_VIOLATED_INITIAL = 2108;
-const TLC_STATE_NOT_COMPLETELY_SPECIFIED_NEXT = 2109;
-const TLC_INVARIANT_VIOLATED_BEHAVIOR = 2110;
-const TLC_INVARIANT_EVALUATION_FAILED = 2111;
-const TLC_INVARIANT_VIOLATED_LEVEL = 2146;
-const TLC_ACTION_PROPERTY_VIOLATED_BEHAVIOR = 2112;
-const TLC_ACTION_PROPERTY_EVALUATION_FAILED = 2113;
-const TLC_DEADLOCK_REACHED = 2114;
-
-const TLC_STATES_AND_NO_NEXT_ACTION = 2115;
-const TLC_TEMPORAL_PROPERTY_VIOLATED = 2116;
-const TLC_FAILED_TO_RECOVER_NEXT = 2117;
-const TLC_NO_STATES_SATISFYING_INIT = 2118;
-const TLC_STRING_MODULE_NOT_FOUND = 2119;
-
-const TLC_AAAAAAA = 2130;
-const TLC_REGISTRY_INIT_ERROR = 2131;
-const TLC_CHOOSE_ARGUMENTS_WRONG = 2164;
-const TLC_CHOOSE_UPPER_BOUND = 2165;
-
-const TLC_VALUE_ASSERT_FAILED = 2132;
-const TLC_MODULE_VALUE_JAVA_METHOD_OVERRIDE = 2154;
-const TLC_MODULE_VALUE_JAVA_METHOD_OVERRIDE_LOADED = 2168;
-const TLC_MODULE_VALUE_JAVA_METHOD_OVERRIDE_MISMATCH = 2400;
-const TLC_MODULE_VALUE_JAVA_METHOD_OVERRIDE_MODULE_MISMATCH = 2402;
-const TLC_MODULE_VALUE_JAVA_METHOD_OVERRIDE_IDENTIFIER_MISMATCH = 2403;
-
-const TLC_STATE_PRINT1 = 2216;
-const TLC_STATE_PRINT2 = 2217;
-const TLC_STATE_PRINT3 = 2218;
-
-// Config file errors
-const TLC_CONFIG_VALUE_NOT_ASSIGNED_TO_CONSTANT_PARAM = 2222;
-const TLC_CONFIG_RHS_ID_APPEARED_AFTER_LHS_ID = 2223;
-const TLC_CONFIG_WRONG_SUBSTITUTION = 2224;
-const TLC_CONFIG_WRONG_SUBSTITUTION_NUMBER_OF_ARGS = 2225;
-const TLC_CONFIG_UNDEFINED_OR_NO_OPERATOR = 2280;
-const TLC_CONFIG_SUBSTITUTION_NON_CONSTANT = 2281;
-const TLC_CONFIG_ID_DOES_NOT_APPEAR_IN_SPEC = 2226;
-const TLC_CONFIG_NOT_BOTH_SPEC_AND_INIT = 2227;
-const TLC_CONFIG_ID_REQUIRES_NO_ARG = 2228;
-const TLC_CONFIG_SPECIFIED_NOT_DEFINED = 2229;
-const TLC_CONFIG_ID_HAS_VALUE = 2230;
-const TLC_CONFIG_MISSING_INIT = 2231;
-const TLC_CONFIG_MISSING_NEXT = 2232;
-const TLC_CONFIG_ID_MUST_NOT_BE_CONSTANT = 2233;
-const TLC_CONFIG_OP_NO_ARGS = 2234;
-const TLC_CONFIG_OP_NOT_IN_SPEC = 2235;
-const TLC_CONFIG_OP_IS_EQUAL = 2236;
-const TLC_CONFIG_SPEC_IS_TRIVIAL = 2237;
-const TLC_CANT_HANDLE_SUBSCRIPT = 2238;
-const TLC_CANT_HANDLE_CONJUNCT = 2239;
-const TLC_CANT_HANDLE_TOO_MANY_NEXT_STATE_RELS = 2240;
-const TLC_CONFIG_PROPERTY_NOT_CORRECTLY_DEFINED = 2241;
-const TLC_CONFIG_OP_ARITY_INCONSISTENT = 2242;
-const TLC_CONFIG_NO_STATE_TYPE = 2243;
-const TLC_CANT_HANDLE_REAL_NUMBERS = 2244;
-const TLC_NO_MODULES = 2245;
-
-const CFG_ERROR_READING_FILE = 5001;
-const CFG_GENERAL = 5002;
-const CFG_MISSING_ID = 5003;
-const CFG_TWICE_KEYWORD = 5004;
-const CFG_EXPECT_ID = 5005;
-const CFG_EXPECTED_SYMBOL = 5006;
-
-const TLC_FINISHED = 2186;
-const TLC_SUCCESS = 2193;
+const NONE = -1938477103984;
 
 /**
  * Parses stdout of TLC model checker.
@@ -326,154 +228,98 @@ class ModelCheckResultBuilder {
         if (this.status === CheckStatus.NotStarted) {
             this.status = CheckStatus.Starting;
         }
-        switch (message.type) {
-            case TLC_MODE_MC:
+        const tlcCode = getTlcCode(message.type);
+        if (!tlcCode) {
+            window.showErrorMessage(`Unexpected message code ${message.type}`);
+            return;
+        }
+        if (tlcCode.type === TlcCodeType.Ignore) {
+            return;
+        }
+        if (tlcCode.type === TlcCodeType.Error) {
+            this.parseErrorMessage(message.lines);
+            return;
+        }
+        switch (tlcCode) {
+            case msg.TLC_MODE_MC:
                 this.processInfo = message.lines.join('');
                 break;
-            case TLC_SANY_START:
+            case msg.TLC_SANY_START:
                 this.status = CheckStatus.SanyParsing;
                 break;
-            case TLC_SANY_END:
+            case msg.TLC_SANY_END:
                 this.status = CheckStatus.SanyFinished;
                 this.parseSanyOutput();
                 break;
-            case TLC_CHECKPOINT_START:
+            case msg.TLC_CHECKPOINT_START:
                 this.status = CheckStatus.Checkpointing;
                 break;
-            case TLC_STARTING:
+            case msg.TLC_STARTING:
                 this.parseStarting(message.lines);
                 break;
-            case TLC_COMPUTING_INIT:
+            case msg.TLC_COMPUTING_INIT:
                 this.status = CheckStatus.InitialStatesComputing;
                 break;
-            case TLC_COMPUTING_INIT_PROGRESS:
+            case msg.TLC_COMPUTING_INIT_PROGRESS:
                 this.status = CheckStatus.InitialStatesComputing;
                 break;
-            case TLC_INIT_GENERATED1:
-            case TLC_INIT_GENERATED2:
-            case TLC_INIT_GENERATED3:
-            case TLC_INIT_GENERATED4:
+            case msg.TLC_INIT_GENERATED1:
+            case msg.TLC_INIT_GENERATED2:
+            case msg.TLC_INIT_GENERATED3:
+            case msg.TLC_INIT_GENERATED4:
                 this.parseInitialStatesComputed(message.lines);
                 break;
-            case TLC_CHECKING_TEMPORAL_PROPS:
+            case msg.TLC_CHECKING_TEMPORAL_PROPS:
                 if (message.lines.length > 0 && message.lines[0].indexOf('complete') >= 0) {
                     this.status = CheckStatus.CheckingLivenessFinal;
                 } else {
                     this.status = CheckStatus.CheckingLiveness;
                 }
                 break;
-            case TLC_DISTRIBUTED_SERVER_RUNNING:
+            case msg.TLC_DISTRIBUTED_SERVER_RUNNING:
                 this.status = CheckStatus.ServerRunning;
                 break;
-            case TLC_DISTRIBUTED_WORKER_REGISTERED:
+            case msg.TLC_DISTRIBUTED_WORKER_REGISTERED:
                 this.status = CheckStatus.WorkersRegistered;
                 this.workersCount += 1;
                 break;
-            case TLC_DISTRIBUTED_WORKER_DEREGISTERED:
+            case msg.TLC_DISTRIBUTED_WORKER_DEREGISTERED:
                 this.workersCount -= 1;
                 break;
-            case TLC_PROGRESS_STATS:
+            case msg.TLC_PROGRESS_STATS:
                 this.parseProgressStats(message.lines);
                 break;
-            case TLC_COVERAGE_INIT:
+            case msg.TLC_COVERAGE_INIT:
                 this.coverageStat.length = 0;
                 this.parseCoverage(message.lines);
                 break;
-            case TLC_COVERAGE_NEXT:
+            case msg.TLC_COVERAGE_NEXT:
                 this.parseCoverage(message.lines);
                 break;
-            case GENERAL:
-            case TLC_METADIR_EXISTS:
-            case TLC_METADIR_CAN_NOT_BE_CREATED:
-            case TLC_INITIAL_STATE:
-            case TLC_NESTED_EXPRESSION:
-            case TLC_ASSUMPTION_FALSE:
-            case TLC_ASSUMPTION_EVALUATION_ERROR:
-            case TLC_STATE_NOT_COMPLETELY_SPECIFIED_INITIAL:
-            // --
-            case TLC_VALUE_ASSERT_FAILED:
-            case TLC_MODULE_VALUE_JAVA_METHOD_OVERRIDE:
-            case TLC_MODULE_VALUE_JAVA_METHOD_OVERRIDE_LOADED:
-            case TLC_MODULE_VALUE_JAVA_METHOD_OVERRIDE_MISMATCH:
-            case TLC_MODULE_VALUE_JAVA_METHOD_OVERRIDE_MODULE_MISMATCH:
-            case TLC_MODULE_VALUE_JAVA_METHOD_OVERRIDE_IDENTIFIER_MISMATCH:
-            case TLC_INVARIANT_VIOLATED_INITIAL:
-            case TLC_PROPERTY_VIOLATED_INITIAL:
-            case TLC_STATE_NOT_COMPLETELY_SPECIFIED_NEXT:
-            case TLC_INVARIANT_VIOLATED_BEHAVIOR:
-            case TLC_INVARIANT_EVALUATION_FAILED:
-            case TLC_INVARIANT_VIOLATED_LEVEL:
-            case TLC_ACTION_PROPERTY_VIOLATED_BEHAVIOR:
-            case TLC_ACTION_PROPERTY_EVALUATION_FAILED:
-            case TLC_DEADLOCK_REACHED:
-            // --
-            case TLC_STATES_AND_NO_NEXT_ACTION:
-            case TLC_TEMPORAL_PROPERTY_VIOLATED:
-            case TLC_FAILED_TO_RECOVER_NEXT:
-            case TLC_NO_STATES_SATISFYING_INIT:
-            case TLC_STRING_MODULE_NOT_FOUND:
-            // --
-            case TLC_AAAAAAA:
-            case TLC_REGISTRY_INIT_ERROR:
-            case TLC_CHOOSE_ARGUMENTS_WRONG:
-            case TLC_CHOOSE_UPPER_BOUND:
-            // --
-            case TLC_CONFIG_VALUE_NOT_ASSIGNED_TO_CONSTANT_PARAM:
-            case TLC_CONFIG_RHS_ID_APPEARED_AFTER_LHS_ID:
-            case TLC_CONFIG_WRONG_SUBSTITUTION:
-            case TLC_CONFIG_WRONG_SUBSTITUTION_NUMBER_OF_ARGS:
-            case TLC_CONFIG_UNDEFINED_OR_NO_OPERATOR:
-            case TLC_CONFIG_SUBSTITUTION_NON_CONSTANT:
-            case TLC_CONFIG_ID_DOES_NOT_APPEAR_IN_SPEC:
-            case TLC_CONFIG_NOT_BOTH_SPEC_AND_INIT:
-            case TLC_CONFIG_ID_REQUIRES_NO_ARG:
-            case TLC_CONFIG_SPECIFIED_NOT_DEFINED:
-            case TLC_CONFIG_ID_HAS_VALUE:
-            case TLC_CONFIG_MISSING_INIT:
-            case TLC_CONFIG_MISSING_NEXT:
-            case TLC_CONFIG_ID_MUST_NOT_BE_CONSTANT:
-            case TLC_CONFIG_OP_NO_ARGS:
-            case TLC_CONFIG_OP_NOT_IN_SPEC:
-            case TLC_CONFIG_OP_IS_EQUAL:
-            case TLC_CONFIG_SPEC_IS_TRIVIAL:
-            case TLC_CANT_HANDLE_SUBSCRIPT:
-            case TLC_CANT_HANDLE_CONJUNCT:
-            case TLC_CANT_HANDLE_TOO_MANY_NEXT_STATE_RELS:
-            case TLC_CONFIG_PROPERTY_NOT_CORRECTLY_DEFINED:
-            case TLC_CONFIG_OP_ARITY_INCONSISTENT:
-            case TLC_CONFIG_NO_STATE_TYPE:
-            case TLC_CANT_HANDLE_REAL_NUMBERS:
-            case TLC_NO_MODULES:
-            // --
-            case CFG_ERROR_READING_FILE:
-            case CFG_GENERAL:
-            case CFG_MISSING_ID:
-            case CFG_TWICE_KEYWORD:
-            case CFG_EXPECT_ID:
-            case CFG_EXPECTED_SYMBOL:
-                this.parseErrorMessage(message.lines);
-                break;
-            case TLC_STATE_PRINT1:
-            case TLC_STATE_PRINT2:
-            case TLC_STATE_PRINT3:
+            case msg.TLC_STATE_PRINT1:
+            case msg.TLC_STATE_PRINT2:
+            case msg.TLC_STATE_PRINT3:
                 this.parseErrorTraceItem(message.lines);
                 break;
-            case TLC_SUCCESS:
+            case msg.TLC_SUCCESS:
                 this.parseSuccess(message.lines);
                 this.state = CheckState.Success;
                 break;
-            case TLC_FINISHED:
+            case msg.TLC_FINISHED:
                 this.status = CheckStatus.Finished;
                 this.parseFinished(message.lines);
                 if (this.state !== CheckState.Success) {
                     this.state = CheckState.Error;
                 }
                 break;
+            default:
+                window.showErrorMessage(`No handler for message of type ${message.type}`);
+                console.error(`No handler for message of type ${message.type}, text: ${message.lines.join('\n')}`);
         }
     }
 
     private tryParseMessageStart(line: string): number | undefined {
-        const matches = /^(.*)@!@!@STARTMSG (\d+)(:\d+)? @!@!@$/g.exec(line);
+        const matches = /^(.*)@!@!@STARTMSG (-?\d+)(:\d+)? @!@!@$/g.exec(line);
         if (!matches) {
             return undefined;
         }
@@ -484,7 +330,7 @@ class ModelCheckResultBuilder {
     }
 
     private tryParseMessageEnd(line: string): LineParsingResult {
-        const matches = /^(.*)@!@!@ENDMSG \d+ @!@!@(.*)$/g.exec(line);
+        const matches = /^(.*)@!@!@ENDMSG -?\d+ @!@!@(.*)$/g.exec(line);
         if (!matches) {
             return new LineParsingResult(false, line);
         }
