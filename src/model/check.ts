@@ -244,7 +244,7 @@ export class OutputLine {
  */
 export class ModelCheckResult {
     static readonly EMPTY = new ModelCheckResult(
-        undefined, CheckState.Running, CheckStatus.Starting, undefined, [], [], [], [],
+        undefined, CheckState.Running, CheckStatus.Starting, undefined, [], [], [], [], [],
         undefined, undefined, undefined, undefined, 0, undefined, []);
 
     readonly stateName: string;
@@ -260,6 +260,7 @@ export class ModelCheckResult {
         readonly processInfo: string | undefined,
         readonly initialStatesStat: InitialStateStatItem[],
         readonly coverageStat: CoverageItem[],
+        readonly warnings: string[][],
         readonly errors: string[][],
         readonly errorTrace: ErrorTraceItem[],
         readonly sanyMessages: DCollection | undefined,
