@@ -73,7 +73,7 @@ Run command `TLA+: Parse module`. It will transpile the PlusCal algorithm to <no
 
 We now have a simple specification that we can check by running the command `TLA+: Check model`. The command will start the TLC tool on the currently open specification and display its progress and final result in a special panel.
 
-One of the artifacts that the TLC command cerates when running on a `.tla` file with a PlusCal algorithm is a `.cfg` file that contains the model parameters. If you don't use PlusCal in your specification, the model configuration file will not be created automatically, but the extension will warn you about it absense and propose you to create it from a simple template.
+One of the artifacts that the TLC command cerates when running on a `.tla` file with a PlusCal algorithm is a `.cfg` file that contains the model parameters. If you don't use PlusCal in your specification, the model configuration file will not be created automatically, but the extension will warn you about its absense and propose you to create it from a simple template.
 
 You can find the full output of the TLC tool in a `.out` file that will be created near your specification. Should you need to visualize an output from a previous model checking, use the command `TLA+: Visualize TLC output` on a `.out` file.
 
