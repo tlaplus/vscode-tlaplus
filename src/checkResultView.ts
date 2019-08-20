@@ -76,7 +76,12 @@ function createNewPanel() {
         if (message.command === 'stop') {
             vscode.commands.executeCommand(CMD_CHECK_MODEL_STOP);
         } else if (message.command === 'openFile') {
-            revealFile(message.filePath, message.line, message.character);
+            // `One` is used here because at the moment, VSCode doesn't provide API
+            // for revealing existing document, so we're speculating here to reduce open documents duplication.
+            const viewColumn = message.filePath.endsWith('.out') && viewPanel
+                ? viewPanel.viewColumn || vscode.ViewColumn.Active
+                : vscode.ViewColumn.One;
+            revealFile(message.filePath, viewColumn, message.line, message.character);
         }
     });
     panelIsVisible = true;
@@ -97,13 +102,11 @@ function ensurePanelBody(extContext: vscode.ExtensionContext) {
     viewPanel.webview.html = viewHtml;
 }
 
-function revealFile(filePath: string, line: number, character: number) {
+function revealFile(filePath: string, viewColumn: vscode.ViewColumn, line: number, character: number) {
     const location = new vscode.Position(line, character);
     const showOpts: vscode.TextDocumentShowOptions = {
         selection: new vscode.Range(location, location),
-        // `One` is used here because at the moment, VSCode doesn't provide API
-        // for revealing existing document, so we're speculating here to reduce open documents duplication.
-        viewColumn: vscode.ViewColumn.One
+        viewColumn: viewColumn
     };
     vscode.workspace.openTextDocument(filePath)
         .then(doc => vscode.window.showTextDocument(doc, showOpts));
