@@ -25,9 +25,5 @@
             "start": "^\\\\\\* BEGIN TRANSLATION\\b",
             "end": "^\\\\\\* END TRANSLATION\\b"
         }
-    },
-    "indentationRules": {
-        "increaseIndentPattern": "^((?!\\/\\/).)*(if\\s+|variables|define|while\\s+|macro\\s+|with\\s+|either\\s+|begin|\\w+:).*$",
-        "decreaseIndentPattern": "$a"
     }
 }
