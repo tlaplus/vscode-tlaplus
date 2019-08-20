@@ -1,23 +1,45 @@
-{   "scopeName": "source.cfg",
-	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
-	"name": "TLA+ Model Config",
-	"patterns": [
-		{
-			"include": "#keywords"
-		},
-		{
-			"include": "#line_comments"
-		}
-	],
-	"repository": {
-		"keywords": {
-			"name": "keyword.control",
-			"match": "\\b(SPECIFICATION|INVARIANT|PROPERTY|CONSTANT|CONSTANTS|INIT|NEXT|SYMMETRY|CONSTRAINT|ACTION_CONSTRAINT)\\b"
-		},
-		"line_comments": {
-			"name": "comment.line",
-			"begin": "\\\\\\*",
-			"end": "$"
-		}
-	}
+{   "scopeName": "source.tlaplus.cfg",
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "name": "TLA+ Model Config",
+    "patterns": [
+        {
+            "include": "#keywords"
+        },
+        {
+            "include": "#line_comments"
+        },
+        {
+            "include": "#block_comments"
+        },
+        {
+            "include": "#strings"
+        }
+    ],
+    "repository": {
+        "keywords": {
+            "name": "keyword.control",
+            "match": "\\b(SPECIFICATION|INVARIANT|INVARIANTS|PROPERTY|PROPERTIES|CONSTANT|CONSTANTS|INIT|NEXT|SYMMETRY|CONSTRAINT|CONSTRAINTS|ACTION_CONSTRAINT|ACTION_CONSTRAINTS|VIEW)\\b"
+        },
+        "line_comments": {
+            "name": "comment.line",
+            "begin": "\\\\\\*",
+            "end": "$"
+        },
+        "block_comments": {
+            "name": "comment.block",
+            "begin": "\\(\\*",
+            "end": "\\*\\)"
+        },
+        "strings": {
+            "name": "string.quoted.double.tlaplus",
+            "begin": "\"",
+            "end": "\"",
+            "patterns": [
+                {
+                    "name": "constant.character.escape.tlaplus",
+                    "match": "\\\\."
+                }
+            ]
+        }
+    }
 }

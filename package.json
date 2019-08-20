@@ -64,7 +64,7 @@
                 "configuration": "./languages/pluscal-lang-config.json"
             },
             {
-                "id": "cfg",
+                "id": "tlaplus.cfg",
                 "aliases": [],
                 "extensions": [
                     ".cfg"
@@ -90,8 +90,8 @@
                 "path": "./languages/pluscal-grammar.json"
             },
             {
-                "language": "cfg",
-                "scopeName": "source.cfg",
+                "language": "tlaplus.cfg",
+                "scopeName": "source.tlaplus.cfg",
                 "path": "./languages/cfg-grammar.json"
             },
             {
@@ -147,7 +147,7 @@
                 },
                 {
                     "command": "tlaplus.model.check.run",
-                    "when": "editorLangId == tlaplus || editorLangId == cfg"
+                    "when": "editorLangId == tlaplus || editorLangId == tlaplus.cfg"
                 },
                 {
                     "command": "tlaplus.model.check.stop"

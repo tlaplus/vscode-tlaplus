@@ -41,7 +41,7 @@ export function checkModel(diagnostic: vscode.DiagnosticCollection, extContext: 
         vscode.window.showWarningMessage('No editor is active, cannot find a TLA+ model to check');
         return;
     }
-    if (editor.document.languageId !== 'tlaplus' && editor.document.languageId !== 'cfg') {
+    if (editor.document.languageId !== 'tlaplus' && editor.document.languageId !== 'tlaplus.cfg') {
         vscode.window.showWarningMessage(
             'File in the active editor is not a .tla or .cfg file, it cannot be checked as a model');
         return;

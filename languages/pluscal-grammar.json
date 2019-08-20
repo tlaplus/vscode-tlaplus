@@ -1,72 +1,117 @@
 {   "scopeName": "source.tlaplus.pluscal",
-	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
-	"name": "PlusCal",
-	"patterns": [
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "name": "PlusCal",
+    "patterns": [
 		{
-			"include": "#keywords"
+			"include": "#define_blocks"
+		},
+        {
+            "include": "#keywords"
+        },
+        {
+            "include": "#tlaplus_keywords"
+		},
+        {
+            "include": "#tlaplus_keywords"
+		},
+        {
+            "include": "#embedded_operators"
+        },
+        {
+            "include": "#labels"
+        },
+        {
+            "include": "#strings"
+        },
+        {
+            "include": "#line_comments"
+        },
+        {
+            "include": "#block_comments"
+        },
+        {
+            "include": "#constants"
 		},
 		{
-			"include": "#tlaplus_keywords"
+			"include": "#operators"
 		},
 		{
-			"include": "#embedded_operators"
-		},
-		{
-			"include": "#labels"
-		},
-		{
-			"include": "#strings"
-		},
-		{
-			"include": "#line_comments"
-		},
-		{
-			"include": "#block_comments"
-		},
-		{
-			"include": "#constants"
+			"include": "#inst_module_refs"
 		}
-	],
-	"repository": {
-		"keywords": {
-			"name": "keyword.control",
-			"match": "\\b(if|then|elsif|else|while|variables|define|process|macro|procedure|begin|end|do|skip|assert|fair|either|or|with|goto)\\b"
+    ],
+    "repository": {
+        "keywords": {
+            "name": "keyword.other",
+            "match": "\\b(if|then|elsif|else|while|variables|define|process|macro|procedure|begin|end|do|skip|assert|fair|either|or|with|goto)\\b"
+        },
+        "tlaplus_keywords": {
+            "name": "keyword.other.tlaplus",
+            "match": "\\b(EXTENDS|VARIABLE|VARIABLES|LET|IN|EXCEPT|ENABLED|UNCHANGED|LAMBDA|DOMAIN|CONSTANT|CONSTANTS|CHOOSE|LOCAL|ASSUME|ASSUMPTION|AXIOM|RECURSIVE|INSTANCE|WITH|THEOREM|SUBSET|UNION|SF_|WF_)\\b"
+        },
+        "tlaplus_control_keywords": {
+            "name": "keyword.control.tlaplus",
+            "match": "\\b(IF|THEN|ELSE|CASE|OTHER)\\b"
+        },
+        "embedded_operators": {
+            "match": "\\\\[a-zA-Z]+\\b",
+            "name": "strong"
+        },
+        "strings": {
+            "name": "string.quoted.double.tlaplus",
+            "begin": "\"",
+            "end": "\"",
+            "patterns": [
+                {
+                    "name": "constant.character.escape.tlaplus",
+                    "match": "\\\\."
+                }
+            ]
+        },
+        "line_comments": {
+            "match": "\\\\\\*.*$",
+            "name": "comment.line"
+        },
+        "block_comments": {
+            "name": "comment.block",
+            "begin": "\\(\\*",
+            "end": "\\*\\)"
+        },
+        "constants": {
+            "name": "support.constant.tlaplus",
+            "match": "\\b(TRUE|FALSE|BOOLEAN|numbers)\\b"
+        },
+        "labels": {
+            "match": "\\w+:[^=]",
+            "name": "variable.other"
 		},
-		"tlaplus_keywords": {
-			"name": "keyword.control",
-			"match": "\\b(IF|THEN|ELSE|CASE|OTHER|LET|IN|EXCEPT|ENABLED|UNCHANGED|CHOOSE|LAMBDA|DOMAIN|CONSTANTS|ASSUME|RECURSIVE|INSTANCE|WITH|THEOREM|LOCAL|SUBSET|UNION)\\b"
+		"define_blocks": {
+            "begin": "^\\s*(define)\\s*$",
+            "beginCaptures": {
+                "1": {
+                    "name": "keyword.other"
+                }
+            },
+            "end": "^\\s*(end\\s+define);?\\s*$",
+            "endCaptures": {
+                "1": {
+                    "name": "keyword.other"
+                }
+            },
+            "patterns": [{
+                "include": "source.tlaplus"
+            }]
 		},
-		"embedded_operators": {
-			"name": "strong",
-			"match": "\\\\(in|A|E|X|union|o)"
-		},
-		"strings": {
-			"name": "string.quoted.double.tlaplus",
-			"begin": "\"",
-			"end": "\"",
-			"patterns": [
-				{
-					"name": "constant.character.escape.tlaplus",
-					"match": "\\\\."
-				}
-			]
-		},
-		"line_comments": {
-			"match": "\\\\\\*.*$",
-			"name": "comment.line"
-		},
-		"block_comments": {
-			"name": "comment.block",
-			"begin": "\\(\\*",
-			"end": "\\*\\)"
-		},
-		"constants": {
-			"name": "support.constant.tlaplus",
-			"match": "\\b(TRUE|FALSE|BOOLEAN|numbers)\\b"
-		},
-		"labels": {
-			"match": "\\w+:[^=]",
-			"name": "variable.other"
-		}
-	}
+		"operators": {
+            "match": "(\\w+)\\s*\\(",
+            "captures": {
+                "1": {
+                    "name": "entity.name.function"
+                }
+            }
+        },
+        "inst_module_refs": {
+            "match": "\\b(\\w+!)",
+            "name": "entity.name.class"
+        }
+    }
 }

@@ -1,109 +1,205 @@
 {   "scopeName": "source.tlaplus",
-	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
-	"name": "TLA+",
-	"foldingStartMarker": "\\\\* BEGIN TRANSLATION",
-	"foldingStopMarker": "\\\\* END TRANSLATION",
-	"patterns": [
-		{
-			"include": "#pluscal"
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "name": "TLA+",
+    "foldingStartMarker": "\\\\* BEGIN TRANSLATION",
+    "foldingStopMarker": "\\\\* END TRANSLATION",
+    "patterns": [
+        {
+            "include": "#pluscal"
+        },
+        {
+            "include": "#keywords"
+        },
+        {
+            "include": "#control_keywords"
+        },
+        {
+            "include": "#embedded_operators"
+        },
+        {
+            "include": "#strings"
+        },
+        {
+            "include": "#line_comments"
+        },
+        {
+            "include": "#block_comments"
 		},
 		{
-			"include": "#keywords"
+			"include": "#lines"
 		},
-		{
-			"include": "#embedded_operators"
-		},
-		{
-			"include": "#strings"
-		},
-		{
-			"include": "#line_comments"
-		},
-		{
-			"include": "#block_comments"
-		},
-		{
-			"include": "#module_start"
-		},
-		{
-			"include": "#module_end"
-		},
-		{
-			"include": "#constants"
-		}
-	],
-	"repository": {
-		"pluscal": {
-			"begin": "(\\(\\*)\\s*--(algorithm)\\s*.*",
-			"beginCaptures": {
-				"1": {
-					"name": "comment.line"
-				},
-				"2": {
-					"name": "keyword.other"
-				}
-			},
-			"end": "(end\\s+algorithm)(;)?\\s*(\\*\\))",
-			"endCaptures": {
-				"1": {
-					"name": "keyword.other"
-				},
-				"3": {
-					"name": "comment.line"
-				}
-			},
-			"patterns": [{
-				"include": "source.tlaplus.pluscal"
-			}]
-		},
-		"keywords": {
-			"name": "keyword.control.tlaplus",
-			"match": "\\b(MODULE|EXTENDS|VARIABLE|VARIABLES|IF|THEN|ELSE|CASE|OTHER|LET|IN|EXCEPT|ENABLED|UNCHANGED|CHOOSE|LAMBDA|DOMAIN|CONSTANTS|ASSUME|RECURSIVE|INSTANCE|WITH|THEOREM|LOCAL|SUBSET|UNION)\\b"
-		},
-		"embedded_operators": {
-			"name": "strong",
-			"match": "\\\\(in|notin|subseteq|union|intersect|cup|cap|o|A|E|X|~)"
-		},
-		"constants": {
-			"name": "support.constant.tlaplus",
-			"match": "\\b(TRUE|FALSE|BOOLEAN|numbers)\\b"
-		},
-		"strings": {
-			"name": "string.quoted.double.tlaplus",
-			"begin": "\"",
-			"end": "\"",
-			"patterns": [
-				{
-					"name": "constant.character.escape.tlaplus",
-					"match": "\\\\."
-				}
-			]
-		},
-		"line_comments": {
-			"name": "comment.line",
-			"begin": "\\\\\\*",
-			"end": "$"
-		},
-		"block_comments": {
-			"name": "comment.block",
-			"begin": "\\(\\*",
-			"end": "\\*\\)"
-		},
-		"module_start": {
-			"name": "comment.line",
-			"match": "^\\s*-{4,}\\s*(MODULE)\\s*(\\w*)\\s*-{4,}",
-			"captures": {
-				"1": {
-					"name": "keyword.control"
-				},
-				"2": {
-					"name": "entity.name.section"
-				}
-			}
-		},
-		"module_end": {
-			"name": "comment.line",
-			"match": "^={4,}\\s*$"
-		}
-	}
+        {
+            "include": "#module_start"
+        },
+        {
+            "include": "#module_end"
+        },
+        {
+            "include": "#constants"
+        },
+        {
+            "include": "#var_definitions"
+        },
+        {
+            "include": "#postfix_operator_definitions"
+        },
+        {
+            "include": "#binary_operator_definitions"
+        },
+        {
+            "include": "#function_definitions"
+        },
+        {
+            "include": "#operators"
+        },
+        {
+            "include": "#inst_modules"
+        },
+        {
+            "include": "#inst_module_refs"
+        }
+    ],
+    "repository": {
+        "pluscal": {
+            "begin": "(\\(\\*)\\s*--(algorithm)\\s*.*",
+            "beginCaptures": {
+                "1": {
+                    "name": "comment.line"
+                },
+                "2": {
+                    "name": "keyword.other"
+                }
+            },
+            "end": "(end\\s+algorithm)(;)?\\s*(\\*\\))",
+            "endCaptures": {
+                "1": {
+                    "name": "keyword.other"
+                },
+                "3": {
+                    "name": "comment.line"
+                }
+            },
+            "patterns": [{
+                "include": "source.tlaplus.pluscal"
+            }]
+        },
+        "keywords": {
+            "name": "keyword.other.tlaplus",
+            "match": "\\b(EXTENDS|VARIABLE|VARIABLES|LET|IN|EXCEPT|ENABLED|UNCHANGED|LAMBDA|DOMAIN|CONSTANT|CONSTANTS|CHOOSE|LOCAL|ASSUME|ASSUMPTION|AXIOM|RECURSIVE|INSTANCE|WITH|THEOREM|SUBSET|UNION|SF_|WF_)\\b"
+        },
+        "control_keywords": {
+            "name": "keyword.control.tlaplus",
+            "match": "\\b(IF|THEN|ELSE|CASE|OTHER)\\b"
+        },
+        "embedded_operators": {
+            "match": "\\\\[a-zA-Z]+\\b",
+            "name": "strong"
+        },
+        "constants": {
+            "name": "support.constant.tlaplus",
+            "match": "\\b(TRUE|FALSE|BOOLEAN|numbers)\\b"
+        },
+        "strings": {
+            "name": "string.quoted.double.tlaplus",
+            "begin": "\"",
+            "end": "\"",
+            "patterns": [
+                {
+                    "name": "constant.character.escape.tlaplus",
+                    "match": "\\\\."
+                }
+            ]
+        },
+        "line_comments": {
+            "name": "comment.line",
+            "begin": "\\\\\\*",
+            "end": "$"
+        },
+        "block_comments": {
+            "name": "comment.block",
+            "begin": "\\(\\*",
+            "end": "\\*\\)"
+        },
+        "module_start": {
+            "name": "comment.line",
+            "match": "^\\s*-{4,}\\s*(MODULE)\\s*(\\w+)\\s*-{4,}",
+            "captures": {
+                "1": {
+                    "name": "keyword.other"
+                },
+                "2": {
+                    "name": "entity.name.class"
+                }
+            }
+        },
+        "module_end": {
+            "name": "comment.line",
+            "match": "^={4,}\\s*$"
+        },
+        "lines": {
+            "name": "comment.line",
+            "match": "^\\s*-{4,}\\s*$"
+        },
+        "var_definitions": {
+            "match": "(\\w+)\\s*==(?!\\s*INSTANCE)",
+            "captures": {
+                "1": {
+                    "name": "variable.other"
+                }
+            }
+        },
+        "postfix_operator_definitions": {
+            "match": "(\\w+\\s*(\\^\\+|\\^\\*|\\^#))\\s*==",
+            "captures": {
+                "1": {
+                    "name": "variable.parameter"
+                },
+                "2": {
+                    "name": "entity.name.function"
+                }
+            }
+        },
+        "binary_operator_definitions": {
+            "match": "(\\w+\\s*(\\(?[-<:>=&@/%#!X\\$\\*\\+\\.\\|\\?\\^\\\\]+\\)?|\\\\[a-z]+\\s)\\s*\\w+)\\s*==",
+            "captures": {
+                "1": {
+                    "name": "variable.parameter"
+                },
+                "2": {
+                    "name": "entity.name.function"
+                }
+            }
+        },
+        "function_definitions": {
+            "match": "(\\w+)\\s*\\[.*==",
+            "captures": {
+                "1": {
+                    "name": "entity.name.function"
+                }
+            }
+        },
+        "operators": {
+            "match": "(\\w+)\\s*\\(",
+            "captures": {
+                "1": {
+                    "name": "entity.name.function"
+                }
+            }
+        },
+        "inst_modules": {
+            "match": "(\\w+)\\s*==\\s*(INSTANCE)\\b",
+            "captures": {
+                "1": {
+                    "name": "entity.name.class"
+                },
+                "2": {
+                    "name": "keyword.other"
+                }
+            }
+        },
+        "inst_module_refs": {
+            "match": "\\b(\\w+!)",
+            "name": "entity.name.class"
+        }
+    }
 }
