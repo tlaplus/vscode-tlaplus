@@ -6,7 +6,8 @@ import { ChildProcess, spawn } from 'child_process';
 import { pathToUri } from './common';
 import { JavaVersionParser } from './parsers/javaVersion';
 
-export const CFG_JAVA_HOME = 'tlaplus.java.home';
+const CFG_JAVA_HOME = 'tlaplus.java.home';
+const CFG_JAVA_OPTIONS = 'tlaplus.java.options';
 
 export enum TlaTool {
     PLUS_CAL = 'pcal.trans',
@@ -19,7 +20,8 @@ const MIN_TLA_ERROR = 10;           // Exit codes not related to tooling start f
 const LOWEST_JAVA_VERSION = 8;
 const javaCmd = 'java' + (process.platform === 'win32' ? '.exe' : '');
 const toolsJarPath = path.resolve(__dirname, '../../tools/tla2tools.jar');
-const toolsBaseArgs: ReadonlyArray<string> = ['-XX:+UseParallelGC', '-cp', toolsJarPath];
+const defaultGCArg = '-XX:+UseParallelGC';
+const toolsBaseArgs: ReadonlyArray<string> = ['-cp', toolsJarPath];
 
 let lastUsedJavaHome: string | undefined;
 let cachedJavaPath: string | undefined;
@@ -47,7 +49,7 @@ export class JavaVersion {
  */
 export async function runTool(toolName: string, filePath: string, toolArgs?: string[]): Promise<ChildProcess> {
     const javaPath = await obtainJavaPath();
-    const args = toolsBaseArgs.slice(0);
+    const args = buildJavaOptions().concat(toolsBaseArgs);
     args.push(toolName);
     if (toolArgs) {
         toolArgs.forEach(arg => args.push(arg));
@@ -101,6 +103,20 @@ function buildJavaPath(): string {
 }
 
 /**
+ * Builds an array of options to pass to Java process when running TLA tools.
+ */
+function buildJavaOptions(): string[] {
+    const javaOptions = vscode.workspace.getConfiguration().get<string>(CFG_JAVA_OPTIONS) || '';
+    const opts = javaOptions.split(' ').map(opt => opt.trim());
+    // If GC is provided by the user, don't use the default one. Otherwise, add GC option.
+    const gcOption = opts.find(opt => opt.startsWith('-XX:+Use') && opt.endsWith('GC'));
+    if (!gcOption) {
+        opts.push(defaultGCArg);
+    }
+    return opts;
+}
+
+/**
  * Executes java -version and analyzes, if the version is 1.8 or higher.
  */
 async function checkJavaVersion(javaPath: string) {
@@ -126,9 +142,14 @@ async function checkJavaVersion(javaPath: string) {
  * Adds a handler to the given TLA+ tooling process that captures various system errors.
  */
 function addReturnCodeHandler(proc: ChildProcess, toolName?: string) {
-    proc.on('close', (exitCode) => {
+    const stderr: string[] = [];
+    proc.stderr.on('data', chunk => {
+        stderr.push(String(chunk));
+    });
+    proc.on('close', exitCode => {
         if (exitCode !== NO_ERROR && exitCode < MIN_TLA_ERROR) {
-            vscode.window.showErrorMessage(`Error running ${toolName} (exit code ${exitCode})`);
+            const details = stderr.join('\n');
+            vscode.window.showErrorMessage(`Error running ${toolName} (exit code ${exitCode})\n${details}`);
         }
     });
 }
