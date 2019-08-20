@@ -81,8 +81,12 @@
             "match": "\\b(TRUE|FALSE|BOOLEAN|numbers)\\b"
         },
         "labels": {
-            "match": "\\w+:[^=]",
-            "name": "variable.other"
+            "match": "^\\s*(\\w+:)[^=]",
+            "captures": {
+                "1": {
+                    "name": "variable.other"
+                }
+            }
 		},
 		"define_blocks": {
             "begin": "^\\s*(define)\\s*$",
