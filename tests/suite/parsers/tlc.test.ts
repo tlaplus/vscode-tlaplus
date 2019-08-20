@@ -50,6 +50,28 @@ suite('TLC Output Parser Test Suite', () => {
         );
     });
 
+    test('Captures warnings', () => {
+        return assertOutput('warning.out', ROOT_PATH,
+            new CheckResultBuilder('warning.out', CheckState.Success, CheckStatus.Finished)
+                .addDColFilePath('/Users/bob/example.tla')
+                .setStartDateTime('2019-08-17 00:11:08')
+                .setEndDateTime('2019-08-17 00:11:09')
+                .setDuration(886)
+                .addWarning([
+                    'Please run the Java VM which executes TLC with a throughput optimized garbage collector'
+                    + ' by passing the "-XX:+UseParallelGC" property.'
+                ])
+                .setProcessInfo(
+                    'Running breadth-first search Model-Checking with fp 22 and seed -5755320172003082571'
+                        + ' with 1 worker on 4 cores with 1820MB heap and 64MB offheap memory [pid: 91333]'
+                        + ' (Mac OS X 10.14.5 x86_64, Amazon.com Inc. 11.0.3 x86_64, MSBDiskFPSet, DiskStateQueue).')
+                .addInitState('00:00:00', 0, 1, 1, 1)
+                .addInitState('00:00:00', 2, 3, 2, 0)
+                .addCoverage('example', 'Init', '/Users/bob/example.tla', range(13, 0, 13, 4), 1, 1)
+                .build()
+            );
+    });
+
     test('Captures SANY errors', () => {
         return assertOutput('sany-error.out', ROOT_PATH,
             new CheckResultBuilder('sany-error.out', CheckState.Error, CheckStatus.Finished)
@@ -199,6 +221,7 @@ function assertEquals(actual: ModelCheckResult, expected: ModelCheckResult) {
     assert.deepEqual(actual.initialStatesStat, expected.initialStatesStat);
     assert.deepEqual(actual.coverageStat, expected.coverageStat);
     assert.deepEqual(actual.sanyMessages, expected.sanyMessages);
+    assert.deepEqual(actual.warnings, expected.warnings);
     assert.deepEqual(actual.errors, expected.errors);
     assert.deepEqual(actual.errorTrace, expected.errorTrace);
 }

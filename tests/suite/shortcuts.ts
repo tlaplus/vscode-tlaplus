@@ -38,6 +38,7 @@ export class CheckResultBuilder {
     private processInfo: string | undefined;
     private initialStatesStat: InitialStateStatItem[] = [];
     private coverageStat: CoverageItem[] = [];
+    private warnings: string[][] = [];
     private errors: string[][] = [];
     private errorTrace: ErrorTraceItem[] = [];
     private sanyMessages: DCollection | undefined;
@@ -62,6 +63,7 @@ export class CheckResultBuilder {
             this.processInfo,
             this.initialStatesStat,
             this.coverageStat,
+            this.warnings,
             this.errors,
             this.errorTrace,
             this.sanyMessages,
@@ -126,6 +128,11 @@ export class CheckResultBuilder {
             }
         }
         this.outputLines.push(line);
+        return this;
+    }
+
+    addWarning(lines: string[]): CheckResultBuilder {
+        this.warnings.push(lines);
         return this;
     }
 

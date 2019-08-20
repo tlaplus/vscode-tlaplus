@@ -172,6 +172,12 @@
                     "default": "",
                     "format": "uri",
                     "markdownDescription": "Path to Java (8 or higher) home directory that should be used to run TLA+ tools."
+                },
+                "tlaplus.java.options": {
+                    "type": "string",
+                    "scope": "application",
+                    "default": "",
+                    "description": "Java options to use when running TLA+ tools."
                 }
             }
         }

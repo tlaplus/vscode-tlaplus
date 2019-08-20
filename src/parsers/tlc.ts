@@ -149,6 +149,7 @@ class ModelCheckResultBuilder {
     private processInfo: string | undefined;
     private initialStatesStat: InitialStateStatItem[] = [];
     private coverageStat: CoverageItem[] = [];
+    private warnings: string[][] = [];
     private errors: string[][] = [];
     private errorTrace: ErrorTraceItem[] = [];
     private messages = new MessageStack();
@@ -212,6 +213,7 @@ class ModelCheckResultBuilder {
             this.processInfo,
             this.initialStatesStat,
             this.coverageStat,
+            this.warnings,
             this.errors,
             this.errorTrace,
             this.sanyData ? this.sanyData.dCollection : undefined,
@@ -234,6 +236,10 @@ class ModelCheckResultBuilder {
             return;
         }
         if (tlcCode.type === TlcCodeType.Ignore) {
+            return;
+        }
+        if (tlcCode.type === TlcCodeType.Warning) {
+            this.parseWarningMessage(message.lines);
             return;
         }
         if (tlcCode.type === TlcCodeType.Error) {
@@ -410,6 +416,13 @@ class ModelCheckResultBuilder {
                 parseInt(matches[8])
             ));
         }
+    }
+
+    private parseWarningMessage(lines: string[]) {
+        if (lines.length === 0) {
+            return;
+        }
+        this.warnings.push(lines);
     }
 
     private parseErrorMessage(lines: string[]) {
