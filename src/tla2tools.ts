@@ -107,7 +107,7 @@ function buildJavaPath(): string {
  */
 function buildJavaOptions(): string[] {
     const javaOptions = vscode.workspace.getConfiguration().get<string>(CFG_JAVA_OPTIONS) || '';
-    const opts = javaOptions.split(' ').map(opt => opt.trim());
+    const opts = javaOptions.split(' ').map(opt => opt.trim()).filter(opt => opt !== '');
     // If GC is provided by the user, don't use the default one. Otherwise, add GC option.
     const gcOption = opts.find(opt => opt.startsWith('-XX:+Use') && opt.endsWith('GC'));
     if (!gcOption) {
