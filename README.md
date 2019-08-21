@@ -81,6 +81,7 @@ You can find the full output of the TLC tool in a `.out` file that will be creat
 
 * [TLA<sup>+</sup> Home Page](http://research.microsoft.com/en-us/um/people/lamport/tla/tla.html) on Leslie Lamport's website.
 * [Introduction to TLA<sup>+</sup> and PlusCal](https://learntla.com) by Hillel Wayne.
+* [TLA<sup>+</sup> in Practice and Theory](https://pron.github.io/posts/tlaplus_part1) by Ron Pressler.
 * [A collection of TLA<sup>+</sup> specification examples](https://github.com/tlaplus/Examples) in the TLA<sup>+</sup> repository.
 
 ## License
