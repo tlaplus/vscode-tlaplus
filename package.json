@@ -1,7 +1,7 @@
 {
     "name": "vscode-tlaplus",
     "displayName": "TLA+",
-    "version": "0.3.0",
+    "version": "0.3.3",
     "preview": true,
     "description": "TLA+ language support",
     "publisher": "alygin",
@@ -20,6 +20,9 @@
     "repository": {
         "type": "git",
         "url": "https://github.com/alygin/vscode-tlaplus.git"
+    },
+    "bugs": {
+        "url": "https://github.com/alygin/vscode-tlaplus/issues"
     },
     "icon": "resources/images/tlaplus.png",
     "keywords": [

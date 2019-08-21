@@ -282,7 +282,7 @@ export class ModelCheckResult {
                 break;
             case CheckState.Success:
                 statusDetails = collisionProbability
-                    ? `Fingerprint collission probability: ${collisionProbability}`
+                    ? `Fingerprint collision probability: ${collisionProbability}`
                     : '';
                 break;
             case CheckState.Error:

@@ -53,7 +53,7 @@ end algorithm; *)
 ====
 ```
 
-Add some simple logic to it. For instance, let's make it check that squares of numbers from 1 to 10 are less than 100:
+Add some simple logic to it. For instance, let's make it check that squares of numbers from 1 to 10 do not exceed 100:
 
 ```tla
 ---- MODULE squares ----
@@ -80,8 +80,8 @@ You can find the full output of the TLC tool in a `.out` file that will be creat
 ## What to read
 
 * [<nobr>TLA<sup>+</sup></nobr> Home Page](http://research.microsoft.com/en-us/um/people/lamport/tla/tla.html) on Leslie Lamport's website.
-* [Introduction to <nobr>TLA<sup>+</sup></nobr> and Plus cal](https://learntla.com) by Hillel Wayne.
-* [A colletion of <nobr>TLA<sup>+</sup></nobr> specifications](https://github.com/tlaplus/Examples) in the <nobr>TLA<sup>+</sup></nobr> repository.
+* [Introduction to <nobr>TLA<sup>+</sup></nobr> and PlusCal](https://learntla.com) by Hillel Wayne.
+* [A collection of <nobr>TLA<sup>+</sup></nobr> specification examples](https://github.com/tlaplus/Examples) in the <nobr>TLA<sup>+</sup></nobr> repository.
 
 ## License
 
