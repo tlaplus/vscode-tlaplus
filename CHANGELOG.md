@@ -1,5 +1,12 @@
 # Change Log
 
+## 0.3.6 &ndash; 21st August, 2019
+
+### Bug fixes
+
+* Fix running TLA tools without custom Java options.
+* Fix typo in the model checking execution report.
+
 ## 0.3.0 &ndash; 21st August, 2019
 
 ### Enhancements
@@ -16,7 +23,7 @@
 
 * Fix TLC output parsing.
 * Fix SANY output parsing.
-* Fix parsing of <nobr>TLA<sup>+</sup><nobr> tools output on Windows.
+* Fix parsing of TLA<sup>+</sup> tools output on Windows.
 
 ## 0.2.0 &ndash; 10th August, 2019
 
@@ -35,7 +42,7 @@
 
 ### Initial release
 
-* <nobr>TLA<sup>+</sup><nobr> and PlusCal syntax higlight.
-* PlusCal-to-TLA<nobr>TLA<sup>+</sup><nobr> translation and parsing.
+* TLA<sup>+</sup> and PlusCal syntax higlight.
+* PlusCal-to-TLA<sup>+</sup> translation and parsing.
 * Running TLC model checker.
 * Display model check results.
