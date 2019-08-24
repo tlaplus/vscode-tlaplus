@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { ModelCheckResult } from './model/check';
+import { ModelCheckResult, ModelCheckResultSource } from './model/check';
 import { CMD_CHECK_MODEL_STOP } from './commands/checkModel';
 
 // Cached HTML template for the WebView
@@ -23,8 +23,8 @@ export function updateCheckResultView(checkResult: ModelCheckResult) {
     lastCheckResult = checkResult;
 }
 
-export function revealEmptyCheckResultView(extContext: vscode.ExtensionContext) {
-    revealCheckResultView(extContext, ModelCheckResult.EMPTY);
+export function revealEmptyCheckResultView(source: ModelCheckResultSource, extContext: vscode.ExtensionContext) {
+    revealCheckResultView(extContext, ModelCheckResult.createEmpty(source));
 }
 
 export function revealLastCheckResultView(extContext: vscode.ExtensionContext) {
@@ -33,7 +33,7 @@ export function revealLastCheckResultView(extContext: vscode.ExtensionContext) {
     }
 }
 
-export function revealCheckResultView(extContext: vscode.ExtensionContext, checkResult: ModelCheckResult) {
+function revealCheckResultView(extContext: vscode.ExtensionContext, checkResult: ModelCheckResult) {
     doRevealCheckResultView(extContext);
     updateCheckResultView(checkResult);
 }

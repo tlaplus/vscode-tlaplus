@@ -2,7 +2,7 @@ import * as assert from 'assert';
 import * as path from 'path';
 import * as fs from 'fs';
 import { PassThrough } from 'stream';
-import { ModelCheckResult, CheckState, CheckStatus, Change } from '../../../src/model/check';
+import { ModelCheckResult, CheckState, CheckStatus, Change, ModelCheckResultSource } from '../../../src/model/check';
 import { TlcModelCheckerStdoutParser } from '../../../src/parsers/tlc';
 import { replaceExtension } from '../../../src/common';
 import { CheckResultBuilder, range, struct, v, set } from '../shortcuts';
@@ -207,7 +207,7 @@ suite('TLC Output Parser Test Suite', () => {
 });
 
 class CheckResultHolder {
-    checkResult: ModelCheckResult = ModelCheckResult.EMPTY;
+    checkResult: ModelCheckResult = ModelCheckResult.createEmpty(ModelCheckResultSource.OutFile);
 }
 
 function assertEquals(actual: ModelCheckResult, expected: ModelCheckResult) {
@@ -233,8 +233,12 @@ async function assertOutput(fileName: string, tlaFilePath: string, expected: Mod
     stream.end(buffer);
     const crh = new CheckResultHolder();
     const outFilePath = replaceExtension(tlaFilePath, 'out');
-    const parser = new TlcModelCheckerStdoutParser(stream, tlaFilePath, outFilePath, (cr) => {
-        crh.checkResult = cr;
-    });
+    const parser = new TlcModelCheckerStdoutParser(
+        ModelCheckResultSource.OutFile,
+        stream,
+        tlaFilePath,
+        outFilePath,
+        cr => { crh.checkResult = cr; }
+    );
     return parser.readAll().then(() => assertEquals(crh.checkResult, expected));
 }

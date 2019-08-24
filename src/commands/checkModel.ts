@@ -8,6 +8,7 @@ import { applyDCollection } from '../diagnostic';
 import { ChildProcess } from 'child_process';
 import { saveStreamToFile } from '../outputSaver';
 import { replaceExtension } from '../common';
+import { ModelCheckResultSource } from '../model/check';
 
 export const CMD_CHECK_MODEL_RUN = 'tlaplus.model.check.run';
 export const CMD_CHECK_MODEL_STOP = 'tlaplus.model.check.stop';
@@ -88,9 +89,13 @@ async function doCheckModel(
         });
         const outFilePath = replaceExtension(specFiles.tlaFilePath, 'out');
         saveStreamToFile(checkProcess.stdout, outFilePath);
-        revealEmptyCheckResultView(extContext);
+        revealEmptyCheckResultView(ModelCheckResultSource.Process, extContext);
         const stdoutParser = new TlcModelCheckerStdoutParser(
-            checkProcess.stdout, specFiles.tlaFilePath, outFilePath, updateCheckResultView);
+            ModelCheckResultSource.Process,
+            checkProcess.stdout,
+            specFiles.tlaFilePath,
+            outFilePath,
+            updateCheckResultView);
         const dCol = await stdoutParser.readAll();
         applyDCollection(dCol, diagnostic);
     } catch (err) {

@@ -3,7 +3,7 @@ import * as moment from 'moment/moment';
 import { Readable } from 'stream';
 import { clearTimeout } from 'timers';
 import { CheckStatus, ModelCheckResult, InitialStateStatItem, CoverageItem, ErrorTraceItem,
-    CheckState, OutputLine, StructureValue, findChanges} from '../model/check';
+    CheckState, OutputLine, StructureValue, findChanges, ModelCheckResultSource} from '../model/check';
 import { ProcessOutputParser } from './base';
 import { parseVariableValue } from './tlcValues';
 import { SanyData, SanyStdoutParser } from './sany';
@@ -24,6 +24,7 @@ export class TlcModelCheckerStdoutParser extends ProcessOutputParser<DCollection
     first: boolean = true;
 
     constructor(
+        source: ModelCheckResultSource,
         stdout: Readable | string[],
         tlaFilePath: string | undefined,
         outFilePath: string,
@@ -31,7 +32,7 @@ export class TlcModelCheckerStdoutParser extends ProcessOutputParser<DCollection
     ) {
         super(stdout, new DCollection());
         this.handler = handler;
-        this.checkResultBuilder = new ModelCheckResultBuilder(outFilePath);
+        this.checkResultBuilder = new ModelCheckResultBuilder(source, outFilePath);
         if (tlaFilePath) {
             this.result.addFilePath(tlaFilePath);
         }
@@ -160,8 +161,10 @@ class ModelCheckResultBuilder {
     private firstStatTime: moment.Moment | undefined;
     private fingerprintCollisionProbability: string | undefined;
 
-    constructor(private outFilePath: string) {
-    }
+    constructor(
+        private source: ModelCheckResultSource,
+        private outFilePath: string
+    ) {}
 
     getStatus(): CheckStatus {
         return this.status;
@@ -207,6 +210,7 @@ class ModelCheckResultBuilder {
 
     build(): ModelCheckResult {
         return new ModelCheckResult(
+            this.source,
             this.outFilePath,
             this.state,
             this.status,
