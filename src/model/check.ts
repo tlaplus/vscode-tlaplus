@@ -2,6 +2,7 @@ import { Range } from 'vscode';
 import { DCollection } from '../diagnostic';
 import { isNumber } from 'util';
 import { Moment } from 'moment';
+import { v } from '../../tests/suite/shortcuts';
 
 export enum CheckState {
     Running = 'R',
@@ -125,11 +126,7 @@ export abstract class CollectionValue extends Value {
     deletedItems: Value[] | undefined;
 
     constructor(key: ValueKey, readonly items: Value[], prefix: string, postfix: string, toStr?: (v: Value) => string) {
-        super(key, makeCollectionValueString(items, prefix, postfix, toStr || CollectionValue.valueToString));
-    }
-
-    static valueToString(v: Value) {
-        return v.str;
+        super(key, makeCollectionValueString(items, prefix, postfix, ', ', toStr || (v => v.str)));
     }
 
     addDeletedItems(items: Value[]) {
@@ -204,9 +201,26 @@ export class StructureValue extends CollectionValue {
 /**
  * Represents a simple function: (10 :> TRUE), ("foo" :> "bar"), etc
  */
+export class SimpleFunctionItem extends Value {
+    constructor(
+        key: ValueKey,
+        readonly from: Value,
+        readonly to: Value
+    ) {
+        super(key, `${from.str} :> ${to.str}`);
+    }
+}
+
+/**
+ * Represents a collection of merged simple functions: (10 :> TRUE),
+ * ("foo" :> "bar" @@ "baz" => 31), etc
+ */
 export class SimpleFunction extends Value {
-    constructor(key: ValueKey, readonly from: Value, readonly to: Value) {
-        super(key, `(${from.str} :> ${to.str})`);
+    constructor(
+        key: ValueKey,
+        readonly items: SimpleFunctionItem[]
+    ) {
+        super(key, makeCollectionValueString(items, '(', ')', ' @@ ', (v => v.str)));
     }
 }
 
@@ -376,11 +390,17 @@ function durationToStr(dur: number | undefined): string {
     return dur + ' msec';
 }
 
-function makeCollectionValueString(items: Value[], prefix: string, postfix: string, toStr: (v: Value) => string) {
+function makeCollectionValueString(
+    items: Value[],
+    prefix: string,
+    postfix: string,
+    delimiter: string,
+    toStr: (v: Value) => string
+) {
     // TODO: trim to fit into 100 symbols
     const valuesStr = items
         .filter(i => i.changeType !== Change.DELETED)
         .map(i => toStr(i))
-        .join(', ');
+        .join(delimiter);
     return prefix + valuesStr + postfix;
 }

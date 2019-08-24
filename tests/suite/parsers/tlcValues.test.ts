@@ -1,7 +1,7 @@
 import * as assert from 'assert';
 import { parseVariableValue } from '../../../src/parsers/tlcValues';
 import { Value } from '../../../src/model/check';
-import { v, set, seq, struct, func, n } from '../shortcuts';
+import { v, set, seq, struct, func, n, funcMerge, funcItem } from '../shortcuts';
 
 const ROOT = 'root';
 
@@ -159,6 +159,17 @@ suite('TLC Values Output Parser Test Suite', () => {
                         v('to', 'FALSE')))));
     });
 
+    test('Parses merged functions', () => {
+        assertValue(
+            ['(1 :> 3 @@ 2 :> 5 @@ 3 :> 10)'],
+            funcMerge(ROOT,
+                funcItem(1, v('from', '1'), v('to', '3')),
+                funcItem(2, v('from', '2'), v('to', '5')),
+                funcItem(3, v('from', '3'), v('to', '10'))
+            )
+        );
+    });
+
     test('Parses complex case', () => {
         const lines = [
             '{ 12,',
@@ -169,7 +180,7 @@ suite('TLC Values Output Parser Test Suite', () => {
             '          subkey_41 |-> <<',
             '     -299384>>',
             ' ]],',
-            '(TRUE :> {(10 :> <<"foo">>)})',
+            '(TRUE :> {(10 :> <<"foo">>)} @@ FALSE :> "false")',
             '<<{}>>,',
             ' "long long \\" string"',
             '{<<',
@@ -184,9 +195,10 @@ suite('TLC Values Output Parser Test Suite', () => {
                 set('key_2', v(1, '3'), v(2, '4'), v(3, '"five"'), v('4', 'TRUE')),
                 struct('key_3', seq('subkey_41', v(1, '-299384')))
             ),
-            func(3,
-                v('from', 'TRUE'),
-                set('to', func(1, v('from', '10'), seq('to', v(1, '"foo"'))))),
+            funcMerge(3,
+                funcItem(1, v('from', 'TRUE'), set('to', func(1, v('from', '10'), seq('to', v(1, '"foo"'))))),
+                funcItem(2, v('from', 'FALSE'), v('to', '"false"'))
+            ),
             seq(4, set('1')),
             v(5, '"long long \\" string"'),
             set(6, seq(1, struct(1, set('foo', v(1, 'TRUE')), v('bar', '-2..5')))),
