@@ -1,5 +1,17 @@
 # Change Log
 
+## 0.4.0 &ndash; 24th August, 2019
+
+### Enhancements
+
+* Highlight actions with no executions in the coverage table.
+* Minor UI improvements.
+
+### Bug fixes
+
+* Fix visualization when switching between an ongoing TLC process and a .out file.
+* Fix coverage total/distinct numbers.
+
 ## 0.3.6 &ndash; 21st August, 2019
 
 ### Bug fixes
