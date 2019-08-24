@@ -1,4 +1,5 @@
-import { Value, StructureValue, SetValue, SequenceValue, ValueKey, SimpleFunction, NameValue } from '../model/check';
+import { Value, StructureValue, SetValue, SequenceValue, ValueKey, SimpleFunction,
+    NameValue, SimpleFunctionItem } from '../model/check';
 import { ParsingError } from '../common';
 import { Position } from 'vscode';
 
@@ -207,21 +208,55 @@ function parseValue(key: ValueKey, token: Token, tokenizer: Tokenizer): Value {
         return new Value(key, token.str);
     }
     if (token.type === TokenType.SetStart) {
-        const values = parseCollectionValues(tokenizer, TokenType.SetEnd, parseValue);
-        return new SetValue(key, values);
+        const items = parseCollectionItems(tokenizer, TokenType.SetEnd, TokenType.Comma, parseValue);
+        return new SetValue(key, items);
     }
     if (token.type === TokenType.SequenceStart) {
-        const values = parseCollectionValues(tokenizer, TokenType.SequenceEnd, parseValue);
-        return new SequenceValue(key, values);
+        const items = parseCollectionItems(tokenizer, TokenType.SequenceEnd, TokenType.Comma, parseValue);
+        return new SequenceValue(key, items);
     }
     if (token.type === TokenType.StructureStart) {
-        const values = parseCollectionValues(tokenizer, TokenType.StructureEnd, parseStructureItem);
-        return new StructureValue(key, values);
+        const items = parseCollectionItems(tokenizer, TokenType.StructureEnd, TokenType.Comma, parseStructureItem);
+        return new StructureValue(key, items);
     }
     if (token.type === TokenType.FunctionStart) {
-        return parseFunction(key, tokenizer);
+        const items = parseCollectionItems(tokenizer, TokenType.FunctionEnd, TokenType.AtAt, parseFunctionItem);
+        return new SimpleFunction(key, items);
     }
     throw new ParsingError(`Unexpected token at ${tokenizer.getPosition()}: ${token.str}`);
+}
+
+function parseCollectionItems<T>(
+    tokenizer: Tokenizer,
+    endTokenType: TokenType,
+    delimiterTokenType: TokenType,
+    valueParser: (key: ValueKey, token: Token, tokenizer: Tokenizer) => T
+): T[] {
+    const items = [];
+    let canClose = true;
+    let canComma = false;
+    while (true) {
+        const token = tokenizer.nextToken();
+        if (token.type === endTokenType) {
+            if (!canClose) {
+                throw new ParsingError(
+                    `Unexpected end of collection at ${tokenizer.getPosition()}: ${token.str}`);
+            }
+            return items;
+        }
+        if (token.type === delimiterTokenType) {
+            if (!canComma) {
+                throw new ParsingError(
+                    `Unexpected comma at ${tokenizer.getPosition()}: ${token.str}`);
+            }
+            canComma = false;
+            canClose = false;
+        } else {
+            items.push(valueParser(items.length + 1, token, tokenizer));
+            canClose = true;
+            canComma = true;
+        }
+    }
 }
 
 function parseStructureItem(_: ValueKey, token: Token, tokenizer: Tokenizer): Value {
@@ -235,64 +270,22 @@ function parseStructureItem(_: ValueKey, token: Token, tokenizer: Tokenizer): Va
     return parseValue(token.str, tokenizer.nextToken(), tokenizer);
 }
 
-function parseCollectionValues<T>(
-    tokenizer: Tokenizer,
-    endTokenType: TokenType,
-    valueParser: (key: ValueKey, token: Token, tokenizer: Tokenizer) => T
-): T[] {
-    const values = [];
-    let canClose = true;
-    let canComma = false;
-    while (true) {
-        const token = tokenizer.nextToken();
-        if (token.type === endTokenType) {
-            if (!canClose) {
-                throw new ParsingError(
-                    `Unexpected end of collection at ${tokenizer.getPosition()}: ${token.str}`);
-            }
-            return values;
-        }
-        if (token.type === TokenType.Comma) {
-            if (!canComma) {
-                throw new ParsingError(
-                    `Unexpected comma at ${tokenizer.getPosition()}: ${token.str}`);
-            }
-            canComma = false;
-            canClose = false;
-        } else {
-            values.push(valueParser(values.length + 1, token, tokenizer));
-            canClose = true;
-            canComma = true;
-        }
-    }
-}
-
-function parseFunction(key: ValueKey, tokenizer: Tokenizer): SimpleFunction {
-    const tokenFrom = tokenizer.nextToken();
+function parseFunctionItem(key: ValueKey, tokenFrom: Token, tokenizer: Tokenizer): SimpleFunctionItem {
     if (tokenFrom === Token.END) {
         console.log(`Unexpected function description end at ${tokenizer.getPosition()}`);
-        return new SimpleFunction(key, UNKNOWN_FROM, UNKNOWN_TO, undefined);
+        return new SimpleFunctionItem(key, UNKNOWN_FROM, UNKNOWN_TO);
     }
     const from = parseValue('from', tokenFrom, tokenizer);
     const tokenColon = tokenizer.nextToken();
     if (tokenColon.type !== TokenType.ColonBracket) {
         console.log(`Unexpected function description end at ${tokenizer.getPosition()}`);
-        return new SimpleFunction(key, from, UNKNOWN_TO, undefined);
+        return new SimpleFunctionItem(key, from, UNKNOWN_TO);
     }
     const tokenTo = tokenizer.nextToken();
     if (tokenTo === Token.END) {
         console.log(`Unexpected function description end at ${tokenizer.getPosition()}`);
-        return new SimpleFunction(key, from, UNKNOWN_TO, undefined);
+        return new SimpleFunctionItem(key, from, UNKNOWN_TO);
     }
     const to = parseValue('to', tokenTo, tokenizer);
-    const tokenEnd = tokenizer.nextToken();
-    if (tokenEnd.type === TokenType.FunctionEnd) {
-        return new SimpleFunction(key, from, to, undefined);
-    }
-    if (tokenEnd.type === TokenType.AtAt) {
-        const mergeFunc = parseFunction('', tokenizer);
-        return new SimpleFunction(key, from, to, mergeFunc);
-    }
-    console.log(`Unexpected function description end at ${tokenizer.getPosition()}`);
-    return new SimpleFunction(key, from, to, undefined);
+    return new SimpleFunctionItem(key, from, to);
 }

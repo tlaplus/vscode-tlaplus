@@ -1,7 +1,7 @@
 import * as assert from 'assert';
 import { parseVariableValue } from '../../../src/parsers/tlcValues';
 import { Value } from '../../../src/model/check';
-import { v, set, seq, struct, func, n, funcMerge } from '../shortcuts';
+import { v, set, seq, struct, func, n, funcMerge, funcItem } from '../shortcuts';
 
 const ROOT = 'root';
 
@@ -163,16 +163,9 @@ suite('TLC Values Output Parser Test Suite', () => {
         assertValue(
             ['(1 :> 3 @@ 2 :> 5 @@ 3 :> 10)'],
             funcMerge(ROOT,
-                v('from', '1'),
-                v('to', '3'),
-                funcMerge('',
-                    v('from', '2'),
-                    v('to', '5'),
-                    func('',
-                        v('from', '3'),
-                        v('to', '10')
-                    )
-                )
+                funcItem(1, v('from', '1'), v('to', '3')),
+                funcItem(2, v('from', '2'), v('to', '5')),
+                funcItem(3, v('from', '3'), v('to', '10'))
             )
         );
     });
@@ -203,9 +196,8 @@ suite('TLC Values Output Parser Test Suite', () => {
                 struct('key_3', seq('subkey_41', v(1, '-299384')))
             ),
             funcMerge(3,
-                v('from', 'TRUE'),
-                set('to', func(1, v('from', '10'), seq('to', v(1, '"foo"')))),
-                func('', v('from', 'FALSE'), v('to', '"false"'))
+                funcItem(1, v('from', 'TRUE'), set('to', func(1, v('from', '10'), seq('to', v(1, '"foo"'))))),
+                funcItem(2, v('from', 'FALSE'), v('to', '"false"'))
             ),
             seq(4, set('1')),
             v(5, '"long long \\" string"'),

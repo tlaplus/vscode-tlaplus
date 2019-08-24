@@ -3,7 +3,7 @@ import moment = require('moment');
 import { Moment } from 'moment';
 import { Value, ValueKey, SetValue, SequenceValue, StructureValue, SimpleFunction,
     InitialStateStatItem, CoverageItem, ModelCheckResult, CheckState, CheckStatus,
-    ErrorTraceItem, OutputLine, ModelCheckResultSource } from '../../src/model/check';
+    ErrorTraceItem, OutputLine, ModelCheckResultSource, SimpleFunctionItem } from '../../src/model/check';
 import { DCollection } from '../../src/diagnostic';
 
 export function v(key: ValueKey, value: string): Value {
@@ -26,12 +26,16 @@ export function struct(key: ValueKey, ...items: Value[]): StructureValue {
     return new StructureValue(key, items);
 }
 
-export function func(key: ValueKey, from: Value, to: Value): SimpleFunction {
-    return new SimpleFunction(key, from, to, undefined);
+export function funcItem(key: ValueKey, from: Value, to: Value): SimpleFunctionItem {
+    return new SimpleFunctionItem(key, from, to);
 }
 
-export function funcMerge(key: ValueKey, from: Value, to: Value, mergeFunc: SimpleFunction): SimpleFunction {
-    return new SimpleFunction(key, from, to, mergeFunc);
+export function func(key: ValueKey, from: Value, to: Value): SimpleFunction {
+    return new SimpleFunction(key, [ funcItem(1, from, to) ]);
+}
+
+export function funcMerge(key: ValueKey, ...items: SimpleFunctionItem[]): SimpleFunction {
+    return new SimpleFunction(key, items);
 }
 
 export function range(fromLine: number, fromChar: number, toLine: number, toChar: number): vscode.Range {
