@@ -31,7 +31,7 @@ suite('TLC Output Parser Test Suite', () => {
                 .addInitState('00:00:00', 2, 3, 2, 0)
                 .addCoverage('example', 'Init', '/Users/bob/example.tla', range(13, 0, 13, 4), 1, 1)
                 .addCoverage('example', 'Lbl_1', '/Users/bob/example.tla', range(15, 0, 15, 5), 1, 1)
-                .addCoverage('example', 'Terminating', '/Users/bob/example.tla', range(20, 0, 20, 11), 0, 1)
+                .addCoverage('example', 'Terminating', '/Users/bob/example.tla', range(20, 0, 20, 11), 1, 0)
                 .build()
             );
     });
@@ -100,7 +100,7 @@ suite('TLC Output Parser Test Suite', () => {
                 .addInitState('00:00:00', 0, 1, 1, 1)
                 .addInitState('00:00:00', 3, 4, 4, 1)
                 .addCoverage('error_trace', 'Init', '/Users/bob/error_trace.tla', range(7, 0, 7, 4), 2, 2)
-                .addCoverage('error_trace', 'SomeFunc', '/Users/bob/error_trace.tla', range(11, 0, 11, 11), 3, 5)
+                .addCoverage('error_trace', 'SomeFunc', '/Users/bob/error_trace.tla', range(11, 0, 11, 11), 5, 3)
                 .addError(['Invariant FooInvariant is violated.'])
                 .addTraceItem('Initial predicate', '', '', undefined, range(0, 0, 0, 0),
                     struct('', v('FooVar', '1..2'), v('BarVar', '-1'))

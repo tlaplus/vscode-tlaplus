@@ -412,8 +412,8 @@ class ModelCheckResultBuilder {
                     parseInt(matches[4]) - 1,
                     parseInt(matches[5])
                 ),
-                parseInt(matches[7]),
-                parseInt(matches[8])
+                parseInt(matches[8]),
+                parseInt(matches[7])
             ));
         }
     }
