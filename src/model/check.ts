@@ -202,11 +202,16 @@ export class StructureValue extends CollectionValue {
 }
 
 /**
- * Represents a simple function: (10 :> TRUE), ("foo" :> "bar"), etc
+ * Represents a simple function: (10 :> TRUE), ("foo" :> "bar" @@ "baz" => 31), etc
  */
 export class SimpleFunction extends Value {
-    constructor(key: ValueKey, readonly from: Value, readonly to: Value) {
-        super(key, `(${from.str} :> ${to.str})`);
+    constructor(
+        key: ValueKey,
+        readonly from: Value,
+        readonly to: Value,
+        readonly mergeFunc: SimpleFunction | undefined
+    ) {
+        super(key, `(${from.str} :> ${to.str}${ mergeFunc ? ` @@ ${mergeFunc.str}` : '' })`);
     }
 }
 

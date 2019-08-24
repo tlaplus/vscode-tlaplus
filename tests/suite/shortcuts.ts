@@ -27,7 +27,11 @@ export function struct(key: ValueKey, ...items: Value[]): StructureValue {
 }
 
 export function func(key: ValueKey, from: Value, to: Value): SimpleFunction {
-    return new SimpleFunction(key, from, to);
+    return new SimpleFunction(key, from, to, undefined);
+}
+
+export function funcMerge(key: ValueKey, from: Value, to: Value, mergeFunc: SimpleFunction): SimpleFunction {
+    return new SimpleFunction(key, from, to, mergeFunc);
 }
 
 export function range(fromLine: number, fromChar: number, toLine: number, toChar: number): vscode.Range {
