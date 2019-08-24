@@ -4,6 +4,16 @@
 
 This extension adds support for the [TLA<sup>+</sup> formal specification language](http://research.microsoft.com/en-us/um/people/lamport/tla/tla.html) to VS Code. It also supports running the TLC model checker on TLA<sup>+</sup> specifications.
 
+## Table of Contents
+- [Features](#features)
+- [Requirements](#requirements)
+- [Commands](#commands)
+- [Settings](#settings)
+- [How to Start](#how-to-start)
+- [Make It Easier](#make-it-easier)
+- [What to Read](#what-to-read)
+- [License](#license)
+
 ## Features
 
 - TLA<sup>+</sup> and PlusCal syntax highlighting and code snippets.
@@ -31,7 +41,7 @@ The extension provides the following commands in the Command Palette:
 - `Java: Home` allows to provide location of the JVM that the extension must use for running TLA<sup>+</sup> tools.
 - `Java: Options` allows to provide additional options that must be passed to a Java process when running TLA<sup>+</sup> tools.
 
-## How to start
+## How to Start
 
 The easiest way to get a working model is to create an empty PlusCal algorithm, translate it into a TLA<sup>+</sup> specification and run the TLC tool on it. Here's a step by step instruction:
 
@@ -77,15 +87,15 @@ One of the artefacts that the TLC command cerates when running on a `.tla` file 
 
 You can find the full output of the TLC tool in a `.out` file that will be created near your specification. Should you need to visualize an output from a previous model checking, use the command `TLA+: Visualize TLC output` on a `.out` file.
 
-## Make your work easier
+## Make It Easier
 
 If you're going to use the extension for more than just syntax highlighting, a few tips may help to make your experience smoother:
 
-* [Map keyboard shortcuts](https://code.visualstudio.com/docs/getstarted/keybindings) to the extension commands. For instance, you might want to parse the current module by pressing `Ctrl+I` (`Command+I`) and to run the model checker by pressing `Ctrl+. Ctrl+.` (`Command+. Command+.`).
+* [Map keyboard shortcuts](https://code.visualstudio.com/docs/getstarted/keybindings) to the [extension commands](#commands). For instance, you might want to parse the current module by pressing `Ctrl+I` (`Command+I`) and to run the model checker by pressing `Ctrl+. Ctrl+.` (`Command+. Command+.`).
 * [Edit settings](https://code.visualstudio.com/docs/getstarted/settings) to hide `.old` (and probably  `.out`) files from the Explorer panel. Those files are a by-product of various tools, and there's usually no need to deal with them directly. You'll need the `files.exclude` setting, and patterns to add are `**/*.old` and `**/*.out`.
 * [Take a look](https://github.com/alygin/vscode-tlaplus/blob/master/languages/pluscal-snippets.json) at the PlusCal code snippets the extension provides. They can save you a few keyboard strokes here and there.
 
-## What to read
+## What to Read
 
 If you're not familiar with TLA<sup>+</sup>, but want to get a grasp on it, the following list of resources is a good starting point:
 
