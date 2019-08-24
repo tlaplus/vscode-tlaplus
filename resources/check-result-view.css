@@ -99,6 +99,10 @@ thead {
     display: block;
 }
 
+.coverage-zero {
+    background: var(--vscode-inputValidation-warningBackground);
+}
+
 .error:not(:first-child) {
     padding-top: 0.5em;
 }

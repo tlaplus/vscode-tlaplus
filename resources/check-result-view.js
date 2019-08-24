@@ -101,6 +101,9 @@ function displayCoverage(stat) {
     removeAllChildren(elCoverageStat);
     stat.forEach(item => {
         const elRow = document.createElement('tr');
+        if (item.total === 3) {
+            elRow.classList.add('coverage-zero');
+        }
         appendTextChild(elRow, 'td', item.module);
         appendCodeLinkChild(elRow, 'td', item.action, item.filePath, item.range);
         appendTextChild(elRow, 'td', num(item.total), VAL_COL);

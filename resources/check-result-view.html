@@ -27,10 +27,10 @@
         <thead>
          <tr>
            <td>Time</td>
-           <td class="val-col">Diameter</td>
-           <td class="val-col">Found</td>
-           <td class="val-col">Distinct</td>
-           <td class="val-col">Queue</td>
+           <td class="val-col" title="The diameter of the reachable state graph">Diameter</td>
+           <td class="val-col" title="The total number of states found so far">Found</td>
+           <td class="val-col" title="The number of distinct states amoung all the states found">Distinct</td>
+           <td class="val-col" title="The number of states whose successor states has not been found yet">Queue</td>
          </tr>
        </thead>
        <tbody id="states-stat" />
@@ -43,8 +43,8 @@
           <tr>
             <td>Module</td>
             <td>Action</td>
-            <td class="val-col">Total</td>
-            <td class="val-col">Distinct</td>
+            <td class="val-col" title="Total number of times the action has been used to compute a successor state">Total</td>
+            <td class="val-col" title="Total number of times the action produced a distinct successor state">Distinct</td>
           </tr>
         </thead>
         <tbody id="coverage-stat"/>
