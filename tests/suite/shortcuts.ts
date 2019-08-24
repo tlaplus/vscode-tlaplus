@@ -3,7 +3,7 @@ import moment = require('moment');
 import { Moment } from 'moment';
 import { Value, ValueKey, SetValue, SequenceValue, StructureValue, SimpleFunction,
     InitialStateStatItem, CoverageItem, ModelCheckResult, CheckState, CheckStatus,
-    ErrorTraceItem, OutputLine } from '../../src/model/check';
+    ErrorTraceItem, OutputLine, ModelCheckResultSource } from '../../src/model/check';
 import { DCollection } from '../../src/diagnostic';
 
 export function v(key: ValueKey, value: string): Value {
@@ -57,6 +57,7 @@ export class CheckResultBuilder {
 
     build(): ModelCheckResult {
         return new ModelCheckResult(
+            ModelCheckResultSource.OutFile,
             this.outFilePath,
             this.checkState,
             this.checkStatus,

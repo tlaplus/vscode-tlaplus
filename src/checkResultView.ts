@@ -1,39 +1,49 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { ModelCheckResult } from './model/check';
+import { ModelCheckResult, ModelCheckResultSource } from './model/check';
 import { CMD_CHECK_MODEL_STOP } from './commands/checkModel';
 
 // Cached HTML template for the WebView
 let viewHtml: string | undefined;
 let viewPanel: vscode.WebviewPanel | undefined;
 let missing: boolean;
-let lastCheckResult: ModelCheckResult | undefined;
+let currentSource: ModelCheckResultSource | undefined;
+let lastProcessCheckResult: ModelCheckResult | undefined;   // Only results with source=process go here
+let lastCheckResult: ModelCheckResult | undefined;          // The last known check result, no matter what its source is
 let panelIsVisible = false;
 
 export function updateCheckResultView(checkResult: ModelCheckResult) {
-    if (viewPanel && viewPanel.visible) {
-        viewPanel.webview.postMessage({
-            checkResult: checkResult
-        });
-        missing = false;
-    } else {
-        missing = true;
+    if (checkResult.source === currentSource) {
+        if (viewPanel && viewPanel.visible) {
+            viewPanel.webview.postMessage({
+                checkResult: checkResult
+            });
+            missing = false;
+        } else {
+            missing = true;
+        }
     }
     lastCheckResult = checkResult;
+    if (checkResult.source === ModelCheckResultSource.Process) {
+        lastProcessCheckResult = checkResult;
+    }
 }
 
-export function revealEmptyCheckResultView(extContext: vscode.ExtensionContext) {
-    revealCheckResultView(extContext, ModelCheckResult.EMPTY);
+export function revealEmptyCheckResultView(source: ModelCheckResultSource, extContext: vscode.ExtensionContext) {
+    revealCheckResultView(ModelCheckResult.createEmpty(source), extContext);
 }
 
 export function revealLastCheckResultView(extContext: vscode.ExtensionContext) {
-    if (lastCheckResult) {
-        revealCheckResultView(extContext, lastCheckResult);
+    if (lastProcessCheckResult) {
+        revealCheckResultView(lastProcessCheckResult, extContext);
+    } else {
+        revealEmptyCheckResultView(ModelCheckResultSource.Process, extContext);
     }
 }
 
-export function revealCheckResultView(extContext: vscode.ExtensionContext, checkResult: ModelCheckResult) {
+function revealCheckResultView(checkResult: ModelCheckResult, extContext: vscode.ExtensionContext) {
+    currentSource = checkResult.source;
     doRevealCheckResultView(extContext);
     updateCheckResultView(checkResult);
 }

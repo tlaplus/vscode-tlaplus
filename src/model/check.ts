@@ -239,13 +239,15 @@ export class OutputLine {
     }
 }
 
+export enum ModelCheckResultSource {
+    Process,    // The result comes from an ongoing TLC process
+    OutFile     // The result comes from a .out file
+}
+
 /**
  * Represents the state of a TLA model checking process.
  */
 export class ModelCheckResult {
-    static readonly EMPTY = new ModelCheckResult(
-        undefined, CheckState.Running, CheckStatus.Starting, undefined, [], [], [], [], [],
-        undefined, undefined, undefined, undefined, 0, undefined, []);
 
     readonly stateName: string;
     readonly startDateTimeStr: string | undefined;
@@ -254,6 +256,7 @@ export class ModelCheckResult {
     readonly statusDetails: string | undefined;
 
     constructor(
+        readonly source: ModelCheckResultSource,
         readonly outFilePath: string | undefined,
         readonly state: CheckState,
         readonly status: CheckStatus,
@@ -290,6 +293,12 @@ export class ModelCheckResult {
                 break;
         }
         this.statusDetails = statusDetails;
+    }
+
+    static createEmpty(source: ModelCheckResultSource): ModelCheckResult {
+        return new ModelCheckResult(
+            source, undefined, CheckState.Running, CheckStatus.Starting, undefined, [], [], [], [], [],
+            undefined, undefined, undefined, undefined, 0, undefined, []);
     }
 }
 
