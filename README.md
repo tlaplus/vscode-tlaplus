@@ -33,11 +33,11 @@ The extension provides the following commands in the Command Palette:
 
 ## How to start
 
-The easiest way to get a working model is to create an empy PlusCal algorithm, translate it into a TLA<sup>+</sup> specification and run the TLC tool on it. Here's a step by step instruction:
+The easiest way to get a working model is to create an empty PlusCal algorithm, translate it into a TLA<sup>+</sup> specification and run the TLC tool on it. Here's a step by step instruction:
 
 Create a specification file. Let's name it `squares.tla`.
 
-Make the file a TLA<sup>+</sup> module. To do it, start typing `module` and select the "Create new module (TLA+)" snippet from the drop down list. The snippet will expand into module header and footer.
+Make the file a TLA<sup>+</sup> module. To do it, start typing `module` and select the "Create new module (TLA+)" snippet from the drop-down list. The snippet will expand into module header and footer.
 
 Use another snippet `pluscal` ("Create PlusCal block (TLA+)") to create an empty PlusCal algorithm. So far, we've got the following file:
 
@@ -69,15 +69,25 @@ end algorithm; *)
 ====
 ```
 
-Run command `TLA+: Parse module`. It will transpile the PlusCal algorithm to TLA<sup>+</sup> specification (that will be added right into this file) and check it for errors.
+Run command `TLA+: Parse module`. It will translate the PlusCal algorithm to a TLA<sup>+</sup> specification (that will be added right into this file) and check it for errors.
 
-We now have a simple specification that we can check by running the command `TLA+: Check model`. The command will start the TLC tool on the currently open specification and display its progress and final result in a special panel.
+We now have a simple specification that we can check by running the command `TLA+: Check model`. It will start the TLC tool on the currently open specification and display its progress and final result in a special panel.
 
-One of the artifacts that the TLC command cerates when running on a `.tla` file with a PlusCal algorithm is a `.cfg` file that contains the model parameters. If you don't use PlusCal in your specification, the model configuration file will not be created automatically, but the extension will warn you about its absense and propose you to create it from a simple template.
+One of the artefacts that the TLC command cerates when running on a `.tla` file with a PlusCal algorithm is a `.cfg` file that contains the model parameters. If you don't use PlusCal in your specification, the model configuration file will not be created automatically, but the extension will warn you about its absence and propose you to create it from a simple template.
 
 You can find the full output of the TLC tool in a `.out` file that will be created near your specification. Should you need to visualize an output from a previous model checking, use the command `TLA+: Visualize TLC output` on a `.out` file.
 
+## Make your work easier
+
+If you're going to use the extension for more than just syntax highlighting, a few tips may help to make your experience smoother:
+
+* [Map keyboard shortcuts](https://code.visualstudio.com/docs/getstarted/keybindings) to the extension commands. For instance, you might want to parse the current module by pressing `Ctrl+I` (`Command+I`) and to run the model checker by pressing `Ctrl+. Ctrl+.` (`Command+. Command+.`).
+* [Edit settings](https://code.visualstudio.com/docs/getstarted/settings) to hide `.old` (and probably  `.out`) files from the Explorer panel. Those files are a by-product of various tools, and there's usually no need to deal with them directly. You'll need the `files.exclude` setting, and patterns to add are `**/*.old` and `**/*.out`.
+* [Take a look](https://github.com/alygin/vscode-tlaplus/blob/master/languages/pluscal-snippets.json) at the PlusCal code snippets the extension provides. They can save you a few keyboard strokes here and there.
+
 ## What to read
+
+If you're not familiar with TLA<sup>+</sup>, but want to get a grasp on it, the following list of resources is a good starting point:
 
 * [TLA<sup>+</sup> Home Page](http://research.microsoft.com/en-us/um/people/lamport/tla/tla.html) on Leslie Lamport's website.
 * [Introduction to TLA<sup>+</sup> and PlusCal](https://learntla.com) by Hillel Wayne.
