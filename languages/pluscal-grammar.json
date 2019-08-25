@@ -42,7 +42,7 @@
     "repository": {
         "keywords": {
             "name": "keyword.other",
-            "match": "\\b(if|then|elsif|else|while|variables|define|process|macro|procedure|begin|end|do|skip|assert|fair|either|or|with|goto)\\b"
+            "match": "\\b(if|then|elsif|else|while|variables|define|process|macro|begin|end|do|skip|assert|procedure|return|call|fair|either|or|with|await|when|self|goto)\\b"
         },
         "tlaplus_keywords": {
             "name": "keyword.other.tlaplus",

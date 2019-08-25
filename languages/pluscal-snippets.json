@@ -65,5 +65,14 @@
             "end either;"
         ],
         "description": "Either block"
+    },
+    "Process": {
+        "prefix": "proc",
+        "body": [
+            "process ${1:name} = ${2:value}",
+            "begin",
+            "    ${0:body}",
+            "end process;"
+        ]
     }
 }
