@@ -104,6 +104,7 @@ function displayCoverage(stat) {
         const elRow = document.createElement('tr');
         if (item.total === 0) {
             elRow.classList.add('coverage-zero');
+            elRow.setAttribute('title', 'This action has never been used to compute successor states');
         }
         appendTextChild(elRow, 'td', item.module);
         appendCodeLinkChild(elRow, 'td', item.action, item.filePath, item.range);
