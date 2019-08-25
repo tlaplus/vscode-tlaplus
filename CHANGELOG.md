@@ -1,5 +1,18 @@
 # Change Log
 
+## 0.4.1 &ndash; 25th August, 2019
+
+### Enhancements
+
+* Better PlusCal syntax highlighting.
+* Better visualization of functions in error traces.
+* Minor UI improvements.
+
+### Bug fixes
+
+* Fix the Stop button.
+* Fix merged functions parsing.
+
 ## 0.4.0 &ndash; 24th August, 2019
 
 ### Enhancements
