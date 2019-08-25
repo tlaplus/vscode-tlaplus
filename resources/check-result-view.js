@@ -195,7 +195,7 @@ function displayValue(elParent, value, state) {
     }
     elVarValueBlock.appendChild(elVarValue);
     elVar.appendChild(elVarValueBlock);
-    if (value.items && value.items.length > 0) {
+    if (value.items && (value.items.length > 1 || value.items.length == 1 && value.expandSingle)) {
         elVarKey.classList.add('tree-expandable');
         const elSubList = document.createElement('ul');
         elSubList.classList.add('tree-nodes');

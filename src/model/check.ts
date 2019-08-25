@@ -123,6 +123,7 @@ export class NameValue extends Value {
  * Value that is a collection of other values.
  */
 export abstract class CollectionValue extends Value {
+    readonly expandSingle = true;
     deletedItems: Value[] | undefined;
 
     constructor(key: ValueKey, readonly items: Value[], prefix: string, postfix: string, toStr?: (v: Value) => string) {
@@ -216,6 +217,8 @@ export class SimpleFunctionItem extends Value {
  * ("foo" :> "bar" @@ "baz" => 31), etc
  */
 export class SimpleFunction extends Value {
+    readonly expandSingle = false;
+
     constructor(
         key: ValueKey,
         readonly items: SimpleFunctionItem[]
