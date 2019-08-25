@@ -17,6 +17,7 @@ function displayCheckResult(data) {
     displayStatus(res);
     displayStatesStat(res.initialStatesStat);
     displayCoverage(res.coverageStat);
+    displayWarnings(res.warnings);
     displayErrors(res.errors);
     displayErrorTrace(res.errorTrace, data);
     displayOutput(res.outputLines);
@@ -112,20 +113,28 @@ function displayCoverage(stat) {
     });
 }
 
+function displayWarnings(warnings) {
+    displayMessages(warnings, 'warnings', 'warnings-list');
+}
+
 function displayErrors(errors) {
-    const elErrors = document.getElementById('errors');
-    const elErrorsList = document.getElementById('errors-list');
-    removeAllChildren(elErrorsList);
-    if (!errors || errors.length === 0) {
-        elErrors.classList.add('hidden');
+    displayMessages(errors, 'errors', 'errors-list');
+}
+
+function displayMessages(messages, wrapperId, listId) {
+    const elWrapper = document.getElementById(wrapperId);
+    const elList = document.getElementById(listId);
+    removeAllChildren(elList);
+    if (!messages || messages.length === 0) {
+        elWrapper.classList.add('hidden');
         return;
     }
-    elErrors.classList.remove('hidden');
-    errors.forEach(err => {
-        const elError = document.createElement('p');
-        elError.classList = ['error'];
-        err.forEach(line => appendTextChild(elError, 'p', line, ['error-line']));
-        elErrorsList.appendChild(elError);
+    elWrapper.classList.remove('hidden');
+    messages.forEach(msg => {
+        const elMessage = document.createElement('p');
+        elMessage.classList = ['message'];
+        msg.forEach(line => appendTextChild(elMessage, 'p', line, ['message-line']));
+        elList.appendChild(elMessage);
     });
 }
 
