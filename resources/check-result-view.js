@@ -54,16 +54,18 @@ function displayStatus(result) {
     const elTimeEnd = document.getElementById('time-end');
     const elState = document.getElementById('check-state');
     const elStatusDetails = document.getElementById('check-status-details');
-    const elCmdStop = document.getElementById('cmd-stop');
+    const elCmdStopWrapper = document.getElementById('cmd-stop-wrapper');
     elTimeStart.innerText = result.startDateTimeStr;
     elTimeEnd.innerText = result.endDateTimeStr;
     elState.innerText = result.stateName;
     elState.classList = ['state-' + result.state];
     if (result.state === 'R') {
         // Still running
-        elCmdStop.classList.remove('hidden');
+        elCmdStopWrapper.classList.remove('hidden');
+        elCmdStopWrapper.onclick = () => stopProcess();
     } else {
-        elCmdStop.classList.add('hidden');
+        elCmdStopWrapper.classList.add('hidden');
+        elCmdStopWrapper.onclick = undefined;
     }
     if (result.statusDetails) {
         elStatusDetails.classList.remove('hidden');
