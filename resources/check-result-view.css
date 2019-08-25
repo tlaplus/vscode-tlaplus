@@ -103,11 +103,11 @@ thead {
     background: var(--vscode-inputValidation-warningBackground);
 }
 
-.error:not(:first-child) {
+.message:not(:first-child) {
     padding-top: 0.5em;
 }
 
-.error-line {
+.message-line {
     padding: 0;
     margin: 0;
 }
