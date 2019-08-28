@@ -448,14 +448,16 @@ class ModelCheckResultBuilder {
             return;
         }
         let traceItem;
+        let checkChanges = true;
         // Try special cases like <Initial predicate>, <Stuttering>, etc.
-        const sMatches = this.tryMatchBufferLine(lines, /^(\d+): <([\w\s]+)>$/g);
+        const sMatches = this.tryMatchBufferLine(lines, /^(\d+): <?([\w\s]+)>?$/g);
         if (sMatches) {
             const itemVars = this.parseErrorTraceVariables(lines);
             traceItem = new ErrorTraceItem(
                 parseInt(sMatches[1]),
                 sMatches[2],
                 '', '', undefined, new Range(0, 0, 0, 0), itemVars);
+            checkChanges = false;
         } else {
             // Otherwise fall back to simple states
             const matches = this.tryMatchBufferLine(lines, /^(\d+): <(\w+) line (\d+), col (\d+) to line (\d+), col (\d+) of module (\w+)>$/g);
@@ -479,7 +481,7 @@ class ModelCheckResultBuilder {
                 itemVars
             );
         }
-        if (this.errorTrace.length > 0) {
+        if (checkChanges && this.errorTrace.length > 0) {
             findChanges(this.errorTrace[this.errorTrace.length - 1].variables, traceItem.variables);
         }
         this.errorTrace.push(traceItem);
