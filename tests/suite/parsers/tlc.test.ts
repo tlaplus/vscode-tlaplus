@@ -127,6 +127,27 @@ suite('TLC Output Parser Test Suite', () => {
         );
     });
 
+    test('Parses error trace with stuttering state', () => {
+        return assertOutput('stuttering.out', '/Users/bob/stuttering.tla',
+            new CheckResultBuilder('stuttering.out', CheckState.Error, CheckStatus.Finished)
+                .addDColFilePath('/Users/bob/stuttering.tla')
+                .setProcessInfo('Running breadth-first search Model-Checking with fp 6 and seed -9020681683977717109.')
+                .setStartDateTime('2019-08-17 02:37:50')
+                .setEndDateTime('2019-08-17 02:37:51')
+                .setDuration(1041)
+                .addInitState('00:00:00', 0, 1, 1, 1)
+                .addInitState('00:00:00', 3, 4, 4, 1)
+                .addError(['Temporal properties were violated.'])
+                .addTraceItem('Initial predicate', '', '', undefined, range(0, 0, 0, 0),
+                    struct('', v('Foo', '1'))
+                )
+                .addTraceItem(
+                    'Stuttering', '', '', undefined, range(0, 0, 0, 0), struct('')
+                )
+                .build()
+        );
+    });
+
     test('Parses error trace with a single variable', () => {
         // Such variables has no `/\` at the beginning
         return assertOutput('error-trace-single.out', '/Users/bob/error_trace.tla',

@@ -281,7 +281,7 @@ export const TLC_ENABLED_WRONG_FORMULA = registerCode(2260, TlcCodeType.Error);
 export const TLC_ENCOUNTERED_FORMULA_IN_PREDICATE = registerCode(2261, TlcCodeType.Error);
 export const TLC_VERSION = registerCode(2262, TlcCodeType.Ignore);
 export const TLC_USAGE = registerCode(2263, TlcCodeType.Ignore);
-export const TLC_COUNTER_EXAMPLE = registerCode(2264, TlcCodeType.Error);
+export const TLC_COUNTER_EXAMPLE = registerCode(2264, TlcCodeType.Ignore);  // It will be shown in error trace
 
 export const TLC_INTEGER_TOO_BIG = registerCode(2265, TlcCodeType.Error);
 export const TLC_TRACE_TOO_LONG = registerCode(2282, TlcCodeType.Error);
