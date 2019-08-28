@@ -1,5 +1,13 @@
 # Change Log
 
+## 0.4.2 &ndash; 29th August, 2019
+
+### Bug fixes
+
+* Fix the "Stuttering" state parsing.
+* Fix the "Back to state" state parsing.
+* Recognize fair PlusCal algorithms.
+
 ## 0.4.1 &ndash; 25th August, 2019
 
 ### Enhancements
