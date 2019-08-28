@@ -102,10 +102,10 @@ suite('TLC Output Parser Test Suite', () => {
                 .addCoverage('error_trace', 'Init', '/Users/bob/error_trace.tla', range(7, 0, 7, 4), 2, 2)
                 .addCoverage('error_trace', 'SomeFunc', '/Users/bob/error_trace.tla', range(11, 0, 11, 11), 5, 3)
                 .addError(['Invariant FooInvariant is violated.'])
-                .addTraceItem('Initial predicate', '', '', undefined, range(0, 0, 0, 0),
+                .addTraceItem(1, 'Initial predicate', '', '', undefined, range(0, 0, 0, 0),
                     struct('', v('FooVar', '1..2'), v('BarVar', '-1'))
                 )
-                .addTraceItem(
+                .addTraceItem(2,
                     'SomeFunc in error_trace', 'error_trace', 'SomeFunc',
                     '/Users/bob/error_trace.tla', range(12, 8, 14, 24),
                     struct('',
@@ -113,7 +113,7 @@ suite('TLC Output Parser Test Suite', () => {
                         v('BarVar', '1').setModified()
                     ).setModified()
                 )
-                .addTraceItem(
+                .addTraceItem(3,
                     'SomeFunc in error_trace', 'error_trace', 'SomeFunc',
                     '/Users/bob/error_trace.tla', range(12, 8, 14, 24),
                     struct('',
@@ -128,7 +128,7 @@ suite('TLC Output Parser Test Suite', () => {
     });
 
     test('Parses error trace with stuttering state', () => {
-        return assertOutput('stuttering.out', '/Users/bob/stuttering.tla',
+        return assertOutput('error-trace-stuttering.out', '/Users/bob/stuttering.tla',
             new CheckResultBuilder('stuttering.out', CheckState.Error, CheckStatus.Finished)
                 .addDColFilePath('/Users/bob/stuttering.tla')
                 .setProcessInfo('Running breadth-first search Model-Checking with fp 6 and seed -9020681683977717109.')
@@ -138,11 +138,37 @@ suite('TLC Output Parser Test Suite', () => {
                 .addInitState('00:00:00', 0, 1, 1, 1)
                 .addInitState('00:00:00', 3, 4, 4, 1)
                 .addError(['Temporal properties were violated.'])
-                .addTraceItem('Initial predicate', '', '', undefined, range(0, 0, 0, 0),
+                .addTraceItem(1, 'Initial predicate', '', '', undefined, range(0, 0, 0, 0),
                     struct('', v('Foo', '1'))
                 )
-                .addTraceItem(
+                .addTraceItem(2,
                     'Stuttering', '', '', undefined, range(0, 0, 0, 0), struct('')
+                )
+                .build()
+        );
+    });
+
+    test('Parses error trace with back-to-previous-state', () => {
+        return assertOutput('error-trace-back-to-state.out', '/Users/bob/back_to_state.tla',
+            new CheckResultBuilder('back_to_state.out', CheckState.Error, CheckStatus.Finished)
+                .addDColFilePath('/Users/bob/back_to_state.tla')
+                .setProcessInfo('Running breadth-first search Model-Checking with fp 6 and seed -9020681683977717109.')
+                .setStartDateTime('2019-08-17 02:37:50')
+                .setEndDateTime('2019-08-17 02:37:51')
+                .setDuration(1041)
+                .addInitState('00:00:00', 0, 1, 1, 1)
+                .addInitState('00:00:00', 3, 4, 4, 1)
+                .addError(['Temporal properties were violated.'])
+                .addTraceItem(1, 'Initial predicate', '', '', undefined, range(0, 0, 0, 0),
+                    struct('', v('Foo', '1'))
+                )
+                .addTraceItem(2, 'Cycle in back_to_state', 'back_to_state', 'Cycle',
+                    '/Users/bob/back_to_state.tla', range(41, 9, 47, 30),
+                    struct('', v('Foo', '2').setModified()).setModified()
+                )
+                .addTraceItem(2, 'Back to state 2', 'back_to_state', 'Cycle',
+                    '/Users/bob/back_to_state.tla', range(41, 9, 47, 30),
+                    struct('')
                 )
                 .build()
         );
@@ -160,7 +186,7 @@ suite('TLC Output Parser Test Suite', () => {
                 .addInitState('00:00:00', 0, 1, 1, 1)
                 .addInitState('00:00:00', 3, 4, 4, 1)
                 .addError(['Invariant FooInvariant is violated.'])
-                .addTraceItem('Initial predicate', '', '', undefined, range(0, 0, 0, 0),
+                .addTraceItem(1, 'Initial predicate', '', '', undefined, range(0, 0, 0, 0),
                     struct('', struct('Var', v('foo', '1'), v('bar', '2')))
                 )
                 .build()

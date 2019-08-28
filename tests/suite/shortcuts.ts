@@ -163,6 +163,7 @@ export class CheckResultBuilder {
     }
 
     addTraceItem(
+        num: number,
         title: string,
         module: string,
         action: string,
@@ -170,7 +171,6 @@ export class CheckResultBuilder {
         range: vscode.Range,
         variables: StructureValue  // Variables are presented as items of a structure
     ): CheckResultBuilder {
-        const num = this.errorTrace.length + 1;
         this.errorTrace.push(new ErrorTraceItem(num, title, module, action, filePath, range, variables));
         return this;
     }
