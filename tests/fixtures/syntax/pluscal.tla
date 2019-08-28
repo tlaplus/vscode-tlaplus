@@ -14,15 +14,23 @@ macro do_nothing(param) begin
     skip;
 end macro;
 
+procedure do_something(param = "10") begin
+    End:
+        return;
+end procedure;
+
 process appender = "appender"
 begin Push:
-    while TRUE do
-        either
-            box := Append(box, DEP!Thing);
-        or
-            skip;
-        end either;
-    end while;
+    await TRUE;
+    when 1 = 1;
+    Loop:
+        while TRUE do
+            either
+                box := Append(box, DEP!Thing);
+            or
+                skip;
+            end either;
+        end while;
 end process;
 
 process retriever = "retriever"
@@ -38,33 +46,53 @@ begin
         end if;
         assert 1 = 1;
     end while;
+    call do_something("something");
 end process;
 
 end algorithm; *)
 \* BEGIN TRANSLATION
-VARIABLES box, pc
+VARIABLES box, pc, stack
 
 (* define statement *)
 Nine == 9
 AddSevenMulNine(x) == DEP!AddSeven(x) * Nine
 
+VARIABLE param
 
-vars == << box, pc >>
+vars == << box, pc, stack, param >>
 
 ProcSet == {"appender"} \cup {"retriever"}
 
 Init == (* Global variables *)
         /\ box = <<>>
+        (* Procedure do_something *)
+        /\ param = [ self \in ProcSet |-> "10"]
+        /\ stack = [self \in ProcSet |-> << >>]
         /\ pc = [self \in ProcSet |-> CASE self = "appender" -> "Push"
                                         [] self = "retriever" -> "Retrieve"]
 
+End(self) == /\ pc[self] = "End"
+             /\ pc' = [pc EXCEPT ![self] = Head(stack[self]).pc]
+             /\ param' = [param EXCEPT ![self] = Head(stack[self]).param]
+             /\ stack' = [stack EXCEPT ![self] = Tail(stack[self])]
+             /\ box' = box
+
+do_something(self) == End(self)
+
 Push == /\ pc["appender"] = "Push"
+        /\ TRUE
+        /\ 1 = 1
+        /\ pc' = [pc EXCEPT !["appender"] = "Loop"]
+        /\ UNCHANGED << box, stack, param >>
+
+Loop == /\ pc["appender"] = "Loop"
         /\ \/ /\ box' = Append(box, DEP!Thing)
            \/ /\ TRUE
               /\ box' = box
-        /\ pc' = [pc EXCEPT !["appender"] = "Push"]
+        /\ pc' = [pc EXCEPT !["appender"] = "Loop"]
+        /\ UNCHANGED << stack, param >>
 
-appender == Push
+appender == Push \/ Loop
 
 Retrieve == /\ pc["retriever"] = "Retrieve"
             /\ IF ~FALSE
@@ -75,16 +103,30 @@ Retrieve == /\ pc["retriever"] = "Retrieve"
                                         ELSE /\ TRUE
                                              /\ box' = box
                        /\ Assert(1 = 1, 
-                                 "Failure of assertion at line 39, column 9.")
+                                 "Failure of assertion at line 47, column 9.")
                        /\ pc' = [pc EXCEPT !["retriever"] = "Retrieve"]
-                  ELSE /\ pc' = [pc EXCEPT !["retriever"] = "Done"]
+                       /\ UNCHANGED << stack, param >>
+                  ELSE /\ /\ param' = [param EXCEPT !["retriever"] = "something"]
+                          /\ stack' = [stack EXCEPT !["retriever"] = << [ procedure |->  "do_something",
+                                                                          pc        |->  "Done",
+                                                                          param     |->  param["retriever"] ] >>
+                                                                      \o stack["retriever"]]
+                       /\ pc' = [pc EXCEPT !["retriever"] = "End"]
                        /\ box' = box
 
 retriever == Retrieve
 
+(* Allow infinite stuttering to prevent deadlock on termination. *)
+Terminating == /\ \A self \in ProcSet: pc[self] = "Done"
+               /\ UNCHANGED vars
+
 Next == appender \/ retriever
+           \/ (\E self \in ProcSet: do_something(self))
+           \/ Terminating
 
 Spec == Init /\ [][Next]_vars
+
+Termination == <>(\A self \in ProcSet: pc[self] = "Done")
 
 \* END TRANSLATION
 ====
