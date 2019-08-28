@@ -37,6 +37,9 @@ The following behavior constitutes a counter-example:
 @!@!@STARTMSG 2218:4 @!@!@
 2: Stuttering
 @!@!@ENDMSG 2218 @!@!@
+@!@!@STARTMSG 2267:0 @!@!@
+Finished checking temporal properties in 00s at 2019-08-17 02:37:50
+@!@!@ENDMSG 2267 @!@!@
 @!@!@STARTMSG 2201:0 @!@!@
 The coverage statistics at 2019-08-17 02:37:50
 @!@!@ENDMSG 2201 @!@!@

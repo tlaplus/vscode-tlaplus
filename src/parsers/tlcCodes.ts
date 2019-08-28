@@ -91,7 +91,7 @@ export const TLC_STRING_MODULE_NOT_FOUND = registerCode(2119, TlcCodeType.Error)
 
 export const TLC_ERROR_STATE = registerCode(2120, TlcCodeType.Error);
 export const TLC_BEHAVIOR_UP_TO_THIS_POINT = registerCode(2121, TlcCodeType.Ignore);
-export const TLC_BACK_TO_STATE = registerCode(2122, TlcCodeType.Ignore);  // TODO: Error trace might depend on it
+export const TLC_BACK_TO_STATE = registerCode(2122, TlcCodeType.Info);
 export const TLC_FAILED_TO_RECOVER_INIT = registerCode(2123, TlcCodeType.Error);
 export const TLC_REPORTER_DIED = registerCode(2124, TlcCodeType.Error);
 

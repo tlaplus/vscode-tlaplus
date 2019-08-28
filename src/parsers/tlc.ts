@@ -309,6 +309,7 @@ class ModelCheckResultBuilder {
             case msg.TLC_STATE_PRINT1:
             case msg.TLC_STATE_PRINT2:
             case msg.TLC_STATE_PRINT3:
+            case msg.TLC_BACK_TO_STATE:
                 this.parseErrorTraceItem(message.lines);
                 break;
             case msg.TLC_SUCCESS:
@@ -447,44 +448,87 @@ class ModelCheckResultBuilder {
             console.log('Error trace expected but message buffer is empty');
             return;
         }
-        let traceItem;
-        let checkChanges = true;
-        // Try special cases like <Initial predicate>, <Stuttering>, etc.
-        const sMatches = this.tryMatchBufferLine(lines, /^(\d+): <?([\w\s]+)>?$/g);
-        if (sMatches) {
+        let traceItem = this.tryParseSimpleErrorTraceItem(lines);
+        const checkChanges = traceItem instanceof ErrorTraceItem;
+        if (!traceItem) {
+            traceItem = this.tryParseSpecialErrorTraceItem(lines);
+        }
+        if (!traceItem) {
+            traceItem = this.tryParseBackToStateErrorTraceItem(lines);
+        }
+        if (!traceItem) {
+            console.error(`Cannot parse error trace item: ${lines[0]}`);
             const itemVars = this.parseErrorTraceVariables(lines);
             traceItem = new ErrorTraceItem(
-                parseInt(sMatches[1]),
-                sMatches[2],
-                '', '', undefined, new Range(0, 0, 0, 0), itemVars);
-            checkChanges = false;
-        } else {
-            // Otherwise fall back to simple states
-            const matches = this.tryMatchBufferLine(lines, /^(\d+): <(\w+) line (\d+), col (\d+) to line (\d+), col (\d+) of module (\w+)>$/g);
-            if (!matches) {
-                return;
-            }
-            const itemVars = this.parseErrorTraceVariables(lines);
-            const actionName = matches[2];
-            const moduleName = matches[7];
-            traceItem = new ErrorTraceItem(
-                parseInt(matches[1]),
-                `${actionName} in ${moduleName}`,
-                moduleName,
-                actionName,
-                this.getModulePath(moduleName),
-                new Range(
-                    parseInt(matches[3]) - 1,
-                    parseInt(matches[4]) - 1,
-                    parseInt(matches[5]) - 1,
-                    parseInt(matches[6])),
-                itemVars
+                0, lines[1], '', '', undefined, new Range(0, 0, 0, 0), itemVars
             );
         }
         if (checkChanges && this.errorTrace.length > 0) {
             findChanges(this.errorTrace[this.errorTrace.length - 1].variables, traceItem.variables);
         }
         this.errorTrace.push(traceItem);
+    }
+
+    private tryParseSimpleErrorTraceItem(lines: string[]): ErrorTraceItem | undefined {
+        const matches = this.tryMatchBufferLine(lines, /^(\d+): <(\w+) line (\d+), col (\d+) to line (\d+), col (\d+) of module (\w+)>$/g);
+        if (!matches) {
+            return undefined;
+        }
+        const itemVars = this.parseErrorTraceVariables(lines);
+        const actionName = matches[2];
+        const moduleName = matches[7];
+        return new ErrorTraceItem(
+            parseInt(matches[1]),
+            `${actionName} in ${moduleName}`,
+            moduleName,
+            actionName,
+            this.getModulePath(moduleName),
+            new Range(
+                parseInt(matches[3]) - 1,
+                parseInt(matches[4]) - 1,
+                parseInt(matches[5]) - 1,
+                parseInt(matches[6])),
+            itemVars
+        );
+    }
+
+    private tryParseSpecialErrorTraceItem(lines: string[]): ErrorTraceItem | undefined {
+        // Try special cases like "Initial predicate", "Stuttering", etc.
+        const matches = this.tryMatchBufferLine(lines, /^(\d+): <?([\w\s]+)>?$/g);
+        if (!matches) {
+            return undefined;
+        }
+        const itemVars = this.parseErrorTraceVariables(lines);
+        return new ErrorTraceItem(
+            parseInt(matches[1]),
+            matches[2],
+            '', '', undefined, new Range(0, 0, 0, 0), itemVars
+        );
+    }
+
+    private tryParseBackToStateErrorTraceItem(lines: string[]): ErrorTraceItem | undefined {
+        // Try special cases "Back to state: <...>"
+        const matches = this.tryMatchBufferLine(lines, /^(\d+): Back to state: <(\w+) line (\d+), col (\d+) to line (\d+), col (\d+) of module (\w+)>?/g);
+        if (!matches) {
+            return undefined;
+        }
+        const itemVars = this.parseErrorTraceVariables(lines);
+        const actionName = matches[2];
+        const moduleName = matches[7];
+        const num = parseInt(matches[1]) + 1;   // looks like a shift-by-one error in the Toolbox
+        return new ErrorTraceItem(
+            num,
+            `Back to state ${num}`,
+            moduleName,
+            actionName,
+            this.getModulePath(moduleName),
+            new Range(
+                parseInt(matches[3]) - 1,
+                parseInt(matches[4]) - 1,
+                parseInt(matches[5]) - 1,
+                parseInt(matches[6])),
+            itemVars
+        );
     }
 
     private parseErrorTraceVariables(lines: string[]): StructureValue {
