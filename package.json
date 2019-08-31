@@ -174,13 +174,29 @@
                     "scope": "application",
                     "default": "",
                     "format": "uri",
-                    "markdownDescription": "Path to Java (8 or higher) home directory that should be used to run TLA+ tools."
+                    "markdownDescription": "Path to Java (8 or higher, 11 is recommended) home directory that should be used to run TLA+ tools.",
+                    "maxLength": 1000
                 },
                 "tlaplus.java.options": {
                     "type": "string",
                     "scope": "application",
                     "default": "",
-                    "description": "Java options to use when running TLA+ tools."
+                    "description": "Java options to use when running TLA+ tools.",
+                    "maxLength": 1000
+                },
+                "tlaplus.pluscal.options": {
+                    "type": "string",
+                    "scope": "application",
+                    "default": "",
+                    "description": "Additional options to pass to PlusCal transpiler.",
+                    "maxLength": 1000
+                },
+                "tlaplus.tlc.modelChecker.options": {
+                    "type": "string",
+                    "scope": "application",
+                    "default": "",
+                    "description": "Additional options to pass to TLC.",
+                    "maxLength": 1000
                 }
             }
         }

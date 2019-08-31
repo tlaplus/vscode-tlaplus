@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { exists, copyFile } from 'fs';
-import { runTool, stopProcess, TlaTool } from '../tla2tools';
+import { runTlc, stopProcess } from '../tla2tools';
 import { TlcModelCheckerStdoutParser } from '../parsers/tlc';
 import { updateCheckResultView, revealEmptyCheckResultView, revealLastCheckResultView } from '../checkResultView';
 import { applyDCollection } from '../diagnostic';
@@ -79,10 +79,7 @@ async function doCheckModel(
     }
     try {
         updateStatusBarItem(true);
-        checkProcess = await runTool(
-            TlaTool.TLC,
-            specFiles.tlaFilePath,
-            ['-modelcheck', '-coverage', '1', '-tool', '-config', path.basename(specFiles.cfgFilePath)]);
+        checkProcess = await runTlc(specFiles.tlaFilePath, path.basename(specFiles.cfgFilePath));
         checkProcess.on('close', () => {
             checkProcess = undefined;
             updateStatusBarItem(false);

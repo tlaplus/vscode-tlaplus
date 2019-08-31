@@ -8,12 +8,8 @@ import { JavaVersionParser } from './parsers/javaVersion';
 
 const CFG_JAVA_HOME = 'tlaplus.java.home';
 const CFG_JAVA_OPTIONS = 'tlaplus.java.options';
-
-export enum TlaTool {
-    PLUS_CAL = 'pcal.trans',
-    SANY = 'tla2sany.SANY',
-    TLC = 'tlc2.TLC'
-}
+const CFG_TLC_OPTIONS = 'tlaplus.tlc.modelChecker.options';
+const CFG_PLUSCAL_OPTIONS = 'tlaplus.pluscal.options';
 
 const NO_ERROR = 0;
 const MIN_TLA_ERROR = 10;           // Exit codes not related to tooling start from this number
@@ -25,6 +21,12 @@ const toolsBaseArgs: ReadonlyArray<string> = ['-cp', toolsJarPath];
 
 let lastUsedJavaHome: string | undefined;
 let cachedJavaPath: string | undefined;
+
+enum TlaTool {
+    PLUS_CAL = 'pcal.trans',
+    SANY = 'tla2sany.SANY',
+    TLC = 'tlc2.TLC'
+}
 
 /**
  * Thrown when there's some problem with Java or TLA+ tooling.
@@ -44,17 +46,38 @@ export class JavaVersion {
     ) {}
 }
 
-/**
- * Executes a TLA+ tool.
- */
-export async function runTool(toolName: string, filePath: string, toolArgs?: string[]): Promise<ChildProcess> {
+export async function runPlusCal(tlaFilePath: string): Promise<ChildProcess> {
+    const customOptions = getConfigOptions(CFG_PLUSCAL_OPTIONS);
+    return runTool(
+        TlaTool.PLUS_CAL,
+        tlaFilePath,
+        buildPlusCalOptions(tlaFilePath, customOptions)
+    );
+}
+
+export async function runSany(tlaFilePath: string): Promise<ChildProcess> {
+    return runTool(
+        TlaTool.SANY,
+        tlaFilePath,
+        [tlaFilePath]
+    );
+}
+
+export async function runTlc(tlaFilePath: string, cfgFilePath: string): Promise<ChildProcess> {
+    const customOptions = getConfigOptions(CFG_TLC_OPTIONS);
+    return runTool(
+        TlaTool.TLC,
+        tlaFilePath,
+        buildTlcOptions(tlaFilePath, cfgFilePath, customOptions)
+    );
+}
+
+async function runTool(toolName: string, filePath: string, toolOptions: string[]): Promise<ChildProcess> {
     const javaPath = await obtainJavaPath();
-    const args = buildJavaOptions().concat(toolsBaseArgs);
+    const cfgOptions = getConfigOptions(CFG_JAVA_OPTIONS);
+    const args = buildJavaOptions(cfgOptions).concat(toolsBaseArgs);
     args.push(toolName);
-    if (toolArgs) {
-        toolArgs.forEach(arg => args.push(arg));
-    }
-    args.push(filePath);
+    toolOptions.forEach(opt => args.push(opt));
     const proc = spawn(javaPath, args, { cwd: path.dirname(filePath) });
     addReturnCodeHandler(proc, toolName);
     return proc;
@@ -105,14 +128,33 @@ function buildJavaPath(): string {
 /**
  * Builds an array of options to pass to Java process when running TLA tools.
  */
-function buildJavaOptions(): string[] {
-    const javaOptions = vscode.workspace.getConfiguration().get<string>(CFG_JAVA_OPTIONS) || '';
-    const opts = javaOptions.split(' ').map(opt => opt.trim()).filter(opt => opt !== '');
+export function buildJavaOptions(customOptions: string[]): string[] {
+    const opts = customOptions.slice(0);
     // If GC is provided by the user, don't use the default one. Otherwise, add GC option.
     const gcOption = opts.find(opt => opt.startsWith('-XX:+Use') && opt.endsWith('GC'));
     if (!gcOption) {
         opts.push(defaultGCArg);
     }
+    return opts;
+}
+
+/**
+ * Builds an array of options to pass to the TLC tool.
+ */
+export function buildTlcOptions(tlaFilePath: string, cfgFilePath: string, customOptions: string[]): string[] {
+    const custOpts = customOptions.slice(0);
+    const opts = [tlaFilePath, '-tool', '-modelcheck'];
+    addValueOrDefault('-coverage', '1', custOpts, opts);
+    addValueOrDefault('-config', cfgFilePath, custOpts, opts);
+    return opts.concat(custOpts);
+}
+
+/**
+ * Builds an array of options to pass to the PlusCal tool.
+ */
+export function buildPlusCalOptions(tlaFilePath: string, customOptions: string[]): string[] {
+    const opts = customOptions.slice(0);
+    opts.push(tlaFilePath);
     return opts;
 }
 
@@ -138,6 +180,17 @@ async function checkJavaVersion(javaPath: string) {
     vscode.window.showWarningMessage(`Unexpected Java version: ${ver.version}`);
 }
 
+function addValueOrDefault(option: string, defaultValue: string, args: string[], realArgs: string[]) {
+    realArgs.push(option);
+    const idx = args.indexOf(option);
+    if (idx < 0 || idx === args.length - 1) {
+        realArgs.push(defaultValue);
+    } else {
+        realArgs.push(args[idx + 1]);
+        args.splice(idx, 2);
+    }
+}
+
 /**
  * Adds a handler to the given TLA+ tooling process that captures various system errors.
  */
@@ -152,4 +205,9 @@ function addReturnCodeHandler(proc: ChildProcess, toolName?: string) {
             vscode.window.showErrorMessage(`Error running ${toolName} (exit code ${exitCode})\n${details}`);
         }
     });
+}
+
+function getConfigOptions(cfgName: string): string[] {
+    const optsString = vscode.workspace.getConfiguration().get<string>(cfgName) || '';
+    return optsString.split(' ').map(opt => opt.trim()).filter(opt => opt !== '');
 }
