@@ -26,7 +26,7 @@ This extension adds support for the [TLA<sup>+</sup> formal specification langua
 
 ## Requirements
 
-In order to run various TLA<sup>+</sup> tools, you need Java 8 or higher installed. If it's not your default Java SDK, configure the proper Java Home path in the extension settings.
+In order to run various TLA<sup>+</sup> tools, you need Java 8 or higher (Java 11 is recommended) installed. If it's not your default Java SDK, configure the proper Java Home path in the extension settings.
 
 ## Commands
 
@@ -40,6 +40,8 @@ The extension provides the following commands in the Command Palette:
 
 - `Java: Home` allows to provide location of the JVM that the extension must use for running TLA<sup>+</sup> tools.
 - `Java: Options` allows to provide additional options that must be passed to a Java process when running TLA<sup>+</sup> tools.
+- `PlusCal: Options` allows to provide additional options to the PlusCal transpiler.
+- `TLC Model Checker: Options` allows to provide additional options to the TLC model checker.
 
 ## How to Start
 
