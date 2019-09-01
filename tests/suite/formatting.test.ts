@@ -3,12 +3,24 @@ import * as assert from 'assert';
 import { TlaOnTypeFormattingEditProvider } from '../../src/formatting';
 import { join } from 'path';
 
+const ZERO_POSITION = new vscode.Position(0, 0);
 const OPT_4_SPACES: vscode.FormattingOptions = { insertSpaces: true, tabSize: 4 };
 
 suite('On Type Formatting Test Suite', () => {
+    let doc: vscode.TextDocument;
+
+    suiteSetup(async () => {
+        const d = await vscode.workspace.openTextDocument({ language: 'tlaplus' });
+        doc = d;
+    });
+
+    suiteTeardown(async () => {
+        await vscode.window.showTextDocument(doc, {preview: true, preserveFocus: false});
+        return vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+    });
 
     test('Indents begin-block body', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
                 'begin',
                 '{enter}(**)'
             ], [
@@ -19,7 +31,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Indents define-block body', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
                 'define',
                 '{enter}(**)'
             ], [
@@ -30,7 +42,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Indents define-block closing', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
                 'define',
                 '    FOO == 10',
                 '    en{d}',
@@ -43,7 +55,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Indents macro-block body', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
                 'macro foo(x) begin',
                 '{enter}(**)'
             ], [
@@ -54,7 +66,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Indents macro-block closing', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
                 'macro foo(x) begin',
                 '     skip;',
                 '     en{d} macro;'
@@ -67,7 +79,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Indents procedure-block body', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
                 'procedure foo(x) begin',
                 '{enter}(**)'
             ], [
@@ -78,7 +90,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Indents procedure-block closing', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
                 'procedure foo(x) begin',
                 '    Ret: return;',
                 '    en{d}'
@@ -91,7 +103,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Indents if-block body', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
                 '    if TRUE then',
                 '    {enter}(**)'
             ], [
@@ -102,7 +114,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Indents else-line', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
                 '    if foo = bar then',
                 '        skip;',
                 '        els{e}'
@@ -115,7 +127,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Indents else-block body', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
                 '    if foo = bar then',
                 '        skip;',
                 '    else',
@@ -130,7 +142,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Indents elsif-line', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
                 '    if foo = bar then',
                 '        skip;',
                 '        elsi{f}'
@@ -143,7 +155,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Indents elsif-block body', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
                 '    if foo = bar then',
                 '        skip;',
                 '    elsif foo = bar-1 then',
@@ -158,7 +170,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Indents if-block closing', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
                 '    if foo = bar then',
                 '        skip;',
                 '        en{d}',
@@ -171,7 +183,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Indents if-block closing after else', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
                 '    if foo = bar then',
                 '        skip;',
                 '    else',
@@ -188,7 +200,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Indents if-block closing after elsif', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
                 '    if foo = bar then',
                 '        skip;',
                 '    elsif foo = 10 then',
@@ -205,7 +217,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Indents either-block body', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
                 '    either',
                 '    {enter}(**)'
             ], [
@@ -216,7 +228,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Indents or-line', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
                 '    either',
                 '        foo := 1;',
                 '        o{r}'
@@ -229,7 +241,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Indents or-block body', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
                 '    either',
                 '        foo := 1;',
                 '    or',
@@ -244,7 +256,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Indents either-block closing', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
                 '    either',
                 '        skip;',
                 '        en{d}'
@@ -257,7 +269,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Indents either-block closing after or', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
                 '    either',
                 '        skip;',
                 '    or',
@@ -274,7 +286,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Indents while-block body', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
                 '    while a < b do',
                 '    {enter}(**)'
             ], [
@@ -285,7 +297,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Indents while-block closing', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
                 '    while a < b do',
                 '        skip;',
                 '        en{d}'
@@ -298,7 +310,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Indents with-block body', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
                 'with a = 100 do',
                 '{enter}(**)'
             ], [
@@ -309,7 +321,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Indents with-block closing', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
                 '    with a = 100 do',
                 '        skip;',
                 '    en{d}'
@@ -322,7 +334,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Indents variables-block when it\'s empty', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
             '    variables',
             '    {enter}'
         ], [
@@ -332,7 +344,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Indents VARIABLES-block when it\'s empty', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
             '    VARIABLES',
             '    {enter}'
         ], [
@@ -342,7 +354,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Indents CONSTANTS-block when it\'s empty', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
             '    CONSTANTS',
             '    {enter}'
         ], [
@@ -352,7 +364,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Indents label-blocks', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
             '    LabelA:',
             '    {enter}'
         ], [
@@ -362,7 +374,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Indents definitions with AND', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
             '  NewState == /\\ TRUE',
             '  {enter}'
         ], [
@@ -372,7 +384,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Indents definitions with OR', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
             '  NewState == \\/ Foo = Bar',
             '  {enter}'
         ], [
@@ -382,7 +394,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Indents definitions new line', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
             '  NewState ==',
             '  {enter}'
         ], [
@@ -392,7 +404,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Indents operator definitions with AND', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
             '  NewOp(a, b) == /\\ Foo = a',
             '  {enter}'
         ], [
@@ -402,7 +414,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Indents operator definitions new line', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
             '  NewOp(a, b) ==',
             '  {enter}'
         ], [
@@ -412,7 +424,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Doesn\'t indent definitions without AND / OR', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
             '  NewState == TRUE',
             '  {enter}'
         ], [
@@ -422,7 +434,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Doesn\'t indent definitions if it\'s not the first line', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
             'Foo == \\/ <<>>',
             '',
             '{enter}'
@@ -434,7 +446,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Doesn\'t indent variables-block when it\'s not empty', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
             '    variables foo = 10;',
             '    {enter}'
         ], [
@@ -444,7 +456,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Doesn\'t indent simple block if it doesn\'t start on the previous line' , () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
             '    variables',
             '',
             '{enter}'
@@ -456,7 +468,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Keeps simple block indentation', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
             '    CONSTANTS',
             '        Foo,',
             '        {enter}'
@@ -468,7 +480,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Indents body first line and saves end of line', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
                 '    if TRUE then',
                 '    {enter} \\* end of line'
             ], [
@@ -479,7 +491,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Keeps indentation inside body', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
                 '    while a = 10 do',
                 '        do_something(1);',
                 '        {enter}(**)'
@@ -492,7 +504,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Indents body lines after empty lines', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
                 '    define',
                 '        FOO == 10',
                 '',
@@ -507,7 +519,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Increases indentation of block ends', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
                 '    if TRUE then',
                 '        skip;',
                 ' en{d}'
@@ -520,7 +532,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Doesnt indent block end when it is already intended', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
                 '    if TRUE then',
                 '        skip;',
                 '    end i{f}'
@@ -533,7 +545,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Ignores previous blocks', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
                 '    begin',
                 '        while a < 20 do',
                 '            a := a + 1;',
@@ -550,7 +562,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Supports labelled blocks', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
             '    Check: while a >= 10 do',
             '    {enter}'
         ], [
@@ -560,7 +572,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('CAN IMPROVE: Indents to the body of enclosing block', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
                 '    begin',
                 '        while a < 20 do',
                 '            a := a + 1;',
@@ -579,7 +591,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Respects formatting options, tabs', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
             '    while TRUE do',
             '    {enter}'
         ], [
@@ -590,7 +602,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Respects formatting options, 7 spaces', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
             '    while TRUE do',
             '    {enter}'
         ], [
@@ -601,7 +613,7 @@ suite('On Type Formatting Test Suite', () => {
     });
 
     test('Respects formatting options, 2 spaces', () => {
-        return assertOnTypeFormatting([
+        return assertOnTypeFormatting(doc, [
             '    while TRUE do',
             '    {enter}'
         ], [
@@ -621,12 +633,13 @@ class DocInfo {
 }
 
 async function assertOnTypeFormatting(
+    doc: vscode.TextDocument,
     docLines: string[],
     expectLines: string[],
     options: vscode.FormattingOptions = OPT_4_SPACES
-) {
+): Promise<undefined> {
     const docInfo = parseDocInfo(docLines);
-    const doc = await vscode.workspace.openTextDocument({ language: 'tlaplus', content: docInfo.lines.join('\n') });
+    await replaceDocContents(doc, docInfo.lines.join('\n'));
     const tokenSrc = new vscode.CancellationTokenSource();
     const formatter = new TlaOnTypeFormattingEditProvider();
     const edits = await formatter.provideOnTypeFormattingEdits(
@@ -638,13 +651,18 @@ async function assertOnTypeFormatting(
     );
     await applyDocEdits(doc.uri, edits);
     assert.deepEqual(doc.getText().split('\n'), expectLines);
-    await closeDocument(doc);
+    return undefined;
 }
 
-async function closeDocument(doc: vscode.TextDocument): Promise<boolean> {
-    const closeEdit = new vscode.WorkspaceEdit();
-    closeEdit.deleteFile(doc.uri);
-    return vscode.workspace.applyEdit(closeEdit);
+async function replaceDocContents(doc: vscode.TextDocument, content: string): Promise<boolean> {
+    const edits = [];
+    if (doc.lineCount > 0) {
+        const lastLine = doc.lineAt(doc.lineCount - 1);
+        const delEdit = vscode.TextEdit.delete(new vscode.Range(ZERO_POSITION, lastLine.range.end));
+        edits.push(delEdit);
+    }
+    edits.push(vscode.TextEdit.insert(ZERO_POSITION, content));
+    return applyDocEdits(doc.uri, edits);
 }
 
 async function applyDocEdits(docUri: vscode.Uri, edits: vscode.TextEdit[] | null | undefined): Promise<boolean> {

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-const dc = vscode.languages.createDiagnosticCollection('tlaplus');
+const dc = vscode.languages.createDiagnosticCollection('tlaplus-test');
 
 /**
  * An expectation of set ot diagnostics for the given file path.
