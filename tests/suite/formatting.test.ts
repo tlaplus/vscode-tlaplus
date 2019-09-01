@@ -467,6 +467,16 @@ suite('On Type Formatting Test Suite', () => {
         );
     });
 
+    test('Supports labelled blocks', () => {
+        return assertOnTypeFormatting([
+            '    Check: while a >= 10 do',
+            '    {enter}'
+        ], [
+            '    Check: while a >= 10 do',
+            '        '
+        ]);
+    });
+
     test('CAN IMPROVE: Indents to the body of enclosing block', () => {
         return assertOnTypeFormatting([
                 '    begin',

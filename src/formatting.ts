@@ -43,8 +43,8 @@ function tryIndentBlockStart(
     position: vscode.Position,
     options: vscode.FormattingOptions
 ): vscode.TextEdit[] {
-    const startInfo = findOuterBlockStart(document, position.line - 1)
-                        || testListBlockStrart(document.lineAt(position.line - 1));
+    const startInfo = testListBlockStart(document.lineAt(position.line - 1))
+                        || findOuterBlockStart(document, position.line - 1);
     if (!startInfo) {
         return [];
     }
@@ -81,7 +81,10 @@ function tryIndentBlockEnd(
     ];
 }
 
-function findOuterBlockStart(document: vscode.TextDocument, start: number): LineInfo | undefined {
+function findOuterBlockStart(
+    document: vscode.TextDocument,
+    start: number
+): LineInfo | undefined {
     let n = start;
     while (n >= 0) {
         const line = document.lineAt(n);
@@ -101,13 +104,13 @@ function findOuterBlockStart(document: vscode.TextDocument, start: number): Line
     return undefined;
 }
 
-function testListBlockStrart(line: vscode.TextLine): LineInfo | undefined {
+function testListBlockStart(line: vscode.TextLine): LineInfo | undefined {
     const gMatches = /^(\s*)(?:variables|VARIABLES|CONSTANTS)\s*$/g.exec(line.text);
     return gMatches ? new LineInfo(line, gMatches[1]) : undefined;
 }
 
 function testBlockStart(line: vscode.TextLine): LineInfo | undefined {
-    const matches = /^(\s*)(?:begin|if|else|elsif|while|either|or|with|define|macro|procedure)\b.*/g.exec(line.text);
+    const matches = /^(\s*)(?:\w+\:)?\s*(?:begin|if|else|elsif|while|either|or|with|define|macro|procedure)\b.*/g.exec(line.text);
     return matches ? new LineInfo(line, matches[1]) : undefined;
 }
 
@@ -143,16 +146,7 @@ function makeTab(options: vscode.FormattingOptions): string {
     if (!options.insertSpaces) {
         return '\t';
     }
-    if (options.tabSize < SPACES.length) {
-        return SPACES[options.tabSize];
-    }
-    let len = SPACES.length - 1;
-    const spaces = SPACES.slice(SPACES.length - 1);
-    while (len < options.tabSize) {
-        len += 1;
-        spaces.push(' ');
-    }
-    return spaces.join('');
+    return spaces(options.tabSize);
 }
 
 function indentationLen(str: string, options: vscode.FormattingOptions): number {
@@ -165,4 +159,17 @@ function indentationLen(str: string, options: vscode.FormattingOptions): number 
         }
     }
     return len;
+}
+
+function spaces(num: number) {
+    if (num < SPACES.length) {
+        return SPACES[num];
+    }
+    let len = SPACES.length - 1;
+    const spaces = SPACES.slice(SPACES.length - 1);
+    while (len < num) {
+        len += 1;
+        spaces.push(' ');
+    }
+    return spaces.join('');
 }
