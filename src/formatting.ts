@@ -112,7 +112,7 @@ function findOuterBlockStart(document: vscode.TextDocument, start: number): Line
 }
 
 function testBlockStart(line: vscode.TextLine): LineInfo | undefined {
-    const matches = /^(\s*)(?:begin|if|else|elsif|while|either|define|macro|procedure)\b.*/g.exec(line.text);
+    const matches = /^(\s*)(?:begin|if|else|elsif|while|either|or|with|define|macro|procedure)\b.*/g.exec(line.text);
     return matches ? new LineInfo(line, matches[1]) : undefined;
 }
 
@@ -130,7 +130,7 @@ function makeTab(options: vscode.FormattingOptions): string {
     }
     let len = SPACES.length - 1;
     const spaces = SPACES.slice(SPACES.length - 1);
-    while (len <= options.tabSize) {
+    while (len < options.tabSize) {
         len += 1;
         spaces.push(' ');
     }
