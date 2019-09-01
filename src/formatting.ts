@@ -125,10 +125,14 @@ function testSimpleBlockStart(line: vscode.TextLine): LineInfo | undefined {
 }
 
 function testStateDefBlockStart(line: vscode.TextLine, options: vscode.FormattingOptions): LineInfo | undefined {
-    const gMatches = /^(\s*\w+\s*==\s*)(\/\\|\\\/).*$/g.exec(line.text);
-    return gMatches
-        ? new LineInfo(line, spaces(indentationLen(gMatches[1], options)), IndentationType.Exact)
-        : undefined;
+    const gMatches = /^((\s*)\w+\s*==\s*)((?:\/\\|\\\/).*)?\s*$/g.exec(line.text);
+    if (!gMatches) {
+        return undefined;
+    }
+    if (gMatches[3]) {
+        return new LineInfo(line, spaces(indentationLen(gMatches[1], options)), IndentationType.Exact);
+    }
+    return new LineInfo(line, gMatches[2], IndentationType.Right);
 }
 
 function testBlockStart(line: vscode.TextLine): LineInfo | undefined {

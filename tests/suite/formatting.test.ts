@@ -381,6 +381,16 @@ suite('On Type Formatting Test Suite', () => {
         ]);
     });
 
+    test('Indents definitions new line', () => {
+        return assertOnTypeFormatting([
+            '  NewState ==',
+            '  {enter}'
+        ], [
+            '  NewState ==',
+            '      '
+        ]);
+    });
+
     test('Doesn\'t indent definitions without AND / OR', () => {
         return assertOnTypeFormatting([
             '  NewState == TRUE',
