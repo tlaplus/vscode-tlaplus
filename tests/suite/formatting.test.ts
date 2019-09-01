@@ -391,6 +391,26 @@ suite('On Type Formatting Test Suite', () => {
         ]);
     });
 
+    test('Indents operator definitions with AND', () => {
+        return assertOnTypeFormatting([
+            '  NewOp(a, b) == /\\ Foo = a',
+            '  {enter}'
+        ], [
+            '  NewOp(a, b) == /\\ Foo = a',
+            '                 '
+        ]);
+    });
+
+    test('Indents operator definitions new line', () => {
+        return assertOnTypeFormatting([
+            '  NewOp(a, b) ==',
+            '  {enter}'
+        ], [
+            '  NewOp(a, b) ==',
+            '      '
+        ]);
+    });
+
     test('Doesn\'t indent definitions without AND / OR', () => {
         return assertOnTypeFormatting([
             '  NewState == TRUE',

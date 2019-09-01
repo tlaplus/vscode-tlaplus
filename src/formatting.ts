@@ -125,7 +125,7 @@ function testSimpleBlockStart(line: vscode.TextLine): LineInfo | undefined {
 }
 
 function testStateDefBlockStart(line: vscode.TextLine, options: vscode.FormattingOptions): LineInfo | undefined {
-    const gMatches = /^((\s*)\w+\s*==\s*)((?:\/\\|\\\/).*)?\s*$/g.exec(line.text);
+    const gMatches = /^((\s*)[\w\(\),\s]+==\s*)((?:\/\\|\\\/).*)?\s*$/g.exec(line.text);
     if (!gMatches) {
         return undefined;
     }
