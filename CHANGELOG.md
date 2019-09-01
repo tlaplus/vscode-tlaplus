@@ -1,5 +1,16 @@
 # Change Log
 
+## 0.5.0 &ndash; 1st September, 2019
+
+### Enhancements
+
+* Code on-type formatting.
+* Support custom TLC and PlusCal transpiler options (via settings).
+
+### Bug fixes
+
+* Fix parsing of PlusCal unrecoverable errors locations.
+
 ## 0.4.2 &ndash; 29th August, 2019
 
 ### Bug fixes
