@@ -26,14 +26,10 @@ export class TranspilerStdoutParser extends ProcessOutputParser<DCollection> {
         if (line === '') {
             return;
         }
-        if (!this.errMessage && line.startsWith(' -- ')) {
-            const msg = line.substring(4);
-            if (msg.startsWith('Beginning of algorithm string --algorithm not found')) {
-                // This error means that there's no PlusCal code in file. Just ignore it.
+        if (!this.errMessage) {
+            if (this.tryUnrecoverableError(line)) {
                 return;
             }
-            this.errMessage = msg;
-            return;
         }
         if (this.errMessage) {
             const rxPosition = /^\s+(?:at )?line (\d+), column (\d+).?\s*$/g;
@@ -49,5 +45,30 @@ export class TranspilerStdoutParser extends ProcessOutputParser<DCollection> {
             this.errMessage = null;
             return;
         }
+    }
+
+    private tryUnrecoverableError(line: string): boolean {
+        const matchers = /^\s+--\s+(.+)$/g.exec(line);
+        if (!matchers) {
+            return false;
+        }
+        const message = matchers[1];
+        if (message.startsWith('Beginning of algorithm string --algorithm not found')) {
+            // This error means that there's no PlusCal code in file. Just ignore it.
+            return true;
+        }
+        const posMatcher = /\s*(?:at )?line (\d+), column (\d+).?\s*$/g.exec(line);
+        if (posMatcher) {
+            const posLine = parseInt(posMatcher[1]) - 1;
+            const posCol = parseInt(posMatcher[2]);
+            this.result.addMessage(
+                this.filePath!,
+                new vscode.Range(posLine, posCol, posLine, posCol),
+                message.substring(0, message.length - posMatcher[0].length));
+            this.errMessage = null;
+        } else {
+            this.errMessage = message;
+        }
+        return true;
     }
 }

@@ -42,6 +42,22 @@ suite('PlusCal Transpiler Output Parser Test Suite', () => {
         ]);
     });
 
+    test('Captures unrecoverable errors with location', () => {
+        const stdout = [
+            'pcal.trans Version 1.9 of 10 July 2019',
+            '',
+            'Unrecoverable error:',
+            '  -- Missing `;\' before line 13, column 9.',
+            ''
+        ].join('\n');
+        assertOutput(stdout, '/Users/bob/TLA/err.tla', [
+            new vscode.Diagnostic(
+                new vscode.Range(12, 9, 12, 9),
+                'Missing `;\' before',
+                vscode.DiagnosticSeverity.Error)
+        ]);
+    });
+
     test('Ignore no-pluscal-code error', () => {
         const stdout = [
             'pcal.trans Version 1.9 of 10 July 2019',
