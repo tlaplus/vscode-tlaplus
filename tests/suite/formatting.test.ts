@@ -321,6 +321,70 @@ suite('On Type Formatting Test Suite', () => {
         );
     });
 
+    test('Indents variables-block when it\'s empty', () => {
+        return assertOnTypeFormatting([
+            '    variables',
+            '    {enter}'
+        ], [
+            '    variables',
+            '        '
+        ]);
+    });
+
+    test('Indents VARIABLES-block when it\'s empty', () => {
+        return assertOnTypeFormatting([
+            '    VARIABLES',
+            '    {enter}'
+        ], [
+            '    VARIABLES',
+            '        '
+        ]);
+    });
+
+    test('Indents CONSTANTS-block when it\'s empty', () => {
+        return assertOnTypeFormatting([
+            '    CONSTANTS',
+            '    {enter}'
+        ], [
+            '    CONSTANTS',
+            '        '
+        ]);
+    });
+
+    test('Doesn\'t indent variables-block when it\'s not empty', () => {
+        return assertOnTypeFormatting([
+            '    variables foo = 10;',
+            '    {enter}'
+        ], [
+            '    variables foo = 10;',
+            '    '
+        ]);
+    });
+
+    test('Doesn\'t indent simple block if it doesn\'t start on the previous line' , () => {
+        return assertOnTypeFormatting([
+            '    variables',
+            '',
+            '{enter}'
+        ], [
+            '    variables',
+            '',
+            ''
+        ]);
+    });
+
+    test('Keeps simple block indentation', () => {
+        return assertOnTypeFormatting([
+            '    CONSTANTS',
+            '        Foo,',
+            '        {enter}'
+        ], [
+            '    CONSTANTS',
+            '        Foo,',
+            '        '
+        ]);
+    });
+
     test('Indents body first line and saves end of line', () => {
         return assertOnTypeFormatting([
                 '    if TRUE then',

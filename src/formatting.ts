@@ -43,26 +43,13 @@ function tryIndentBlockStart(
     position: vscode.Position,
     options: vscode.FormattingOptions
 ): vscode.TextEdit[] {
-    const startInfo = findOuterBlockStart(document, position.line - 1);
+    const startInfo = findOuterBlockStart(document, position.line - 1)
+                        || testListBlockStrart(document.lineAt(position.line - 1));
     if (!startInfo) {
         return [];
     }
     const lineText = document.lineAt(position.line).text;
-    if (lineText === startInfo.indentation) {
-        // The user has just hit the Enter right after the block start
-        // and VSCode aligned the new line to the block start. Just add a new tab.
-        return [ vscode.TextEdit.insert(position, makeTab(options)) ];
-    }
-    if (position.character === indentationLen(startInfo.indentation, options) + options.tabSize) {
-        // The user just hit the Enter while continuing to type inside already indented
-        // block. VSCode does everyting itself.
-        return [];
-    }
-    // Otherwise just force the correct indentation
-    // This works in all cases. The cases above are just to improve user experience a bit
-    const newIdent = startInfo.indentation + makeTab(options);
-    const lineStart = new vscode.Position(position.line, 0);
-    return [ vscode.TextEdit.replace(new vscode.Range(lineStart, position), newIdent) ];
+    return indentRight(lineText, position, startInfo.indentation, options);
 }
 
 /**
@@ -106,9 +93,17 @@ function findOuterBlockStart(document: vscode.TextDocument, start: number): Line
         if (endInfo) {
             return undefined;
         }
+        if (line.text.length > 0 && !line.text.startsWith(' ') && !line.text.startsWith('\n')) {
+            return undefined;  // some text with no indentation, stop analysis to prevent too long searching
+        }
         n -= 1;
     }
     return undefined;
+}
+
+function testListBlockStrart(line: vscode.TextLine): LineInfo | undefined {
+    const gMatches = /^(\s*)(?:variables|VARIABLES|CONSTANTS)\s*$/g.exec(line.text);
+    return gMatches ? new LineInfo(line, gMatches[1]) : undefined;
 }
 
 function testBlockStart(line: vscode.TextLine): LineInfo | undefined {
@@ -119,6 +114,29 @@ function testBlockStart(line: vscode.TextLine): LineInfo | undefined {
 function testBlockEnd(line: vscode.TextLine): LineInfo | undefined {
     const matches = /^(\s*)(?:end|else|elsif|or)\b.*/g.exec(line.text);
     return matches ? new LineInfo(line, matches[1]) : undefined;
+}
+
+function indentRight(
+    lineText: string,
+    position: vscode.Position,
+    baseIndentation: string,
+    options: vscode.FormattingOptions
+) {
+    if (lineText === baseIndentation) {
+        // The user has just hit the Enter right after the block start
+        // and VSCode aligned the new line to the block start. Just add a new tab.
+        return [ vscode.TextEdit.insert(position, makeTab(options)) ];
+    }
+    if (position.character === indentationLen(baseIndentation, options) + options.tabSize) {
+        // The user just hit the Enter while continuing to type inside already indented
+        // block. VSCode does everyting itself.
+        return [];
+    }
+    // Otherwise just force the correct indentation
+    // This works in all cases. The cases above are just to improve user experience a bit
+    const newIdent = baseIndentation + makeTab(options);
+    const lineStart = new vscode.Position(position.line, 0);
+    return [ vscode.TextEdit.replace(new vscode.Range(lineStart, position), newIdent) ];
 }
 
 function makeTab(options: vscode.FormattingOptions): string {
@@ -140,12 +158,10 @@ function makeTab(options: vscode.FormattingOptions): string {
 function indentationLen(str: string, options: vscode.FormattingOptions): number {
     let len = 0;
     for (const ch of str) {
-        if (ch === ' ') {
-            len += 1;
-        } else if (ch === '\t') {
+        if (ch === '\t') {
             len += options.tabSize;
         } else {
-            break;
+            len += 1;
         }
     }
     return len;
