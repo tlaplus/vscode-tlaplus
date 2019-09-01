@@ -2,7 +2,6 @@ import { Range } from 'vscode';
 import { DCollection } from '../diagnostic';
 import { isNumber } from 'util';
 import { Moment } from 'moment';
-import { v } from '../../tests/suite/shortcuts';
 
 export enum CheckState {
     Running = 'R',

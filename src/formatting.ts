@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import { start } from 'repl';
 
 const SPACES = ['', ' ', '  ', '   ', '    '];
 
@@ -150,7 +149,7 @@ function indentRight(
     position: vscode.Position,
     baseIndentation: string,
     options: vscode.FormattingOptions
-) {
+): vscode.TextEdit[] {
     if (lineText === baseIndentation) {
         // The user has just hit the Enter right after the block start
         // and VSCode aligned the new line to the block start. Just add a new tab.
@@ -172,7 +171,7 @@ function indentExact(
     lineText: string,
     position: vscode.Position,
     indentation: string
-) {
+): vscode.TextEdit[] {
     if (lineText === indentation) {
         return [];
     }

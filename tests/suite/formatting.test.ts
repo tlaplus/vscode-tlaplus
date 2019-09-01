@@ -10,8 +10,7 @@ suite('On Type Formatting Test Suite', () => {
     let doc: vscode.TextDocument;
 
     suiteSetup(async () => {
-        const d = await vscode.workspace.openTextDocument({ language: 'tlaplus' });
-        doc = d;
+        doc = await vscode.workspace.openTextDocument({ language: 'tlaplus' });
     });
 
     suiteTeardown(async () => {

@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
 import { Readable } from 'stream';
 import { ProcessOutputParser } from './base';
 import { DCollection } from '../diagnostic';
