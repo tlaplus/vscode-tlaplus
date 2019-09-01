@@ -3,10 +3,17 @@ import { start } from 'repl';
 
 const SPACES = ['', ' ', '  ', '   ', '    '];
 
+enum IndentationType {
+    Exact,
+    Right,
+    Left
+}
+
 class LineInfo {
     constructor(
         readonly line: vscode.TextLine,
-        readonly indentation: string
+        readonly indentation: string,
+        readonly indentationType: IndentationType
     ) {}
 }
 
@@ -43,13 +50,21 @@ function tryIndentBlockStart(
     position: vscode.Position,
     options: vscode.FormattingOptions
 ): vscode.TextEdit[] {
-    const startInfo = testListBlockStart(document.lineAt(position.line - 1))
+    const prevLine = document.lineAt(position.line - 1);
+    const startInfo = testSimpleBlockStart(prevLine)
+                        || testStateDefBlockStart(prevLine, options)
                         || findOuterBlockStart(document, position.line - 1);
     if (!startInfo) {
         return [];
     }
     const lineText = document.lineAt(position.line).text;
-    return indentRight(lineText, position, startInfo.indentation, options);
+    switch (startInfo.indentationType) {
+        case IndentationType.Right:
+            return indentRight(lineText, position, startInfo.indentation, options);
+        case IndentationType.Exact:
+            return indentExact(lineText, position, startInfo.indentation);
+    }
+    return [];
 }
 
 /**
@@ -104,19 +119,26 @@ function findOuterBlockStart(
     return undefined;
 }
 
-function testListBlockStart(line: vscode.TextLine): LineInfo | undefined {
-    const gMatches = /^(\s*)(?:variables|VARIABLES|CONSTANTS)\s*$/g.exec(line.text);
-    return gMatches ? new LineInfo(line, gMatches[1]) : undefined;
+function testSimpleBlockStart(line: vscode.TextLine): LineInfo | undefined {
+    const gMatches = /^(\s*)(?:variables|VARIABLES|CONSTANTS|\w+:)\s*$/g.exec(line.text);
+    return gMatches ? new LineInfo(line, gMatches[1], IndentationType.Right) : undefined;
+}
+
+function testStateDefBlockStart(line: vscode.TextLine, options: vscode.FormattingOptions): LineInfo | undefined {
+    const gMatches = /^(\s*\w+\s*==\s*)(\/\\|\\\/).*$/g.exec(line.text);
+    return gMatches
+        ? new LineInfo(line, spaces(indentationLen(gMatches[1], options)), IndentationType.Exact)
+        : undefined;
 }
 
 function testBlockStart(line: vscode.TextLine): LineInfo | undefined {
     const matches = /^(\s*)(?:\w+\:)?\s*(?:begin|if|else|elsif|while|either|or|with|define|macro|procedure)\b.*/g.exec(line.text);
-    return matches ? new LineInfo(line, matches[1]) : undefined;
+    return matches ? new LineInfo(line, matches[1], IndentationType.Right) : undefined;
 }
 
 function testBlockEnd(line: vscode.TextLine): LineInfo | undefined {
     const matches = /^(\s*)(?:end|else|elsif|or)\b.*/g.exec(line.text);
-    return matches ? new LineInfo(line, matches[1]) : undefined;
+    return matches ? new LineInfo(line, matches[1], IndentationType.Left) : undefined;
 }
 
 function indentRight(
@@ -140,6 +162,18 @@ function indentRight(
     const newIdent = baseIndentation + makeTab(options);
     const lineStart = new vscode.Position(position.line, 0);
     return [ vscode.TextEdit.replace(new vscode.Range(lineStart, position), newIdent) ];
+}
+
+function indentExact(
+    lineText: string,
+    position: vscode.Position,
+    indentation: string
+) {
+    if (lineText === indentation) {
+        return [];
+    }
+    const lineStart = new vscode.Position(position.line, 0);
+    return [ vscode.TextEdit.replace(new vscode.Range(lineStart, position), indentation) ];
 }
 
 function makeTab(options: vscode.FormattingOptions): string {

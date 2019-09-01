@@ -351,6 +351,58 @@ suite('On Type Formatting Test Suite', () => {
         ]);
     });
 
+    test('Indents label-blocks', () => {
+        return assertOnTypeFormatting([
+            '    LabelA:',
+            '    {enter}'
+        ], [
+            '    LabelA:',
+            '        '
+        ]);
+    });
+
+    test('Indents definitions with AND', () => {
+        return assertOnTypeFormatting([
+            '  NewState == /\\ TRUE',
+            '  {enter}'
+        ], [
+            '  NewState == /\\ TRUE',
+            '              '
+        ]);
+    });
+
+    test('Indents definitions with OR', () => {
+        return assertOnTypeFormatting([
+            '  NewState == \\/ Foo = Bar',
+            '  {enter}'
+        ], [
+            '  NewState == \\/ Foo = Bar',
+            '              '
+        ]);
+    });
+
+    test('Doesn\'t indent definitions without AND / OR', () => {
+        return assertOnTypeFormatting([
+            '  NewState == TRUE',
+            '  {enter}'
+        ], [
+            '  NewState == TRUE',
+            '  '
+        ]);
+    });
+
+    test('Doesn\'t indent definitions if it\'s not the first line', () => {
+        return assertOnTypeFormatting([
+            'Foo == \\/ <<>>',
+            '',
+            '{enter}'
+        ], [
+            'Foo == \\/ <<>>',
+            '',
+            ''
+        ]);
+    });
+
     test('Doesn\'t indent variables-block when it\'s not empty', () => {
         return assertOnTypeFormatting([
             '    variables foo = 10;',
