@@ -201,6 +201,13 @@
             }
         }
     },
+    "configurationDefaults": {
+        "[tlaplus]": {
+            "editor.insertSpaces": true,
+            "editor.tabSize": 4,
+            "editor.formatOnType": true
+        }
+    },
     "scripts": {
         "vscode:prepublish": "npm run compile",
         "compile": "tsc -p ./",

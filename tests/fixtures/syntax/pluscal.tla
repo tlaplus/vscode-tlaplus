@@ -35,6 +35,10 @@ end process;
 
 process retriever = "retriever"
 begin
+    Start:
+    with foo = 10 do
+        skip;
+    end with;
     Retrieve:
     while ~FALSE do
         if Len(box) > 3 then
@@ -69,7 +73,7 @@ Init == (* Global variables *)
         /\ param = [ self \in ProcSet |-> "10"]
         /\ stack = [self \in ProcSet |-> << >>]
         /\ pc = [self \in ProcSet |-> CASE self = "appender" -> "Push"
-                                        [] self = "retriever" -> "Retrieve"]
+                                        [] self = "retriever" -> "Start"]
 
 End(self) == /\ pc[self] = "End"
              /\ pc' = [pc EXCEPT ![self] = Head(stack[self]).pc]
@@ -94,6 +98,12 @@ Loop == /\ pc["appender"] = "Loop"
 
 appender == Push \/ Loop
 
+Start == /\ pc["retriever"] = "Start"
+         /\ LET foo == 10 IN
+              TRUE
+         /\ pc' = [pc EXCEPT !["retriever"] = "Retrieve"]
+         /\ UNCHANGED << box, stack, param >>
+
 Retrieve == /\ pc["retriever"] = "Retrieve"
             /\ IF ~FALSE
                   THEN /\ IF Len(box) > 3
@@ -103,7 +113,7 @@ Retrieve == /\ pc["retriever"] = "Retrieve"
                                         ELSE /\ TRUE
                                              /\ box' = box
                        /\ Assert(1 = 1, 
-                                 "Failure of assertion at line 47, column 9.")
+                                 "Failure of assertion at line 51, column 9.")
                        /\ pc' = [pc EXCEPT !["retriever"] = "Retrieve"]
                        /\ UNCHANGED << stack, param >>
                   ELSE /\ /\ param' = [param EXCEPT !["retriever"] = "something"]
@@ -114,7 +124,7 @@ Retrieve == /\ pc["retriever"] = "Retrieve"
                        /\ pc' = [pc EXCEPT !["retriever"] = "End"]
                        /\ box' = box
 
-retriever == Retrieve
+retriever == Start \/ Retrieve
 
 (* Allow infinite stuttering to prevent deadlock on termination. *)
 Terminating == /\ \A self \in ProcSet: pc[self] = "Done"
