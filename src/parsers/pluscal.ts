@@ -3,6 +3,15 @@ import { ProcessOutputParser } from './base';
 import { Readable } from 'stream';
 import { DCollection } from '../diagnostic';
 
+class LocationInfo {
+    constructor(
+        readonly location: vscode.Position,
+        readonly strLength: number
+    ) {}
+}
+
+const ZERO_LOCATION_INFO = new LocationInfo(new vscode.Position(0, 0), 0);
+
 /**
  * Parses stdout of PlusCal transpiler.
  */
@@ -27,27 +36,18 @@ export class TranspilerStdoutParser extends ProcessOutputParser<DCollection> {
             return;
         }
         if (!this.errMessage) {
-            if (this.tryUnrecoverableError(line)) {
+            if (this.tryParseUnrecoverableError(line)) {
                 return;
             }
         }
         if (this.errMessage) {
-            const rxPosition = /^\s+(?:at )?line (\d+), column (\d+).?\s*$/g;
-            const posMatches = rxPosition.exec(line);
-            if (posMatches) {
-                const posLine = parseInt(posMatches[1]) - 1;
-                const posCol = parseInt(posMatches[2]);
-                this.result.addMessage(
-                    this.filePath!,
-                    new vscode.Range(posLine, posCol, posLine, posCol),
-                    this.errMessage);
-            }
+            const locInfo = this.parseLocation(line) || ZERO_LOCATION_INFO;
+            this.addError(locInfo.location, this.errMessage);
             this.errMessage = null;
-            return;
         }
     }
 
-    private tryUnrecoverableError(line: string): boolean {
+    private tryParseUnrecoverableError(line: string): boolean {
         const matchers = /^\s+--\s+(.+)$/g.exec(line);
         if (!matchers) {
             return false;
@@ -57,18 +57,29 @@ export class TranspilerStdoutParser extends ProcessOutputParser<DCollection> {
             // This error means that there's no PlusCal code in file. Just ignore it.
             return true;
         }
-        const posMatcher = /\s*(?:at )?line (\d+), column (\d+).?\s*$/g.exec(line);
-        if (posMatcher) {
-            const posLine = parseInt(posMatcher[1]) - 1;
-            const posCol = parseInt(posMatcher[2]);
-            this.result.addMessage(
-                this.filePath!,
-                new vscode.Range(posLine, posCol, posLine, posCol),
-                message.substring(0, message.length - posMatcher[0].length));
+        const locInfo = this.parseLocation(line);
+        if (locInfo) {
+            this.addError(locInfo.location, message.substring(0, message.length - locInfo.strLength));
             this.errMessage = null;
         } else {
             this.errMessage = message;
         }
         return true;
+    }
+
+    private addError(location: vscode.Position, message: string) {
+        const locRange = new vscode.Range(location, location);
+        this.result.addMessage(this.filePath!, locRange, message);
+    }
+
+    private parseLocation(line: string): LocationInfo | undefined {
+        const rxLocation = /\s*(?:at )?line (\d+), column (\d+).?\s*$/g;
+        const matches = rxLocation.exec(line);
+        if (!matches) {
+            return undefined;
+        }
+        const posLine = parseInt(matches[1]) - 1;
+        const posCol = parseInt(matches[2]);
+        return new LocationInfo(new vscode.Position(posLine, posCol), matches[0].length);
     }
 }

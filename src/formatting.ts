@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
 
-const SPACES = ['', ' ', '  ', '   ', '    '];
+const SPACES = ['', ' ', '  ', '   ', '    ', '     ', '      ', '       ', '        '];
 
 enum IndentationType {
-    Exact,
-    Right,
-    Left
+    Exact,      // Indent exactly to the given length
+    Right,      // Increase indentation
+    Left        // Decrease indentation
 }
 
 class LineInfo {
@@ -52,7 +52,7 @@ function tryIndentBlockStart(
     const prevLine = document.lineAt(position.line - 1);
     const startInfo = testSimpleBlockStart(prevLine)
                         || testStateDefBlockStart(prevLine, options)
-                        || findOuterBlockStart(document, position.line - 1);
+                        || findEnclosingBlockStart(document, position.line - 1);
     if (!startInfo) {
         return [];
     }
@@ -79,7 +79,7 @@ function tryIndentBlockEnd(
     if (!endInfo || endInfo.indentation.length === 0) {
         return [];
     }
-    const startInfo = findOuterBlockStart(document, position.line - 1);
+    const startInfo = findEnclosingBlockStart(document, position.line - 1);
     if (!startInfo) {
         return [];
     }
@@ -95,11 +95,11 @@ function tryIndentBlockEnd(
     ];
 }
 
-function findOuterBlockStart(
-    document: vscode.TextDocument,
-    start: number
-): LineInfo | undefined {
-    let n = start;
+/**
+ * Finds the beginning of the block that encloses the given line.
+ */
+function findEnclosingBlockStart(document: vscode.TextDocument, lineNo: number): LineInfo | undefined {
+    let n = lineNo;
     while (n >= 0) {
         const line = document.lineAt(n);
         const startInfo = testBlockStart(line);
@@ -180,20 +180,13 @@ function indentExact(
 }
 
 function makeTab(options: vscode.FormattingOptions): string {
-    if (!options.insertSpaces) {
-        return '\t';
-    }
-    return spaces(options.tabSize);
+    return options.insertSpaces ? spaces(options.tabSize) : '\t';
 }
 
 function indentationLen(str: string, options: vscode.FormattingOptions): number {
     let len = 0;
     for (const ch of str) {
-        if (ch === '\t') {
-            len += options.tabSize;
-        } else {
-            len += 1;
-        }
+        len += ch === '\t' ? options.tabSize : 1;
     }
     return len;
 }
