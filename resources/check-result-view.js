@@ -5,7 +5,7 @@ const changeHints = {
     A: 'This item has been added since the previous state',
     M: 'This item has been modified since the previous state',
     D: 'This item has been deleted since the previous state'
-}
+};
 
 const prevState = vscode.getState();
 if (prevState) {
@@ -34,16 +34,16 @@ function openFile(event, filePath, line, character) {
     event.stopPropagation();
     vscode.postMessage({
         command: 'openFile',
-        filePath: filePath,
-        line: line,
-        character: character
+        filePath,
+        line,
+        character
     });
 }
 
 /**
  * Recieves data from the extension.
  */
-window.addEventListener('message', event => {
+window.addEventListener('message', (event) => {
     displayCheckResult(event.data);
     vscode.setState(event.data);
 });
@@ -65,7 +65,7 @@ function displayStatus(result) {
         elCmdStopWrapper.onclick = () => stopProcess();
     } else {
         elCmdStopWrapper.classList.add('hidden');
-        elCmdStopWrapper.onclick = undefined;
+        delete elCmdStopWrapper.onclick;
     }
     if (result.statusDetails) {
         elStatusDetails.classList.remove('hidden');
@@ -76,7 +76,7 @@ function displayStatus(result) {
 }
 
 function displayStatusHeader(outFilePath) {
-    elOutFileLink = document.getElementById('out-file-link');
+    const elOutFileLink = document.getElementById('out-file-link');
     if (outFilePath) {
         elOutFileLink.classList.remove('hidden');
         elOutFileLink.onclick = (e) => openFile(e, outFilePath, 0, 0);
@@ -88,7 +88,7 @@ function displayStatusHeader(outFilePath) {
 function displayStatesStat(stat) {
     const elStatesStat = document.getElementById('states-stat');
     removeAllChildren(elStatesStat);
-    stat.forEach(item => {
+    stat.forEach((item) => {
         const elRow = document.createElement('tr');
         appendTextChild(elRow, 'td', item.timeStamp, VAL_COL);
         appendTextChild(elRow, 'td', num(item.diameter), VAL_COL);
@@ -102,7 +102,7 @@ function displayStatesStat(stat) {
 function displayCoverage(stat) {
     const elCoverageStat = document.getElementById('coverage-stat');
     removeAllChildren(elCoverageStat);
-    stat.forEach(item => {
+    stat.forEach((item) => {
         const elRow = document.createElement('tr');
         if (item.total === 0) {
             elRow.classList.add('coverage-zero');
@@ -133,10 +133,10 @@ function displayMessages(messages, wrapperId, listId) {
         return;
     }
     elWrapper.classList.remove('hidden');
-    messages.forEach(msg => {
+    messages.forEach((msg) => {
         const elMessage = document.createElement('p');
         elMessage.classList = ['message'];
-        msg.forEach(line => appendTextChild(elMessage, 'p', line, ['message-line']));
+        msg.forEach((line) => appendTextChild(elMessage, 'p', line, ['message-line']));
         elList.appendChild(elMessage);
     });
 }
@@ -150,10 +150,10 @@ function displayErrorTrace(trace, state) {
         return;
     }
     elErrorTrace.classList.remove('hidden');
-    trace.forEach(item => displayErrorTraceItem(elErrorTraceItems, item, state));
+    trace.forEach((item) => displayErrorTraceItem(elErrorTraceItems, item, state));
     const expNodes = document.getElementsByClassName('tree-expandable');
-    for (let i = 0; i < expNodes.length; i++) {
-        expNodes[i].onclick = (e) => {
+    for (const node of expNodes) {
+        node.onclick = (e) => {
             const elName = e.target;
             elName.parentElement.parentElement.querySelector('.tree-nodes').classList.toggle('shown');
             elName.classList.toggle('tree-expandable-down');
@@ -180,7 +180,7 @@ function displayErrorTraceItem(elErrorTraceVars, item, state) {
     elVarList.classList.add('tree-nodes');
     elVarList.classList.add('hidden');
     elVarList.classList.add('shown');
-    item.variables.items.forEach(v => displayValue(elVarList, v, state));
+    item.variables.items.forEach((v) => displayValue(elVarList, v, state));
     elItem.appendChild(elVarList);
     elErrorTraceVars.appendChild(elItem);
 }
@@ -198,14 +198,14 @@ function displayValue(elParent, value, state) {
     }
     elVarValueBlock.appendChild(elVarValue);
     elVar.appendChild(elVarValueBlock);
-    if (value.items && (value.items.length > 1 || value.items.length == 1 && value.expandSingle)) {
+    if (value.items && (value.items.length > 1 || value.items.length === 1 && value.expandSingle)) {
         elVarKey.classList.add('tree-expandable');
         const elSubList = document.createElement('ul');
         elSubList.classList.add('tree-nodes');
         elSubList.classList.add('hidden');
-        value.items.forEach(it => displayValue(elSubList, it, state));
+        value.items.forEach((it) => displayValue(elSubList, it, state));
         if (value.deletedItems) {
-            value.deletedItems.forEach(dit => displayValue(elSubList, dit, state));
+            value.deletedItems.forEach((dit) => displayValue(elSubList, dit, state));
         }
         elVar.appendChild(elSubList);
     }
@@ -249,7 +249,7 @@ function displayOutput(lines) {
         return;
     }
     elOutput.classList.remove('hidden');
-    lines.forEach(line => {
+    lines.forEach((line) => {
         const elLine = document.createElement('p');
         elLine.classList.add('output-line');
         let elText;
@@ -303,7 +303,7 @@ function appendTextChild(elParent, tag, innerText, classes) {
     const el = document.createElement(tag);
     el.innerText = innerText;
     if (classes) {
-        classes.forEach(c => el.classList.add(c));
+        classes.forEach((c) => el.classList.add(c));
     }
     elParent.appendChild(el);
     return el;
