@@ -175,7 +175,7 @@
                     "scope": "application",
                     "default": "",
                     "format": "uri",
-                    "markdownDescription": "Path to Java (8 or higher, 11 is recommended) home directory that should be used to run TLA+ tools.",
+                    "description": "Path to Java (8 or higher, 11 is recommended) home directory that should be used to run TLA+ tools.",
                     "maxLength": 1000
                 },
                 "tlaplus.java.options": {
@@ -200,13 +200,13 @@
                     "maxLength": 1000
                 }
             }
-        }
-    },
-    "configurationDefaults": {
-        "[tlaplus]": {
-            "editor.insertSpaces": true,
-            "editor.tabSize": 4,
-            "editor.formatOnType": true
+        },
+        "configurationDefaults": {
+            "[tlaplus]": {
+                "editor.insertSpaces": true,
+                "editor.tabSize": 4,
+                "editor.formatOnType": true
+            }
         }
     },
     "scripts": {
