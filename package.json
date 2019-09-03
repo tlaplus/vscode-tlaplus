@@ -1,7 +1,7 @@
 {
     "name": "vscode-tlaplus",
     "displayName": "TLA+",
-    "version": "0.5.1",
+    "version": "0.5.2",
     "preview": true,
     "description": "TLA+ language support",
     "publisher": "alygin",

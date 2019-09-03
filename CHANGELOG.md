@@ -1,5 +1,18 @@
 # Change Log
 
+## 0.5.2 &ndash; 3rd September, 2019
+
+### Bug fixes
+
+* Fix default TLA<sup>+</sup> language indentation settings.
+* Make snippets respect indentation settings.
+
+## 0.5.1 &ndash; 1st September, 2019
+
+### Enhancements
+
+* Minor formatting improvements.
+
 ## 0.5.0 &ndash; 1st September, 2019
 
 ### Enhancements
