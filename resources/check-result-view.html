@@ -23,14 +23,14 @@
   <section>
     <div class="section-block states-stat">
       <h1>States</h1>
-      <table>
+      <table aria-describedby="States statistics">
         <thead>
          <tr>
-           <td>Time</td>
-           <td class="val-col" title="The diameter of the reachable state graph">Diameter</td>
-           <td class="val-col" title="The total number of states found so far">Found</td>
-           <td class="val-col" title="The number of distinct states amoung all the states found">Distinct</td>
-           <td class="val-col" title="The number of states whose successor states has not been found yet">Queue</td>
+           <th scope="col">Time</th>
+           <th scope="col" class="val-col" title="The diameter of the reachable state graph">Diameter</th>
+           <th scope="col" class="val-col" title="The total number of states found so far">Found</th>
+           <th scope="col" class="val-col" title="The number of distinct states amoung all the states found">Distinct</th>
+           <th scope="col" class="val-col" title="The number of states whose successor states has not been found yet">Queue</th>
          </tr>
        </thead>
        <tbody id="states-stat" />
@@ -38,13 +38,13 @@
     </div>
     <div class="section-block coverage-stat">
       <h1>Coverage</h1>
-      <table>
+      <table aria-describedby="Coverage statistics">
         <thead>
           <tr>
-            <td>Module</td>
-            <td>Action</td>
-            <td class="val-col" title="Total number of times the action has been used to compute a successor state">Total</td>
-            <td class="val-col" title="Total number of times the action produced a distinct successor state">Distinct</td>
+            <th scope="col">Module</th>
+            <th scope="col">Action</th>
+            <th scope="col" class="val-col" title="Total number of times the action has been used to compute a successor state">Total</th>
+            <th scope="col" class="val-col" title="Total number of times the action produced a distinct successor state">Distinct</th>
           </tr>
         </thead>
         <tbody id="coverage-stat"/>

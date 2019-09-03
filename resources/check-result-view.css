@@ -20,12 +20,18 @@ h1 {
     float: right;
 }
 
-td:not(:first-child) {
+td:not(:first-child),
+th:not(:first-child) {
     padding-left: 0.75em;
 }
 
 thead {
     opacity: 0.5;
+}
+
+th {
+    text-align: left;
+    font-weight: normal;
 }
 
 .state-R {

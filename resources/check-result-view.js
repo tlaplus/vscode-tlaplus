@@ -188,7 +188,7 @@ function displayErrorTraceItem(elErrorTraceVars, item, state) {
 function displayValue(elParent, value, state) {
     const elVar = document.createElement('li');
     const elVarValueBlock = document.createElement('div');
-    const elVarKey = renderValueTitle(value, elVarValueBlock);
+    const elVarKey = renderValueTitle(value);
     elVarValueBlock.appendChild(elVarKey);
     const elVarValue = document.createElement('div');
     elVarValue.classList.add('var-value');
