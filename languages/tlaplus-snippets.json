@@ -16,7 +16,7 @@
             "(*--algorithm $TM_FILENAME_BASE",
             "$0",
             "begin",
-            "    skip;",
+            "\tskip;",
             "end algorithm; *)"
         ],
         "description": "Create PlusCal block"

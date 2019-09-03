@@ -205,7 +205,8 @@
             "[tlaplus]": {
                 "editor.insertSpaces": true,
                 "editor.tabSize": 4,
-                "editor.formatOnType": true
+                "editor.formatOnType": true,
+                "editor.detectIndentation": false
             }
         }
     },
