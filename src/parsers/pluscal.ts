@@ -69,7 +69,7 @@ export class TranspilerStdoutParser extends ProcessOutputParser<DCollection> {
 
     private addError(location: vscode.Position, message: string) {
         const locRange = new vscode.Range(location, location);
-        this.result.addMessage(this.filePath!, locRange, message);
+        this.result.addMessage(this.filePath, locRange, message);
     }
 
     private parseLocation(line: string): LocationInfo | undefined {

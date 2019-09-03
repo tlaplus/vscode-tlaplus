@@ -108,7 +108,6 @@ async function getSpecFiles(fileUri: vscode.Uri): Promise<SpecFiles | undefined>
     const filePath = fileUri.fsPath;
     let specFiles;
     let canRun = true;
-    const outFilePath = replaceExtension(filePath, 'out');
     if (filePath.endsWith('.cfg')) {
         specFiles = new SpecFiles(replaceExtension(filePath, 'tla'), filePath);
         canRun = await checkModuleExists(specFiles.tlaFilePath);
