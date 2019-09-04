@@ -36,7 +36,7 @@
     ],
     "activationEvents": [
         "onLanguage:tlaplus",
-        "onCommand:tlaplus.pluscal.transpile",
+        "onCommand:tlaplus.parse",
         "onCommand:tlaplus.model.check.run",
         "workspaceContains:**/*.tla"
     ],

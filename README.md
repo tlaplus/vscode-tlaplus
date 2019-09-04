@@ -97,7 +97,7 @@ You can find the full output of the TLC tool in a `.out` file that will be creat
 If you're going to use the extension for more than just syntax highlighting, a few tips may help to make your experience smoother:
 
 * [Map keyboard shortcuts](https://code.visualstudio.com/docs/getstarted/keybindings) to the [extension commands](#commands). For instance, you might want to parse the current module by pressing `Ctrl+I` (`Command+I`) and to run the model checker by pressing `Ctrl+. Ctrl+.` (`Command+. Command+.`).
-* [Edit settings](https://code.visualstudio.com/docs/getstarted/settings) to hide `.old` (and probably  `.out`) files from the Explorer panel. Those files are a by-product of various tools, and there's usually no need to deal with them directly. You'll need the `files.exclude` setting, and the patterns to add are `**/*.old` and `**/*.out`.
+* If you are using PlusCal, [edit settings](https://code.visualstudio.com/docs/getstarted/settings) to hide `.old` files from the Explorer panel. Those files are a by-product of the PlusCal transpiling process, and there's usually no need to deal with them directly. You'll need the `files.exclude` setting, and the pattern to add is `**/*.old`.
 * [Take a look](https://github.com/alygin/vscode-tlaplus/blob/master/languages/pluscal-snippets.json) at the PlusCal code snippets the extension provides. They can save you a few keyboard strokes here and there.
 
 ## What to Read
