@@ -3,8 +3,12 @@ import { DCollection, applyDCollection } from '../diagnostic';
 import { TranspilerStdoutParser } from '../parsers/pluscal';
 import { SanyData, SanyStdoutParser } from '../parsers/sany';
 import { runPlusCal, runSany } from '../tla2tools';
+import { ToolOutputChannel } from '../outputChannels';
 
 export const CMD_PARSE_MODULE = 'tlaplus.parse';
+
+const plusCalOutChannel = new ToolOutputChannel('PlusCal');
+const sanyOutChannel = new ToolOutputChannel('SANY');
 
 /**
  * Parses .tla module:
@@ -40,6 +44,7 @@ async function doParseFile(fileUri: vscode.Uri, diagnostic: vscode.DiagnosticCol
  */
 async function transpilePlusCal(fileUri: vscode.Uri): Promise<DCollection> {
     const procInfo = await runPlusCal(fileUri.fsPath);
+    plusCalOutChannel.bindTo(procInfo);
     const stdoutParser = new TranspilerStdoutParser(procInfo.process.stdout, fileUri.fsPath);
     return stdoutParser.readAll();
 }
@@ -49,6 +54,7 @@ async function transpilePlusCal(fileUri: vscode.Uri): Promise<DCollection> {
  */
 async function parseSpec(fileUri: vscode.Uri): Promise<SanyData> {
     const procInfo = await runSany(fileUri.fsPath);
+    sanyOutChannel.bindTo(procInfo);
     const stdoutParser = new SanyStdoutParser(procInfo.process.stdout);
     return stdoutParser.readAll();
 }
