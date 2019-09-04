@@ -1,5 +1,14 @@
 # Change Log
 
+## 0.6.0 &ndash; 5th September, 2019
+
+### Enhancements
+
+* New command `TLA+: Check model with non-default config...` allows the user to select a model config file for running model checking on a TLA<sup>+</sup> specification.
+* New setting `TLC Model Checker: Create Out Files` allows the user to switch off sending the TLC output to a .out file.
+* Support for running PlusCal transpiler and module parser automatically when a .tla file is saved.
+* Output channels for TLC, PlusCal and SANY that allow the user to see raw output of these tools along with the full command line.
+
 ## 0.5.2 &ndash; 3rd September, 2019
 
 ### Bug fixes
