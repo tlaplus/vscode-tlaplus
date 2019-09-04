@@ -116,6 +116,11 @@
                 "category": "TLA+"
             },
             {
+                "command": "tlaplus.model.check.customRun",
+                "title": "Check model with non-default config...",
+                "category": "TLA+"
+            },
+            {
                 "command": "tlaplus.model.check.stop",
                 "title": "Stop model checking process",
                 "category": "TLA+"
@@ -152,6 +157,10 @@
                 {
                     "command": "tlaplus.model.check.run",
                     "when": "editorLangId == tlaplus || editorLangId == tlaplus.cfg"
+                },
+                {
+                    "command": "tlaplus.model.check.customRun",
+                    "when": "editorLangId == tlaplus"
                 },
                 {
                     "command": "tlaplus.model.check.stop"

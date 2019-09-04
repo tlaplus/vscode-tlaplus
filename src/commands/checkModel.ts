@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { exists, copyFile } from 'fs';
+import { exists, copyFile, readdir } from 'fs';
 import { runTlc, stopProcess } from '../tla2tools';
 import { TlcModelCheckerStdoutParser } from '../parsers/tlc';
 import { updateCheckResultView, revealEmptyCheckResultView, revealLastCheckResultView } from '../checkResultView';
@@ -12,6 +12,7 @@ import { ModelCheckResultSource } from '../model/check';
 import { ToolOutputChannel } from '../outputChannels';
 
 export const CMD_CHECK_MODEL_RUN = 'tlaplus.model.check.run';
+export const CMD_CHECK_MODEL_CUSTOM_RUN = 'tlaplus.model.check.customRun';
 export const CMD_CHECK_MODEL_STOP = 'tlaplus.model.check.stop';
 export const CMD_CHECK_MODEL_DISPLAY = 'tlaplus.model.check.display';
 export const CMD_SHOW_TLC_OUTPUT = 'tlaplus.showTlcOutput';
@@ -33,25 +34,44 @@ class SpecFiles {
 /**
  * Runs TLC on a TLA+ specification.
  */
-export function checkModel(diagnostic: vscode.DiagnosticCollection, extContext: vscode.ExtensionContext) {
-    if (checkProcess) {
-        vscode.window.showWarningMessage(
-                'Another model checking process is currently running',
-                'Show currently running process'
-            ).then(() => revealLastCheckResultView(extContext));
+export async function checkModel(diagnostic: vscode.DiagnosticCollection, extContext: vscode.ExtensionContext) {
+    const doc = getDocumentIfCanRun(extContext);
+    if (!doc) {
         return;
     }
-    const editor = vscode.window.activeTextEditor;
-    if (!editor) {
-        vscode.window.showWarningMessage('No editor is active, cannot find a TLA+ model to check');
-        return;
-    }
-    if (editor.document.languageId !== 'tlaplus' && editor.document.languageId !== 'tlaplus.cfg') {
+    if (doc.languageId !== 'tlaplus' && doc.languageId !== 'tlaplus.cfg') {
         vscode.window.showWarningMessage(
             'File in the active editor is not a .tla or .cfg file, it cannot be checked as a model');
         return;
     }
-    doCheckModel(editor.document.uri, extContext, diagnostic);
+    const specFiles = await getSpecFiles(doc.uri);
+    if (!specFiles) {
+        return;
+    }
+    doCheckModel(specFiles, extContext, diagnostic);
+}
+
+export async function checkModelCustom(diagnostic: vscode.DiagnosticCollection, extContext: vscode.ExtensionContext) {
+    const doc = getDocumentIfCanRun(extContext);
+    if (!doc) {
+        return;
+    }
+    if (doc.languageId !== 'tlaplus') {
+        vscode.window.showWarningMessage('File in the active editor is not a .tla, it cannot be checked as a model');
+        return;
+    }
+    const cfgFileName = await vscode.window.showQuickPick(
+        findConfigFiles(path.dirname(doc.uri.fsPath)),
+        { canPickMany: false, placeHolder: 'Select a model config file', matchOnDetail: true }
+    );
+    if (!cfgFileName || cfgFileName.length === 0) {
+        return;
+    }
+    const specFiles = new SpecFiles(
+        doc.uri.fsPath,
+        path.join(path.dirname(doc.uri.fsPath), cfgFileName)
+    );
+    doCheckModel(specFiles, extContext, diagnostic);
 }
 
 /**
@@ -77,14 +97,10 @@ export function showTlcOutput() {
 }
 
 async function doCheckModel(
-    fileUri: vscode.Uri,
+    specFiles: SpecFiles,
     extContext: vscode.ExtensionContext,
     diagnostic: vscode.DiagnosticCollection
 ) {
-    const specFiles = await getSpecFiles(fileUri);
-    if (!specFiles) {
-        return;
-    }
     try {
         updateStatusBarItem(true);
         const procInfo = await runTlc(specFiles.tlaFilePath, path.basename(specFiles.cfgFilePath));
@@ -194,4 +210,36 @@ function mapTlcOutputLine(line: string): string | undefined {
     }
     const cleanLine = line.replace(/@!@!@(START|END)MSG \d+(\:\d+)? @!@!@/g, '');
     return cleanLine === '' ? undefined : cleanLine;
+}
+
+/**
+ * Returns the list of .cfg-files in the given directory.
+ */
+async function findConfigFiles(path: string): Promise<string[]> {
+    return new Promise<string[]>((resolve, reject) => {
+        readdir(path, (err, files) => {
+            if (err) {
+                reject(err);
+                return;
+            }
+            const configs = files.filter(f => f.endsWith('.cfg'));
+            resolve(configs.sort());
+        });
+    });
+}
+
+function getDocumentIfCanRun(extContext: vscode.ExtensionContext): vscode.TextDocument | undefined {
+    if (checkProcess) {
+        vscode.window.showWarningMessage(
+                'Another model checking process is currently running',
+                'Show currently running process'
+            ).then(() => revealLastCheckResultView(extContext));
+        return undefined;
+    }
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+        vscode.window.showWarningMessage('No editor is active, cannot find a TLA+ model to check');
+        return undefined;
+    }
+    return editor.document;
 }

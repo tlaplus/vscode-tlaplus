@@ -35,6 +35,7 @@ The extension provides the following commands in the Command Palette:
 
 - `TLA+: Parse module` for translating PlusCal to TLA<sup>+</sup> and checking syntax of the resulting specification.
 - `TLA+: Check model` for running the TLC model checker on the TLA<sup>+</sup> specification.
+- `TLA+: Check model with non-default config...` for running the TLC model checker on the TLA<sup>+</sup> specification. Lets the user select a non-default model config file.
 - `TLA+: Visualize TLC output` for presenting model checking results.
 
 ## Settings
