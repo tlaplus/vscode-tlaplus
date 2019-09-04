@@ -79,7 +79,8 @@ async function doCheckModel(
     }
     try {
         updateStatusBarItem(true);
-        checkProcess = await runTlc(specFiles.tlaFilePath, path.basename(specFiles.cfgFilePath));
+        const procInfo = await runTlc(specFiles.tlaFilePath, path.basename(specFiles.cfgFilePath));
+        checkProcess = procInfo.process;
         checkProcess.on('close', () => {
             checkProcess = undefined;
             updateStatusBarItem(false);
