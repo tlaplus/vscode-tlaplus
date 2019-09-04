@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { CMD_CHECK_MODEL_RUN, CMD_CHECK_MODEL_STOP, CMD_CHECK_MODEL_DISPLAY, CMD_SHOW_TLC_OUTPUT,
-    checkModel, displayModelChecking, stopModelChecking, showTlcOutput,  } from './commands/checkModel';
+    CMD_CHECK_MODEL_CUSTOM_RUN, checkModel, displayModelChecking, stopModelChecking,
+    showTlcOutput, checkModelCustom} from './commands/checkModel';
 import { parseModule, CMD_PARSE_MODULE } from './commands/parseModule';
 import { visualizeTlcOutput, CMD_VISUALIZE_TLC_OUTPUT } from './commands/visualizeOutput';
 import { TlaOnTypeFormattingEditProvider } from './formatting';
@@ -20,6 +21,9 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand(
             CMD_CHECK_MODEL_RUN,
             () => checkModel(diagnostic, context)),
+        vscode.commands.registerCommand(
+            CMD_CHECK_MODEL_CUSTOM_RUN,
+            () => checkModelCustom(diagnostic, context)),
         vscode.commands.registerCommand(
             CMD_SHOW_TLC_OUTPUT,
             () => showTlcOutput()),
