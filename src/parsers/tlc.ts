@@ -4,7 +4,7 @@ import { Readable } from 'stream';
 import { clearTimeout } from 'timers';
 import { CheckStatus, ModelCheckResult, InitialStateStatItem, CoverageItem, ErrorTraceItem,
     CheckState, OutputLine, StructureValue, findChanges, ModelCheckResultSource} from '../model/check';
-import { ProcessOutputParser } from './base';
+import { ProcessOutputHandler } from '../outputHandler';
 import { parseVariableValue } from './tlcValues';
 import { SanyData, SanyStdoutParser } from './sany';
 import { DCollection, addDiagnostics } from '../diagnostic';
@@ -18,7 +18,7 @@ const NONE = -1938477103984;
 /**
  * Parses stdout of TLC model checker.
  */
-export class TlcModelCheckerStdoutParser extends ProcessOutputParser<DCollection> {
+export class TlcModelCheckerStdoutParser extends ProcessOutputHandler<DCollection> {
     checkResultBuilder: ModelCheckResultBuilder;
     timer: NodeJS.Timer | undefined = undefined;
     first: boolean = true;
@@ -38,7 +38,7 @@ export class TlcModelCheckerStdoutParser extends ProcessOutputParser<DCollection
         }
     }
 
-    protected parseLine(line: string | null) {
+    protected handleLine(line: string | null) {
         if (line !== null) {
             this.checkResultBuilder.addLine(line);
             this.scheduleUpdate();

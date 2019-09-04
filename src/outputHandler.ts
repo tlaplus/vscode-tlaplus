@@ -1,13 +1,13 @@
 import { Readable } from 'stream';
-import { ParsingError } from '../common';
+import { ParsingError } from './common';
 
 const CHAR_RETURN = 13;
 
 /**
  * Auxiliary class that reads chunks from the given stream or array, breaks data into lines
- * and sends them to the parsing method line by line.
+ * and sends them to the handling method line by line.
  */
-export abstract class ProcessOutputParser<T> {
+export abstract class ProcessOutputHandler<T> {
     protected result: T;
     private closed: boolean = false;
     private buf: string | null = null;
@@ -36,24 +36,24 @@ export abstract class ProcessOutputParser<T> {
     }
 
     /**
-     * Parses the source synchronously.
+     * Handles the source synchronously.
      * For this method to work, the source of the lines must be an array of l.
      */
     readAllSync(): T {
         if (!this.lines) {
-            throw new ParsingError('Cannot parse synchronously because the source is not a set of lines');
+            throw new ParsingError('Cannot handle synchronously because the source is not a set of lines');
         }
         this.lines.forEach(l => {
-            this.tryParseLine(l);
+            this.tryHandleLine(l);
         });
-        this.tryParseLine(null);
+        this.tryHandleLine(null);
         if (!this.result) {
-            throw new Error('No parsing result returned');
+            throw new Error('No handling result returned');
         }
         return this.result;
     }
 
-    protected abstract parseLine(line: string | null): void;
+    protected abstract handleLine(line: string | null): void;
 
     protected handleError(err: any) {
         // Do nothing by default
@@ -65,7 +65,7 @@ export abstract class ProcessOutputParser<T> {
         }
         if (chunk === null) {
             // console.log(':END:');
-            this.tryParseLine(this.buf);
+            this.tryHandleLine(this.buf);
             this.buf = null;
             this.closed = true;
             if (this.resolve) {
@@ -85,20 +85,20 @@ export abstract class ProcessOutputParser<T> {
         const me = this;
         lines.forEach(line => {
             // console.log('> ' + line);
-            me.tryParseLine(line);
+            me.tryHandleLine(line);
         });
     }
 
-    private tryParseLine(line: string | null) {
+    private tryHandleLine(line: string | null) {
         try {
             // On Windows, the last 0x0A character is still in the line, cut it off
             const eLine = line && line.charCodeAt(line.length - 1) === CHAR_RETURN
                 ? line.substring(0, line.length - 1)
                 : line;
-            this.parseLine(eLine);
+            this.handleLine(eLine);
         } catch (err) {
             this.handleError(err);
-            console.error(`Error parsing output line: ${err}`);
+            console.error(`Error handling output line: ${err}`);
         }
     }
 }
