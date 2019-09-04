@@ -9,6 +9,7 @@ import { ChildProcess } from 'child_process';
 import { saveStreamToFile } from '../outputSaver';
 import { replaceExtension } from '../common';
 import { ModelCheckResultSource } from '../model/check';
+import { TlcOutputChannel } from '../output/tlcOutputChannel';
 
 export const CMD_CHECK_MODEL_RUN = 'tlaplus.model.check.run';
 export const CMD_CHECK_MODEL_STOP = 'tlaplus.model.check.stop';
@@ -18,6 +19,7 @@ const TEMPLATE_CFG_PATH = path.resolve(__dirname, '../../../tools/template.cfg')
 
 let checkProcess: ChildProcess | undefined;
 const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);
+const outChannel = new TlcOutputChannel();
 
 class SpecFiles {
     constructor(
@@ -80,6 +82,7 @@ async function doCheckModel(
     try {
         updateStatusBarItem(true);
         const procInfo = await runTlc(specFiles.tlaFilePath, path.basename(specFiles.cfgFilePath));
+        outChannel.bindTo(procInfo);
         checkProcess = procInfo.process;
         checkProcess.on('close', () => {
             checkProcess = undefined;

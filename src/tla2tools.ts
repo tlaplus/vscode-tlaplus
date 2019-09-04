@@ -150,7 +150,7 @@ export function buildJavaOptions(customOptions: string[]): string[] {
  */
 export function buildTlcOptions(tlaFilePath: string, cfgFilePath: string, customOptions: string[]): string[] {
     const custOpts = customOptions.slice(0);
-    const opts = [tlaFilePath, '-tool', '-modelcheck'];
+    const opts = [path.basename(tlaFilePath), '-tool', '-modelcheck'];
     addValueOrDefault('-coverage', '1', custOpts, opts);
     addValueOrDefault('-config', cfgFilePath, custOpts, opts);
     return opts.concat(custOpts);
