@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import * as assert from 'assert';
 import { TlaOnTypeFormattingEditProvider } from '../../src/formatting';
-import { join } from 'path';
 
 const ZERO_POSITION = new vscode.Position(0, 0);
 const OPT_4_SPACES: vscode.FormattingOptions = { insertSpaces: true, tabSize: 4 };
