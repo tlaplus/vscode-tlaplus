@@ -27,15 +27,15 @@ export function visualizeTlcOutput(extContext: vscode.ExtensionContext) {
             vscode.window.showErrorMessage(`Cannot read file: ${err}`);
             return;
         }
-        showOutput(filePath, data, extContext);
+        showOutput(data, extContext);
     });
 }
 
-function showOutput(outFilePath: string, buffer: Buffer, extContext: vscode.ExtensionContext) {
+function showOutput(buffer: Buffer, extContext: vscode.ExtensionContext) {
     const stream = new PassThrough();
     stream.end(buffer);
     revealEmptyCheckResultView(ModelCheckResultSource.OutFile, extContext);
     const parser = new TlcModelCheckerStdoutParser(
-        ModelCheckResultSource.OutFile, stream, undefined, outFilePath, updateCheckResultView);
+        ModelCheckResultSource.OutFile, stream, undefined, false, updateCheckResultView);
     parser.readAll();
 }

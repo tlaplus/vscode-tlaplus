@@ -29,6 +29,12 @@ function stopProcess() {
     });
 }
 
+function showTlcOutput() {
+    vscode.postMessage({
+        command: 'showTlcOutput'
+    });
+}
+
 function openFile(event, filePath, line, character) {
     event.preventDefault();
     event.stopPropagation();
@@ -49,7 +55,7 @@ window.addEventListener('message', (event) => {
 });
 
 function displayStatus(result) {
-    displayStatusHeader(result.outFilePath);
+    displayStatusHeader(result.showFullOutput);
     const elTimeStart = document.getElementById('time-start');
     const elTimeEnd = document.getElementById('time-end');
     const elState = document.getElementById('check-state');
@@ -75,13 +81,14 @@ function displayStatus(result) {
     }
 }
 
-function displayStatusHeader(outFilePath) {
-    const elOutFileLink = document.getElementById('out-file-link');
-    if (outFilePath) {
-        elOutFileLink.classList.remove('hidden');
-        elOutFileLink.onclick = (e) => openFile(e, outFilePath, 0, 0);
+function displayStatusHeader(showFullOutput) {
+    const elOutputLink = document.getElementById('output-link');
+    if (showFullOutput) {
+        elOutputLink.classList.remove('hidden');
+        elOutputLink.onclick = () => showTlcOutput();
     } else {
-        elOutFileLink.classList.add('hidden');
+        elOutputLink.classList.add('hidden');
+        delete elOutputLink.onclick;
     }
 }
 

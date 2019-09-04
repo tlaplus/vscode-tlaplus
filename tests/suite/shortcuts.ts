@@ -66,7 +66,7 @@ export class CheckResultBuilder {
     build(): ModelCheckResult {
         return new ModelCheckResult(
             ModelCheckResultSource.OutFile,
-            this.outFilePath,
+            false,
             this.checkState,
             this.checkStatus,
             this.processInfo,

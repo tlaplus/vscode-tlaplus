@@ -27,12 +27,12 @@ export class TlcModelCheckerStdoutParser extends ProcessOutputHandler<DCollectio
         source: ModelCheckResultSource,
         stdout: Readable | string[],
         tlaFilePath: string | undefined,
-        outFilePath: string,
+        showFullOutput: boolean,
         private handler: (checkResult: ModelCheckResult) => void
     ) {
         super(stdout, new DCollection());
         this.handler = handler;
-        this.checkResultBuilder = new ModelCheckResultBuilder(source, outFilePath);
+        this.checkResultBuilder = new ModelCheckResultBuilder(source, showFullOutput);
         if (tlaFilePath) {
             this.result.addFilePath(tlaFilePath);
         }
@@ -163,7 +163,7 @@ class ModelCheckResultBuilder {
 
     constructor(
         private source: ModelCheckResultSource,
-        private outFilePath: string
+        private showFullOutput: boolean
     ) {}
 
     getStatus(): CheckStatus {
@@ -211,7 +211,7 @@ class ModelCheckResultBuilder {
     build(): ModelCheckResult {
         return new ModelCheckResult(
             this.source,
-            this.outFilePath,
+            this.showFullOutput,
             this.state,
             this.status,
             this.processInfo,

@@ -273,7 +273,7 @@ export class ModelCheckResult {
 
     constructor(
         readonly source: ModelCheckResultSource,
-        readonly outFilePath: string | undefined,
+        readonly showFullOutput: boolean,
         readonly state: CheckState,
         readonly status: CheckStatus,
         readonly processInfo: string | undefined,
@@ -313,7 +313,7 @@ export class ModelCheckResult {
 
     static createEmpty(source: ModelCheckResultSource): ModelCheckResult {
         return new ModelCheckResult(
-            source, undefined, CheckState.Running, CheckStatus.Starting, undefined, [], [], [], [], [],
+            source, false, CheckState.Running, CheckStatus.Starting, undefined, [], [], [], [], [],
             undefined, undefined, undefined, undefined, 0, undefined, []);
     }
 }

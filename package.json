@@ -198,6 +198,12 @@
                     "default": "",
                     "description": "Additional options to pass to TLC.",
                     "maxLength": 1000
+                },
+                "tlaplus.tlc.modelChecker.createOutFiles": {
+                    "type": "boolean",
+                    "scope": "application",
+                    "default": true,
+                    "description": "Send TLC output to .out file."
                 }
             }
         },

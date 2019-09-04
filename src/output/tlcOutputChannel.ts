@@ -34,4 +34,8 @@ export class TlcOutputChannel {
         this.outChannel.appendLine('');
         this.outSender = new OutputToOutChannelSender(procInfo.process.stdout, this.outChannel);
     }
+
+    revealWindow() {
+        this.outChannel.show();
+    }
 }
