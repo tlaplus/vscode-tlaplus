@@ -42,6 +42,7 @@ The extension provides the following commands in the Command Palette:
 - `Java: Home` allows to provide location of the JVM that the extension must use for running TLA<sup>+</sup> tools.
 - `Java: Options` allows to provide additional options that must be passed to a Java process when running TLA<sup>+</sup> tools.
 - `PlusCal: Options` allows to provide additional options to the PlusCal transpiler.
+- `TLC Model Checker: Create Out Files` defines if TLC model checker output should be sent to a .out file.
 - `TLC Model Checker: Options` allows to provide additional options to the TLC model checker.
 
 ## How to Start
