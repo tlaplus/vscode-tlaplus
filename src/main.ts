@@ -5,6 +5,7 @@ import { CMD_CHECK_MODEL_RUN, CMD_CHECK_MODEL_STOP, CMD_CHECK_MODEL_DISPLAY, CMD
 import { parseModule, CMD_PARSE_MODULE } from './commands/parseModule';
 import { visualizeTlcOutput, CMD_VISUALIZE_TLC_OUTPUT } from './commands/visualizeOutput';
 import { TlaOnTypeFormattingEditProvider } from './formatting';
+import { TlaCodeActionProvider } from './actions';
 
 // Holds all the error messages
 let diagnostic: vscode.DiagnosticCollection;
@@ -36,6 +37,10 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand(
             CMD_VISUALIZE_TLC_OUTPUT,
             () => visualizeTlcOutput(context)),
+        vscode.languages.registerCodeActionsProvider(
+            { scheme: 'file', language: 'tlaplus' },
+            new TlaCodeActionProvider(),
+            { providedCodeActionKinds: [ vscode.CodeActionKind.Source ] }),
         vscode.languages.registerOnTypeFormattingEditProvider(
             { scheme: 'file', language: 'tlaplus' },
             new TlaOnTypeFormattingEditProvider(),
