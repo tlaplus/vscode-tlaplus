@@ -6,14 +6,14 @@ suite('TLA+ Tools Test Suite', () => {
     test('Builds PlusCal options with no custom settings', () => {
         assert.deepEqual(
             buildPlusCalOptions('/path/to/module.tla', []),
-            ['/path/to/module.tla']
+            ['module.tla']
         );
     });
 
     test('Puts PlusCal custom options before module name', () => {
         assert.deepEqual(
             buildPlusCalOptions('/path/to/module.tla', ['-lineWidth', '100', '-nocfg']),
-            ['-lineWidth', '100', '-nocfg', '/path/to/module.tla']
+            ['-lineWidth', '100', '-nocfg', 'module.tla']
         );
     });
 
