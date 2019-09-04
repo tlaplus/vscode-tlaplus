@@ -9,7 +9,7 @@ import { ChildProcess } from 'child_process';
 import { saveStreamToFile } from '../outputSaver';
 import { replaceExtension } from '../common';
 import { ModelCheckResultSource } from '../model/check';
-import { TlcOutputChannel } from '../output/tlcOutputChannel';
+import { ToolOutputChannel } from '../outputChannels';
 
 export const CMD_CHECK_MODEL_RUN = 'tlaplus.model.check.run';
 export const CMD_CHECK_MODEL_STOP = 'tlaplus.model.check.stop';
@@ -21,7 +21,7 @@ const TEMPLATE_CFG_PATH = path.resolve(__dirname, '../../../tools/template.cfg')
 
 let checkProcess: ChildProcess | undefined;
 const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);
-const outChannel = new TlcOutputChannel();
+const outChannel = new ToolOutputChannel('TLC', mapTlcOutputLine);
 
 class SpecFiles {
     constructor(
@@ -186,4 +186,12 @@ async function createModelFile(cfgPath: string) {
         vscode.workspace.openTextDocument(cfgPath)
             .then(doc => vscode.window.showTextDocument(doc));
     });
+}
+
+function mapTlcOutputLine(line: string): string | undefined {
+    if (line === '') {
+        return line;
+    }
+    const cleanLine = line.replace(/@!@!@(START|END)MSG \d+(\:\d+)? @!@!@/g, '');
+    return cleanLine === '' ? undefined : cleanLine;
 }
