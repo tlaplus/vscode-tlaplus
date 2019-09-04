@@ -66,7 +66,7 @@ export async function runSany(tlaFilePath: string): Promise<ToolProcessInfo> {
     return runTool(
         TlaTool.SANY,
         tlaFilePath,
-        [tlaFilePath]
+        [ path.basename(tlaFilePath) ]
     );
 }
 
@@ -161,7 +161,7 @@ export function buildTlcOptions(tlaFilePath: string, cfgFilePath: string, custom
  */
 export function buildPlusCalOptions(tlaFilePath: string, customOptions: string[]): string[] {
     const opts = customOptions.slice(0);
-    opts.push(tlaFilePath);
+    opts.push(path.basename(tlaFilePath));
     return opts;
 }
 
