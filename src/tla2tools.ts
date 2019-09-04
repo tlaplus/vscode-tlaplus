@@ -28,6 +28,13 @@ enum TlaTool {
     TLC = 'tlc2.TLC'
 }
 
+export class ToolProcessInfo {
+    constructor(
+        readonly commandLine: string,
+        readonly process: ChildProcess
+    ) {}
+}
+
 /**
  * Thrown when there's some problem with Java or TLA+ tooling.
  */
@@ -46,7 +53,7 @@ export class JavaVersion {
     ) {}
 }
 
-export async function runPlusCal(tlaFilePath: string): Promise<ChildProcess> {
+export async function runPlusCal(tlaFilePath: string): Promise<ToolProcessInfo> {
     const customOptions = getConfigOptions(CFG_PLUSCAL_OPTIONS);
     return runTool(
         TlaTool.PLUS_CAL,
@@ -55,7 +62,7 @@ export async function runPlusCal(tlaFilePath: string): Promise<ChildProcess> {
     );
 }
 
-export async function runSany(tlaFilePath: string): Promise<ChildProcess> {
+export async function runSany(tlaFilePath: string): Promise<ToolProcessInfo> {
     return runTool(
         TlaTool.SANY,
         tlaFilePath,
@@ -63,7 +70,7 @@ export async function runSany(tlaFilePath: string): Promise<ChildProcess> {
     );
 }
 
-export async function runTlc(tlaFilePath: string, cfgFilePath: string): Promise<ChildProcess> {
+export async function runTlc(tlaFilePath: string, cfgFilePath: string): Promise<ToolProcessInfo> {
     const customOptions = getConfigOptions(CFG_TLC_OPTIONS);
     return runTool(
         TlaTool.TLC,
@@ -72,7 +79,7 @@ export async function runTlc(tlaFilePath: string, cfgFilePath: string): Promise<
     );
 }
 
-async function runTool(toolName: string, filePath: string, toolOptions: string[]): Promise<ChildProcess> {
+async function runTool(toolName: string, filePath: string, toolOptions: string[]): Promise<ToolProcessInfo> {
     const javaPath = await obtainJavaPath();
     const cfgOptions = getConfigOptions(CFG_JAVA_OPTIONS);
     const args = buildJavaOptions(cfgOptions).concat(toolsBaseArgs);
@@ -80,7 +87,7 @@ async function runTool(toolName: string, filePath: string, toolOptions: string[]
     toolOptions.forEach(opt => args.push(opt));
     const proc = spawn(javaPath, args, { cwd: path.dirname(filePath) });
     addReturnCodeHandler(proc, toolName);
-    return proc;
+    return new ToolProcessInfo(buildCommandLine(javaPath, args), proc);
 }
 
 /**
@@ -143,7 +150,7 @@ export function buildJavaOptions(customOptions: string[]): string[] {
  */
 export function buildTlcOptions(tlaFilePath: string, cfgFilePath: string, customOptions: string[]): string[] {
     const custOpts = customOptions.slice(0);
-    const opts = [tlaFilePath, '-tool', '-modelcheck'];
+    const opts = [path.basename(tlaFilePath), '-tool', '-modelcheck'];
     addValueOrDefault('-coverage', '1', custOpts, opts);
     addValueOrDefault('-config', cfgFilePath, custOpts, opts);
     return opts.concat(custOpts);
@@ -210,4 +217,12 @@ function addReturnCodeHandler(proc: ChildProcess, toolName?: string) {
 function getConfigOptions(cfgName: string): string[] {
     const optsString = vscode.workspace.getConfiguration().get<string>(cfgName) || '';
     return optsString.split(' ').map(opt => opt.trim()).filter(opt => opt !== '');
+}
+
+function buildCommandLine(programName: string, args: string[]): string {
+    const line = [ programName ];
+    args
+        .map(arg => arg.indexOf(' ') >= 0 ? '"' + arg + '"' : arg)
+        .forEach(arg => line.push(arg));
+    return line.join(' ');
 }

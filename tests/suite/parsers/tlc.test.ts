@@ -279,12 +279,11 @@ async function assertOutput(fileName: string, tlaFilePath: string, expected: Mod
     const stream = new PassThrough();
     stream.end(buffer);
     const crh = new CheckResultHolder();
-    const outFilePath = replaceExtension(tlaFilePath, 'out');
     const parser = new TlcModelCheckerStdoutParser(
         ModelCheckResultSource.OutFile,
         stream,
         tlaFilePath,
-        outFilePath,
+        false,
         cr => { crh.checkResult = cr; }
     );
     return parser.readAll().then(() => assertEquals(crh.checkResult, expected));

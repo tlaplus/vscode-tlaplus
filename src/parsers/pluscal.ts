@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ProcessOutputParser } from './base';
+import { ProcessOutputHandler } from '../outputHandler';
 import { Readable } from 'stream';
 import { DCollection } from '../diagnostic';
 
@@ -15,7 +15,7 @@ const ZERO_LOCATION_INFO = new LocationInfo(new vscode.Position(0, 0), 0);
 /**
  * Parses stdout of PlusCal transpiler.
  */
-export class TranspilerStdoutParser extends ProcessOutputParser<DCollection> {
+export class TranspilerStdoutParser extends ProcessOutputHandler<DCollection> {
     private readonly filePath: string;
     private errMessage: string | null = null;
 
@@ -25,7 +25,7 @@ export class TranspilerStdoutParser extends ProcessOutputParser<DCollection> {
         this.filePath = filePath;
     }
 
-    protected parseLine(line: string | null) {
+    protected handleLine(line: string | null) {
         if (line === null) {
             if (this.errMessage !== null) {
                 this.result.addMessage(this.filePath, new vscode.Range(0, 0, 0, 0), this.errMessage);

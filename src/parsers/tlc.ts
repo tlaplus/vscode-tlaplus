@@ -4,7 +4,7 @@ import { Readable } from 'stream';
 import { clearTimeout } from 'timers';
 import { CheckStatus, ModelCheckResult, InitialStateStatItem, CoverageItem, ErrorTraceItem,
     CheckState, OutputLine, StructureValue, findChanges, ModelCheckResultSource} from '../model/check';
-import { ProcessOutputParser } from './base';
+import { ProcessOutputHandler } from '../outputHandler';
 import { parseVariableValue } from './tlcValues';
 import { SanyData, SanyStdoutParser } from './sany';
 import { DCollection, addDiagnostics } from '../diagnostic';
@@ -18,7 +18,7 @@ const NONE = -1938477103984;
 /**
  * Parses stdout of TLC model checker.
  */
-export class TlcModelCheckerStdoutParser extends ProcessOutputParser<DCollection> {
+export class TlcModelCheckerStdoutParser extends ProcessOutputHandler<DCollection> {
     checkResultBuilder: ModelCheckResultBuilder;
     timer: NodeJS.Timer | undefined = undefined;
     first: boolean = true;
@@ -27,18 +27,18 @@ export class TlcModelCheckerStdoutParser extends ProcessOutputParser<DCollection
         source: ModelCheckResultSource,
         stdout: Readable | string[],
         tlaFilePath: string | undefined,
-        outFilePath: string,
+        showFullOutput: boolean,
         private handler: (checkResult: ModelCheckResult) => void
     ) {
         super(stdout, new DCollection());
         this.handler = handler;
-        this.checkResultBuilder = new ModelCheckResultBuilder(source, outFilePath);
+        this.checkResultBuilder = new ModelCheckResultBuilder(source, showFullOutput);
         if (tlaFilePath) {
             this.result.addFilePath(tlaFilePath);
         }
     }
 
-    protected parseLine(line: string | null) {
+    protected handleLine(line: string | null) {
         if (line !== null) {
             this.checkResultBuilder.addLine(line);
             this.scheduleUpdate();
@@ -163,7 +163,7 @@ class ModelCheckResultBuilder {
 
     constructor(
         private source: ModelCheckResultSource,
-        private outFilePath: string
+        private showFullOutput: boolean
     ) {}
 
     getStatus(): CheckStatus {
@@ -211,7 +211,7 @@ class ModelCheckResultBuilder {
     build(): ModelCheckResult {
         return new ModelCheckResult(
             this.source,
-            this.outFilePath,
+            this.showFullOutput,
             this.state,
             this.status,
             this.processInfo,

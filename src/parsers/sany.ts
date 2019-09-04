@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { Readable } from 'stream';
-import { ProcessOutputParser } from './base';
+import { ProcessOutputHandler } from '../outputHandler';
 import { DCollection } from '../diagnostic';
 
 enum OutBlock {
@@ -18,7 +18,7 @@ export class SanyData {
 /**
  * Parses stdout of TLA+ code parser.
  */
-export class SanyStdoutParser extends ProcessOutputParser<SanyData> {
+export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
     rootModulePath: string | undefined;
     curFilePath: string | undefined;
     outBlock = OutBlock.Parsing;
@@ -30,7 +30,7 @@ export class SanyStdoutParser extends ProcessOutputParser<SanyData> {
         super(source, new SanyData());
     }
 
-    protected parseLine(line: string | null): void {
+    protected handleLine(line: string | null): void {
         if (line === null || line === '') {
             return;
         }

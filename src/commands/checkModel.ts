@@ -9,15 +9,19 @@ import { ChildProcess } from 'child_process';
 import { saveStreamToFile } from '../outputSaver';
 import { replaceExtension } from '../common';
 import { ModelCheckResultSource } from '../model/check';
+import { TlcOutputChannel } from '../output/tlcOutputChannel';
 
 export const CMD_CHECK_MODEL_RUN = 'tlaplus.model.check.run';
 export const CMD_CHECK_MODEL_STOP = 'tlaplus.model.check.stop';
 export const CMD_CHECK_MODEL_DISPLAY = 'tlaplus.model.check.display';
+export const CMD_SHOW_TLC_OUTPUT = 'tlaplus.showTlcOutput';
 
+const CFG_CREATE_OUT_FILES = 'tlaplus.tlc.modelChecker.createOutFiles';
 const TEMPLATE_CFG_PATH = path.resolve(__dirname, '../../../tools/template.cfg');
 
 let checkProcess: ChildProcess | undefined;
 const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);
+const outChannel = new TlcOutputChannel();
 
 class SpecFiles {
     constructor(
@@ -68,6 +72,10 @@ export function stopModelChecking() {
     }
 }
 
+export function showTlcOutput() {
+    outChannel.revealWindow();
+}
+
 async function doCheckModel(
     fileUri: vscode.Uri,
     extContext: vscode.ExtensionContext,
@@ -79,25 +87,34 @@ async function doCheckModel(
     }
     try {
         updateStatusBarItem(true);
-        checkProcess = await runTlc(specFiles.tlaFilePath, path.basename(specFiles.cfgFilePath));
+        const procInfo = await runTlc(specFiles.tlaFilePath, path.basename(specFiles.cfgFilePath));
+        outChannel.bindTo(procInfo);
+        checkProcess = procInfo.process;
         checkProcess.on('close', () => {
             checkProcess = undefined;
             updateStatusBarItem(false);
         });
-        const outFilePath = replaceExtension(specFiles.tlaFilePath, 'out');
-        saveStreamToFile(checkProcess.stdout, outFilePath);
+        attachFileSaver(specFiles.tlaFilePath, checkProcess);
         revealEmptyCheckResultView(ModelCheckResultSource.Process, extContext);
         const stdoutParser = new TlcModelCheckerStdoutParser(
             ModelCheckResultSource.Process,
             checkProcess.stdout,
             specFiles.tlaFilePath,
-            outFilePath,
+            true,
             updateCheckResultView);
         const dCol = await stdoutParser.readAll();
         applyDCollection(dCol, diagnostic);
     } catch (err) {
         statusBarItem.hide();
         vscode.window.showErrorMessage(err.message);
+    }
+}
+
+function attachFileSaver(tlaFilePath: string, proc: ChildProcess) {
+    const createOutFiles = vscode.workspace.getConfiguration().get<boolean>(CFG_CREATE_OUT_FILES);
+    if (typeof(createOutFiles) === 'undefined' || createOutFiles) {
+        const outFilePath = replaceExtension(tlaFilePath, 'out');
+        saveStreamToFile(proc.stdout, outFilePath);
     }
 }
 

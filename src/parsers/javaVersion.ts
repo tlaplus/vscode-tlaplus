@@ -1,11 +1,11 @@
 import { Readable } from 'stream';
-import { ProcessOutputParser } from './base';
+import { ProcessOutputHandler } from '../outputHandler';
 import { JavaVersion } from '../tla2tools';
 
 /**
  * Parses `java -version` output.
  */
-export class JavaVersionParser extends ProcessOutputParser<JavaVersion> {
+export class JavaVersionParser extends ProcessOutputHandler<JavaVersion> {
     private version: string = JavaVersion.UNKNOWN_VERSION;
     private outLines: string[] = [];
 
@@ -13,7 +13,7 @@ export class JavaVersionParser extends ProcessOutputParser<JavaVersion> {
         super(source, new JavaVersion(JavaVersion.UNKNOWN_VERSION, []));
     }
 
-    protected parseLine(line: string | null): void {
+    protected handleLine(line: string | null): void {
         if (line == null) {
             this.result = new JavaVersion(this.version, this.outLines);
             return;
