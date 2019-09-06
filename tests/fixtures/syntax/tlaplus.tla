@@ -79,7 +79,9 @@ Par^+ == 10
 Par^* == 10
 Par^# == 10
 
-VARIABLES foo, bar, pc
+VARIABLES foo, bar, pc,
+    another,    \* comment
+    not_an_operator   (* block comment in line *)
 
 vars == << foo, bar, pc >>
 
