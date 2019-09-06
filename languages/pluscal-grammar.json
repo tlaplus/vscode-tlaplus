@@ -42,11 +42,11 @@
     "repository": {
         "keywords": {
             "name": "keyword.other",
-            "match": "\\b(if|then|elsif|else|while|variables|define|process|macro|begin|end|do|skip|assert|procedure|return|call|fair|either|or|with|await|when|self|goto)\\b"
+            "match": "\\b(if|then|elsif|else|while|variable(s)?|define|process|macro|begin|end|do|skip|assert|procedure|return|call|fair|either|or|with|await|when|self|goto|print)\\b"
         },
         "tlaplus_keywords": {
             "name": "keyword.other.tlaplus",
-            "match": "\\b(EXTENDS|VARIABLE|VARIABLES|LET|IN|EXCEPT|ENABLED|UNCHANGED|LAMBDA|DOMAIN|CONSTANT|CONSTANTS|CHOOSE|LOCAL|ASSUME|ASSUMPTION|AXIOM|RECURSIVE|INSTANCE|WITH|THEOREM|SUBSET|UNION|SF_|WF_)\\b"
+            "match": "\\b(EXTENDS|VARIABLE(S)?|LET|IN|EXCEPT|ENABLED|UNCHANGED|LAMBDA|DOMAIN|CONSTANT(S)?|CHOOSE|LOCAL|ASSUME|ASSUMPTION|AXIOM|RECURSIVE|INSTANCE|WITH|THEOREM|SUBSET|UNION|SF_|WF_|USE|DEFS|BY|DEF|SUFFICES|PROVE|OBVIOUS|NEW|QED|RECURSIVE|PICK|HIDE|DEFINE|WITNESS|HAVE|TAKE|PROOF|ACTION|COROLLARY|LEMMA|OMITTED|ONLY|PROPOSITION|STATE|TEMPORAL)\\b"
         },
         "tlaplus_control_keywords": {
             "name": "keyword.control.tlaplus",
