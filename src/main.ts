@@ -7,6 +7,7 @@ import { visualizeTlcOutput, CMD_VISUALIZE_TLC_OUTPUT } from './commands/visuali
 import { TlaOnTypeFormattingEditProvider } from './formatters/tla';
 import { CfgOnTypeFormattingEditProvider } from './formatters/cfg';
 import { TlaCodeActionProvider } from './actions';
+import { LANG_TLAPLUS, LANG_TLAPLUS_CFG } from './common';
 
 // Holds all the error messages
 let diagnostic: vscode.DiagnosticCollection;
@@ -15,7 +16,7 @@ let diagnostic: vscode.DiagnosticCollection;
  * Extension entry point.
  */
 export function activate(context: vscode.ExtensionContext) {
-    diagnostic = vscode.languages.createDiagnosticCollection('tlaplus');
+    diagnostic = vscode.languages.createDiagnosticCollection(LANG_TLAPLUS);
     context.subscriptions.push(
         vscode.commands.registerCommand(
             CMD_PARSE_MODULE,
@@ -39,15 +40,15 @@ export function activate(context: vscode.ExtensionContext) {
             CMD_VISUALIZE_TLC_OUTPUT,
             () => visualizeTlcOutput(context)),
         vscode.languages.registerCodeActionsProvider(
-            { scheme: 'file', language: 'tlaplus' },
+            { scheme: 'file', language: LANG_TLAPLUS },
             new TlaCodeActionProvider(),
             { providedCodeActionKinds: [ vscode.CodeActionKind.Source ] }),
         vscode.languages.registerOnTypeFormattingEditProvider(
-            { scheme: 'file', language: 'tlaplus' },
+            { scheme: 'file', language: LANG_TLAPLUS },
             new TlaOnTypeFormattingEditProvider(),
             '\n', 'd', 'e', 'f', 'r'),
         vscode.languages.registerOnTypeFormattingEditProvider(
-            { scheme: 'file', language: 'tlaplus.cfg' },
+            { scheme: 'file', language: LANG_TLAPLUS_CFG },
             new CfgOnTypeFormattingEditProvider(),
             '\n')
     );

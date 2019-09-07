@@ -68,7 +68,7 @@
                 "configuration": "./languages/pluscal-lang-config.json"
             },
             {
-                "id": "tlaplus.cfg",
+                "id": "tlaplus_cfg",
                 "aliases": [],
                 "extensions": [
                     ".cfg"
@@ -76,7 +76,7 @@
                 "configuration": "./languages/cfg-lang-config.json"
             },
             {
-                "id": "tlaplus.out",
+                "id": "tlaplus_out",
                 "extensions": [
                     ".out"
                 ]
@@ -94,12 +94,12 @@
                 "path": "./languages/pluscal-grammar.json"
             },
             {
-                "language": "tlaplus.cfg",
+                "language": "tlaplus_cfg",
                 "scopeName": "source.tlaplus.cfg",
                 "path": "./languages/cfg-grammar.json"
             },
             {
-                "language": "tlaplus.out",
+                "language": "tlaplus_out",
                 "scopeName": "source.tlaplus.out",
                 "path": "./languages/out-grammar.json"
             }
@@ -156,7 +156,7 @@
                 },
                 {
                     "command": "tlaplus.model.check.run",
-                    "when": "editorLangId == tlaplus || editorLangId == tlaplus.cfg"
+                    "when": "editorLangId == tlaplus || editorLangId == tlaplus_cfg"
                 },
                 {
                     "command": "tlaplus.model.check.customRun",
@@ -223,7 +223,7 @@
                 "editor.formatOnType": true,
                 "editor.detectIndentation": false
             },
-            "[tlaplus.cfg]": {
+            "[tlaplus_cfg]": {
                 "editor.insertSpaces": true,
                 "editor.tabSize": 2,
                 "editor.formatOnType": true,
