@@ -1,6 +1,9 @@
 import * as vscode from 'vscode';
 import * as moment from 'moment';
 
+export const LANG_TLAPLUS = 'tlaplus';
+export const LANG_TLAPLUS_CFG = 'tlaplus_cfg';
+
 /**
  * Thrown when there's some problem with parsing.
  */

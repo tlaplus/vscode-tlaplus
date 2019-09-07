@@ -4,6 +4,7 @@ import { TranspilerStdoutParser } from '../parsers/pluscal';
 import { SanyData, SanyStdoutParser } from '../parsers/sany';
 import { runPlusCal, runSany } from '../tla2tools';
 import { ToolOutputChannel } from '../outputChannels';
+import { LANG_TLAPLUS } from '../common';
 
 export const CMD_PARSE_MODULE = 'tlaplus.parse';
 
@@ -21,7 +22,7 @@ export function parseModule(diagnostic: vscode.DiagnosticCollection) {
         vscode.window.showWarningMessage('No editor is active, cannot find a TLA+ file to transpile');
         return;
     }
-    if (editor.document.languageId !== 'tlaplus') {
+    if (editor.document.languageId !== LANG_TLAPLUS) {
         vscode.window.showWarningMessage('File in the active editor is not a TLA+ file, it cannot be transpiled');
         return;
     }

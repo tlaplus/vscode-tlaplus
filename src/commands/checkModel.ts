@@ -7,7 +7,7 @@ import { updateCheckResultView, revealEmptyCheckResultView, revealLastCheckResul
 import { applyDCollection } from '../diagnostic';
 import { ChildProcess } from 'child_process';
 import { saveStreamToFile } from '../outputSaver';
-import { replaceExtension } from '../common';
+import { replaceExtension, LANG_TLAPLUS, LANG_TLAPLUS_CFG } from '../common';
 import { ModelCheckResultSource } from '../model/check';
 import { ToolOutputChannel } from '../outputChannels';
 
@@ -39,7 +39,7 @@ export async function checkModel(diagnostic: vscode.DiagnosticCollection, extCon
     if (!doc) {
         return;
     }
-    if (doc.languageId !== 'tlaplus' && doc.languageId !== 'tlaplus.cfg') {
+    if (doc.languageId !== LANG_TLAPLUS && doc.languageId !== LANG_TLAPLUS_CFG) {
         vscode.window.showWarningMessage(
             'File in the active editor is not a .tla or .cfg file, it cannot be checked as a model');
         return;
@@ -56,7 +56,7 @@ export async function checkModelCustom(diagnostic: vscode.DiagnosticCollection, 
     if (!doc) {
         return;
     }
-    if (doc.languageId !== 'tlaplus') {
+    if (doc.languageId !== LANG_TLAPLUS) {
         vscode.window.showWarningMessage('File in the active editor is not a .tla, it cannot be checked as a model');
         return;
     }

@@ -1,12 +1,13 @@
 import * as vscode from 'vscode';
 import { assertOnTypeFormatting, OPT_4_SPACES } from './formatting';
 import { TlaOnTypeFormattingEditProvider } from '../../../src/formatters/tla';
+import { LANG_TLAPLUS } from '../../../src/common';
 
 suite('TLA On Type Formatting Test Suite', () => {
     let doc: vscode.TextDocument;
 
     suiteSetup(async () => {
-        doc = await vscode.workspace.openTextDocument({ language: 'tlaplus' });
+        doc = await vscode.workspace.openTextDocument({ language: LANG_TLAPLUS });
     });
 
     suiteTeardown(async () => {

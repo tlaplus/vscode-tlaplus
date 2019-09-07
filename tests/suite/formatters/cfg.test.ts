@@ -1,12 +1,13 @@
 import * as vscode from 'vscode';
 import { assertOnTypeFormatting, OPT_2_SPACES } from './formatting';
 import { CfgOnTypeFormattingEditProvider } from '../../../src/formatters/cfg';
+import { LANG_TLAPLUS_CFG } from '../../../src/common';
 
 suite('Config On Type Formatting Test Suite', () => {
     let doc: vscode.TextDocument;
 
     suiteSetup(async () => {
-        doc = await vscode.workspace.openTextDocument({ language: 'tlaplus.cfg' });
+        doc = await vscode.workspace.openTextDocument({ language: LANG_TLAPLUS_CFG });
     });
 
     suiteTeardown(async () => {
@@ -54,6 +55,17 @@ suite('Config On Type Formatting Test Suite', () => {
             ], [
                 'CONSTRAINTS',
                 '  '
+            ]
+        );
+    });
+
+    test('Doesn\'t indent if the block already has contents', () => {
+        return assertCfgOnTypeFormatting(doc, [
+                'CONSTANTS Foo = 3',
+                '{enter}'
+            ], [
+                'CONSTANTS Foo = 3',
+                ''
             ]
         );
     });
