@@ -270,6 +270,7 @@ export class ModelCheckResult {
     readonly endDateTimeStr: string | undefined;
     readonly durationStr: string | undefined;
     readonly statusDetails: string | undefined;
+    readonly modulePaths: any;
 
     constructor(
         readonly source: ModelCheckResultSource,
@@ -288,7 +289,7 @@ export class ModelCheckResult {
         readonly duration: number | undefined,
         readonly workersCount: number,
         readonly collisionProbability: string | undefined,
-        readonly outputLines: OutputLine[]
+        readonly outputLines: OutputLine[],
     ) {
         this.stateName = getStateName(this.state);
         this.startDateTimeStr = dateTimeToStr(startDateTime);
@@ -309,6 +310,10 @@ export class ModelCheckResult {
                 break;
         }
         this.statusDetails = statusDetails;
+        this.modulePaths = {};
+        if (this.sanyMessages) {
+            this.sanyMessages.getModules().forEach((path, name) => this.modulePaths[name] = path);
+        }
     }
 
     static createEmpty(source: ModelCheckResultSource): ModelCheckResult {

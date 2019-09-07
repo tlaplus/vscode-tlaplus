@@ -18,7 +18,7 @@ function displayCheckResult(data) {
     displayStatesStat(res.initialStatesStat);
     displayCoverage(res.coverageStat);
     displayWarnings(res.warnings);
-    displayErrors(res.errors);
+    displayErrors(res.errors, data.checkResult.modulePaths);
     displayErrorTrace(res.errorTrace, data);
     displayOutput(res.outputLines);
 }
@@ -35,14 +35,13 @@ function showTlcOutput() {
     });
 }
 
-function openFile(event, filePath, line, character) {
+function openFile(event, filePath, location) {
     event.preventDefault();
     event.stopPropagation();
     vscode.postMessage({
         command: 'openFile',
         filePath,
-        line,
-        character
+        location
     });
 }
 
@@ -116,7 +115,7 @@ function displayCoverage(stat) {
             elRow.setAttribute('title', 'This action has never been used to compute successor states');
         }
         appendTextChild(elRow, 'td', item.module);
-        appendCodeLinkChild(elRow, 'td', item.action, item.filePath, item.range);
+        appendCodeLinkChild(elRow, 'td', item.action, item.filePath, item.range[0]);
         appendTextChild(elRow, 'td', num(item.total), VAL_COL);
         appendTextChild(elRow, 'td', num(item.distinct), VAL_COL);
         elCoverageStat.appendChild(elRow);
@@ -124,14 +123,14 @@ function displayCoverage(stat) {
 }
 
 function displayWarnings(warnings) {
-    displayMessages(warnings, 'warnings', 'warnings-list');
+    displayMessages(warnings, undefined, 'warnings', 'warnings-list');
 }
 
-function displayErrors(errors) {
-    displayMessages(errors, 'errors', 'errors-list');
+function displayErrors(errors, modulePaths) {
+    displayMessages(errors, modulePaths, 'errors', 'errors-list');
 }
 
-function displayMessages(messages, wrapperId, listId) {
+function displayMessages(messages, modulePaths, wrapperId, listId) {
     const elWrapper = document.getElementById(wrapperId);
     const elList = document.getElementById(listId);
     removeAllChildren(elList);
@@ -143,9 +142,30 @@ function displayMessages(messages, wrapperId, listId) {
     messages.forEach((msg) => {
         const elMessage = document.createElement('p');
         elMessage.classList = ['message'];
-        msg.forEach((line) => appendTextChild(elMessage, 'p', line, ['message-line']));
+        msg.forEach((line) => displayMessageLine(elMessage, line, modulePaths));
         elList.appendChild(elMessage);
     });
+}
+
+function displayMessageLine(elParent, line, modulePaths) {
+    const matches = /^(.*)((?:L|l)ine (\d+), column (\d+) to line (\d+), column (\d+) in (\w+))(.*)$/g.exec(line);
+    let filePath;
+    if (matches && modulePaths) {
+        filePath = modulePaths[matches[7]]
+    }
+    if (!filePath) {
+        return appendTextChild(elParent, 'p', line, ['message-line']);
+    }
+    const elLine = appendTextChild(elParent, 'p', undefined, ['message-line']);
+    const prefix = matches[1];
+    const linkText = matches[2];
+    const location = { line: parseInt(matches[3]) - 1, character: parseInt(matches[4]) - 1 };
+    const suffix = matches[8];
+    appendTextChild(elLine, 'span', prefix);
+    const elLink = appendTextChild(elLine, 'a', linkText);
+    elLink.setAttribute('href', '#');
+    elLink.onclick = (e) => openFile(e, filePath, location)
+    appendTextChild(elParent, 'span', suffix);
 }
 
 function displayErrorTrace(trace, state) {
@@ -179,7 +199,7 @@ function displayErrorTraceItem(elErrorTraceVars, item, state) {
     elHeader.classList.add('error-trace-item-title');
     elHeader.innerText = `${item.num}: ${item.title} `;
     if (item.filePath && item.range) {
-        appendCodeLinkChild(elHeader, 'span', '>>', item.filePath, item.range);
+        appendCodeLinkChild(elHeader, 'span', '>>', item.filePath, item.range[0]);
     }
     elItemBlock.appendChild(elHeader);
     elItem.appendChild(elItemBlock);
@@ -308,7 +328,9 @@ function removeAllChildren(el) {
 
 function appendTextChild(elParent, tag, innerText, classes) {
     const el = document.createElement(tag);
-    el.innerText = innerText;
+    if (innerText) {
+        el.innerText = innerText;
+    }
     if (classes) {
         classes.forEach((c) => el.classList.add(c));
     }
@@ -316,14 +338,17 @@ function appendTextChild(elParent, tag, innerText, classes) {
     return el;
 }
 
-function appendCodeLinkChild(elParent, tag, innerText, filePath, range) {
+function appendCodeLinkChild(elParent, tag, innerText, filePath, location, classes) {
     const el = document.createElement(tag);
-    if (filePath && range[0]) {
+    if (filePath && location) {
         const elLink = appendTextChild(el, 'a', innerText);
-        elLink.onclick = (e) => openFile(e, filePath, range[0].line, range[0].character);
+        elLink.onclick = (e) => openFile(e, filePath, location);
         elLink.setAttribute('href', '#');
-    } else {
+    } else if (innerText) {
         el.innerText = innerText;
+    }
+    if (classes) {
+        classes.forEach((c) => el.classList.add(c));
     }
     elParent.appendChild(el);
     return el;

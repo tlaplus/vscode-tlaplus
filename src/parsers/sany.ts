@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { Readable } from 'stream';
 import { ProcessOutputHandler } from '../outputHandler';
 import { DCollection } from '../diagnostic';
+import { pathToModuleName } from '../common';
 
 enum OutBlock {
     Parsing,
@@ -96,11 +97,7 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
     }
 
     private rememberParsedModule(modulePath: string) {
-        // It's necessary to check both separators here, not just `path.sep`
-        // to support .out files portability. TLA+ doesn't support slashes in module names,
-        // so it breaks nothing.
-        const sid = Math.max(modulePath.lastIndexOf('/'), modulePath.lastIndexOf('\\'));
-        const modName = modulePath.substring(sid + 1, modulePath.length - 4);   // remove path and .tla
+        const modName = pathToModuleName(modulePath);
         this.result.modulePaths.set(modName, modulePath);
         this.result.dCollection.addFilePath(modulePath);
         this.curFilePath = modulePath;

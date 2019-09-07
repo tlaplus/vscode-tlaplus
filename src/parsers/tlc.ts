@@ -518,7 +518,7 @@ class ModelCheckResultBuilder {
         const num = parseInt(matches[1]) + 1;   // looks like a shift-by-one error in the Toolbox
         return new ErrorTraceItem(
             num,
-            `Back to state ${num}`,
+            `Back to state`,
             moduleName,
             actionName,
             this.getModulePath(moduleName),

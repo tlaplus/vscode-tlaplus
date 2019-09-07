@@ -1,15 +1,15 @@
 import * as vscode from 'vscode';
-import { pathToUri } from './common';
+import { pathToModuleName, pathToUri } from './common';
 
 /**
  * Collection of DMessages that were generated during a single check run.
  */
 export class DCollection {
-    private filePaths: Set<string> = new Set(); // Set of checked files
-    private messages: DMessage[] = [];          // Collection of diagnostic messages from the check run
+    private modules: Map<string, string> = new Map();   // Map of checked modules names to file paths
+    private messages: DMessage[] = [];                  // Collection of diagnostic messages from the check run
 
-    public getFilePaths(): ReadonlySet<string> {
-        return this.filePaths;
+    public getModules(): ReadonlyMap<string, string> {
+        return this.modules;
     }
 
     public getMessages(): ReadonlyArray<DMessage> {
@@ -17,17 +17,17 @@ export class DCollection {
     }
 
     public addFilePath(filePath: string) {
-        this.filePaths.add(filePath);
+        this.modules.set(pathToModuleName(filePath), filePath);
     }
 
     public addMessage(filePath: string, range: vscode.Range, text: string) {
         this.messages.push(new DMessage(filePath, range, text));
-        this.filePaths.add(filePath);
+        this.addFilePath(filePath);
     }
 
     public addAll(src: DCollection) {
-        src.messages.forEach(m => this.messages.push(m));
-        src.filePaths.forEach(p => this.filePaths.add(p));
+        src.messages.forEach((msg) => this.messages.push(msg));
+        src.modules.forEach((path, mod) => this.modules.set(mod, path));
     }
 }
 
@@ -37,7 +37,7 @@ export class DCollection {
  */
 export function applyDCollection(dCol: DCollection, dc: vscode.DiagnosticCollection) {
     // Clear diagnostic for all checked files
-    dCol.getFilePaths().forEach(p => dc.delete(pathToUri(p)));
+    dCol.getModules().forEach((modPath) => dc.delete(pathToUri(modPath)));
     // Add messages that were found
     const uri2diag = new Map<string, vscode.Diagnostic[]>();
     dCol.getMessages().forEach(d => {
@@ -55,8 +55,8 @@ export function applyDCollection(dCol: DCollection, dc: vscode.DiagnosticCollect
  * Adds all diagnostics from one collection to another.
  */
 export function addDiagnostics(from: DCollection, to: DCollection) {
-    from.getFilePaths().forEach(fp => to.addFilePath(fp));
-    from.getMessages().forEach(m => to.addMessage(m.filePath, m.diagnostic.range, m.diagnostic.message));
+    from.getModules().forEach((modPath) => to.addFilePath(modPath));
+    from.getMessages().forEach((msg) => to.addMessage(msg.filePath, msg.diagnostic.range, msg.diagnostic.message));
 }
 
 /**
