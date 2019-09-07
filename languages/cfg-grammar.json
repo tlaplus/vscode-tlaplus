@@ -24,7 +24,7 @@
     "repository": {
         "keywords": {
             "name": "keyword.control",
-            "match": "\\b(SPECIFICATION|INVARIANT|INVARIANTS|PROPERTY|PROPERTIES|CONSTANT|CONSTANTS|INIT|NEXT|SYMMETRY|CONSTRAINT|CONSTRAINTS|ACTION_CONSTRAINT|ACTION_CONSTRAINTS|VIEW)\\b"
+            "match": "\\b(SPECIFICATION|INVARIANT(S)?|PROPERT(Y|IES)|CONSTANT(S)?|INIT|NEXT|SYMMETRY|CONSTRAINT(S)?|ACTION_CONSTRAINT(S)?|VIEW)\\b"
         },
         "line_comments": {
             "name": "comment.line",
