@@ -57,6 +57,9 @@
         },
         {
             "include": "#inst_module_refs"
+        },
+        {
+            "include": "#primed_operators"
         }
     ],
     "repository": {
@@ -93,14 +96,14 @@
         },
         "embedded_operators": {
             "match": "\\\\[a-zA-Z]+\\b",
-            "name": "strong"
+            "name": "keyword.operator.tlaplus"
         },
         "constants": {
             "name": "support.constant.tlaplus",
-            "match": "\\b(TRUE|FALSE|BOOLEAN|numbers)\\b"
+            "match": "\\b(TRUE|FALSE|\\d+)\\b"
         },
         "strings": {
-            "name": "string.quoted.double.tlaplus",
+            "name": "string.quoted.doublte.tlaplus",
             "begin": "\"",
             "end": "\"",
             "patterns": [
@@ -144,7 +147,7 @@
             "match": "(\\w+)\\s*==(?!\\s*INSTANCE)",
             "captures": {
                 "1": {
-                    "name": "variable.other"
+                    "name": "support.type.primitive"
                 }
             }
         },
@@ -179,7 +182,7 @@
             }
         },
         "operators": {
-            "match": "(\\w+)\\s*\\([^\\*]",
+            "match": "(\\w+)\\s*\\((?!\\*)",
             "captures": {
                 "1": {
                     "name": "entity.name.function"
@@ -198,8 +201,12 @@
             }
         },
         "inst_module_refs": {
-            "match": "\\b(\\w+!)",
+            "match": "\\b(\\w+\\s*!)(?!\\!)",
             "name": "entity.name.class"
+        },
+        "primed_operators": {
+            "match": "\\b(\\w+')",
+            "name": "variable.name"
         }
     }
 }

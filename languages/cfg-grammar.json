@@ -13,6 +13,12 @@
         },
         {
             "include": "#strings"
+        },
+        {
+            "include": "#constants"
+        },
+        {
+            "include": "#const_definitions"
         }
     ],
     "repository": {
@@ -40,6 +46,18 @@
                     "match": "\\\\."
                 }
             ]
+        },
+        "constants": {
+            "name": "support.constant.tlaplus",
+            "match": "\\b(TRUE|FALSE|\\d+)\\b"
+        },
+        "const_definitions": {
+            "match": "(\\w+)\\s*(?:=|<-)",
+            "captures": {
+                "1": {
+                    "name": "support.constant.tlaplus"
+                }
+            }
         }
     }
 }
