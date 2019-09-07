@@ -4,7 +4,8 @@ import { CMD_CHECK_MODEL_RUN, CMD_CHECK_MODEL_STOP, CMD_CHECK_MODEL_DISPLAY, CMD
     showTlcOutput, checkModelCustom} from './commands/checkModel';
 import { parseModule, CMD_PARSE_MODULE } from './commands/parseModule';
 import { visualizeTlcOutput, CMD_VISUALIZE_TLC_OUTPUT } from './commands/visualizeOutput';
-import { TlaOnTypeFormattingEditProvider } from './formatting';
+import { TlaOnTypeFormattingEditProvider } from './formatters/tla';
+import { CfgOnTypeFormattingEditProvider } from './formatters/cfg';
 import { TlaCodeActionProvider } from './actions';
 
 // Holds all the error messages
@@ -44,7 +45,11 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.languages.registerOnTypeFormattingEditProvider(
             { scheme: 'file', language: 'tlaplus' },
             new TlaOnTypeFormattingEditProvider(),
-            '\n', 'd', 'e', 'f', 'r')
+            '\n', 'd', 'e', 'f', 'r'),
+        vscode.languages.registerOnTypeFormattingEditProvider(
+            { scheme: 'file', language: 'tlaplus.cfg' },
+            new CfgOnTypeFormattingEditProvider(),
+            '\n')
     );
 }
 

@@ -1,23 +1,8 @@
 import * as vscode from 'vscode';
-
-const SPACES = ['', ' ', '  ', '   ', '    ', '     ', '      ', '       ', '        '];
-
-enum IndentationType {
-    Exact,      // Indent exactly to the given length
-    Right,      // Increase indentation
-    Left        // Decrease indentation
-}
-
-class LineInfo {
-    constructor(
-        readonly line: vscode.TextLine,
-        readonly indentation: string,
-        readonly indentationType: IndentationType
-    ) {}
-}
+import { IndentationType, LineInfo, makeSpaces, indentRight, indentationLen } from './formatting';
 
 /**
- * Formats the code on the fly.
+ * Formats the code on the fly in .tla files.
  */
 export class TlaOnTypeFormattingEditProvider implements vscode.OnTypeFormattingEditProvider {
     provideOnTypeFormattingEdits(
@@ -30,8 +15,6 @@ export class TlaOnTypeFormattingEditProvider implements vscode.OnTypeFormattingE
         if (position.line === 0) {
             return [];
         }
-        // VSCode does the simple formatting itself (keeps indentation from the previous line)
-        // So, we only need to correct it when necessary
         if (ch === '\n') {
             return tryIndentBlockStart(document, position, options);
         } else if (ch === 'd' || ch === 'e' || ch === 'f' || ch === 'r') {
@@ -129,7 +112,7 @@ function testStateDefBlockStart(line: vscode.TextLine, options: vscode.Formattin
         return undefined;
     }
     if (gMatches[3]) {
-        return new LineInfo(line, spaces(indentationLen(gMatches[1], options)), IndentationType.Exact);
+        return new LineInfo(line, makeSpaces(indentationLen(gMatches[1], options)), IndentationType.Exact);
     }
     return new LineInfo(line, gMatches[2], IndentationType.Right);
 }
@@ -144,29 +127,6 @@ function testBlockEnd(line: vscode.TextLine): LineInfo | undefined {
     return matches ? new LineInfo(line, matches[1], IndentationType.Left) : undefined;
 }
 
-function indentRight(
-    lineText: string,
-    position: vscode.Position,
-    baseIndentation: string,
-    options: vscode.FormattingOptions
-): vscode.TextEdit[] {
-    if (lineText === baseIndentation) {
-        // The user has just hit the Enter right after the block start
-        // and VSCode aligned the new line to the block start. Just add a new tab.
-        return [ vscode.TextEdit.insert(position, makeTab(options)) ];
-    }
-    if (position.character === indentationLen(baseIndentation, options) + options.tabSize) {
-        // The user just hit the Enter while continuing to type inside already indented
-        // block. VSCode does everyting itself.
-        return [];
-    }
-    // Otherwise just force the correct indentation
-    // This works in all cases. The cases above are just to improve user experience a bit
-    const newIdent = baseIndentation + makeTab(options);
-    const lineStart = new vscode.Position(position.line, 0);
-    return [ vscode.TextEdit.replace(new vscode.Range(lineStart, position), newIdent) ];
-}
-
 function indentExact(
     lineText: string,
     position: vscode.Position,
@@ -177,29 +137,4 @@ function indentExact(
     }
     const lineStart = new vscode.Position(position.line, 0);
     return [ vscode.TextEdit.replace(new vscode.Range(lineStart, position), indentation) ];
-}
-
-function makeTab(options: vscode.FormattingOptions): string {
-    return options.insertSpaces ? spaces(options.tabSize) : '\t';
-}
-
-function indentationLen(str: string, options: vscode.FormattingOptions): number {
-    let len = 0;
-    for (const ch of str) {
-        len += ch === '\t' ? options.tabSize : 1;
-    }
-    return len;
-}
-
-function spaces(num: number) {
-    if (num < SPACES.length) {
-        return SPACES[num];
-    }
-    let len = SPACES.length - 1;
-    const spaces = SPACES.slice(SPACES.length - 1);
-    while (len < num) {
-        len += 1;
-        spaces.push(' ');
-    }
-    return spaces.join('');
 }
