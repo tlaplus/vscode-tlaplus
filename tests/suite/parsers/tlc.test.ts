@@ -2,10 +2,9 @@ import * as assert from 'assert';
 import * as path from 'path';
 import * as fs from 'fs';
 import { PassThrough } from 'stream';
-import { ModelCheckResult, CheckState, CheckStatus, Change, ModelCheckResultSource } from '../../../src/model/check';
+import { ModelCheckResult, CheckState, CheckStatus, ModelCheckResultSource } from '../../../src/model/check';
 import { TlcModelCheckerStdoutParser } from '../../../src/parsers/tlc';
-import { replaceExtension } from '../../../src/common';
-import { CheckResultBuilder, range, struct, v, set } from '../shortcuts';
+import { CheckResultBuilder, pos, range, struct, v, set, message, sourceLink } from '../shortcuts';
 
 const ROOT_PATH = '/Users/alice/TLA/foo.tla';
 const FIXTURES_PATH = path.resolve(__dirname, '../../../../tests/fixtures/parsers/tlc');
@@ -81,8 +80,8 @@ suite('TLC Output Parser Test Suite', () => {
                 .setEndDateTime('2019-08-17 02:04:44')
                 .setDuration(380)
                 .addDColMessage(ROOT_PATH, range(4, 7, 4, 8), "Unknown operator: `a'.")
-                .addError(["Unknown operator: `a'."])
-                .addError(['Parsing or semantic analysis failed.'])
+                .addError([message("Unknown operator: `a'.")])
+                .addError([message('Parsing or semantic analysis failed.')])
                 .build()
         );
     });
@@ -101,7 +100,7 @@ suite('TLC Output Parser Test Suite', () => {
                 .addInitState('00:00:00', 3, 4, 4, 1)
                 .addCoverage('error_trace', 'Init', '/Users/bob/error_trace.tla', range(7, 0, 7, 4), 2, 2)
                 .addCoverage('error_trace', 'SomeFunc', '/Users/bob/error_trace.tla', range(11, 0, 11, 11), 5, 3)
-                .addError(['Invariant FooInvariant is violated.'])
+                .addError([message('Invariant FooInvariant is violated.')])
                 .addTraceItem(1, 'Initial predicate', '', '', undefined, range(0, 0, 0, 0),
                     struct('', v('FooVar', '1..2'), v('BarVar', '-1'))
                 )
@@ -137,7 +136,7 @@ suite('TLC Output Parser Test Suite', () => {
                 .setDuration(1041)
                 .addInitState('00:00:00', 0, 1, 1, 1)
                 .addInitState('00:00:00', 3, 4, 4, 1)
-                .addError(['Temporal properties were violated.'])
+                .addError([ message('Temporal properties were violated.')])
                 .addTraceItem(1, 'Initial predicate', '', '', undefined, range(0, 0, 0, 0),
                     struct('', v('Foo', '1'))
                 )
@@ -158,7 +157,7 @@ suite('TLC Output Parser Test Suite', () => {
                 .setDuration(1041)
                 .addInitState('00:00:00', 0, 1, 1, 1)
                 .addInitState('00:00:00', 3, 4, 4, 1)
-                .addError(['Temporal properties were violated.'])
+                .addError([ message('Temporal properties were violated.')])
                 .addTraceItem(1, 'Initial predicate', '', '', undefined, range(0, 0, 0, 0),
                     struct('', v('Foo', '1'))
                 )
@@ -185,7 +184,7 @@ suite('TLC Output Parser Test Suite', () => {
                 .setDuration(1041)
                 .addInitState('00:00:00', 0, 1, 1, 1)
                 .addInitState('00:00:00', 3, 4, 4, 1)
-                .addError(['Invariant FooInvariant is violated.'])
+                .addError([ message('Invariant FooInvariant is violated.')])
                 .addTraceItem(1, 'Initial predicate', '', '', undefined, range(0, 0, 0, 0),
                     struct('', struct('Var', v('foo', '1'), v('bar', '2')))
                 )
@@ -202,13 +201,48 @@ suite('TLC Output Parser Test Suite', () => {
                 .setEndDateTime('2019-08-18 21:16:19')
                 .setDuration(262)
                 .addError([
-                    'TLC threw an unexpected exception.',
-                    'This was probably caused by an error in the spec or model.',
-                    'See the User Output or TLC Console for clues to what happened.',
-                    'The exception was a tlc2.tool.ConfigFileException',
-                    ': ',
-                    'TLC found an error in the configuration file at line 6',
-                    'It was expecting = or <-, but did not find it.'
+                    message('TLC threw an unexpected exception.'),
+                    message('This was probably caused by an error in the spec or model.'),
+                    message('See the User Output or TLC Console for clues to what happened.'),
+                    message('The exception was a tlc2.tool.ConfigFileException'),
+                    message(': '),
+                    message('TLC found an error in the configuration file at line 6'),
+                    message('It was expecting = or <-, but did not find it.')
+                ])
+                .build()
+            );
+    });
+
+    test('Extracts links from error messages', () => {
+        return assertOutput('error-message-links.out', ROOT_PATH,
+            new CheckResultBuilder('error-message-links.out', CheckState.Error, CheckStatus.Finished)
+                .addDColFilePath('/Users/bob/error_message_links.tla')
+                .setProcessInfo('Running breadth-first search Model-Checking with fp 6 and seed -9020681683977717109.')
+                .setStartDateTime('2019-08-17 02:37:50')
+                .setEndDateTime('2019-08-17 02:37:51')
+                .setDuration(1041)
+                .addInitState('00:00:00', 0, 1, 1, 1)
+                .addInitState('00:00:00', 3, 4, 4, 1)
+                .addError([
+                    message('The error occurred when TLC was evaluating the nested'),
+                    message('expressions at the following positions:'),
+                    message(
+                        '0. ',
+                        sourceLink(
+                            'Line 38, column 10 to line 50, column 44 in error_message_links',
+                            '/Users/bob/error_message_links.tla',
+                            pos(37, 9)
+                        )
+                    ),
+                    message(
+                        '1. ',
+                        sourceLink(
+                            'Line 40, column 13 to line 42, column 24 in error_message_links',
+                            '/Users/bob/error_message_links.tla',
+                            pos(39, 12)
+                        ),
+                        '. It\'s a pity.'
+                    )
                 ])
                 .build()
             );

@@ -1,4 +1,4 @@
-import { Range } from 'vscode';
+import { Range, Position } from 'vscode';
 import { DCollection } from '../diagnostic';
 import { isNumber } from 'util';
 import { Moment } from 'moment';
@@ -68,6 +68,41 @@ export class CoverageItem {
         readonly total: number,
         readonly distinct: number
     ) {}
+}
+
+enum MessageSpanType {
+    Text = 'T',
+    SourceLink = 'SL'
+}
+
+export class MessageSpan {
+    private constructor(
+        readonly type: MessageSpanType,
+        readonly text: string,
+        readonly filePath?: string | undefined,
+        readonly location?: Position | undefined
+    ) {}
+
+    static newTextSpan(text: string): MessageSpan {
+        return new MessageSpan(MessageSpanType.Text, text);
+    }
+
+    static newSourceLinkSpan(text: string, filePath: string, location: Position): MessageSpan {
+        return new MessageSpan(MessageSpanType.SourceLink, text, filePath, location);
+    }
+}
+
+/**
+ * Represents an error or warning line of a message.
+ */
+export class MessageLine {
+    constructor(
+        readonly spans: ReadonlyArray<MessageSpan>
+    ) {}
+
+    static fromText(text: string): MessageLine {
+        return new MessageLine([ MessageSpan.newTextSpan(text) ]);
+    }
 }
 
 export type ValueKey = string | number;
@@ -270,7 +305,6 @@ export class ModelCheckResult {
     readonly endDateTimeStr: string | undefined;
     readonly durationStr: string | undefined;
     readonly statusDetails: string | undefined;
-    readonly modulePaths: any;
 
     constructor(
         readonly source: ModelCheckResultSource,
@@ -281,7 +315,7 @@ export class ModelCheckResult {
         readonly initialStatesStat: InitialStateStatItem[],
         readonly coverageStat: CoverageItem[],
         readonly warnings: string[][],
-        readonly errors: string[][],
+        readonly errors: MessageLine[][],
         readonly errorTrace: ErrorTraceItem[],
         readonly sanyMessages: DCollection | undefined,
         readonly startDateTime: Moment | undefined,
@@ -310,10 +344,6 @@ export class ModelCheckResult {
                 break;
         }
         this.statusDetails = statusDetails;
-        this.modulePaths = {};
-        if (this.sanyMessages) {
-            this.sanyMessages.getModules().forEach((path, name) => this.modulePaths[name] = path);
-        }
     }
 
     static createEmpty(source: ModelCheckResultSource): ModelCheckResult {
