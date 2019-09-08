@@ -228,10 +228,21 @@ suite('TLC Output Parser Test Suite', () => {
                     message('expressions at the following positions:'),
                     message(
                         '0. ',
-                        sourceLink('Line 38, column 10 to line 50, column 44 in error_message_links', pos(37, 9))),
+                        sourceLink(
+                            'Line 38, column 10 to line 50, column 44 in error_message_links',
+                            '/Users/bob/error_message_links.tla',
+                            pos(37, 9)
+                        )
+                    ),
                     message(
                         '1. ',
-                        sourceLink('Line 40, column 13 to line 42, column 24 in error_message_links', pos(39, 12)))
+                        sourceLink(
+                            'Line 40, column 13 to line 42, column 24 in error_message_links',
+                            '/Users/bob/error_message_links.tla',
+                            pos(39, 12)
+                        ),
+                        '. It\'s a pity.'
+                    )
                 ])
                 .build()
             );

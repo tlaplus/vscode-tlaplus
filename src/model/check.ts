@@ -79,6 +79,7 @@ export class MessageSpan {
     private constructor(
         readonly type: MessageSpanType,
         readonly text: string,
+        readonly filePath?: string | undefined,
         readonly location?: Position | undefined
     ) {}
 
@@ -86,8 +87,8 @@ export class MessageSpan {
         return new MessageSpan(MessageSpanType.Text, text);
     }
 
-    static newSourceLinkSpan(text: string, location: Position): MessageSpan {
-        return new MessageSpan(MessageSpanType.SourceLink, text, location);
+    static newSourceLinkSpan(text: string, filePath: string, location: Position): MessageSpan {
+        return new MessageSpan(MessageSpanType.SourceLink, text, filePath, location);
     }
 }
 
@@ -304,7 +305,6 @@ export class ModelCheckResult {
     readonly endDateTimeStr: string | undefined;
     readonly durationStr: string | undefined;
     readonly statusDetails: string | undefined;
-    readonly modulePaths: any;
 
     constructor(
         readonly source: ModelCheckResultSource,
@@ -344,10 +344,6 @@ export class ModelCheckResult {
                 break;
         }
         this.statusDetails = statusDetails;
-        this.modulePaths = {};
-        if (this.sanyMessages) {
-            this.sanyMessages.getModules().forEach((path, name) => this.modulePaths[name] = path);
-        }
     }
 
     static createEmpty(source: ModelCheckResultSource): ModelCheckResult {

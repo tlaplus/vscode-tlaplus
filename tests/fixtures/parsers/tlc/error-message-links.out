@@ -25,7 +25,7 @@ Finished computing initial states: 1 distinct state generated at 2019-08-17 02:3
 The error occurred when TLC was evaluating the nested
 expressions at the following positions:
 0. Line 38, column 10 to line 50, column 44 in error_message_links
-1. Line 40, column 13 to line 42, column 24 in error_message_links
+1. Line 40, column 13 to line 42, column 24 in error_message_links. It's a pity.
 
 
 @!@!@ENDMSG 2103 @!@!@

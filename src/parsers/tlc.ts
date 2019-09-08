@@ -597,7 +597,7 @@ class ModelCheckResultBuilder {
     }
 
     private makeMessageLine(line: string): MessageLine {
-        const matches = /^(.*)((?:L|l)ine (\d+), column (\d+) to line \d+, column \d+ in (\w+))(.*)$/g.exec(line);
+        const matches = /^(.*)\b((?:L|l)ine (\d+), column (\d+) to line \d+, column \d+ in (\w+))\b(.*)$/g.exec(line);
         const modulePath = matches ? this.getModulePath(matches[5]) : undefined;
         if (!matches || !modulePath) {
             return MessageLine.fromText(line);
@@ -608,6 +608,7 @@ class ModelCheckResultBuilder {
         }
         spans.push(MessageSpan.newSourceLinkSpan(
             matches![2],
+            modulePath,
             new Position(parseInt(matches[3]) - 1, parseInt(matches[4]) - 1)
         ));
         if (matches[6] !== '') {

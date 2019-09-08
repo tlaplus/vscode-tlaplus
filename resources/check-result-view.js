@@ -18,7 +18,7 @@ function displayCheckResult(data) {
     displayStatesStat(res.initialStatesStat);
     displayCoverage(res.coverageStat);
     displayWarnings(res.warnings);
-    displayErrors(res.errors, data.checkResult.modulePaths);
+    displayErrors(res.errors);
     displayErrorTrace(res.errorTrace, data);
     displayOutput(res.outputLines);
 }
@@ -123,14 +123,14 @@ function displayCoverage(stat) {
 }
 
 function displayWarnings(warnings) {
-    displayMessages(warnings, undefined, 'warnings', 'warnings-list');
+    displayMessages(warnings, 'warnings', 'warnings-list');
 }
 
-function displayErrors(errors, modulePaths) {
-    displayMessages(errors, modulePaths, 'errors', 'errors-list');
+function displayErrors(errors) {
+    displayMessages(errors, 'errors', 'errors-list');
 }
 
-function displayMessages(messages, modulePaths, wrapperId, listId) {
+function displayMessages(messages, wrapperId, listId) {
     const elWrapper = document.getElementById(wrapperId);
     const elList = document.getElementById(listId);
     removeAllChildren(elList);
@@ -142,30 +142,24 @@ function displayMessages(messages, modulePaths, wrapperId, listId) {
     messages.forEach((msg) => {
         const elMessage = document.createElement('p');
         elMessage.classList = ['message'];
-        msg.forEach((line) => displayMessageLine(elMessage, line, modulePaths));
+        msg.forEach((line) => displayMessageLine(elMessage, line));
         elList.appendChild(elMessage);
     });
 }
 
-function displayMessageLine(elParent, line, modulePaths) {
-    const matches = /^(.*)((?:L|l)ine (\d+), column (\d+) to line (\d+), column (\d+) in (\w+))(.*)$/g.exec(line);
-    let filePath;
-    if (matches && modulePaths) {
-        filePath = modulePaths[matches[7]]
-    }
-    if (!filePath) {
-        return appendTextChild(elParent, 'p', line, ['message-line']);
-    }
-    const elLine = appendTextChild(elParent, 'p', undefined, ['message-line']);
-    const prefix = matches[1];
-    const linkText = matches[2];
-    const location = { line: parseInt(matches[3]) - 1, character: parseInt(matches[4]) - 1 };
-    const suffix = matches[8];
-    appendTextChild(elLine, 'span', prefix);
-    const elLink = appendTextChild(elLine, 'a', linkText);
-    elLink.setAttribute('href', '#');
-    elLink.onclick = (e) => openFile(e, filePath, location)
-    appendTextChild(elParent, 'span', suffix);
+function displayMessageLine(elParent, line) {
+    const elLine = document.createElement('p');
+    elLine.classList = ['message-line'];
+    line.spans.forEach((span) => {
+        if (span.type === 'SL') {
+            const elLink = appendTextChild(elLine, 'a', span.text);
+            elLink.setAttribute('href', '#');
+            elLink.onclick = (e) => openFile(e, span.filePath, span.location)
+        } else {
+            appendTextChild(elLine, 'span', span.text);
+        }
+    });
+    elParent.appendChild(elLine);
 }
 
 function displayErrorTrace(trace, state) {

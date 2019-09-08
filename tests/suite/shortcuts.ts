@@ -55,8 +55,8 @@ export function message(...spans: MessageSpanSrc[]): MessageLine {
     return new MessageLine(eSpans);
 }
 
-export function sourceLink(text: string, locaction: vscode.Position): MessageSpan {
-    return MessageSpan.newSourceLinkSpan(text, locaction);
+export function sourceLink(text: string, filePath: string, locaction: vscode.Position): MessageSpan {
+    return MessageSpan.newSourceLinkSpan(text, filePath, locaction);
 }
 
 export class CheckResultBuilder {
