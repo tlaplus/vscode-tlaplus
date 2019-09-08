@@ -2,9 +2,11 @@ import * as vscode from 'vscode';
 import moment = require('moment');
 import { Moment } from 'moment';
 import { Value, ValueKey, SetValue, SequenceValue, StructureValue, SimpleFunction,
-    InitialStateStatItem, CoverageItem, ModelCheckResult, CheckState, CheckStatus,
+    InitialStateStatItem, CoverageItem, ModelCheckResult, CheckState, CheckStatus, MessageLine, MessageSpan,
     ErrorTraceItem, OutputLine, ModelCheckResultSource, SimpleFunctionItem } from '../../src/model/check';
 import { DCollection } from '../../src/diagnostic';
+
+type MessageSpanSrc = string | MessageSpan;
 
 export function v(key: ValueKey, value: string): Value {
     return new Value(key, value);
@@ -38,8 +40,23 @@ export function funcMerge(key: ValueKey, ...items: SimpleFunctionItem[]): Simple
     return new SimpleFunction(key, items);
 }
 
+export function pos(line: number, char: number): vscode.Position {
+    return new vscode.Position(line, char);
+}
+
 export function range(fromLine: number, fromChar: number, toLine: number, toChar: number): vscode.Range {
-    return new vscode.Range(new vscode.Position(fromLine, fromChar), new vscode.Position(toLine, toChar));
+    return new vscode.Range(pos(fromLine, fromChar), pos(toLine, toChar));
+}
+
+export function message(...spans: MessageSpanSrc[]): MessageLine {
+    const eSpans = spans.map((s) => {
+        return s instanceof MessageSpan ? s : MessageSpan.newTextSpan(s);
+    });
+    return new MessageLine(eSpans);
+}
+
+export function sourceLink(text: string, locaction: vscode.Position): MessageSpan {
+    return MessageSpan.newSourceLinkSpan(text, locaction);
 }
 
 export class CheckResultBuilder {
@@ -47,7 +64,7 @@ export class CheckResultBuilder {
     private initialStatesStat: InitialStateStatItem[] = [];
     private coverageStat: CoverageItem[] = [];
     private warnings: string[][] = [];
-    private errors: string[][] = [];
+    private errors: MessageLine[][] = [];
     private errorTrace: ErrorTraceItem[] = [];
     private sanyMessages: DCollection | undefined;
     private startDateTime: Moment | undefined;
@@ -145,7 +162,7 @@ export class CheckResultBuilder {
         return this;
     }
 
-    addError(lines: string[]): CheckResultBuilder {
+    addError(lines: MessageLine[]): CheckResultBuilder {
         this.errors.push(lines);
         return this;
     }

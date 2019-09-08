@@ -1,8 +1,8 @@
-import { Range, window } from 'vscode';
+import { Range, Position, window } from 'vscode';
 import * as moment from 'moment/moment';
 import { Readable } from 'stream';
 import { clearTimeout } from 'timers';
-import { CheckStatus, ModelCheckResult, InitialStateStatItem, CoverageItem, ErrorTraceItem,
+import { CheckStatus, ModelCheckResult, InitialStateStatItem, CoverageItem, MessageLine, MessageSpan, ErrorTraceItem,
     CheckState, OutputLine, StructureValue, findChanges, ModelCheckResultSource} from '../model/check';
 import { ProcessOutputHandler } from '../outputHandler';
 import { parseVariableValue } from './tlcValues';
@@ -11,6 +11,7 @@ import { DCollection, addDiagnostics } from '../diagnostic';
 import { parseDateTime } from '../common';
 import * as msg from './tlcCodes';
 import { getTlcCode, TlcCodeType } from './tlcCodes';
+import { downloadAndUnzipVSCode } from 'vscode-test';
 
 const STATUS_EMIT_TIMEOUT = 500;    // msec
 const NONE = -1938477103984;
@@ -151,7 +152,7 @@ class ModelCheckResultBuilder {
     private initialStatesStat: InitialStateStatItem[] = [];
     private coverageStat: CoverageItem[] = [];
     private warnings: string[][] = [];
-    private errors: string[][] = [];
+    private errors: MessageLine[][] = [];
     private errorTrace: ErrorTraceItem[] = [];
     private messages = new MessageStack();
     private sanyLines: string[] = [];
@@ -377,7 +378,9 @@ class ModelCheckResultBuilder {
         const sany = new SanyStdoutParser(this.sanyLines);
         this.sanyData = sany.readAllSync();
         // Display SANY error messages as model checking errors
-        this.sanyData.dCollection.getMessages().forEach(diag => this.errors.push([diag.diagnostic.message]));
+        this.sanyData.dCollection.getMessages().forEach(diag => {
+            this.errors.push([ MessageLine.fromText(diag.diagnostic.message) ]);
+        });
     }
 
     private parseInitialStatesComputed(lines: string[]) {
@@ -434,12 +437,13 @@ class ModelCheckResultBuilder {
         if (lines.length === 0) {
             return;
         }
+        const msgLines = lines.map((l) => this.makeMessageLine(l));
         if (lines[0] === 'TLC threw an unexpected exception.' && this.errors.length > 0) {
             // Such message must be combined with the previous one (that was actually nested)
             const prevError = this.errors[this.errors.length - 1];
-            this.errors[this.errors.length - 1] = lines.concat(prevError);
+            this.errors[this.errors.length - 1] = msgLines.concat(prevError);
         } else {
-            this.errors.push(lines);
+            this.errors.push(msgLines);
         }
     }
 
@@ -590,6 +594,26 @@ class ModelCheckResultBuilder {
 
     private getModulePath(moduleName: string): string | undefined {
         return this.sanyData ? this.sanyData.modulePaths.get(moduleName) : undefined;
+    }
+
+    private makeMessageLine(line: string): MessageLine {
+        const matches = /^(.*)((?:L|l)ine (\d+), column (\d+) to line \d+, column \d+ in (\w+))(.*)$/g.exec(line);
+        const modulePath = matches ? this.getModulePath(matches[5]) : undefined;
+        if (!matches || !modulePath) {
+            return MessageLine.fromText(line);
+        }
+        const spans = [];
+        if (matches[1] !== '') {
+            spans.push(MessageSpan.newTextSpan(matches[1]));
+        }
+        spans.push(MessageSpan.newSourceLinkSpan(
+            matches![2],
+            new Position(parseInt(matches[3]) - 1, parseInt(matches[4]) - 1)
+        ));
+        if (matches[6] !== '') {
+            spans.push(MessageSpan.newTextSpan(matches[6]));
+        }
+        return new MessageLine(spans);
     }
 }
 
