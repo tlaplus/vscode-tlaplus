@@ -607,7 +607,7 @@ class ModelCheckResultBuilder {
             spans.push(MessageSpan.newTextSpan(matches[1]));
         }
         spans.push(MessageSpan.newSourceLinkSpan(
-            matches![2],
+            matches[2],
             modulePath,
             new Position(parseInt(matches[3]) - 1, parseInt(matches[4]) - 1)
         ));
