@@ -1,5 +1,13 @@
 # Change Log
 
+## 0.7.0 &ndash; 8th September, 2018
+
+### Enhancements
+
+* Render source code links in error messages.
+* Auto-indentation in .cfg files.
+* Lots of syntax highlighting improvements.
+
 ## 0.6.0 &ndash; 5th September, 2019
 
 ### Enhancements
