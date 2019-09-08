@@ -1,6 +1,6 @@
 # Change Log
 
-## 0.7.0 &ndash; 8th September, 2018
+## 0.7.1 &ndash; 8th September, 2019
 
 ### Enhancements
 
