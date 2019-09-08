@@ -174,7 +174,7 @@ async function checkJavaVersion(javaPath: string) {
     const ver = await parser.readAll();
     if (ver.version === JavaVersion.UNKNOWN_VERSION) {
         ver.fullOutput.forEach(line => console.debug(line));
-        throw new ToolingError('Error while obtaining Java version. Check the Java Home configuration property.');
+        throw new ToolingError('Error while obtaining Java version. Check the Java Home setting.');
     }
     let num = ver.version;
     if (num.startsWith('1.')) {
@@ -184,7 +184,7 @@ async function checkJavaVersion(javaPath: string) {
     if (pIdx > 0 && parseInt(num.substring(0, pIdx), 10) >= LOWEST_JAVA_VERSION) {
         return;
     }
-    vscode.window.showWarningMessage(`Unexpected Java version: ${ver.version}`);
+    vscode.window.showWarningMessage(`Unsupported Java version: ${ver.version}`);
 }
 
 function addValueOrDefault(option: string, defaultValue: string, args: string[], realArgs: string[]) {
