@@ -219,13 +219,13 @@
         "configurationDefaults": {
             "[tlaplus]": {
                 "editor.insertSpaces": true,
-                "editor.tabSize": 2,
+                "editor.tabSize": 4,
                 "editor.formatOnType": true,
                 "editor.detectIndentation": false
             },
             "[tlaplus_cfg]": {
                 "editor.insertSpaces": true,
-                "editor.tabSize": 2,
+                "editor.tabSize": 4,
                 "editor.formatOnType": true,
                 "editor.detectIndentation": false
             }
