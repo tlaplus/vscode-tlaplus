@@ -9,8 +9,10 @@
 </head>
 <body>
   <section>
-    <div id="status-header">
-      <div id="output-link"><a href="#" title="Display full TLC output">Full output</a></div>
+    <div class="header">
+      <div id="output-link" class="header-actions">
+        <a href="#" title="Display full TLC output">Full output</a>
+      </div>
       <h1>Status</h1>
     </div>
     <p>
@@ -64,7 +66,12 @@
     <div id="errors-list" />
   </section>
   <section id="error-trace" class="hidden">
-    <h1>Error Trace</h1>
+    <div class="header">
+      <div class="header-actions">
+        <a id="unmodified-switch" href="#" title="Hide/show unmodified variables">Hide unmodified</a>
+      </div>
+      <h1>Error Trace</h1>
+    </div>
     <ul id="error-trace-items" class="tree-nodes tree-top-level"/>
   </section>
 </body>

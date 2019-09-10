@@ -7,19 +7,23 @@ const changeHints = {
     D: 'This item has been deleted since the previous state'
 };
 
-const prevState = vscode.getState();
-if (prevState) {
-    displayCheckResult(prevState);
+let curState = vscode.getState() || { settings: { showUnmodified: true } };
+
+if (curState) {
+    displayCheckResult(curState);
 }
 
-function displayCheckResult(data) {
-    const res = data.checkResult;
+function displayCheckResult(state) {
+    const res = state.checkResult;
+    if (!res) {
+        return;
+    }
     displayStatus(res);
     displayStatesStat(res.initialStatesStat);
     displayCoverage(res.coverageStat);
     displayWarnings(res.warnings);
     displayErrors(res.errors);
-    displayErrorTrace(res.errorTrace, data);
+    displayErrorTrace(res.errorTrace, state.settings.showUnmodified);
     displayOutput(res.outputLines);
 }
 
@@ -46,11 +50,16 @@ function openFile(event, filePath, location) {
 }
 
 /**
- * Recieves data from the extension.
+ * Receives data from the extension.
  */
 window.addEventListener('message', (event) => {
-    displayCheckResult(event.data);
-    vscode.setState(event.data);
+    const newState = {
+        checkResult: event.data.checkResult,
+        settings: curState.settings
+    };
+    curState = newState;
+    displayCheckResult(newState);
+    vscode.setState(newState);
 });
 
 function displayStatus(result) {
@@ -162,7 +171,7 @@ function displayMessageLine(elParent, line) {
     elParent.appendChild(elLine);
 }
 
-function displayErrorTrace(trace, state) {
+function displayErrorTrace(trace, showUnmodified) {
     const elErrorTrace = document.getElementById('error-trace');
     const elErrorTraceItems = document.getElementById('error-trace-items');
     removeAllChildren(elErrorTraceItems);
@@ -170,8 +179,10 @@ function displayErrorTrace(trace, state) {
         elErrorTrace.classList.add('hidden');
         return;
     }
+    const elShowHideSwitch = document.getElementById('unmodified-switch');
+    elShowHideSwitch.onclick = (e) => setShowUnmodified(e, !showUnmodified);
     elErrorTrace.classList.remove('hidden');
-    trace.forEach((item) => displayErrorTraceItem(elErrorTraceItems, item, state));
+    trace.forEach((item) => displayErrorTraceItem(elErrorTraceItems, item, showUnmodified));
     const expNodes = document.getElementsByClassName('tree-expandable');
     for (const node of expNodes) {
         node.onclick = (e) => {
@@ -182,7 +193,8 @@ function displayErrorTrace(trace, state) {
     }
 }
 
-function displayErrorTraceItem(elErrorTraceVars, item, state) {
+function displayErrorTraceItem(elErrorTraceVars, item, showUnmodified) {
+    let eShowUnmodified = showUnmodified || item.num === 1;
     const elItem = document.createElement('li');
     const elItemBlock = document.createElement('div');
     elItemBlock.classList.add('error-trace-item-block');
@@ -201,12 +213,15 @@ function displayErrorTraceItem(elErrorTraceVars, item, state) {
     elVarList.classList.add('tree-nodes');
     elVarList.classList.add('hidden');
     elVarList.classList.add('shown');
-    item.variables.items.forEach((v) => displayValue(elVarList, v, state));
+    item.variables.items.forEach((v) => displayValue(elVarList, v, eShowUnmodified));
     elItem.appendChild(elVarList);
     elErrorTraceVars.appendChild(elItem);
 }
 
-function displayValue(elParent, value, state) {
+function displayValue(elParent, value, showUnmodified) {
+    if (!showUnmodified && value.changeType === 'N') {
+        return;
+    }
     const elVar = document.createElement('li');
     const elVarValueBlock = document.createElement('div');
     const elVarKey = renderValueTitle(value);
@@ -224,9 +239,9 @@ function displayValue(elParent, value, state) {
         const elSubList = document.createElement('ul');
         elSubList.classList.add('tree-nodes');
         elSubList.classList.add('hidden');
-        value.items.forEach((it) => displayValue(elSubList, it, state));
+        value.items.forEach((it) => displayValue(elSubList, it, showUnmodified));
         if (value.deletedItems) {
-            value.deletedItems.forEach((dit) => displayValue(elSubList, dit, state));
+            value.deletedItems.forEach((dit) => displayValue(elSubList, dit, showUnmodified));
         }
         elVar.appendChild(elSubList);
     }
@@ -346,4 +361,19 @@ function appendCodeLinkChild(elParent, tag, innerText, filePath, location, class
     }
     elParent.appendChild(el);
     return el;
+}
+
+function setShowUnmodified(event, show) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.target.blur();
+    const elShowHideSwitch = document.getElementById('unmodified-switch');
+    if (show) {
+        elShowHideSwitch.innerText = 'Hide unmodified';
+    } else {
+        elShowHideSwitch.innerText = 'Show unmodified';
+    }
+    displayErrorTrace(curState.checkResult.errorTrace, show);
+    curState.settings.showUnmodified = show;
+    vscode.setState(curState);
 }
