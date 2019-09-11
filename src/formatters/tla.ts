@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { IndentationType, LineInfo, makeSpaces, indentRight, indentationLen } from './formatting';
+import { IndentationType, LineInfo, makeSpaces, indentRight, indentExact, indentationLen } from './formatting';
 
 /**
  * Formats the code on the fly in .tla files.
@@ -102,7 +102,7 @@ function findEnclosingBlockStart(document: vscode.TextDocument, lineNo: number):
 }
 
 function testSimpleBlockStart(line: vscode.TextLine): LineInfo | undefined {
-    const gMatches = /^(\s*)(?:variables|VARIABLES|CONSTANTS|\w+:)\s*$/g.exec(line.text);
+    const gMatches = /^(\s*)(?:variables|VARIABLE(S)?|CONSTANT(S)?|\w+:)\s*$/g.exec(line.text);
     return gMatches ? new LineInfo(line, gMatches[1], IndentationType.Right) : undefined;
 }
 
@@ -125,16 +125,4 @@ function testBlockStart(line: vscode.TextLine): LineInfo | undefined {
 function testBlockEnd(line: vscode.TextLine): LineInfo | undefined {
     const matches = /^(\s*)(?:end|else|elsif|or)\b.*/g.exec(line.text);
     return matches ? new LineInfo(line, matches[1], IndentationType.Left) : undefined;
-}
-
-function indentExact(
-    lineText: string,
-    position: vscode.Position,
-    indentation: string
-): vscode.TextEdit[] {
-    if (lineText === indentation) {
-        return [];
-    }
-    const lineStart = new vscode.Position(position.line, 0);
-    return [ vscode.TextEdit.replace(new vscode.Range(lineStart, position), indentation) ];
 }
