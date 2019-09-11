@@ -44,6 +44,9 @@ MergeFuncsLong(f, g) == [
         IF x \in DOMAIN f THEN f[x] ELSE g[x]
 ]
 
+
+ASSUME DEP!HmTheorem!:       \* HmTheorem! must not be highlighted as a module reference. DEP! must.
+
 \* Operators redefinition
 Left !! Right == Left
 Left ## Right == Left
