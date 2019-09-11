@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-const UNKNOWN_MODULE_NAME = '';
+export const ROOT_SYMBOL_NAME = '';
 
 /**
  * Provides TLA+ symbols from the given document.
@@ -11,7 +11,7 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
         token: vscode.CancellationToken
     ): vscode.ProviderResult<vscode.SymbolInformation[] | vscode.DocumentSymbol[]> {
         const symbols = [];
-        let moduleName = UNKNOWN_MODULE_NAME;
+        let moduleName = ROOT_SYMBOL_NAME;
         for (let i = 0; i < document.lineCount; i++) {
             const symbol = this.tryExtractSymbol(document, document.lineAt(i), moduleName);
             if (!symbol) {
@@ -34,7 +34,7 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
             return undefined;
         }
         let symbol;
-        if (moduleName === UNKNOWN_MODULE_NAME) {
+        if (moduleName === ROOT_SYMBOL_NAME) {
             symbol = this.tryExtractModuleName(document, line);
         }
         if (!symbol) {
