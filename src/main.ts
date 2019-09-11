@@ -7,6 +7,7 @@ import { visualizeTlcOutput, CMD_VISUALIZE_TLC_OUTPUT } from './commands/visuali
 import { TlaOnTypeFormattingEditProvider } from './formatters/tla';
 import { CfgOnTypeFormattingEditProvider } from './formatters/cfg';
 import { TlaCodeActionProvider } from './actions';
+import { TlaDocumentSymbolsProvider } from './symbols/tlaSymbols';
 import { LANG_TLAPLUS, LANG_TLAPLUS_CFG } from './common';
 
 // Holds all the error messages
@@ -50,7 +51,12 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.languages.registerOnTypeFormattingEditProvider(
             { scheme: 'file', language: LANG_TLAPLUS_CFG },
             new CfgOnTypeFormattingEditProvider(),
-            '\n')
+            '\n'),
+        vscode.languages.registerDocumentSymbolProvider(
+            { scheme: 'file', language: LANG_TLAPLUS },
+            new TlaDocumentSymbolsProvider(),
+            { label: 'TLA+' }
+        )
     );
 }
 
