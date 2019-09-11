@@ -114,7 +114,7 @@
             }
         },
         "inst_module_refs": {
-            "match": "\\b(\\w+!)",
+            "match": "\\b(\\w+!)(?=\\w)",
             "name": "entity.name.class"
         }
     }

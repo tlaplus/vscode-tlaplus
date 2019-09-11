@@ -174,10 +174,15 @@
             }
         },
         "function_definitions": {
-            "match": "(\\w+)\\s*\\[.*==",
+            "match": "(\\w+)\\s*\\[(.*==)",
             "captures": {
                 "1": {
                     "name": "entity.name.function"
+                },
+                "2": {
+                    "patterns": [{
+                        "include": "source.tlaplus"
+                    }]
                 }
             }
         },
@@ -201,7 +206,7 @@
             }
         },
         "inst_module_refs": {
-            "match": "\\b(\\w+\\s*!)(?!\\!)",
+            "match": "\\b(\\w+\\s*!)(?=\\w)",
             "name": "entity.name.class"
         },
         "primed_operators": {
