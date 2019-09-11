@@ -349,12 +349,32 @@ suite('TLA On Type Formatting Test Suite', () => {
         ]);
     });
 
+    test('Indents VARIABLE-block when it\'s empty', () => {
+        return assertTlaOnTypeFormatting(doc, [
+            '    VARIABLE',
+            '    {enter}'
+        ], [
+            '    VARIABLE',
+            '        '
+        ]);
+    });
+
     test('Indents CONSTANTS-block when it\'s empty', () => {
         return assertTlaOnTypeFormatting(doc, [
             '    CONSTANTS',
             '    {enter}'
         ], [
             '    CONSTANTS',
+            '        '
+        ]);
+    });
+
+    test('Indents CONSTANT-block when it\'s empty', () => {
+        return assertTlaOnTypeFormatting(doc, [
+            '    CONSTANT',
+            '    {enter}'
+        ], [
+            '    CONSTANT',
             '        '
         ]);
     });

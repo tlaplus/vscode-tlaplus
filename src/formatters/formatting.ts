@@ -42,6 +42,21 @@ export function indentRight(
     return [ vscode.TextEdit.replace(new vscode.Range(lineStart, position), newIdent) ];
 }
 
+/**
+ * Indents the block with the given indentation string.
+ */
+export function indentExact(
+    lineText: string,
+    position: vscode.Position,
+    indentation: string
+): vscode.TextEdit[] {
+    if (lineText === indentation) {
+        return [];
+    }
+    const lineStart = new vscode.Position(position.line, 0);
+    return [ vscode.TextEdit.replace(new vscode.Range(lineStart, position), indentation) ];
+}
+
 export function makeSpaces(num: number) {
     if (num < SPACES.length) {
         return SPACES[num];
