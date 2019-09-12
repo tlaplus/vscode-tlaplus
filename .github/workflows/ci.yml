@@ -11,8 +11,7 @@ jobs:
       with:
         node-version: '8.12'
     - name: Install dependencies
-      run: |
-        npm install
+      run: npm install
     - name: Build
       run: npm run vscode:prepublish
     - name: Check
