@@ -1,6 +1,6 @@
 # TLA<sup>+</sup> for Visual Studio Code
 
-[![Build Status](https://travis-ci.com/alygin/vscode-tlaplus.svg)](https://travis-ci.com/alygin/vscode-tlaplus) [![Quality Gate](https://img.shields.io/sonar/quality_gate/alygin_vscode-tlaplus?server=https%3A%2F%2Fsonarcloud.io)](https://sonarcloud.io/dashboard?id=alygin_vscode-tlaplus)
+[![Build Status](https://travis-ci.com/alygin/vscode-tlaplus.svg)](https://travis-ci.com/alygin/vscode-tlaplus) [![Quality Gate](https://img.shields.io/sonar/quality_gate/alygin_vscode-tlaplus?server=https%3A%2F%2Fsonarcloud.io)](https://sonarcloud.io/dashboard?id=alygin_vscode-tlaplus) [![VS Code extension version](https://img.shields.io/visual-studio-marketplace/v/alygin.vscode-tlaplus?color=blue&label=Visual%20Studio%20Marketplace&logo=visual-studio-code)](https://marketplace.visualstudio.com/items?itemName=alygin.vscode-tlaplus)
 
 This extension adds support for the [TLA<sup>+</sup> formal specification language](http://research.microsoft.com/en-us/um/people/lamport/tla/tla.html) to VS Code. It also supports running the TLC model checker on TLA<sup>+</sup> specifications.
 
