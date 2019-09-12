@@ -11,6 +11,7 @@ This extension adds support for the [TLA<sup>+</sup> formal specification langua
 - [Settings](#settings)
 - [How to Start](#how-to-start)
 - [Productivity Tips](#productivity-tips)
+- [Wiki](#wiki)
 - [What to Read](#what-to-read)
 - [License](#license)
 
@@ -28,6 +29,8 @@ This extension adds support for the [TLA<sup>+</sup> formal specification langua
 ## Requirements
 
 In order to run various TLA<sup>+</sup> tools, you need Java 8 or higher (Java 11 is recommended) installed. If it's not your default Java SDK, configure the proper Java Home path in the extension settings.
+
+You can find more information on how to install Java on [the special wiki page](https://github.com/alygin/vscode-tlaplus/wiki/Installing-Java).
 
 ## Commands
 
@@ -100,6 +103,10 @@ If you're going to use the extension for more than just syntax highlighting, a f
 * Set the `editor.codeActionsOnSave` [setting](https://code.visualstudio.com/docs/getstarted/settings) for the `tlaplus` language to `{ "source": true }` and VSCode will run PlusCal transpiler and module checker automatically every time you save a .tla file.
 * If you are using PlusCal, [edit settings](https://code.visualstudio.com/docs/getstarted/settings) to hide `.old` files from the Explorer panel. Those files are a by-product of the PlusCal transpiling process, and there's usually no need to deal with them directly. You'll need the `files.exclude` setting, and the pattern to add is `**/*.old`.
 * [Take a look](https://github.com/alygin/vscode-tlaplus/blob/master/languages/pluscal-snippets.json) at the PlusCal code snippets the extension provides. They can save you a few keyboard strokes here and there.
+
+## Wiki
+
+You can find more information about the extension in [the project wikis](https://github.com/alygin/vscode-tlaplus/wiki).
 
 ## What to Read
 
