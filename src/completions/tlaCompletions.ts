@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
 
-const TLA_OPERATORS = [
+export const TLA_OPERATORS = [
     'E', 'A', 'X', 'o', 'lnot', 'land', 'lor', 'cdot', 'equiv', 'subseteq', 'in', 'notin', 'intersect',
     'union', 'leq', 'geq', 'cup', 'cap'
 ];
-const TLA_KEYWORDS = [
+export const TLA_KEYWORDS = [
     'EXTENDS', 'VARIABLE', 'VARIABLES', 'LET', 'IN', 'EXCEPT', 'ENABLED', 'UNCHANGED', 'LAMBDA', 'DOMAIN',
     'CONSTANT', 'CONSTANTS', 'CHOOSE', 'LOCAL', 'ASSUME', 'ASSUMPTION', 'AXIOM', 'RECURSIVE', 'INSTANCE', 'WITH',
     'THEOREM', 'SUBSET', 'UNION', 'SF_', 'WF_', 'USE', 'DEFS', 'BY', 'DEF', 'SUFFICES', 'PROVE', 'OBVIOUS', 'NEW',
@@ -15,7 +15,7 @@ const TLA_KEYWORDS = [
     // -- other
     'BOOLEAN'
 ];
-const TLA_CONSTANTS = [ 'TRUE', 'FALSE' ];
+export const TLA_CONSTANTS = [ 'TRUE', 'FALSE' ];
 
 const TLA_KEYWORD_ITEMS = TLA_KEYWORDS.map(w => new vscode.CompletionItem(w, vscode.CompletionItemKind.Keyword));
 const TLA_CONST_ITEMS = TLA_CONSTANTS.map(w => new vscode.CompletionItem(w, vscode.CompletionItemKind.Constant));
@@ -29,7 +29,7 @@ const TLA_ITEMS = TLA_KEYWORD_ITEMS.concat(TLA_CONST_ITEMS);
  */
 export class TlaCompletionItemProvider implements vscode.CompletionItemProvider {
     constructor(
-        private docSymbols: Map<vscode.Uri, vscode.SymbolInformation[]>
+        private docSymbols: ReadonlyMap<vscode.Uri, ReadonlyArray<vscode.SymbolInformation>>
     ) {}
 
     provideCompletionItems(
@@ -37,7 +37,7 @@ export class TlaCompletionItemProvider implements vscode.CompletionItemProvider 
         position: vscode.Position,
         token: vscode.CancellationToken,
         context: vscode.CompletionContext
-    ): vscode.ProviderResult<vscode.CompletionItem[] | vscode.CompletionList> {
+    ): vscode.ProviderResult<vscode.CompletionList> {
         const prevText = getPrevText(document, position);
         const isOperator = /^.*(?<!\/)\\\w*$/g.test(prevText);  // contains \ before the trailing letters, but not /\
         if (isOperator) {

@@ -49,8 +49,8 @@ export function range(fromLine: number, fromChar: number, toLine: number, toChar
     return new vscode.Range(pos(fromLine, fromChar), pos(toLine, toChar));
 }
 
-export function loc(docUri: vscode.Uri, range: vscode.Range): vscode.Location {
-    return new vscode.Location(docUri, range);
+export function loc(docUri: vscode.Uri, rangeOrPos: vscode.Range | vscode.Position): vscode.Location {
+    return new vscode.Location(docUri, rangeOrPos);
 }
 
 export function message(...spans: MessageSpanSrc[]): MessageLine {
