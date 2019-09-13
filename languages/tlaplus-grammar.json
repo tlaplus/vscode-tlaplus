@@ -64,7 +64,7 @@
     ],
     "repository": {
         "pluscal": {
-            "begin": "(\\(\\*)\\s*--((?:fair\\s+)?algorithm)\\s*.*",
+            "begin": "(\\(\\*.*)--((?:fair\\s+)?algorithm)\\b",
             "beginCaptures": {
                 "1": {
                     "name": "comment.line"
