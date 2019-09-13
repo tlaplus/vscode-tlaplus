@@ -69,6 +69,10 @@ suite('TLA Symbols Provider Test Suite', () => {
         ]);
     });
 
+    test('Ignores theorems with =>', () => {
+        return assertSymbols(doc, [ 'THEOREM TwoRabbits => ThreeRabbits' ], []);
+    });
+
     test('Finds axiom', () => {
         return assertSymbols(doc, [
             'AXIOM Truth == TRUE'
@@ -167,12 +171,32 @@ suite('TLA Symbols Provider Test Suite', () => {
 async function assertSymbols(
     doc: vscode.TextDocument,
     docLines: string[],
-    expectSymbols: object[]
+    expectSymbols: vscode.SymbolInformation[]
 ): Promise<void> {
-    const symbolsProvider = new TlaDocumentSymbolsProvider();
+    const docSymbols = new Map<vscode.Uri, vscode.SymbolInformation[]>();
+    const symbolsProvider = new TlaDocumentSymbolsProvider(docSymbols);
     await replaceDocContents(doc, docLines.join('\n'));
     const tokenSrc = new vscode.CancellationTokenSource();
-    const symbols = symbolsProvider.provideDocumentSymbols(doc, tokenSrc.token);
+    const symbols = await symbolsProvider.provideDocumentSymbols(doc, tokenSrc.token);
     assert.deepEqual(symbols, expectSymbols);
+    assertDocSymbols(doc.uri, docSymbols, expectSymbols);
     return undefined;
+}
+
+function assertDocSymbols(
+    docUri: vscode.Uri,
+    docSymbols: Map<vscode.Uri, vscode.SymbolInformation[]>,
+    expectSymbols: vscode.SymbolInformation[]
+) {
+    assert.equal(docSymbols.size, 1);
+    const docSymbolsList = docSymbols.get(docUri);
+    if (docSymbolsList) {
+        assert.equal(expectSymbols.length, expectSymbols.length);
+        expectSymbols.forEach((expSymbol) => {
+            const symbol = docSymbolsList.find(s => s.name === expSymbol.name);
+            assert.ok(symbol);
+        });
+    } else {
+        assert.fail('Document symbols list not found');
+    }
 }

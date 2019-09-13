@@ -6,6 +6,10 @@ export const ROOT_SYMBOL_NAME = '';
  * Provides TLA+ symbols from the given document.
  */
 export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider {
+    constructor(
+        private docSymbols: Map<vscode.Uri, vscode.SymbolInformation[]>
+    ) {}
+
     provideDocumentSymbols(
         document: vscode.TextDocument,
         token: vscode.CancellationToken
@@ -22,6 +26,7 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
             }
             symbols.push(symbol);
         }
+        this.docSymbols.set(document.uri, symbols);
         return symbols;
     }
 
@@ -96,7 +101,7 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
         line: vscode.TextLine,
         moduleName: string
     ): vscode.SymbolInformation | undefined {
-        const matches = /^\s*(?:THEOREM|AXIOM)\s*(\w+)\b/g.exec(line.text);
+        const matches = /^\s*(?:THEOREM|AXIOM)\s*(\w+)\s*==/g.exec(line.text);
         if (!matches) {
             return undefined;
         }
