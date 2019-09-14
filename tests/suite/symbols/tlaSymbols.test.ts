@@ -234,6 +234,14 @@ suite('TLA Symbols Provider Test Suite', () => {
         ]);
     });
 
+    test('Finds lemma', () => {
+        return assertSymbols(doc, [
+            'LEMMA LemmA == TRUE'
+        ], [
+            symBool('LemmA', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 0)))
+        ]);
+    });
+
     test('Captures symbol with no value', () => {
         return assertSymbols(doc, [
             'Multiline =='
