@@ -4,6 +4,7 @@ import { LANG_TLAPLUS } from '../../../src/common';
 import { TlaDocumentSymbolsProvider, ROOT_SYMBOL_NAME } from '../../../src/symbols/tlaSymbols';
 import { replaceDocContents } from '../document';
 import { symModule, loc, range, symField, symFunc, symModRef, symBool } from '../shortcuts';
+import { TlaDocumentInfos } from '../../../src/model/documentInfo';
 
 suite('TLA Symbols Provider Test Suite', () => {
     let doc: vscode.TextDocument;
@@ -173,23 +174,22 @@ async function assertSymbols(
     docLines: string[],
     expectSymbols: vscode.SymbolInformation[]
 ): Promise<void> {
-    const docSymbols = new Map<vscode.Uri, vscode.SymbolInformation[]>();
-    const symbolsProvider = new TlaDocumentSymbolsProvider(docSymbols);
+    const docInfos = new TlaDocumentInfos();
+    const symbolsProvider = new TlaDocumentSymbolsProvider(docInfos);
     await replaceDocContents(doc, docLines.join('\n'));
     const tokenSrc = new vscode.CancellationTokenSource();
     const symbols = await symbolsProvider.provideDocumentSymbols(doc, tokenSrc.token);
     assert.deepEqual(symbols, expectSymbols);
-    assertDocSymbols(doc.uri, docSymbols, expectSymbols);
+    assertDocSymbols(doc.uri, docInfos, expectSymbols);
     return undefined;
 }
 
 function assertDocSymbols(
     docUri: vscode.Uri,
-    docSymbols: Map<vscode.Uri, vscode.SymbolInformation[]>,
+    docInfos: TlaDocumentInfos,
     expectSymbols: vscode.SymbolInformation[]
 ) {
-    assert.equal(docSymbols.size, 1);
-    const docSymbolsList = docSymbols.get(docUri);
+    const docSymbolsList = docInfos.get(docUri).getSymbols();
     if (docSymbolsList) {
         assert.equal(expectSymbols.length, expectSymbols.length);
         expectSymbols.forEach((expSymbol) => {

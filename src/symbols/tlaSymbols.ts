@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { TlaDocumentInfos } from '../model/documentInfo';
 
 export const ROOT_SYMBOL_NAME = '';
 
@@ -7,7 +8,7 @@ export const ROOT_SYMBOL_NAME = '';
  */
 export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider {
     constructor(
-        private docSymbols: Map<vscode.Uri, vscode.SymbolInformation[]>
+        private docInfos: TlaDocumentInfos
     ) {}
 
     provideDocumentSymbols(
@@ -26,7 +27,7 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
             }
             symbols.push(symbol);
         }
-        this.docSymbols.set(document.uri, symbols);
+        this.docInfos.get(document.uri).setSymbols(symbols);
         return symbols;
     }
 

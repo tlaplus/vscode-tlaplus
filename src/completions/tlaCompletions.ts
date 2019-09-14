@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { TlaDocumentInfos } from '../model/documentInfo';
 
 export const TLA_OPERATORS = [
     'E', 'A', 'X', 'lnot', 'land', 'lor', 'cdot', 'equiv', 'subseteq', 'in', 'notin', 'intersect',
@@ -36,7 +37,7 @@ const TLA_INNER_ITEMS = TLA_OTHER_KEYWORD_ITEMS.concat(TLA_CONST_ITEMS);
  */
 export class TlaCompletionItemProvider implements vscode.CompletionItemProvider {
     constructor(
-        private docSymbols: ReadonlyMap<vscode.Uri, ReadonlyArray<vscode.SymbolInformation>>
+        private docInfos: TlaDocumentInfos
     ) {}
 
     provideCompletionItems(
@@ -51,7 +52,7 @@ export class TlaCompletionItemProvider implements vscode.CompletionItemProvider 
             return new vscode.CompletionList(TLA_OPERATOR_ITEMS, false);
         }
         const isNewLine = /^[\s<>\d\.]*[a-zA-Z]*$/g.test(prevText);
-        const symbols = this.docSymbols.get(document.uri) || [];
+        const symbols = this.docInfos.get(document.uri).getSymbols() || [];
         const symbolInfos = symbols.map(s => new vscode.CompletionItem(s.name, mapKind(s.kind)));
         let items = TLA_INNER_ITEMS.concat(symbolInfos);
         if (isNewLine) {

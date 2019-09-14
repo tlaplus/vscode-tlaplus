@@ -10,11 +10,12 @@ import { TlaCodeActionProvider } from './actions';
 import { TlaDocumentSymbolsProvider } from './symbols/tlaSymbols';
 import { LANG_TLAPLUS, LANG_TLAPLUS_CFG } from './common';
 import { TlaCompletionItemProvider } from './completions/tlaCompletions';
+import { TlaDocumentInfos } from './model/documentInfo';
 
 const TLAPLUS_FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file', language: LANG_TLAPLUS };
 const TLAPLUS_CFG_FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file', language: LANG_TLAPLUS_CFG };
 
-const docSymbols = new Map<vscode.Uri, vscode.SymbolInformation[]>();
+const tlaDocInfos = new TlaDocumentInfos();
 
 // Holds all the error messages
 let diagnostic: vscode.DiagnosticCollection;
@@ -60,11 +61,11 @@ export function activate(context: vscode.ExtensionContext) {
             '\n'),
         vscode.languages.registerDocumentSymbolProvider(
             TLAPLUS_FILE_SELECTOR,
-            new TlaDocumentSymbolsProvider(docSymbols),
+            new TlaDocumentSymbolsProvider(tlaDocInfos),
             { label: 'TLA+' }),
         vscode.languages.registerCompletionItemProvider(
             TLAPLUS_FILE_SELECTOR,
-            new TlaCompletionItemProvider(docSymbols))
+            new TlaCompletionItemProvider(tlaDocInfos))
         );
 }
 

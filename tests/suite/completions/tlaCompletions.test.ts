@@ -5,6 +5,7 @@ import { TlaCompletionItemProvider, TLA_CONSTANTS, TLA_STARTING_KEYWORDS, TLA_OT
     } from '../../../src/completions/tlaCompletions';
 import { parseDocInfo, replaceDocContents } from '../document';
 import { loc, pos } from '../shortcuts';
+import { TlaDocumentInfos } from '../../../src/model/documentInfo';
 
 const EXPECT_NOTHING = 0;
 const EXPECT_STARTING_KEYWORDS = 1;
@@ -36,7 +37,7 @@ suite('TLA Completions Provider Test Suite', () => {
 
     test('Treats section numbers as new line', () => {
         return assertCompletions(doc, [
-            '<1> {t}'
+            '<1>. {t}'
         ], EXPECT_STARTING_KEYWORDS | EXPECT_INNER_CLASS);
     });
 
@@ -79,8 +80,8 @@ async function assertCompletions(
 ): Promise<void> {
     const docInfo = parseDocInfo(docLines);
     await replaceDocContents(doc, docInfo.lines.join('\n'));
-    const docSymbols = createTestSymsols(doc.uri);
-    const completionsProvider = new TlaCompletionItemProvider(docSymbols);
+    const docInfos = createTestDocInfos(doc.uri);
+    const completionsProvider = new TlaCompletionItemProvider(docInfos);
     const tokenSrc = new vscode.CancellationTokenSource();
     const ctx: vscode.CompletionContext = {
         triggerKind: vscode.CompletionTriggerKind.TriggerCharacter,
@@ -157,12 +158,12 @@ function assertCompletion(
     }
 }
 
-function createTestSymsols(docUri: vscode.Uri): Map<vscode.Uri, vscode.SymbolInformation[]> {
+function createTestDocInfos(docUri: vscode.Uri): TlaDocumentInfos {
     const symbolsList = [];
     symbolsList.push(
         new vscode.SymbolInformation('Foo', vscode.SymbolKind.Field, 'test', loc(docUri, pos(0, 0)))
     );
-    const symbols = new Map<vscode.Uri, vscode.SymbolInformation[]>();
-    symbols.set(docUri, symbolsList);
-    return symbols;
+    const docInfos = new TlaDocumentInfos();
+    docInfos.get(docUri).setSymbols(symbolsList);
+    return docInfos;
 }
