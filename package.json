@@ -111,6 +111,11 @@
                 "category": "TLA+"
             },
             {
+                "command": "tlaplus.exportToTex",
+                "title": "Export module to LaTeX",
+                "category": "TLA+"
+            },
+            {
                 "command": "tlaplus.model.check.run",
                 "title": "Check model",
                 "category": "TLA+"
@@ -152,6 +157,10 @@
             "commandPalette": [
                 {
                     "command": "tlaplus.parse",
+                    "when": "editorLangId == tlaplus"
+                },
+                {
+                    "command": "tlaplus.exportToTex",
                     "when": "editorLangId == tlaplus"
                 },
                 {

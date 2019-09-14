@@ -4,6 +4,7 @@ import { CMD_CHECK_MODEL_RUN, CMD_CHECK_MODEL_STOP, CMD_CHECK_MODEL_DISPLAY, CMD
     showTlcOutput, checkModelCustom} from './commands/checkModel';
 import { parseModule, CMD_PARSE_MODULE } from './commands/parseModule';
 import { visualizeTlcOutput, CMD_VISUALIZE_TLC_OUTPUT } from './commands/visualizeOutput';
+import { exportModuleToTex, CMD_EXPORT_TLA_TO_TEX } from './commands/exportModule';
 import { TlaOnTypeFormattingEditProvider } from './formatters/tla';
 import { CfgOnTypeFormattingEditProvider } from './formatters/cfg';
 import { TlaCodeActionProvider } from './actions';
@@ -30,6 +31,9 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand(
             CMD_PARSE_MODULE,
             () => parseModule(diagnostic)),
+        vscode.commands.registerCommand(
+            CMD_EXPORT_TLA_TO_TEX,
+            () => exportModuleToTex(context)),
         vscode.commands.registerCommand(
             CMD_CHECK_MODEL_RUN,
             () => checkModel(diagnostic, context)),

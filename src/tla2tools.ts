@@ -25,7 +25,8 @@ let cachedJavaPath: string | undefined;
 enum TlaTool {
     PLUS_CAL = 'pcal.trans',
     SANY = 'tla2sany.SANY',
-    TLC = 'tlc2.TLC'
+    TLC = 'tlc2.TLC',
+    TEX = 'tla2tex.TLA'
 }
 
 export class ToolProcessInfo {
@@ -65,6 +66,14 @@ export async function runPlusCal(tlaFilePath: string): Promise<ToolProcessInfo> 
 export async function runSany(tlaFilePath: string): Promise<ToolProcessInfo> {
     return runTool(
         TlaTool.SANY,
+        tlaFilePath,
+        [ path.basename(tlaFilePath) ]
+    );
+}
+
+export async function runTex(tlaFilePath: string): Promise<ToolProcessInfo> {
+    return runTool(
+        TlaTool.TEX,
         tlaFilePath,
         [ path.basename(tlaFilePath) ]
     );
