@@ -5,7 +5,7 @@ import { Value, ValueKey, SetValue, SequenceValue, StructureValue, SimpleFunctio
     InitialStateStatItem, CoverageItem, ModelCheckResult, CheckState, CheckStatus, MessageLine, MessageSpan,
     ErrorTraceItem, OutputLine, ModelCheckResultSource, SimpleFunctionItem } from '../../src/model/check';
 import { DCollection } from '../../src/diagnostic';
-import { ROOT_SYMBOL_NAME } from '../../src/symbols/tlaSymbols';
+import { ROOT_SYMBOL_NAME, PLUS_CAL_SYMBOL_NAME } from '../../src/symbols/tlaSymbols';
 
 type MessageSpanSrc = string | MessageSpan;
 
@@ -49,8 +49,8 @@ export function range(fromLine: number, fromChar: number, toLine: number, toChar
     return new vscode.Range(pos(fromLine, fromChar), pos(toLine, toChar));
 }
 
-export function loc(docUri: vscode.Uri, range: vscode.Range): vscode.Location {
-    return new vscode.Location(docUri, range);
+export function loc(docUri: vscode.Uri, rangeOrPos: vscode.Range | vscode.Position): vscode.Location {
+    return new vscode.Location(docUri, rangeOrPos);
 }
 
 export function message(...spans: MessageSpanSrc[]): MessageLine {
@@ -68,12 +68,24 @@ export function symModule(name: string, location: vscode.Location): vscode.Symbo
     return new vscode.SymbolInformation(name, vscode.SymbolKind.Module, ROOT_SYMBOL_NAME, location);
 }
 
+export function symPlusCal(location: vscode.Location): vscode.SymbolInformation {
+    return new vscode.SymbolInformation(PLUS_CAL_SYMBOL_NAME, vscode.SymbolKind.Namespace, ROOT_SYMBOL_NAME, location);
+}
+
 export function symFunc(name: string, parentName: string, location: vscode.Location): vscode.SymbolInformation {
     return new vscode.SymbolInformation(name, vscode.SymbolKind.Function, parentName, location);
 }
 
 export function symField(name: string, parentName: string, location: vscode.Location): vscode.SymbolInformation {
     return new vscode.SymbolInformation(name, vscode.SymbolKind.Field, parentName, location);
+}
+
+export function symConst(name: string, parentName: string, location: vscode.Location): vscode.SymbolInformation {
+    return new vscode.SymbolInformation(name, vscode.SymbolKind.Constant, parentName, location);
+}
+
+export function symVar(name: string, parentName: string, location: vscode.Location): vscode.SymbolInformation {
+    return new vscode.SymbolInformation(name, vscode.SymbolKind.Variable, parentName, location);
 }
 
 export function symModRef(name: string, parentName: string, location: vscode.Location): vscode.SymbolInformation {

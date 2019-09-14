@@ -9,6 +9,13 @@ import { CfgOnTypeFormattingEditProvider } from './formatters/cfg';
 import { TlaCodeActionProvider } from './actions';
 import { TlaDocumentSymbolsProvider } from './symbols/tlaSymbols';
 import { LANG_TLAPLUS, LANG_TLAPLUS_CFG } from './common';
+import { TlaCompletionItemProvider } from './completions/tlaCompletions';
+import { TlaDocumentInfos } from './model/documentInfo';
+
+const TLAPLUS_FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file', language: LANG_TLAPLUS };
+const TLAPLUS_CFG_FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file', language: LANG_TLAPLUS_CFG };
+
+const tlaDocInfos = new TlaDocumentInfos();
 
 // Holds all the error messages
 let diagnostic: vscode.DiagnosticCollection;
@@ -41,23 +48,25 @@ export function activate(context: vscode.ExtensionContext) {
             CMD_VISUALIZE_TLC_OUTPUT,
             () => visualizeTlcOutput(context)),
         vscode.languages.registerCodeActionsProvider(
-            { scheme: 'file', language: LANG_TLAPLUS },
+            TLAPLUS_FILE_SELECTOR,
             new TlaCodeActionProvider(),
             { providedCodeActionKinds: [ vscode.CodeActionKind.Source ] }),
         vscode.languages.registerOnTypeFormattingEditProvider(
-            { scheme: 'file', language: LANG_TLAPLUS },
+            TLAPLUS_FILE_SELECTOR,
             new TlaOnTypeFormattingEditProvider(),
             '\n', 'd', 'e', 'f', 'r'),
         vscode.languages.registerOnTypeFormattingEditProvider(
-            { scheme: 'file', language: LANG_TLAPLUS_CFG },
+            TLAPLUS_CFG_FILE_SELECTOR,
             new CfgOnTypeFormattingEditProvider(),
             '\n'),
         vscode.languages.registerDocumentSymbolProvider(
-            { scheme: 'file', language: LANG_TLAPLUS },
-            new TlaDocumentSymbolsProvider(),
-            { label: 'TLA+' }
-        )
-    );
+            TLAPLUS_FILE_SELECTOR,
+            new TlaDocumentSymbolsProvider(tlaDocInfos),
+            { label: 'TLA+' }),
+        vscode.languages.registerCompletionItemProvider(
+            TLAPLUS_FILE_SELECTOR,
+            new TlaCompletionItemProvider(tlaDocInfos))
+        );
 }
 
 export function deactivate() {}
