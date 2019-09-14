@@ -5,22 +5,31 @@ import * as vscode from 'vscode';
  */
 export class TlaDocumentInfo {
     private symbols: vscode.SymbolInformation[] = [];
+    private plusCalSymbols: vscode.SymbolInformation[] = [];
     private plusCalRange: vscode.Range | undefined;
-
-    setSymbols(symbols: vscode.SymbolInformation[]) {
-        this.symbols = symbols;
-    }
 
     getSymbols(): ReadonlyArray<vscode.SymbolInformation> {
         return this.symbols;
     }
 
-    setPlusCalRange(range: vscode.Range) {
-        this.plusCalRange = range;
+    setSymbols(symbols: vscode.SymbolInformation[]) {
+        this.symbols = symbols;
+    }
+
+    getPlusCalSymbols(): ReadonlyArray<vscode.SymbolInformation> {
+        return this.plusCalSymbols;
+    }
+
+    setPlusCalSymbols(symbols: vscode.SymbolInformation[]) {
+        this.symbols = symbols;
     }
 
     getPlusCalRange(): vscode.Range | undefined {
         return this.plusCalRange;
+    }
+
+    setPlusCalRange(range: vscode.Range) {
+        this.plusCalRange = range;
     }
 }
 

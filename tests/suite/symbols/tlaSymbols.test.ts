@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 import * as assert from 'assert';
 import { LANG_TLAPLUS } from '../../../src/common';
-import { TlaDocumentSymbolsProvider, ROOT_SYMBOL_NAME } from '../../../src/symbols/tlaSymbols';
+import { TlaDocumentSymbolsProvider, ROOT_SYMBOL_NAME, PLUS_CAL_SYMBOL_NAME } from '../../../src/symbols/tlaSymbols';
 import { replaceDocContents } from '../document';
-import { symModule, loc, range, symField, symFunc, symModRef, symBool } from '../shortcuts';
+import { symModule, loc, range, symField, symFunc, symModRef, symBool, pos, symPlusCal } from '../shortcuts';
 import { TlaDocumentInfos } from '../../../src/model/documentInfo';
 
 suite('TLA Symbols Provider Test Suite', () => {
@@ -34,7 +34,7 @@ suite('TLA Symbols Provider Test Suite', () => {
         return assertSymbols(doc, [
             'Foo == 10'
         ], [
-            symField('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, range(0, 0, 0, 9)))
+            symField('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 0)))
         ]);
     });
 
@@ -42,7 +42,7 @@ suite('TLA Symbols Provider Test Suite', () => {
         return assertSymbols(doc, [
             'Bar(foo) == foo + 10'
         ], [
-            symFunc('Bar', ROOT_SYMBOL_NAME, loc(doc.uri, range(0, 0, 0, 20)))
+            symFunc('Bar', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 0)))
         ]);
     });
 
@@ -50,7 +50,7 @@ suite('TLA Symbols Provider Test Suite', () => {
         return assertSymbols(doc, [
             'Baz[foo \\in 1..3] == foo + 11'
         ], [
-            symFunc('Baz', ROOT_SYMBOL_NAME, loc(doc.uri, range(0, 0, 0, 29)))
+            symFunc('Baz', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 0)))
         ]);
     });
 
@@ -58,7 +58,7 @@ suite('TLA Symbols Provider Test Suite', () => {
         return assertSymbols(doc, [
             'FooMod == INSTANCE foo'
         ], [
-            symModRef('FooMod', ROOT_SYMBOL_NAME, loc(doc.uri, range(0, 0, 0, 22)))
+            symModRef('FooMod', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 0)))
         ]);
     });
 
@@ -66,7 +66,7 @@ suite('TLA Symbols Provider Test Suite', () => {
         return assertSymbols(doc, [
             'THEOREM LifeIsGood == \\A day \\in life: IsHappy(day)'
         ], [
-            symBool('LifeIsGood', ROOT_SYMBOL_NAME, loc(doc.uri, range(0, 0, 0, 51)))
+            symBool('LifeIsGood', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 0)))
         ]);
     });
 
@@ -78,7 +78,7 @@ suite('TLA Symbols Provider Test Suite', () => {
         return assertSymbols(doc, [
             'AXIOM Truth == TRUE'
         ], [
-            symBool('Truth', ROOT_SYMBOL_NAME, loc(doc.uri, range(0, 0, 0, 19)))
+            symBool('Truth', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 0)))
         ]);
     });
 
@@ -86,7 +86,7 @@ suite('TLA Symbols Provider Test Suite', () => {
         return assertSymbols(doc, [
             'Multiline =='
         ], [
-            symField('Multiline', ROOT_SYMBOL_NAME, loc(doc.uri, range(0, 0, 0, 12)))
+            symField('Multiline', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 0)))
         ]);
     });
 
@@ -101,8 +101,8 @@ suite('TLA Symbols Provider Test Suite', () => {
             'BAZ(x) == x'
         ], [
             symModule('bar', loc(doc.uri, range(0, 0, 2, 11))),
-            symField('FOO', 'bar', loc(doc.uri, range(1, 0, 1, 9))),
-            symFunc('BAZ', 'bar', loc(doc.uri, range(2, 0, 2, 11))),
+            symField('FOO', 'bar', loc(doc.uri, pos(1, 0))),
+            symFunc('BAZ', 'bar', loc(doc.uri, pos(2, 0))),
         ]);
     });
 
@@ -110,7 +110,7 @@ suite('TLA Symbols Provider Test Suite', () => {
         return assertSymbols(doc, [
             ' \t  Zero == 0'
         ], [
-            symField('Zero', ROOT_SYMBOL_NAME, loc(doc.uri, range(0, 0, 0, 13)))
+            symField('Zero', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 0)))
         ]);
     });
 
@@ -118,7 +118,7 @@ suite('TLA Symbols Provider Test Suite', () => {
         return assertSymbols(doc, [
             'This_is_3 == 3'
         ], [
-            symField('This_is_3', ROOT_SYMBOL_NAME, loc(doc.uri, range(0, 0, 0, 14)))
+            symField('This_is_3', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 0)))
         ]);
     });
 
@@ -131,8 +131,8 @@ suite('TLA Symbols Provider Test Suite', () => {
             '    One == 1',
             'IN Handle(One)'
         ], [
-            symField('One', ROOT_SYMBOL_NAME, loc(doc.uri, range(1, 0, 1, 12))),
-            symField('One', ROOT_SYMBOL_NAME, loc(doc.uri, range(4, 0, 4, 12)))
+            symField('One', ROOT_SYMBOL_NAME, loc(doc.uri, pos(1, 0))),
+            symField('One', ROOT_SYMBOL_NAME, loc(doc.uri, pos(4, 0)))
         ]);
     });
 
@@ -149,22 +149,40 @@ suite('TLA Symbols Provider Test Suite', () => {
             '*)'
         ], [
             // Actually, we don't want to capture this
-            symFunc('Apply', ROOT_SYMBOL_NAME, loc(doc.uri, range(1, 0, 1, 15)))
+            symFunc('Apply', ROOT_SYMBOL_NAME, loc(doc.uri, pos(1, 0)))
         ]);
     });
 
-    test('CAN IMPROVE: Captures symbols in PlusCal define block', () => {
+    test('Finds PlusCal algorithm', () => {
         return assertSymbols(doc, [
+            'A == 10',
             '(* --algorithm foo',
+            'begin',
+            '  skip;',
+            'end algorithm; *)',
+            'B == 20'
+        ], [
+            symField('A', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 0))),
+            symPlusCal(loc(doc.uri, range(1, 0, 4, 17))),
+            symField('B', ROOT_SYMBOL_NAME, loc(doc.uri, pos(5, 0)))
+        ]);
+    });
+
+    test('Finds symbols in PlusCal algorithm', () => {
+        return assertSymbols(doc, [
+            '(* --algorithm bar',
             'define',
             '  Baz == 39',
             'end define',
             'begin',
             '  skip;',
-            'end algorithm; *)'
+            'end algorithm; *)',
+            'Baz == 39'
         ], [
-            // Actually, we don't want to capture this
-            symField('Baz', ROOT_SYMBOL_NAME, loc(doc.uri, range(2, 0, 2, 11)))
+            symPlusCal(loc(doc.uri, range(0, 0, 6, 17))),
+            symField('Baz', ROOT_SYMBOL_NAME, loc(doc.uri, pos(7, 0))),
+            // PlusCal symbols always come last
+            symField('Baz', PLUS_CAL_SYMBOL_NAME, loc(doc.uri, pos(2, 0)))
         ]);
     });
 });
