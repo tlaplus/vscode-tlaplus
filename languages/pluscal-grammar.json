@@ -32,6 +32,9 @@
         {
             "include": "#constants"
 		},
+        {
+            "include": "#numeric_constants"
+        },
 		{
 			"include": "#operators"
 		},
@@ -42,15 +45,15 @@
     "repository": {
         "keywords": {
             "name": "keyword.other",
-            "match": "\\b(if|then|elsif|else|while|variable(s)?|define|process|macro|begin|end|do|skip|assert|procedure|return|call|fair|either|or|with|await|when|self|goto|print)\\b"
+            "match": "\\b(?:if|then|elsif|else|while|variable(s)?|define|process|macro|begin|end|do|skip|assert|procedure|return|call|fair|either|or|with|await|when|self|goto|print)\\b"
         },
         "tlaplus_keywords": {
             "name": "keyword.other.tlaplus",
-            "match": "\\b(EXTENDS|VARIABLE(S)?|LET|IN|EXCEPT|ENABLED|UNCHANGED|LAMBDA|DOMAIN|CONSTANT(S)?|CHOOSE|LOCAL|ASSUME|ASSUMPTION|AXIOM|RECURSIVE|INSTANCE|WITH|THEOREM|SUBSET|UNION|SF_|WF_|USE|DEFS|BY|DEF|SUFFICES|PROVE|OBVIOUS|NEW|QED|RECURSIVE|PICK|HIDE|DEFINE|WITNESS|HAVE|TAKE|PROOF|ACTION|COROLLARY|LEMMA|OMITTED|ONLY|PROPOSITION|STATE|TEMPORAL)\\b"
+            "match": "\\b(?:EXTENDS|VARIABLE(S)?|LET|IN|EXCEPT|ENABLED|UNCHANGED|LAMBDA|DOMAIN|CONSTANT(S)?|CHOOSE|LOCAL|ASSUME|ASSUMPTION|AXIOM|RECURSIVE|INSTANCE|WITH|THEOREM|SUBSET|UNION|SF_|WF_|USE|DEFS|BY|DEF|SUFFICES|PROVE|OBVIOUS|NEW|QED|RECURSIVE|PICK|HIDE|DEFINE|WITNESS|HAVE|TAKE|PROOF|ACTION|COROLLARY|LEMMA|OMITTED|ONLY|PROPOSITION|STATE|TEMPORAL)\\b"
         },
         "tlaplus_control_keywords": {
             "name": "keyword.control.tlaplus",
-            "match": "\\b(IF|THEN|ELSE|CASE|OTHER)\\b"
+            "match": "\\b(?:IF|THEN|ELSE|CASE|OTHER)\\b"
         },
         "embedded_operators": {
             "match": "\\\\[a-zA-Z]+\\b",
@@ -78,7 +81,11 @@
         },
         "constants": {
             "name": "support.constant.tlaplus",
-            "match": "\\b(TRUE|FALSE|\\d+)\\b"
+            "match": "\\b(?:TRUE|FALSE)\\b"
+        },
+        "numeric_constants": {
+            "name": "support.constant.tlaplus",
+            "match": "(?:\\b\\d+|\\\\(?:b|B)[01]+|\\\\(?:o|O)[0-7]+|\\\\(?:h|H)[0-9a-fA-F]+)\\b"
         },
         "labels": {
             "match": "^\\s*(\\w+:)[^=]",
