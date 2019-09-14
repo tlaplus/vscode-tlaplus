@@ -207,14 +207,11 @@ function assertDocSymbols(
     docInfos: TlaDocumentInfos,
     expectSymbols: vscode.SymbolInformation[]
 ) {
-    const docSymbolsList = docInfos.get(docUri).getSymbols();
-    if (docSymbolsList) {
-        assert.equal(expectSymbols.length, expectSymbols.length);
-        expectSymbols.forEach((expSymbol) => {
+    const docSymbolsList = docInfos.get(docUri).symbols;
+    expectSymbols.forEach((expSymbol) => {
+        if (expSymbol.name !== PLUS_CAL_SYMBOL_NAME) {
             const symbol = docSymbolsList.find(s => s.name === expSymbol.name);
             assert.ok(symbol);
-        });
-    } else {
-        assert.fail('Document symbols list not found');
-    }
+        }
+    });
 }

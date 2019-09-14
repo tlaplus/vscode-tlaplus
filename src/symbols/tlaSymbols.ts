@@ -13,6 +13,7 @@ class ParsingContext {
     public plusCal: vscode.SymbolInformation | undefined;
     public symbols: vscode.SymbolInformation[] = [];
     public plusCalSymbols: vscode.SymbolInformation[] = [];
+    public plusCalRange: vscode.Range | undefined;
 }
 
 /**
@@ -38,8 +39,10 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
                 this.tryExtractSpecialSymbol(context, line);
             }
         }
+        const docInfo = this.docInfos.get(document.uri);
         // We only put TLA+ symbols to DocInfos, not PlusCal to exclude duplications on code completion
-        this.docInfos.get(document.uri).setSymbols(context.symbols);
+        docInfo.symbols = context.symbols.filter((s) => s.name !== PLUS_CAL_SYMBOL_NAME);
+        docInfo.plusCalRange = context.plusCalRange;
         return context.symbols.concat(context.plusCalSymbols);
     }
 
@@ -85,10 +88,9 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
             return false;
         }
         if (symbol === SpecialSymbol.PlusCalEnd && context.plusCal) {
-            context.plusCal.location = new vscode.Location(
-                context.plusCal.location.uri,
-                new vscode.Range(context.plusCal.location.range.start, line.range.end)
-            );
+            const range = new vscode.Range(context.plusCal.location.range.start, line.range.end);
+            context.plusCal.location = new vscode.Location(context.plusCal.location.uri, range);
+            context.plusCalRange = range;
             context.plusCal = undefined;
         }
         return true;

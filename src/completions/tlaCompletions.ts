@@ -51,11 +51,13 @@ export class TlaCompletionItemProvider implements vscode.CompletionItemProvider 
         if (isOperator) {
             return new vscode.CompletionList(TLA_OPERATOR_ITEMS, false);
         }
+        const docInfo = this.docInfos.get(document.uri);
+        const isPlusCal = docInfo.plusCalRange ? docInfo.plusCalRange.contains(position) : false;
         const isNewLine = /^[\s<>\d\.]*[a-zA-Z]*$/g.test(prevText);
-        const symbols = this.docInfos.get(document.uri).getSymbols() || [];
+        const symbols = docInfo.symbols || [];
         const symbolInfos = symbols.map(s => new vscode.CompletionItem(s.name, mapKind(s.kind)));
         let items = TLA_INNER_ITEMS.concat(symbolInfos);
-        if (isNewLine) {
+        if (isNewLine && !isPlusCal) {
             items = items.concat(TLA_STARTING_KEYWORD_ITEMS);
         }
         return new vscode.CompletionList(items, false);

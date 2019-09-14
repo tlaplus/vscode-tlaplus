@@ -164,6 +164,6 @@ function createTestDocInfos(docUri: vscode.Uri): TlaDocumentInfos {
         new vscode.SymbolInformation('Foo', vscode.SymbolKind.Field, 'test', loc(docUri, pos(0, 0)))
     );
     const docInfos = new TlaDocumentInfos();
-    docInfos.get(docUri).setSymbols(symbolsList);
+    docInfos.get(docUri).symbols = symbolsList;
     return docInfos;
 }

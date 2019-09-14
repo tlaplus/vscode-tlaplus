@@ -4,33 +4,9 @@ import * as vscode from 'vscode';
  * Various information about a TLA module.
  */
 export class TlaDocumentInfo {
-    private symbols: vscode.SymbolInformation[] = [];
-    private plusCalSymbols: vscode.SymbolInformation[] = [];
-    private plusCalRange: vscode.Range | undefined;
-
-    getSymbols(): ReadonlyArray<vscode.SymbolInformation> {
-        return this.symbols;
-    }
-
-    setSymbols(symbols: vscode.SymbolInformation[]) {
-        this.symbols = symbols;
-    }
-
-    getPlusCalSymbols(): ReadonlyArray<vscode.SymbolInformation> {
-        return this.plusCalSymbols;
-    }
-
-    setPlusCalSymbols(symbols: vscode.SymbolInformation[]) {
-        this.symbols = symbols;
-    }
-
-    getPlusCalRange(): vscode.Range | undefined {
-        return this.plusCalRange;
-    }
-
-    setPlusCalRange(range: vscode.Range) {
-        this.plusCalRange = range;
-    }
+    symbols: vscode.SymbolInformation[] = [];
+    plusCalSymbols: vscode.SymbolInformation[] = [];
+    plusCalRange: vscode.Range | undefined;
 }
 
 export class TlaDocumentInfos {
