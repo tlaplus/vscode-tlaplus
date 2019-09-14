@@ -1,15 +1,17 @@
 import * as vscode from 'vscode';
 
 export const TLA_OPERATORS = [
-    'E', 'A', 'X', 'o', 'lnot', 'land', 'lor', 'cdot', 'equiv', 'subseteq', 'in', 'notin', 'intersect',
+    'E', 'A', 'X', 'lnot', 'land', 'lor', 'cdot', 'equiv', 'subseteq', 'in', 'notin', 'intersect',
     'union', 'leq', 'geq', 'cup', 'cap'
 ];
-export const TLA_KEYWORDS = [
-    'EXTENDS', 'VARIABLE', 'VARIABLES', 'LET', 'IN', 'EXCEPT', 'ENABLED', 'UNCHANGED', 'LAMBDA', 'DOMAIN',
-    'CONSTANT', 'CONSTANTS', 'CHOOSE', 'LOCAL', 'ASSUME', 'ASSUMPTION', 'AXIOM', 'RECURSIVE', 'INSTANCE', 'WITH',
-    'THEOREM', 'SUBSET', 'UNION', 'SF_', 'WF_', 'USE', 'DEFS', 'BY', 'DEF', 'SUFFICES', 'PROVE', 'OBVIOUS', 'NEW',
-    'QED', 'RECURSIVE', 'PICK', 'HIDE', 'DEFINE', 'WITNESS', 'HAVE', 'TAKE', 'PROOF', 'ACTION', 'COROLLARY', 'LEMMA',
-    'OMITTED', 'ONLY', 'PROPOSITION', 'STATE', 'TEMPORAL',
+export const TLA_STARTING_KEYWORDS = [  // These keywords start blocks, should not be in the middle of an expression
+    'EXTENDS', 'VARIABLE', 'VARIABLES', 'CONSTANT', 'CONSTANTS', 'ASSUME', 'ASSUMPTION', 'AXIOM', 'THEOREM', 'DEFINE',
+    'PROOF', 'LEMMA', 'PROPOSITION', 'COROLLARY', 'QED', 'SUFFICES'
+];
+export const TLA_OTHER_KEYWORDS = [     // These keywords can be found pretty everywhere
+    'LET', 'IN', 'EXCEPT', 'ENABLED', 'UNCHANGED', 'LAMBDA', 'DOMAIN', 'CHOOSE', 'LOCAL', 'RECURSIVE',
+    'INSTANCE', 'WITH', 'SUBSET', 'UNION', 'SF_', 'WF_', 'USE', 'DEFS', 'BY', 'DEF', 'PROVE', 'OBVIOUS',
+    'NEW', 'RECURSIVE', 'PICK', 'HIDE', 'WITNESS', 'HAVE', 'TAKE', 'ACTION', 'OMITTED', 'ONLY', 'STATE', 'TEMPORAL',
     // -- control keywords
     'IF', 'THEN', 'ELSE', 'CASE', 'OTHER',
     // -- other
@@ -17,12 +19,17 @@ export const TLA_KEYWORDS = [
 ];
 export const TLA_CONSTANTS = [ 'TRUE', 'FALSE' ];
 
-const TLA_KEYWORD_ITEMS = TLA_KEYWORDS.map(w => new vscode.CompletionItem(w, vscode.CompletionItemKind.Keyword));
+const TLA_STARTING_KEYWORD_ITEMS = TLA_STARTING_KEYWORDS.map(w => {
+    return new vscode.CompletionItem(w, vscode.CompletionItemKind.Keyword);
+});
+const TLA_OTHER_KEYWORD_ITEMS = TLA_OTHER_KEYWORDS.map(w => {
+    return new vscode.CompletionItem(w, vscode.CompletionItemKind.Keyword);
+});
 const TLA_CONST_ITEMS = TLA_CONSTANTS.map(w => new vscode.CompletionItem(w, vscode.CompletionItemKind.Constant));
 const TLA_OPERATOR_ITEMS = TLA_OPERATORS.map(w => {
     return new vscode.CompletionItem('\\' + w, vscode.CompletionItemKind.Operator);
 });
-const TLA_ITEMS = TLA_KEYWORD_ITEMS.concat(TLA_CONST_ITEMS);
+const TLA_INNER_ITEMS = TLA_OTHER_KEYWORD_ITEMS.concat(TLA_CONST_ITEMS);
 
 /**
  * Completes TLA+ text.
@@ -43,9 +50,13 @@ export class TlaCompletionItemProvider implements vscode.CompletionItemProvider 
         if (isOperator) {
             return new vscode.CompletionList(TLA_OPERATOR_ITEMS, false);
         }
+        const isNewLine = /^[\s<>\d\.]*[a-zA-Z]*$/g.test(prevText);
         const symbols = this.docSymbols.get(document.uri) || [];
         const symbolInfos = symbols.map(s => new vscode.CompletionItem(s.name, mapKind(s.kind)));
-        const items = TLA_ITEMS.concat(symbolInfos);
+        let items = TLA_INNER_ITEMS.concat(symbolInfos);
+        if (isNewLine) {
+            items = items.concat(TLA_STARTING_KEYWORD_ITEMS);
+        }
         return new vscode.CompletionList(items, false);
     }
 

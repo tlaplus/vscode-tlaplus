@@ -1,17 +1,18 @@
 import * as vscode from 'vscode';
 import * as assert from 'assert';
 import { LANG_TLAPLUS } from '../../../src/common';
-import { TlaCompletionItemProvider, TLA_CONSTANTS, TLA_KEYWORDS, TLA_OPERATORS
+import { TlaCompletionItemProvider, TLA_CONSTANTS, TLA_STARTING_KEYWORDS, TLA_OTHER_KEYWORDS, TLA_OPERATORS
     } from '../../../src/completions/tlaCompletions';
 import { parseDocInfo, replaceDocContents } from '../document';
 import { loc, pos } from '../shortcuts';
 
 const EXPECT_NOTHING = 0;
-const EXPECT_KEYWORDS = 1;
-const EXPECT_CONSTANTS = 2;
-const EXPECT_OPERATORS = 4;
-const EXPECT_SYMBOLS = 8;
-const EXPECT_ALL_BUT_OPERATORS = EXPECT_KEYWORDS | EXPECT_CONSTANTS | EXPECT_SYMBOLS;
+const EXPECT_STARTING_KEYWORDS = 1;
+const EXPECT_OTHER_KEYWORDS = 2;
+const EXPECT_CONSTANTS = 4;
+const EXPECT_OPERATORS = 8;
+const EXPECT_SYMBOLS = 16;
+const EXPECT_INNER_CLASS = EXPECT_OTHER_KEYWORDS | EXPECT_CONSTANTS | EXPECT_SYMBOLS;
 
 const PREFIXED_OPERATORS = TLA_OPERATORS.map((op) => '\\' + op);
 
@@ -30,13 +31,25 @@ suite('TLA Completions Provider Test Suite', () => {
     test('Completes all but operators on new line', () => {
         return assertCompletions(doc, [
             '{i}'
-        ], EXPECT_ALL_BUT_OPERATORS);
+        ], EXPECT_STARTING_KEYWORDS | EXPECT_INNER_CLASS);
+    });
+
+    test('Treats section numbers as new line', () => {
+        return assertCompletions(doc, [
+            '<1> {t}'
+        ], EXPECT_STARTING_KEYWORDS | EXPECT_INNER_CLASS);
+    });
+
+    test('Treats subsection numbers as new line', () => {
+        return assertCompletions(doc, [
+            '<12>.4 {t}'
+        ], EXPECT_STARTING_KEYWORDS | EXPECT_INNER_CLASS);
     });
 
     test('Completes all but operators after /\\', () => {
         return assertCompletions(doc, [
             'Foo == /\\{a}'
-        ], EXPECT_ALL_BUT_OPERATORS);
+        ], EXPECT_INNER_CLASS);
     });
 
     test('Completes only operators after \\', () => {
@@ -54,7 +67,7 @@ suite('TLA Completions Provider Test Suite', () => {
     test('Completes all but operators after \\ followed by a space', () => {
         return assertCompletions(doc, [
             '\\ e{q}'
-        ], EXPECT_ALL_BUT_OPERATORS);
+        ], EXPECT_INNER_CLASS);
     });
 
 });
@@ -80,8 +93,11 @@ async function assertCompletions(
     }
     assert.equal(false, completions.isIncomplete, 'Completions list is expected to be complete');
     let total = 0;
-    if ((expectFlags & EXPECT_KEYWORDS) !== 0) {
-        total += assertKeywords(completions);
+    if ((expectFlags & EXPECT_STARTING_KEYWORDS) !== 0) {
+        total += assertStartingKeywords(completions);
+    }
+    if ((expectFlags & EXPECT_OTHER_KEYWORDS) !== 0) {
+        total += assertOtherKeywords(completions);
     }
     if ((expectFlags & EXPECT_CONSTANTS) !== 0) {
         total += assertConstants(completions);
@@ -92,12 +108,20 @@ async function assertCompletions(
     if ((expectFlags & EXPECT_SYMBOLS) !== 0) {
         total += assertSymbols(completions);
     }
-    assert.equal(total, completions.items.length, `Expected ${total} completions, found ${completions.items.length}`);
-    return undefined;
+    assert.equal(
+        total,
+        completions.items.length,
+        `Expected ${total} completions, found ${completions.items.length}:'
+            + '\n${completions.items.map((it) => it.label).join(', ')}`
+    );
 }
 
-function assertKeywords(list: vscode.CompletionList): number {
-    return assertSymbolClass(TLA_KEYWORDS, vscode.CompletionItemKind.Keyword, list);
+function assertStartingKeywords(list: vscode.CompletionList): number {
+    return assertSymbolClass(TLA_STARTING_KEYWORDS, vscode.CompletionItemKind.Keyword, list);
+}
+
+function assertOtherKeywords(list: vscode.CompletionList): number {
+    return assertSymbolClass(TLA_OTHER_KEYWORDS, vscode.CompletionItemKind.Keyword, list);
 }
 
 function assertConstants(list: vscode.CompletionList): number {
