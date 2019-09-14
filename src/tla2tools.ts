@@ -135,7 +135,7 @@ function buildJavaPath(): string {
         const homeUri = pathToUri(javaHome);
         javaPath = homeUri.fsPath + path.sep + 'bin' + path.sep + javaCmd;
         if (!fs.existsSync(javaPath)) {
-            throw new ToolingError('Java executable not found. Check the Java Home configuration property.');
+            throw new ToolingError('Java executable not found. Check the Java Home setting.');
         }
     }
     return javaPath;
