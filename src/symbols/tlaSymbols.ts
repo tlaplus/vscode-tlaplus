@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { TlaDocumentInfos } from '../model/documentInfo';
 
+const COMMA_LEN = 1;
 export const ROOT_SYMBOL_NAME = '';
 export const PLUS_CAL_SYMBOL_NAME = 'PlusCal algorithm';
 
@@ -9,11 +10,27 @@ enum SpecialSymbol {
 }
 
 class ParsingContext {
-    public moduleName = ROOT_SYMBOL_NAME;
-    public plusCal: vscode.SymbolInformation | undefined;
-    public symbols: vscode.SymbolInformation[] = [];
-    public plusCalSymbols: vscode.SymbolInformation[] = [];
-    public plusCalRange: vscode.Range | undefined;
+    moduleName: string | undefined;
+    plusCal: vscode.SymbolInformation | undefined;
+    symbols: vscode.SymbolInformation[] = [];
+    plusCalSymbols: vscode.SymbolInformation[] = [];
+    plusCalRange: vscode.Range | undefined;
+    simpleListSymbolKind: vscode.SymbolKind | undefined;
+
+    getContainerName(): string {
+        if (this.plusCal) {
+            return this.plusCal.name;
+        }
+        return this.moduleName || ROOT_SYMBOL_NAME;
+    }
+
+    addSymbol(symbol: vscode.SymbolInformation) {
+        if (this.plusCal) {
+            this.plusCalSymbols.push(symbol);
+        } else {
+            this.symbols.push(symbol);
+        }
+    }
 }
 
 /**
@@ -51,35 +68,29 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
         document: vscode.TextDocument,
         line: vscode.TextLine
     ): boolean {
-        let symbol;
-        const containerName = context.plusCal ? context.plusCal.name : context.moduleName;
-        if (context.moduleName === ROOT_SYMBOL_NAME) {
-            symbol = this.tryExtractModuleName(document, line);
-            if (symbol) {
-                context.moduleName = symbol.name;
+        if (typeof context.simpleListSymbolKind !== 'undefined') {
+            if (this.tryCollectListItems(context, document.uri, line.lineNumber, 0, line.text)) {
+                return true;
             }
         }
-        if (!symbol) {
-            symbol = this.tryExtractDefinition(document.uri, line, containerName);
-        }
-        if (!symbol) {
-            symbol = this.tryExtractTheoremAxiomLemma(document.uri, line, containerName);
-        }
-        if (!symbol) {
-            symbol = this.tryExtractPlusCalStart(document.uri, line, containerName);
-            if (symbol) {
-                context.plusCal = symbol;
+        if (!context.moduleName) {
+            if (this.tryExtractModuleName(context, document, line)) {
+                return true;
             }
         }
-        if (!symbol) {
-            return false;
+        if (this.tryExtractDefinition(context, document.uri, line)) {
+            return true;
         }
-        if (containerName === PLUS_CAL_SYMBOL_NAME) {
-            context.plusCalSymbols.push(symbol);
-        } else {
-            context.symbols.push(symbol);
+        if (this.tryExtractListStart(context, document.uri, line)) {
+            return true;
         }
-        return true;
+        if (this.tryExtractTheoremAxiomLemma(context, document.uri, line)) {
+            return true;
+        }
+        if (this.tryExtractPlusCalStart(context, document.uri, line)) {
+            return true;
+        }
+        return false;
     }
 
     tryExtractSpecialSymbol(context: ParsingContext, line: vscode.TextLine): boolean {
@@ -97,33 +108,37 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
     }
 
     tryExtractModuleName(
+        context: ParsingContext,
         document: vscode.TextDocument,
         line: vscode.TextLine
-    ): vscode.SymbolInformation | undefined {
+    ): boolean {
         const matches = /^\s*-{4,}\s*MODULE\s*(\w+)\s*-{4,}.*$/g.exec(line.text);
         if (!matches) {
-            return undefined;
+            return false;
         }
         const lastLine = document.lineAt(document.lineCount - 1);
-        return new vscode.SymbolInformation(
+        const symbol = new vscode.SymbolInformation(
             matches[1],
             vscode.SymbolKind.Module,
-            '',
+            ROOT_SYMBOL_NAME,
             new vscode.Location(
                 document.uri,
                 new vscode.Range(line.range.start, lastLine.range.end)
             )
         );
+        context.addSymbol(symbol);
+        context.moduleName = symbol.name;
+        return true;
     }
 
     tryExtractDefinition(
+        context: ParsingContext,
         docUri: vscode.Uri,
-        line: vscode.TextLine,
-        moduleName: string
-    ): vscode.SymbolInformation | undefined {
+        line: vscode.TextLine
+    ): boolean {
         const matches = /^\s*(\w+)\s*([\(|\[)].*)?\s*==\s*(.*)?/g.exec(line.text);
         if (!matches) {
-            return undefined;
+            return false;
         }
         let kind = vscode.SymbolKind.Field;
         const next = matches[2];
@@ -133,50 +148,128 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
         } else if (value && value.startsWith('INSTANCE')) {
             kind = vscode.SymbolKind.Namespace;
         }
-        return new vscode.SymbolInformation(
+        context.addSymbol(new vscode.SymbolInformation(
             matches[1],
             kind,
-            moduleName,
+            context.getContainerName(),
             new vscode.Location(docUri, line.range.start)
-        );
+        ));
+        return true;
+    }
+
+    tryExtractListStart(
+        context: ParsingContext,
+        docUri: vscode.Uri,
+        line: vscode.TextLine
+    ): boolean {
+        const matches = /^(\s*)(VARIABLE(?:S)?|CONSTANT(?:S)?)(\s*.*)/g.exec(line.text);
+        if (!matches) {
+            return false;
+        }
+        context.simpleListSymbolKind = matches[2].startsWith('V')
+            ? vscode.SymbolKind.Variable
+            : vscode.SymbolKind.Constant;
+        const startIdx = matches[1].length + matches[2].length;
+        return this.tryCollectListItems(context, docUri, line.lineNumber,  startIdx, matches[3]);
+    }
+
+    tryCollectListItems(
+        context: ParsingContext,
+        docUri: vscode.Uri,
+        lineNum: number,
+        startChar: number,
+        text: string
+    ): boolean {
+        if (!context.simpleListSymbolKind) {
+            return false;
+        }
+        let charIdx = startChar;
+        const chunks = text.split(',');
+        let name: string | undefined;
+        for (const chunk of chunks) {
+            const rChunk = chunk.trimLeft();
+            if (isCommentStart(rChunk)) {
+                return true;
+            }
+            charIdx += chunk.length - rChunk.length;    // + number of trimmed spaces
+            const matches = /^(\w*)(\s*)(.*)$/g.exec(rChunk);
+            if (!matches) {
+                context.simpleListSymbolKind = undefined;
+                return false;
+            }
+            name = matches[1];
+            const spaces = matches[2];
+            const rest = matches[3];
+            if (name === '') {
+                charIdx += COMMA_LEN;
+                continue;
+            }
+            if (rest !== '' && !isCommentStart(rest)) {
+                context.simpleListSymbolKind = undefined;
+                return false;
+            }
+            context.addSymbol(new vscode.SymbolInformation(
+                name,
+                context.simpleListSymbolKind,
+                context.getContainerName(),
+                new vscode.Location(docUri, new vscode.Position(lineNum, charIdx))
+            ));
+            charIdx += name.length + spaces.length + COMMA_LEN;
+            if (rest !== '') {
+                context.simpleListSymbolKind = undefined;
+                break;      // There were no comma after the name
+            }
+        }
+        if (name !== '') {
+            context.simpleListSymbolKind = undefined;   // There were no comma after the last name
+        }
+        return true;
     }
 
     tryExtractTheoremAxiomLemma(
+        context: ParsingContext,
         docUri: vscode.Uri,
-        line: vscode.TextLine,
-        moduleName: string
-    ): vscode.SymbolInformation | undefined {
+        line: vscode.TextLine
+    ): boolean {
         const matches = /^\s*(?:THEOREM|AXIOM|LEMMA)\s*(\w+)\s*==/g.exec(line.text);
         if (!matches) {
-            return undefined;
+            return false;
         }
-        return new vscode.SymbolInformation(
+        context.addSymbol(new vscode.SymbolInformation(
             matches[1],
             vscode.SymbolKind.Boolean,
-            moduleName,
+            context.getContainerName(),
             new vscode.Location(docUri, line.range.start)
-        );
+        ));
+        return true;
     }
 
     tryExtractPlusCalStart(
+        context: ParsingContext,
         docUri: vscode.Uri,
-        line: vscode.TextLine,
-        moduleName: string
-    ): vscode.SymbolInformation | undefined {
+        line: vscode.TextLine
+    ): boolean {
         const matches = /(\(\*.*)--((?:fair\s+)?algorithm)\b/g.test(line.text);
         if (!matches) {
-            return undefined;
+            return false;
         }
-        return new vscode.SymbolInformation(
+        const symbol = new vscode.SymbolInformation(
             PLUS_CAL_SYMBOL_NAME,
             vscode.SymbolKind.Namespace,
-            moduleName,
+            context.getContainerName(),
             new vscode.Location(docUri, line.range.start)
         );
+        context.addSymbol(symbol);
+        context.plusCal = symbol;
+        return true;
     }
 
     tryExtractPlusCalEnd(line: vscode.TextLine): SpecialSymbol | undefined {
         const matches = /(end\s+algorithm)(;)?\s*(\*\))/g.test(line.text);
         return matches ? SpecialSymbol.PlusCalEnd : undefined;
     }
+}
+
+function isCommentStart(str: string): boolean {
+    return str.startsWith('\\*') || str.startsWith('(*');
 }

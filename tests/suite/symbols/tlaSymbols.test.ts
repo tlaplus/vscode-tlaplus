@@ -3,7 +3,8 @@ import * as assert from 'assert';
 import { LANG_TLAPLUS } from '../../../src/common';
 import { TlaDocumentSymbolsProvider, ROOT_SYMBOL_NAME, PLUS_CAL_SYMBOL_NAME } from '../../../src/symbols/tlaSymbols';
 import { replaceDocContents } from '../document';
-import { symModule, loc, range, symField, symFunc, symModRef, symBool, pos, symPlusCal } from '../shortcuts';
+import { symModule, loc, range, symField, symFunc, symModRef, symBool, pos, symPlusCal, symConst,
+    symVar } from '../shortcuts';
 import { TlaDocumentInfos } from '../../../src/model/documentInfo';
 
 suite('TLA Symbols Provider Test Suite', () => {
@@ -24,13 +25,164 @@ suite('TLA Symbols Provider Test Suite', () => {
 
     test('Finds module', () => {
         return assertSymbols(doc, [
-            '---- MODULE foo ----'
+            '---- MODULE foo ----',
+            '(* body *)',
+            '===='
         ], [
-            symModule('foo', loc(doc.uri, range(0, 0, 0, 20)))
+            symModule('foo', loc(doc.uri, range(0, 0, 2, 4)))
         ]);
     });
 
-    test('Finds constant', () => {
+    test('Finds items in CONSTANT', () => {
+        return assertSymbols(doc, [
+            'CONSTANT Foo, Bar'
+        ], [
+            symConst('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 9))),
+            symConst('Bar', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 14)))
+        ]);
+    });
+
+    test('Finds items in CONSTANTS', () => {
+        return assertSymbols(doc, [
+            'CONSTANTS Foo, Bar'
+        ], [
+            symConst('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 10))),
+            symConst('Bar', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 15)))
+        ]);
+    });
+
+    test('Finds items in VARIABLE', () => {
+        return assertSymbols(doc, [
+            'VARIABLE Foo, Bar'
+        ], [
+            symVar('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 9))),
+            symVar('Bar', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 14)))
+        ]);
+    });
+
+    test('Finds items in VARIABLES', () => {
+        return assertSymbols(doc, [
+            'VARIABLES Foo, Bar'
+        ], [
+            symVar('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 10))),
+            symVar('Bar', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 15)))
+        ]);
+    });
+
+    test('Finds items in multiline list', () => {
+        return assertSymbols(doc, [
+            'CONSTANTS Foo, Bar,',
+            '    Baz,',
+            '    BarBaz, FooBaz'
+        ], [
+            symConst('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 10))),
+            symConst('Bar', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 15))),
+            symConst('Baz', ROOT_SYMBOL_NAME, loc(doc.uri, pos(1, 4))),
+            symConst('BarBaz', ROOT_SYMBOL_NAME, loc(doc.uri, pos(2, 4))),
+            symConst('FooBaz', ROOT_SYMBOL_NAME, loc(doc.uri, pos(2, 12))),
+        ]);
+    });
+
+    test('Handles items list with no items on the first line', () => {
+        return assertSymbols(doc, [
+            'CONSTANTS',
+            '  Foo'
+        ], [
+            symConst('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, pos(1, 2)))
+        ]);
+    });
+
+    test('Handles spaces in items lists corectly', () => {
+        return assertSymbols(doc, [
+            'CONSTANTS   Foo  ,, Bar,Baz  ,',
+            '   FooBar  '
+        ], [
+            symConst('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 12))),
+            symConst('Bar', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 20))),
+            symConst('Baz', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 24))),
+            symConst('FooBar', ROOT_SYMBOL_NAME, loc(doc.uri, pos(1, 3)))
+        ]);
+    });
+
+    test('Finishes items list when another block starts', () => {
+        return assertSymbols(doc, [
+            'CONSTANT Foo',
+            'VARIABLE Bar',
+            'Baz == 1'
+        ], [
+            symConst('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 9))),
+            symVar('Bar', ROOT_SYMBOL_NAME, loc(doc.uri, pos(1, 9))),
+            symField('Baz', ROOT_SYMBOL_NAME, loc(doc.uri, pos(2, 0)))
+        ]);
+    });
+
+    test('Doesn\'t break items list on empty line', () => {
+        return assertSymbols(doc, [
+            'VARIABLES Foo,',
+            '',
+            '   Bar'
+        ], [
+            symVar('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 10))),
+            symVar('Bar', ROOT_SYMBOL_NAME, loc(doc.uri, pos(2, 3)))
+        ]);
+    });
+
+    test('Handles line comments inside items list', () => {
+        return assertSymbols(doc, [
+            'VARIABLES',
+            '   Foo,   \\* this is foo',
+            '          \\* nothing interesting here',
+            '   Bar,   \\* this is bar',
+            '   Baz'
+        ], [
+            symVar('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, pos(1, 3))),
+            symVar('Bar', ROOT_SYMBOL_NAME, loc(doc.uri, pos(3, 3))),
+            symVar('Baz', ROOT_SYMBOL_NAME, loc(doc.uri, pos(4, 3)))
+        ]);
+    });
+
+    test('Handles on-line block comments inside items list', () => {
+        return assertSymbols(doc, [
+            'VARIABLES',
+            '   Foo,   (* this is foo *)',
+            '          (* nothing interesting here *)',
+            '   Bar,   (* this is bar *)',
+            '   Baz'
+        ], [
+            symVar('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, pos(1, 3))),
+            symVar('Bar', ROOT_SYMBOL_NAME, loc(doc.uri, pos(3, 3))),
+            symVar('Baz', ROOT_SYMBOL_NAME, loc(doc.uri, pos(4, 3)))
+        ]);
+    });
+
+    test('Finds last list item with a line comment', () => {
+        return assertSymbols(doc, [
+            'VARIABLE',
+            '  Foo   \\* some comment'
+        ], [
+            symVar('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, pos(1, 2)))
+        ]);
+    });
+
+    test('Finds last list item with a block comment', () => {
+        return assertSymbols(doc, [
+            'VARIABLE',
+            '  Foo   (* some comment *)'
+        ], [
+            symVar('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, pos(1, 2)))
+        ]);
+    });
+
+    test('Breaks items list after an item with no comma', () => {
+        return assertSymbols(doc, [
+            'VARIABLES Foo',
+            'Something'
+        ], [
+            symVar('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 10)))
+        ]);
+    });
+
+    test('Finds simple def', () => {
         return assertSymbols(doc, [
             'Foo == 10'
         ], [

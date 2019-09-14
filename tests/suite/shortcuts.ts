@@ -80,6 +80,14 @@ export function symField(name: string, parentName: string, location: vscode.Loca
     return new vscode.SymbolInformation(name, vscode.SymbolKind.Field, parentName, location);
 }
 
+export function symConst(name: string, parentName: string, location: vscode.Location): vscode.SymbolInformation {
+    return new vscode.SymbolInformation(name, vscode.SymbolKind.Constant, parentName, location);
+}
+
+export function symVar(name: string, parentName: string, location: vscode.Location): vscode.SymbolInformation {
+    return new vscode.SymbolInformation(name, vscode.SymbolKind.Variable, parentName, location);
+}
+
 export function symModRef(name: string, parentName: string, location: vscode.Location): vscode.SymbolInformation {
     return new vscode.SymbolInformation(name, vscode.SymbolKind.Namespace, parentName, location);
 }

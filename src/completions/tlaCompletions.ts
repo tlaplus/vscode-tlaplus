@@ -12,7 +12,7 @@ export const TLA_STARTING_KEYWORDS = [  // These keywords start blocks, should n
 export const TLA_OTHER_KEYWORDS = [     // These keywords can be found pretty everywhere
     'LET', 'IN', 'EXCEPT', 'ENABLED', 'UNCHANGED', 'LAMBDA', 'DOMAIN', 'CHOOSE', 'LOCAL', 'RECURSIVE',
     'INSTANCE', 'WITH', 'SUBSET', 'UNION', 'SF_', 'WF_', 'USE', 'DEFS', 'BY', 'DEF', 'PROVE', 'OBVIOUS',
-    'NEW', 'RECURSIVE', 'PICK', 'HIDE', 'WITNESS', 'HAVE', 'TAKE', 'ACTION', 'OMITTED', 'ONLY', 'STATE', 'TEMPORAL',
+    'NEW', 'PICK', 'HIDE', 'WITNESS', 'HAVE', 'TAKE', 'ACTION', 'OMITTED', 'ONLY', 'STATE', 'TEMPORAL',
     // -- control keywords
     'IF', 'THEN', 'ELSE', 'CASE', 'OTHER',
     // -- other
@@ -83,6 +83,8 @@ function mapKind(symbolKind: vscode.SymbolKind): vscode.CompletionItemKind {
     switch (symbolKind) {
         case vscode.SymbolKind.Field:
             return vscode.CompletionItemKind.Field;
+        case vscode.SymbolKind.Variable:
+            return vscode.CompletionItemKind.Variable;
         case vscode.SymbolKind.Function:
             return vscode.CompletionItemKind.Function;
         case vscode.SymbolKind.Method:
