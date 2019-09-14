@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { TlaDocumentInfos } from '../model/documentInfo';
+import { getPrevText } from './completions';
 
 export const TLA_OPERATORS = [
     'E', 'A', 'X', 'lnot', 'land', 'lor', 'cdot', 'equiv', 'subseteq', 'in', 'notin', 'intersect',
@@ -96,12 +97,4 @@ function mapKind(symbolKind: vscode.SymbolKind): vscode.CompletionItemKind {
             return vscode.CompletionItemKind.Constant;
         }
     return vscode.CompletionItemKind.Text;
-}
-
-function getPrevText(document: vscode.TextDocument, position: vscode.Position): string {
-    if (position.character === 0) {
-        return '';
-    }
-    const prevText = document.lineAt(position.line).text.substring(0, position.character);
-    return prevText;
 }
