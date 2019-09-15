@@ -27,7 +27,7 @@ This extension adds support for the [TLA<sup>+</sup> formal specification langua
 * [Commands](https://github.com/alygin/vscode-tlaplus/wiki/Commands)
 * [Troubleshooting](https://github.com/alygin/vscode-tlaplus/wiki/Troubleshooting)
 
-## What to Read
+## TLA<sup>+</sup> Resources
 
 If you're not familiar with TLA<sup>+</sup>, but want to get a grasp on it, the following list of resources is a good starting point:
 
