@@ -1,5 +1,16 @@
 # Change Log
 
+## 1.0.0 &ndash; 15th September, 2019
+
+### Enhancements
+
+* Code completion in TLA<sup>+</sup> specifications and .cfg files.
+* Export TLA<sup>+</sup> specifications to LaTeX and PDF documents.
+* Symbols provider implementation (for the Outline view and "Go to symbol" command).
+* Show / hide unmodified variables in error traces.
+* Highlighting improvements.
+* Drop the Preview badge.
+
 ## 0.7.1 &ndash; 8th September, 2019
 
 ### Enhancements
