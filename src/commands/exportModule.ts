@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { spawn } from 'child_process';
 
-import { LANG_TLAPLUS, replaceExtension } from '../common';
+import { LANG_TLAPLUS, replaceExtension, pathToUri } from '../common';
 import { runTex, ToolProcessInfo } from '../tla2tools';
 import { ToolOutputChannel } from '../outputChannels';
 
@@ -12,6 +12,8 @@ export const CMD_EXPORT_TLA_TO_PDF = 'tlaplus.exportToPdf';
 
 const CFG_PDF_CONVERT_COMMAND = 'tlaplus.pdf.convertCommand';
 const NO_ERROR = 0;
+const PDF_VIEWER_EXTENSION = 'tomoki1207.pdf';
+const PDF_VIEWER_COMMAND = 'extension.pdf-preview';
 
 let texOutChannel: ToolOutputChannel | undefined;
 let pdfOutChannel: ToolOutputChannel | undefined;
@@ -92,9 +94,7 @@ async function generatePdfFile(tlaFilePath: string) {
             getPdfOutChannel().revealWindow();
             return;
         }
-        const fileName = path.basename(tlaFilePath);
-        const pdfName = replaceExtension(fileName, 'pdf');
-        vscode.window.showInformationMessage(`${pdfName} generated.`);
+        notifyPdfIsReady(replaceExtension(tlaFilePath, 'pdf'));
         removeTempFiles(tlaFilePath, 'log', 'aux');
     });
 }
@@ -152,4 +152,25 @@ async function getPdfToolInfo(texFilePath: string): Promise<PdfToolInfo | undefi
     }
     args.push(srcFile);
     return Promise.resolve(new PdfToolInfo(pdfCmd, args));
+}
+
+async function notifyPdfIsReady(filePath: string) {
+    const fileName = path.basename(filePath);
+    const pdfOptions: string[] = [];
+    const pdfExt = vscode.extensions.getExtension(PDF_VIEWER_EXTENSION);
+    const showPdfOption = 'Show PDF';
+    if (pdfExt) {
+        if (!pdfExt.isActive) {
+            await pdfExt.activate();
+        }
+        pdfOptions.push(showPdfOption);
+    }
+    const option = await vscode.window.showInformationMessage(`${fileName} generated.`, ...pdfOptions);
+    if (option === showPdfOption) {
+        vscode.commands.executeCommand(PDF_VIEWER_COMMAND, pathToUri(filePath))
+            .then(
+                () => {},
+                (reason) => vscode.window.showErrorMessage('Cannot display PDF: ' + reason)
+            );
+    }
 }
