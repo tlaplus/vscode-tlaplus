@@ -7,7 +7,7 @@ import { updateCheckResultView, revealEmptyCheckResultView, revealLastCheckResul
 import { applyDCollection } from '../diagnostic';
 import { ChildProcess } from 'child_process';
 import { saveStreamToFile } from '../outputSaver';
-import { replaceExtension, LANG_TLAPLUS, LANG_TLAPLUS_CFG } from '../common';
+import { replaceExtension, LANG_TLAPLUS, LANG_TLAPLUS_CFG, deleteDir, listFiles } from '../common';
 import { ModelCheckResultSource } from '../model/check';
 import { ToolOutputChannel } from '../outputChannels';
 import { createCustomModel } from './customModel';
@@ -64,8 +64,10 @@ export async function checkModelCustom(diagnostic: vscode.DiagnosticCollection, 
         vscode.window.showWarningMessage('File in the active editor is not a .tla, it cannot be checked as a model');
         return;
     }
+    const configFiles = await listFiles(path.dirname(doc.uri.fsPath), (fName) => fName.endsWith('.cfg'));
+    configFiles.sort();
     const cfgFileName = await vscode.window.showQuickPick(
-        findConfigFiles(path.dirname(doc.uri.fsPath)),
+        configFiles,
         { canPickMany: false, placeHolder: 'Select a model config file', matchOnDetail: true }
     );
     if (!cfgFileName || cfgFileName.length === 0) {
@@ -96,21 +98,31 @@ export function stopModelChecking() {
     }
 }
 
-export function evaluateSelection(extContext: vscode.ExtensionContext) {
+export async function evaluateSelection(extContext: vscode.ExtensionContext) {
     const editor = getEditorIfCanRun(extContext);
     if (!editor) {
         return;
     }
     const selRange = new vscode.Range(editor.selection.start, editor.selection.end);
-    const selText = editor.document.getText(selRange).trim();
-    if (selText.length === 0) {
-        vscode.window.showWarningMessage('Nothing to evaluate. Select a constant expression and try again.');
+    const selText = editor.document.getText(selRange);
+    doEvaluateExpression(editor.document.uri.fsPath, selText);
+}
+
+export async function evaluateExpression(extContext: vscode.ExtensionContext) {
+    const editor = getEditorIfCanRun(extContext);
+    if (!editor) {
         return;
     }
-    vscode.window.showInformationMessage(`Evaluating ${selText}...`);
-    createCustomModel(
-        editor.document.uri.fsPath
-    );
+    vscode.window.showInputBox({
+        value: '{1, 2, 3, 5} / {2}',
+        prompt: 'Enter a TLA+ expression to evaluate',
+        ignoreFocusOut: true
+    }).then((expr) => {
+        if (!expr) {
+            return;
+        }
+        doEvaluateExpression(editor.document.uri.fsPath, expr);
+    });
 }
 
 export function showTlcOutput() {
@@ -145,6 +157,20 @@ async function doCheckModel(
         statusBarItem.hide();
         vscode.window.showErrorMessage(err.message);
     }
+}
+
+async function doEvaluateExpression(tlaFilePath: string, expr: string) {
+    const eExpr = expr.trim();
+    if (eExpr === '') {
+        vscode.window.showWarningMessage('Nothing to evaluate.');
+        return;
+    }
+    vscode.window.showInformationMessage(`Evaluating ${expr}...`);
+    const specDir = await createCustomModel(tlaFilePath);
+    if (!specDir) {
+        return;
+    }
+    deleteDir(specDir);
 }
 
 function attachFileSaver(tlaFilePath: string, proc: ChildProcess) {
@@ -231,22 +257,6 @@ function mapTlcOutputLine(line: string): string | undefined {
     }
     const cleanLine = line.replace(/@!@!@(START|END)MSG \d+(\:\d+)? @!@!@/g, '');
     return cleanLine === '' ? undefined : cleanLine;
-}
-
-/**
- * Returns the list of .cfg-files in the given directory.
- */
-async function findConfigFiles(path: string): Promise<string[]> {
-    return new Promise<string[]>((resolve, reject) => {
-        readdir(path, (err, files) => {
-            if (err) {
-                reject(err);
-                return;
-            }
-            const configs = files.filter(f => f.endsWith('.cfg'));
-            resolve(configs.sort());
-        });
-    });
 }
 
 function getEditorIfCanRun(extContext: vscode.ExtensionContext): vscode.TextEditor | undefined {

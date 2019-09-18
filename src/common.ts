@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import * as moment from 'moment';
 import * as path from 'path';
+import * as fs from 'fs';
 import { tmpdir } from 'os';
-import { existsSync, mkdirSync, readdirSync, unlink, rmdir } from 'fs';
 
 export const LANG_TLAPLUS = 'tlaplus';
 export const LANG_TLAPLUS_CFG = 'tlaplus_cfg';
@@ -50,8 +50,8 @@ export function createTempDirSync(): string | undefined {
     for (let i = 0; i < MAX_TEMP_DIR_ATTEMPTS; i++) {
         const timestamp = new Date().getTime();
         const tempDir = `${baseDir}${path.sep}vscode-tlaplus-${timestamp}`;
-        if (!existsSync(tempDir)) {
-            mkdirSync(tempDir);
+        if (!fs.existsSync(tempDir)) {
+            fs.mkdirSync(tempDir);
             return tempDir;
         }
     }
@@ -60,7 +60,7 @@ export function createTempDirSync(): string | undefined {
 }
 
 export async function deleteDir(dirPath: string) {
-    for (const fileName of readdirSync(dirPath)) {
+    for (const fileName of fs.readdirSync(dirPath)) {
         const filePath = path.join(dirPath, fileName);
         try {
             await deleteFile(filePath);
@@ -68,7 +68,7 @@ export async function deleteDir(dirPath: string) {
             console.error(`Cannot delete file ${filePath}: ${err}`);
         }
     }
-    rmdir(dirPath, (err) => {
+    fs.rmdir(dirPath, (err) => {
         if (err) {
             console.error(`Cannot delete directory ${dirPath}: ${err}`);
         }
@@ -77,12 +77,38 @@ export async function deleteDir(dirPath: string) {
 
 async function deleteFile(filePath: string): Promise<any | null> {
     return new Promise((resolve, reject) => {
-        unlink(filePath, (err) => {
+        fs.unlink(filePath, (err) => {
             if (err) {
                 reject(err);
                 return;
             }
             resolve(null);
+        });
+    });
+}
+
+export async function copyFile(filePath: string, destDir: string): Promise<any | null> {
+    return new Promise((resolve, reject) => {
+        const fileName = path.basename(filePath);
+        fs.copyFile(filePath, path.join(destDir, fileName), (err) => {
+            if (err) {
+                reject(err);
+                return;
+            }
+            resolve(null);
+        });
+    });
+}
+
+export async function listFiles(dirPath: string, predicate?: (name: string) => boolean): Promise<string[]> {
+    return new Promise<string[]>((resolve, reject) => {
+        fs.readdir(dirPath, (err, files) => {
+            if (err) {
+                reject(err);
+                return;
+            }
+            const result = predicate ? files.filter(predicate) : files;
+            resolve(result);
         });
     });
 }
