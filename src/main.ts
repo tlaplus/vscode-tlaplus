@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { CMD_CHECK_MODEL_RUN, CMD_CHECK_MODEL_STOP, CMD_CHECK_MODEL_DISPLAY, CMD_SHOW_TLC_OUTPUT,
     CMD_CHECK_MODEL_CUSTOM_RUN, checkModel, displayModelChecking, stopModelChecking,
-    showTlcOutput, checkModelCustom} from './commands/checkModel';
+    showTlcOutput, checkModelCustom, CMD_EVALUATE_SELECTION, evaluateSelection} from './commands/checkModel';
 import { parseModule, CMD_PARSE_MODULE } from './commands/parseModule';
 import { visualizeTlcOutput, CMD_VISUALIZE_TLC_OUTPUT } from './commands/visualizeOutput';
 import { exportModuleToTex, exportModuleToPdf, CMD_EXPORT_TLA_TO_TEX,
@@ -56,6 +56,9 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand(
             CMD_VISUALIZE_TLC_OUTPUT,
             () => visualizeTlcOutput(context)),
+        vscode.commands.registerCommand(
+            CMD_EVALUATE_SELECTION,
+            () => evaluateSelection(context)),
         vscode.languages.registerCodeActionsProvider(
             TLAPLUS_FILE_SELECTOR,
             new TlaCodeActionProvider(),

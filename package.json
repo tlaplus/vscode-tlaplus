@@ -37,6 +37,10 @@
         "onLanguage:tlaplus",
         "onCommand:tlaplus.parse",
         "onCommand:tlaplus.model.check.run",
+        "onCommand:tlaplus.model.check.customRun",
+        "onCommand:tlaplus.exportToTex",
+        "onCommand:tlaplus.exportToPdf",
+        "onCommand:tlaplus.evaluateSelection",
         "workspaceContains:**/*.tla"
     ],
     "main": "./out/src/main.js",
@@ -143,6 +147,11 @@
                 "command": "tlaplus.out.visualize",
                 "title": "Visualize TLC output",
                 "category": "TLA+"
+            },
+            {
+                "command": "tlaplus.evaluateSelection",
+                "title": "Evaluate selected expression",
+                "category": "TLA+"
             }
         ],
         "snippets": [
@@ -189,6 +198,10 @@
                 {
                     "command": "tlaplus.out.visualize",
                     "when": "resourceExtname == .out"
+                },
+                {
+                    "command": "tlaplus.evaluateSelection",
+                    "when": "editorHasSelection && editorLangId == tlaplus"
                 }
             ]
         },

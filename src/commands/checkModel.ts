@@ -10,11 +10,13 @@ import { saveStreamToFile } from '../outputSaver';
 import { replaceExtension, LANG_TLAPLUS, LANG_TLAPLUS_CFG } from '../common';
 import { ModelCheckResultSource } from '../model/check';
 import { ToolOutputChannel } from '../outputChannels';
+import { createCustomModel } from './customModel';
 
 export const CMD_CHECK_MODEL_RUN = 'tlaplus.model.check.run';
 export const CMD_CHECK_MODEL_CUSTOM_RUN = 'tlaplus.model.check.customRun';
 export const CMD_CHECK_MODEL_STOP = 'tlaplus.model.check.stop';
 export const CMD_CHECK_MODEL_DISPLAY = 'tlaplus.model.check.display';
+export const CMD_EVALUATE_SELECTION = 'tlaplus.evaluateSelection';
 export const CMD_SHOW_TLC_OUTPUT = 'tlaplus.showTlcOutput';
 
 const CFG_CREATE_OUT_FILES = 'tlaplus.tlc.modelChecker.createOutFiles';
@@ -35,10 +37,11 @@ class SpecFiles {
  * Runs TLC on a TLA+ specification.
  */
 export async function checkModel(diagnostic: vscode.DiagnosticCollection, extContext: vscode.ExtensionContext) {
-    const doc = getDocumentIfCanRun(extContext);
-    if (!doc) {
+    const editor = getEditorIfCanRun(extContext);
+    if (!editor) {
         return;
     }
+    const doc = editor.document;
     if (doc.languageId !== LANG_TLAPLUS && doc.languageId !== LANG_TLAPLUS_CFG) {
         vscode.window.showWarningMessage(
             'File in the active editor is not a .tla or .cfg file, it cannot be checked as a model');
@@ -52,10 +55,11 @@ export async function checkModel(diagnostic: vscode.DiagnosticCollection, extCon
 }
 
 export async function checkModelCustom(diagnostic: vscode.DiagnosticCollection, extContext: vscode.ExtensionContext) {
-    const doc = getDocumentIfCanRun(extContext);
-    if (!doc) {
+    const editor = getEditorIfCanRun(extContext);
+    if (!editor) {
         return;
     }
+    const doc = editor.document;
     if (doc.languageId !== LANG_TLAPLUS) {
         vscode.window.showWarningMessage('File in the active editor is not a .tla, it cannot be checked as a model');
         return;
@@ -90,6 +94,23 @@ export function stopModelChecking() {
     } else {
         vscode.window.showInformationMessage("There're no currently running model checking processes");
     }
+}
+
+export function evaluateSelection(extContext: vscode.ExtensionContext) {
+    const editor = getEditorIfCanRun(extContext);
+    if (!editor) {
+        return;
+    }
+    const selRange = new vscode.Range(editor.selection.start, editor.selection.end);
+    const selText = editor.document.getText(selRange).trim();
+    if (selText.length === 0) {
+        vscode.window.showWarningMessage('Nothing to evaluate. Select a constant expression and try again.');
+        return;
+    }
+    vscode.window.showInformationMessage(`Evaluating ${selText}...`);
+    createCustomModel(
+        editor.document.uri.fsPath
+    );
 }
 
 export function showTlcOutput() {
@@ -228,7 +249,7 @@ async function findConfigFiles(path: string): Promise<string[]> {
     });
 }
 
-function getDocumentIfCanRun(extContext: vscode.ExtensionContext): vscode.TextDocument | undefined {
+function getEditorIfCanRun(extContext: vscode.ExtensionContext): vscode.TextEditor | undefined {
     if (checkProcess) {
         vscode.window.showWarningMessage(
                 'Another model checking process is currently running',
@@ -241,5 +262,5 @@ function getDocumentIfCanRun(extContext: vscode.ExtensionContext): vscode.TextDo
         vscode.window.showWarningMessage('No editor is active, cannot find a TLA+ model to check');
         return undefined;
     }
-    return editor.document;
+    return editor;
 }
