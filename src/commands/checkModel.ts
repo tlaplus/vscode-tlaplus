@@ -166,11 +166,24 @@ async function doEvaluateExpression(tlaFilePath: string, expr: string) {
         return;
     }
     vscode.window.showInformationMessage(`Evaluating ${expr}...`);
-    const specDir = await createCustomModel(tlaFilePath);
+    const num = (new Date().getTime());
+    const specDir = await createCustomModel(
+        tlaFilePath, [
+            `E_${num} ==`,
+            expr,
+            `ASSUME PrintT<<"$!@$!@$!@$!@$!", E_${num}>>`,
+            `VARIABLES v_${num}`,
+            `Init_${num} == FALSE /\\ v_${num} = 0`,
+            `Next_${num} == FALSE /\\ v_${num}' = v_${num}`
+        ], [
+            `INIT Init_${num}`,
+            `NEXT Next_${num}`
+        ]
+    );
     if (!specDir) {
         return;
     }
-    deleteDir(specDir);
+    // deleteDir(specDir);
 }
 
 function attachFileSaver(tlaFilePath: string, proc: ChildProcess) {

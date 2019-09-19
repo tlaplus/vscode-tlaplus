@@ -100,6 +100,18 @@ export async function copyFile(filePath: string, destDir: string): Promise<any |
     });
 }
 
+export async function writeFile(filePath: string, ...contents: string[]): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+        fs.writeFile(filePath, contents.join('\n'), (err) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(true);
+            }
+        });
+    });
+}
+
 export async function listFiles(dirPath: string, predicate?: (name: string) => boolean): Promise<string[]> {
     return new Promise<string[]>((resolve, reject) => {
         fs.readdir(dirPath, (err, files) => {
