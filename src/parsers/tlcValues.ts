@@ -175,13 +175,6 @@ class Tokenizer {
     }
 }
 
-class SimpleFunctionParsingResult {
-    constructor(
-        readonly func: SimpleFunction,
-        readonly error: boolean
-    ) {}
-}
-
 /**
  * Parses a set of lines that contain a variable value.
  * It's assumed that the given set of lines came from a TLC output, which means they follow

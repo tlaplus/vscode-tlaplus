@@ -3,12 +3,16 @@ import * as path from 'path';
 import { replaceExtension, deleteDir, readFileLines, exists } from '../common';
 import { SpecFiles, getEditorIfCanRunTlc, doCheckModel } from './checkModel';
 import { createCustomModel } from './customModel';
+import { ToolOutputChannel } from '../outputChannels';
+import { ModelCheckResult, CheckState, SequenceValue } from '../model/check';
+import { parseVariableValue } from '../parsers/tlcValues';
 
 export const CMD_EVALUATE_SELECTION = 'tlaplus.evaluateSelection';
 
 const EXPR_MARKER = '$!@$!@$!@$!@$!';
 
 let lastEvaluatedExpression: string | undefined;
+let outChannel: ToolOutputChannel | undefined;
 
 /**
  * Evaluates the expression, currently selected in the active editor.
@@ -20,7 +24,7 @@ export async function evaluateSelection(diagnostic: vscode.DiagnosticCollection,
     }
     const selRange = new vscode.Range(editor.selection.start, editor.selection.end);
     const selText = editor.document.getText(selRange);
-    doEvaluateExpression(editor.document.uri.fsPath, selText, diagnostic, extContext);
+    doEvaluateExpression(editor, selText, diagnostic, extContext);
 }
 
 /**
@@ -40,12 +44,12 @@ export async function evaluateExpression(diagnostic: vscode.DiagnosticCollection
             return;
         }
         lastEvaluatedExpression = expr;
-        doEvaluateExpression(editor.document.uri.fsPath, expr, diagnostic, extContext);
+        doEvaluateExpression(editor, expr, diagnostic, extContext);
     });
 }
 
 async function doEvaluateExpression(
-    tlaFilePath: string,
+    editor: vscode.TextEditor,
     expr: string,
     diagnostic: vscode.DiagnosticCollection,
     extContext: vscode.ExtensionContext
@@ -55,6 +59,8 @@ async function doEvaluateExpression(
         vscode.window.showWarningMessage('Nothing to evaluate.');
         return;
     }
+    await editor.document.save();
+    const tlaFilePath = editor.document.uri.fsPath;
     const cfgFilePath = replaceExtension(tlaFilePath, 'cfg');
     const cfgExists = await exists(cfgFilePath);
     const constants = cfgExists ? await extractConstants(cfgFilePath) : [];
@@ -79,8 +85,13 @@ async function doEvaluateExpression(
         path.join(model.dirPath, model.tlaFileName),
         path.join(model.dirPath, model.cfgFileName)
     );
-    doCheckModel(specFiles, extContext, diagnostic);
-    // deleteDir(model.dirPath);
+    const channel = getOutChannel();
+    channel.clear();
+    channel.appendLine(`Evaluating constant expression:\n${expr}\n`);
+    channel.revealWindow();
+    const checkResult = await doCheckModel(specFiles, true, extContext, diagnostic);
+    displayResult(checkResult);
+    deleteDir(model.dirPath);
 }
 
 async function extractConstants(cfgFilePath: string): Promise<string[]> {
@@ -98,4 +109,34 @@ async function extractConstants(cfgFilePath: string): Promise<string[]> {
         }
     }
     return constants;
+}
+
+function displayResult(checkResult: ModelCheckResult | undefined) {
+    const channel = getOutChannel();
+    if (!checkResult) {
+        channel.appendLine('Error evaluating expression');
+        return;
+    }
+    if (checkResult.state !== CheckState.Success) {
+        checkResult.errors.forEach((err) => channel.appendLine(err.toString()));
+        return;
+    }
+    if (checkResult.outputLines.length === 0) {
+        channel.appendLine('Error: Expression value output not found.');
+        return;
+    }
+    const val = parseVariableValue('expr', checkResult.outputLines.map((l) => l.text));
+    if (!(val instanceof SequenceValue) || val.items.length !== 2) {
+        channel.appendLine('Error: Unexpected expression value output\n');
+        channel.appendLine(val.str);
+        return;
+    }
+    channel.appendLine(val.items[1].str);
+}
+
+function getOutChannel(): ToolOutputChannel {
+    if (!outChannel) {
+        outChannel = new ToolOutputChannel('TLA+ evaluation');
+    }
+    return outChannel;
 }

@@ -8,7 +8,7 @@ import { applyDCollection } from '../diagnostic';
 import { ChildProcess } from 'child_process';
 import { saveStreamToFile } from '../outputSaver';
 import { replaceExtension, LANG_TLAPLUS, LANG_TLAPLUS_CFG, listFiles, exists } from '../common';
-import { ModelCheckResultSource } from '../model/check';
+import { ModelCheckResultSource, ModelCheckResult } from '../model/check';
 import { ToolOutputChannel } from '../outputChannels';
 
 export const CMD_CHECK_MODEL_RUN = 'tlaplus.model.check.run';
@@ -23,6 +23,10 @@ const TEMPLATE_CFG_PATH = path.resolve(__dirname, '../../../tools/template.cfg')
 let checkProcess: ChildProcess | undefined;
 const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);
 const outChannel = new ToolOutputChannel('TLC', mapTlcOutputLine);
+
+class CheckResultHolder {
+    checkResult: ModelCheckResult | undefined;
+}
 
 export class SpecFiles {
     constructor(
@@ -49,7 +53,7 @@ export async function checkModel(diagnostic: vscode.DiagnosticCollection, extCon
     if (!specFiles) {
         return;
     }
-    doCheckModel(specFiles, extContext, diagnostic);
+    doCheckModel(specFiles, false, extContext, diagnostic);
 }
 
 export async function checkModelCustom(diagnostic: vscode.DiagnosticCollection, extContext: vscode.ExtensionContext) {
@@ -75,7 +79,7 @@ export async function checkModelCustom(diagnostic: vscode.DiagnosticCollection, 
         doc.uri.fsPath,
         path.join(path.dirname(doc.uri.fsPath), cfgFileName)
     );
-    doCheckModel(specFiles, extContext, diagnostic);
+    doCheckModel(specFiles, false, extContext, diagnostic);
 }
 
 /**
@@ -118,9 +122,10 @@ export function getEditorIfCanRunTlc(extContext: vscode.ExtensionContext): vscod
 
 export async function doCheckModel(
     specFiles: SpecFiles,
+    quiet: boolean,
     extContext: vscode.ExtensionContext,
     diagnostic: vscode.DiagnosticCollection
-) {
+): Promise<ModelCheckResult | undefined> {
     try {
         updateStatusBarItem(true);
         const procInfo = await runTlc(specFiles.tlaFilePath, path.basename(specFiles.cfgFilePath));
@@ -130,16 +135,25 @@ export async function doCheckModel(
             checkProcess = undefined;
             updateStatusBarItem(false);
         });
-        attachFileSaver(specFiles.tlaFilePath, checkProcess);
-        revealEmptyCheckResultView(ModelCheckResultSource.Process, extContext);
+        if (!quiet) {
+            attachFileSaver(specFiles.tlaFilePath, checkProcess);
+            revealEmptyCheckResultView(ModelCheckResultSource.Process, extContext);
+        }
+        const resultHolder = new CheckResultHolder();
         const stdoutParser = new TlcModelCheckerStdoutParser(
             ModelCheckResultSource.Process,
             checkProcess.stdout,
             specFiles.tlaFilePath,
             true,
-            updateCheckResultView);
+            (checkResult) => {
+                resultHolder.checkResult = checkResult;
+                if (!quiet) {
+                    updateCheckResultView(checkResult);
+                }
+            });
         const dCol = await stdoutParser.readAll();
         applyDCollection(dCol, diagnostic);
+        return resultHolder.checkResult;
     } catch (err) {
         statusBarItem.hide();
         vscode.window.showErrorMessage(err.message);

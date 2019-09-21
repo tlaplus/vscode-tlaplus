@@ -48,4 +48,12 @@ export class ToolOutputChannel {
     revealWindow() {
         this.outChannel.show();
     }
+
+    clear() {
+        this.outChannel.clear();
+    }
+
+    appendLine(line: string) {
+        this.outChannel.appendLine(line);
+    }
 }

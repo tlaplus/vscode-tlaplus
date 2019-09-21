@@ -103,6 +103,10 @@ export class MessageLine {
     static fromText(text: string): MessageLine {
         return new MessageLine([ MessageSpan.newTextSpan(text) ]);
     }
+
+    toString(): string {
+        return this.spans.map((s) => s.text).join('');
+    }
 }
 
 export type ValueKey = string | number;
