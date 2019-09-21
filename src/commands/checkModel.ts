@@ -152,7 +152,9 @@ export async function doCheckModel(
                 }
             });
         const dCol = await stdoutParser.readAll();
-        applyDCollection(dCol, diagnostic);
+        if (!quiet) {
+            applyDCollection(dCol, diagnostic);
+        }
         return resultHolder.checkResult;
     } catch (err) {
         statusBarItem.hide();

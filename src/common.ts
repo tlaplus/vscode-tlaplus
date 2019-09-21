@@ -63,7 +63,12 @@ export async function deleteDir(dirPath: string) {
     for (const fileName of fs.readdirSync(dirPath)) {
         const filePath = path.join(dirPath, fileName);
         try {
-            await deleteFile(filePath);
+            const fileInfo = await getFileInfo(filePath);
+            if (fileInfo.isDirectory()) {
+                await deleteDir(filePath);
+            } else {
+                await deleteFile(filePath);
+            }
         } catch (err) {
             console.error(`Cannot delete file ${filePath}: ${err}`);
         }
@@ -83,6 +88,18 @@ async function deleteFile(filePath: string): Promise<any | null> {
                 return;
             }
             resolve(null);
+        });
+    });
+}
+
+async function getFileInfo(filePath: string): Promise<fs.Stats> {
+    return new Promise((resolve, reject) => {
+        fs.lstat(filePath, (err, stats) => {
+            if (err) {
+                reject(err);
+                return;
+            }
+            resolve(stats);
         });
     });
 }

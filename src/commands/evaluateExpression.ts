@@ -8,6 +8,7 @@ import { ModelCheckResult, CheckState, SequenceValue } from '../model/check';
 import { parseVariableValue } from '../parsers/tlcValues';
 
 export const CMD_EVALUATE_SELECTION = 'tlaplus.evaluateSelection';
+export const CMD_EVALUATE_EXPRESSION = 'tlaplus.evaluateExpression';
 
 const EXPR_MARKER = '$!@$!@$!@$!@$!';
 
