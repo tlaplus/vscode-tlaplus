@@ -29,31 +29,38 @@ class OutputToOutChannelSender extends ProcessOutputHandler<void> {
  * Manages an output channel and sends output of tool processes to that channel.
  */
 export class ToolOutputChannel {
-    outChannel: vscode.OutputChannel;
+    outChannel: vscode.OutputChannel | undefined;
     outSender: ProcessOutputHandler<void> | undefined;
     lineMapper: LineMapper | undefined;
 
-    constructor(name: string, lineMapper?: LineMapper) {
-        this.outChannel = vscode.window.createOutputChannel(name);
+    constructor(readonly name: string, lineMapper?: LineMapper) {
         this.lineMapper = lineMapper;
     }
 
     bindTo(procInfo: ToolProcessInfo) {
-        this.outChannel.clear();
-        this.outChannel.appendLine(procInfo.commandLine);
-        this.outChannel.appendLine('');
-        this.outSender = new OutputToOutChannelSender(procInfo.process.stdout, this.outChannel, this.lineMapper);
+        const channel = this.getChannel();
+        channel.clear();
+        channel.appendLine(procInfo.commandLine);
+        channel.appendLine('');
+        this.outSender = new OutputToOutChannelSender(procInfo.process.stdout, channel, this.lineMapper);
     }
 
     revealWindow() {
-        this.outChannel.show();
+        this.getChannel().show();
     }
 
     clear() {
-        this.outChannel.clear();
+        this.getChannel().clear();
     }
 
     appendLine(line: string) {
-        this.outChannel.appendLine(line);
+        this.getChannel().appendLine(line);
+    }
+
+    private getChannel(): vscode.OutputChannel {
+        if (!this.outChannel) {
+            this.outChannel = vscode.window.createOutputChannel(this.name);
+        }
+        return this.outChannel;
     }
 }

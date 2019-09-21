@@ -15,8 +15,8 @@ const NO_ERROR = 0;
 const PDF_VIEWER_EXTENSION = 'tomoki1207.pdf';
 const PDF_VIEWER_COMMAND = 'extension.pdf-preview';
 
-let texOutChannel: ToolOutputChannel | undefined;
-let pdfOutChannel: ToolOutputChannel | undefined;
+const texOutChannel = new ToolOutputChannel('TLA+ to LaTeX');
+const pdfOutChannel = new ToolOutputChannel('TLA+ to PDF');
 
 class PdfToolInfo {
     constructor(
@@ -54,11 +54,11 @@ export async function exportModuleToPdf(extContext: vscode.ExtensionContext) {
 
 async function generateTexFile(tlaFilePath: string, notifySuccess: boolean): Promise<boolean> {
     const procInfo = await runTex(tlaFilePath);
-    getTexOutChannel().bindTo(procInfo);
+    texOutChannel.bindTo(procInfo);
     return new Promise((resolve, reject) => {
         procInfo.process.on('close', (exitCode: number) => {
             if (exitCode !== NO_ERROR) {
-                getTexOutChannel().revealWindow();
+                texOutChannel.revealWindow();
                 resolve(false);
                 return;
             }
@@ -86,12 +86,12 @@ async function generatePdfFile(tlaFilePath: string) {
     );
     const cmdLine = [ pdfToolInfo.command ].concat(pdfToolInfo.args).join(' ');
     const procInfo = new ToolProcessInfo(cmdLine, proc);
-    getPdfOutChannel().bindTo(procInfo);
+    pdfOutChannel.bindTo(procInfo);
     proc.on('error', () => {});  // Without this line, the `close` even doesn't fire in case of invalid command
     proc.on('close', (exitCode: number) => {
         if (exitCode !== NO_ERROR) {
             vscode.window.showErrorMessage(`Error generating PDF: exit code ${exitCode}`);
-            getPdfOutChannel().revealWindow();
+            pdfOutChannel.revealWindow();
             return;
         }
         notifyPdfIsReady(replaceExtension(tlaFilePath, 'pdf'));
@@ -109,20 +109,6 @@ function removeFile(filePath: string): Promise<void> {
     return new Promise((resolve, reject) => {
         fs.unlink(filePath, () => resolve());
     });
-}
-
-function getTexOutChannel(): ToolOutputChannel {
-    if (!texOutChannel) {
-        texOutChannel = new ToolOutputChannel('TLA+ to LaTeX');
-    }
-    return texOutChannel;
-}
-
-function getPdfOutChannel(): ToolOutputChannel {
-    if (!pdfOutChannel) {
-        pdfOutChannel = new ToolOutputChannel('LaTeX to PDF');
-    }
-    return pdfOutChannel;
 }
 
 function getDocumentIfCanRun(format: string): vscode.TextDocument | undefined {
