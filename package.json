@@ -37,6 +37,11 @@
         "onLanguage:tlaplus",
         "onCommand:tlaplus.parse",
         "onCommand:tlaplus.model.check.run",
+        "onCommand:tlaplus.model.check.customRun",
+        "onCommand:tlaplus.exportToTex",
+        "onCommand:tlaplus.exportToPdf",
+        "onCommand:tlaplus.evaluateSelection",
+        "onCommand:tlaplus.evaluateExpression",
         "workspaceContains:**/*.tla"
     ],
     "main": "./out/src/main.js",
@@ -143,6 +148,17 @@
                 "command": "tlaplus.out.visualize",
                 "title": "Visualize TLC output",
                 "category": "TLA+"
+            },
+            {
+                "command": "tlaplus.evaluateSelection",
+                "title": "Evaluate selected expression",
+                "category": "TLA+",
+                "enablement": "editorHasSelection"
+            },
+            {
+                "command": "tlaplus.evaluateExpression",
+                "title": "Evaluate expression...",
+                "category": "TLA+"
             }
         ],
         "snippets": [
@@ -183,12 +199,30 @@
                     "command": "tlaplus.model.check.stop"
                 },
                 {
-                    "command": "tlaplus.model.check.display",
-                    "when": "false"
+                    "command": "tlaplus.out.visualize",
+                    "when": "resourceExtname == .out"
+                },
+                {
+                    "command": "tlaplus.evaluateSelection",
+                    "when": "editorLangId == tlaplus"
+                },
+                {
+                    "command": "tlaplus.evaluateExpression",
+                    "when": "editorLangId == tlaplus"
+                }
+            ],
+            "editor/context": [
+                {
+                    "command": "tlaplus.model.check.run",
+                    "when": "editorLangId == tlaplus || editorLangId == tlaplus_cfg"
                 },
                 {
                     "command": "tlaplus.out.visualize",
                     "when": "resourceExtname == .out"
+                },
+                {
+                    "command": "tlaplus.evaluateSelection",
+                    "when": "editorLangId == tlaplus"
                 }
             ]
         },

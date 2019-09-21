@@ -1,9 +1,12 @@
 import * as vscode from 'vscode';
 import * as moment from 'moment';
-import { basename } from 'path';
+import * as path from 'path';
+import * as fs from 'fs';
+import { tmpdir } from 'os';
 
 export const LANG_TLAPLUS = 'tlaplus';
 export const LANG_TLAPLUS_CFG = 'tlaplus_cfg';
+const MAX_TEMP_DIR_ATTEMPTS = 100;
 
 /**
  * Thrown when there's some problem with parsing.
@@ -40,4 +43,119 @@ export function pathToModuleName(filePath: string): string {
     const sid = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'));
     const modName = filePath.substring(sid + 1, filePath.length - 4);   // remove path and .tla
     return modName;
+}
+
+export function createTempDirSync(): string | undefined {
+    const baseDir = tmpdir();
+    for (let i = 0; i < MAX_TEMP_DIR_ATTEMPTS; i++) {
+        const timestamp = new Date().getTime();
+        const tempDir = `${baseDir}${path.sep}vscode-tlaplus-${timestamp}`;
+        if (!fs.existsSync(tempDir)) {
+            fs.mkdirSync(tempDir);
+            return tempDir;
+        }
+    }
+    vscode.window.showErrorMessage(`Cannot create temporary directory inside ${baseDir}.`);
+    return undefined;
+}
+
+export async function deleteDir(dirPath: string) {
+    for (const fileName of fs.readdirSync(dirPath)) {
+        const filePath = path.join(dirPath, fileName);
+        try {
+            const fileInfo = await getFileInfo(filePath);
+            if (fileInfo.isDirectory()) {
+                await deleteDir(filePath);
+            } else {
+                await deleteFile(filePath);
+            }
+        } catch (err) {
+            console.error(`Cannot delete file ${filePath}: ${err}`);
+        }
+    }
+    fs.rmdir(dirPath, (err) => {
+        if (err) {
+            console.error(`Cannot delete directory ${dirPath}: ${err}`);
+        }
+    });
+}
+
+async function deleteFile(filePath: string): Promise<any | null> {
+    return new Promise((resolve, reject) => {
+        fs.unlink(filePath, (err) => {
+            if (err) {
+                reject(err);
+                return;
+            }
+            resolve(null);
+        });
+    });
+}
+
+async function getFileInfo(filePath: string): Promise<fs.Stats> {
+    return new Promise((resolve, reject) => {
+        fs.lstat(filePath, (err, stats) => {
+            if (err) {
+                reject(err);
+                return;
+            }
+            resolve(stats);
+        });
+    });
+}
+
+export async function copyFile(filePath: string, destDir: string): Promise<any | null> {
+    return new Promise((resolve, reject) => {
+        const fileName = path.basename(filePath);
+        fs.copyFile(filePath, path.join(destDir, fileName), (err) => {
+            if (err) {
+                reject(err);
+                return;
+            }
+            resolve(null);
+        });
+    });
+}
+
+export async function writeFile(filePath: string, ...contents: string[]): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+        fs.writeFile(filePath, contents.join('\n'), (err) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(true);
+            }
+        });
+    });
+}
+
+export async function readFileLines(filePath: string): Promise<string[]> {
+    return new Promise((resolve, reject) => {
+        fs.readFile(filePath, { encoding: 'UTF-8' }, (err, data) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(data.split('\n'));
+            }
+        });
+    });
+}
+
+export async function listFiles(dirPath: string, predicate?: (name: string) => boolean): Promise<string[]> {
+    return new Promise<string[]>((resolve, reject) => {
+        fs.readdir(dirPath, (err, files) => {
+            if (err) {
+                reject(err);
+                return;
+            }
+            const result = predicate ? files.filter(predicate) : files;
+            resolve(result);
+        });
+    });
+}
+
+export async function exists(filePath: string): Promise<boolean> {
+    return new Promise(resolve => {
+        fs.exists(filePath, (exists) => resolve(exists));
+    });
 }

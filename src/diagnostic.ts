@@ -40,7 +40,7 @@ export function applyDCollection(dCol: DCollection, dc: vscode.DiagnosticCollect
     dCol.getModules().forEach((modPath) => dc.delete(pathToUri(modPath)));
     // Add messages that were found
     const uri2diag = new Map<string, vscode.Diagnostic[]>();
-    dCol.getMessages().forEach(d => {
+    dCol.getMessages().forEach((d) => {
         let list = uri2diag.get(d.filePath);
         if (!list) {
             list = [];
