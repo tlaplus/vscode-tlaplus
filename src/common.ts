@@ -112,6 +112,18 @@ export async function writeFile(filePath: string, ...contents: string[]): Promis
     });
 }
 
+export async function readFileLines(filePath: string): Promise<string[]> {
+    return new Promise((resolve, reject) => {
+        fs.readFile(filePath, { encoding: 'UTF-8' }, (err, data) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(data.split('\n'));
+            }
+        });
+    });
+}
+
 export async function listFiles(dirPath: string, predicate?: (name: string) => boolean): Promise<string[]> {
     return new Promise<string[]>((resolve, reject) => {
         fs.readdir(dirPath, (err, files) => {
@@ -122,5 +134,11 @@ export async function listFiles(dirPath: string, predicate?: (name: string) => b
             const result = predicate ? files.filter(predicate) : files;
             resolve(result);
         });
+    });
+}
+
+export async function exists(filePath: string): Promise<boolean> {
+    return new Promise(resolve => {
+        fs.exists(filePath, (exists) => resolve(exists));
     });
 }

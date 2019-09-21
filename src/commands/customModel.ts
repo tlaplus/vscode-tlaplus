@@ -2,6 +2,14 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { createTempDirSync, listFiles, copyFile, writeFile } from '../common';
 
+export class CustomModelInfo {
+    constructor(
+        readonly dirPath: string,
+        readonly tlaFileName: string,
+        readonly cfgFileName: string
+    ) {}
+}
+
 /**
  * Creates custom specification and model config for a specific check run.
  * Such models are treated as temporary, they deleted after checking.
@@ -11,7 +19,7 @@ export async function createCustomModel(
     baseSpec: string,
     tlaContents: string[],
     cfgContents: string[]
-): Promise<string | undefined> {
+): Promise<CustomModelInfo | undefined> {
     const tempDir = createTempDirSync();
     if (!tempDir) {
         return undefined;
@@ -23,8 +31,9 @@ export async function createCustomModel(
     const rootModule = 't' + (new Date().getTime());
     const baseModuleFile = path.basename(baseSpec);
     const baseModule = baseModuleFile.substring(0, baseModuleFile.length - 4);
+    const rootModuleFileName = rootModule + '.tla';
     const tlaCreated = await createFile(
-        path.join(tempDir, rootModule + '.tla'),
+        path.join(tempDir, rootModuleFileName),
         `---- MODULE ${rootModule} ----`,
         `EXTENDS ${baseModule}, TLC`,
         ...tlaContents,
@@ -33,19 +42,17 @@ export async function createCustomModel(
     if (!tlaCreated) {
         return undefined;
     }
-    const cfgCreated = await createFile(path.join(tempDir, rootModule + '.cfg'), ...cfgContents);
+    const cfgFileName = rootModule + '.cfg';
+    const cfgCreated = await createFile(path.join(tempDir, cfgFileName), ...cfgContents);
     if (!cfgCreated) {
         return undefined;
     }
-    return tempDir;
+    return new CustomModelInfo(tempDir, rootModuleFileName, cfgFileName);
 }
 
 async function copySpecFiles(srcDir: string, destDir: string): Promise<boolean> {
     try {
-        const fileNames = await listFiles(
-            srcDir,
-            (fName) => fName.endsWith('.tla') || fName.endsWith('.cfg')
-        );
+        const fileNames = await listFiles(srcDir, (fName) => fName.endsWith('.tla'));
         for (const fName of fileNames) {
             await copyFile(path.join(srcDir, fName), destDir);
         }

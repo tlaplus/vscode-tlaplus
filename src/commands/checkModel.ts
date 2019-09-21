@@ -1,22 +1,20 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { exists, copyFile, readdir } from 'fs';
+import { copyFile } from 'fs';
 import { runTlc, stopProcess } from '../tla2tools';
 import { TlcModelCheckerStdoutParser } from '../parsers/tlc';
 import { updateCheckResultView, revealEmptyCheckResultView, revealLastCheckResultView } from '../checkResultView';
 import { applyDCollection } from '../diagnostic';
 import { ChildProcess } from 'child_process';
 import { saveStreamToFile } from '../outputSaver';
-import { replaceExtension, LANG_TLAPLUS, LANG_TLAPLUS_CFG, deleteDir, listFiles } from '../common';
+import { replaceExtension, LANG_TLAPLUS, LANG_TLAPLUS_CFG, listFiles, exists } from '../common';
 import { ModelCheckResultSource } from '../model/check';
 import { ToolOutputChannel } from '../outputChannels';
-import { createCustomModel } from './customModel';
 
 export const CMD_CHECK_MODEL_RUN = 'tlaplus.model.check.run';
 export const CMD_CHECK_MODEL_CUSTOM_RUN = 'tlaplus.model.check.customRun';
 export const CMD_CHECK_MODEL_STOP = 'tlaplus.model.check.stop';
 export const CMD_CHECK_MODEL_DISPLAY = 'tlaplus.model.check.display';
-export const CMD_EVALUATE_SELECTION = 'tlaplus.evaluateSelection';
 export const CMD_SHOW_TLC_OUTPUT = 'tlaplus.showTlcOutput';
 
 const CFG_CREATE_OUT_FILES = 'tlaplus.tlc.modelChecker.createOutFiles';
@@ -26,7 +24,7 @@ let checkProcess: ChildProcess | undefined;
 const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);
 const outChannel = new ToolOutputChannel('TLC', mapTlcOutputLine);
 
-class SpecFiles {
+export class SpecFiles {
     constructor(
         readonly tlaFilePath: string,
         readonly cfgFilePath: string
@@ -37,7 +35,7 @@ class SpecFiles {
  * Runs TLC on a TLA+ specification.
  */
 export async function checkModel(diagnostic: vscode.DiagnosticCollection, extContext: vscode.ExtensionContext) {
-    const editor = getEditorIfCanRun(extContext);
+    const editor = getEditorIfCanRunTlc(extContext);
     if (!editor) {
         return;
     }
@@ -55,7 +53,7 @@ export async function checkModel(diagnostic: vscode.DiagnosticCollection, extCon
 }
 
 export async function checkModelCustom(diagnostic: vscode.DiagnosticCollection, extContext: vscode.ExtensionContext) {
-    const editor = getEditorIfCanRun(extContext);
+    const editor = getEditorIfCanRunTlc(extContext);
     if (!editor) {
         return;
     }
@@ -98,38 +96,27 @@ export function stopModelChecking() {
     }
 }
 
-export async function evaluateSelection(extContext: vscode.ExtensionContext) {
-    const editor = getEditorIfCanRun(extContext);
-    if (!editor) {
-        return;
-    }
-    const selRange = new vscode.Range(editor.selection.start, editor.selection.end);
-    const selText = editor.document.getText(selRange);
-    doEvaluateExpression(editor.document.uri.fsPath, selText);
-}
-
-export async function evaluateExpression(extContext: vscode.ExtensionContext) {
-    const editor = getEditorIfCanRun(extContext);
-    if (!editor) {
-        return;
-    }
-    vscode.window.showInputBox({
-        value: '{1, 2, 3, 5} / {2}',
-        prompt: 'Enter a TLA+ expression to evaluate',
-        ignoreFocusOut: true
-    }).then((expr) => {
-        if (!expr) {
-            return;
-        }
-        doEvaluateExpression(editor.document.uri.fsPath, expr);
-    });
-}
-
 export function showTlcOutput() {
     outChannel.revealWindow();
 }
 
-async function doCheckModel(
+export function getEditorIfCanRunTlc(extContext: vscode.ExtensionContext): vscode.TextEditor | undefined {
+    if (checkProcess) {
+        vscode.window.showWarningMessage(
+                'Another model checking process is currently running',
+                'Show currently running process'
+            ).then(() => revealLastCheckResultView(extContext));
+        return undefined;
+    }
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+        vscode.window.showWarningMessage('No editor is active, cannot find a TLA+ model to check');
+        return undefined;
+    }
+    return editor;
+}
+
+export async function doCheckModel(
     specFiles: SpecFiles,
     extContext: vscode.ExtensionContext,
     diagnostic: vscode.DiagnosticCollection
@@ -159,33 +146,6 @@ async function doCheckModel(
     }
 }
 
-async function doEvaluateExpression(tlaFilePath: string, expr: string) {
-    const eExpr = expr.trim();
-    if (eExpr === '') {
-        vscode.window.showWarningMessage('Nothing to evaluate.');
-        return;
-    }
-    vscode.window.showInformationMessage(`Evaluating ${expr}...`);
-    const num = (new Date().getTime());
-    const specDir = await createCustomModel(
-        tlaFilePath, [
-            `E_${num} ==`,
-            expr,
-            `ASSUME PrintT<<"$!@$!@$!@$!@$!", E_${num}>>`,
-            `VARIABLES v_${num}`,
-            `Init_${num} == FALSE /\\ v_${num} = 0`,
-            `Next_${num} == FALSE /\\ v_${num}' = v_${num}`
-        ], [
-            `INIT Init_${num}`,
-            `NEXT Next_${num}`
-        ]
-    );
-    if (!specDir) {
-        return;
-    }
-    // deleteDir(specDir);
-}
-
 function attachFileSaver(tlaFilePath: string, proc: ChildProcess) {
     const createOutFiles = vscode.workspace.getConfiguration().get<boolean>(CFG_CREATE_OUT_FILES);
     if (typeof(createOutFiles) === 'undefined' || createOutFiles) {
@@ -212,26 +172,20 @@ async function getSpecFiles(fileUri: vscode.Uri): Promise<SpecFiles | undefined>
 }
 
 async function checkModuleExists(modulePath: string): Promise<boolean> {
-    return new Promise(resolve => {
-        exists(modulePath, (exists) => {
-            if (!exists) {
-                const moduleFile = path.basename(modulePath);
-                vscode.window.showWarningMessage(`Corresponding TLA+ module file ${moduleFile} doesn't exist.`);
-            }
-            resolve(exists);
-        });
-    });
+    const moduleExists = await exists(modulePath);
+    if (!moduleExists) {
+        const moduleFile = path.basename(modulePath);
+        vscode.window.showWarningMessage(`Corresponding TLA+ module file ${moduleFile} doesn't exist.`);
+    }
+    return moduleExists;
 }
 
 async function checkModelExists(cfgPath: string): Promise<boolean> {
-    return new Promise(resolve => {
-        exists(cfgPath, (exists) => {
-            if (!exists) {
-                showConfigAbsenceWarning(cfgPath);
-            }
-            resolve(exists);
-        });
-    });
+    const cfgExists = await exists(cfgPath);
+    if (!cfgExists) {
+        showConfigAbsenceWarning(cfgPath);
+    }
+    return cfgExists;
 }
 
 function updateStatusBarItem(active: boolean) {
@@ -270,20 +224,4 @@ function mapTlcOutputLine(line: string): string | undefined {
     }
     const cleanLine = line.replace(/@!@!@(START|END)MSG \d+(\:\d+)? @!@!@/g, '');
     return cleanLine === '' ? undefined : cleanLine;
-}
-
-function getEditorIfCanRun(extContext: vscode.ExtensionContext): vscode.TextEditor | undefined {
-    if (checkProcess) {
-        vscode.window.showWarningMessage(
-                'Another model checking process is currently running',
-                'Show currently running process'
-            ).then(() => revealLastCheckResultView(extContext));
-        return undefined;
-    }
-    const editor = vscode.window.activeTextEditor;
-    if (!editor) {
-        vscode.window.showWarningMessage('No editor is active, cannot find a TLA+ model to check');
-        return undefined;
-    }
-    return editor;
 }
