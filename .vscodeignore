@@ -6,3 +6,4 @@ scripts/
 **/tsconfig.json
 **/tslint.json
 **/*.code-workspace
+resources/images/screencast.gif
