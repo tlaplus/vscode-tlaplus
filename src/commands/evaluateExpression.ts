@@ -4,7 +4,7 @@ import { replaceExtension, deleteDir, readFileLines, exists } from '../common';
 import { SpecFiles, getEditorIfCanRunTlc, doCheckModel } from './checkModel';
 import { createCustomModel } from './customModel';
 import { ToolOutputChannel } from '../outputChannels';
-import { ModelCheckResult, CheckState, SequenceValue } from '../model/check';
+import { ModelCheckResult, CheckState, SequenceValue, Value, OutputLine } from '../model/check';
 import { parseVariableValue } from '../parsers/tlcValues';
 
 export const CMD_EVALUATE_SELECTION = 'tlaplus.evaluateSelection';
@@ -120,15 +120,38 @@ function displayResult(checkResult: ModelCheckResult | undefined) {
         checkResult.errors.forEach((err) => outChannel.appendLine(err.toString()));
         return;
     }
-    if (checkResult.outputLines.length === 0) {
-        outChannel.appendLine('Error: Expression value output not found.');
-        return;
+    const valLines = extractCalculatedExpressionLines(checkResult.outputLines);
+    let exprVal;
+    if (valLines.length > 0) {
+        const val = parseVariableValue('', valLines);
+        exprVal = extractCalculatedExpressionValue(val);
     }
-    const val = parseVariableValue('expr', checkResult.outputLines.map((l) => l.text));
-    if (!(val instanceof SequenceValue) || val.items.length !== 2) {
-        outChannel.appendLine('Error: Unexpected expression value output\n');
-        outChannel.appendLine(val.str);
-        return;
+    outChannel.appendLine(exprVal || 'Error: Expression value output not found.');
+    outChannel.revealWindow();  // VS Code sometimes swithes the window to TLC output, so we need to get it back
+    return;
+}
+
+function extractCalculatedExpressionLines(outLines: OutputLine[]): string[] {
+    const lines = [];
+    for (const outLine of outLines) {
+        const text = outLine.text;
+        if (lines.length > 0 || (lines.length === 0 && text.indexOf(EXPR_MARKER) > 0)) {
+            lines.push(text);
+        }
+        if (lines.length > 0 && text.endsWith('>>')) {
+            break;
+        }
     }
-    outChannel.appendLine(val.items[1].str);
+    return lines;
+}
+
+function extractCalculatedExpressionValue(val: Value): string | undefined {
+    if (!(val instanceof SequenceValue)) {
+        return undefined;
+    }
+    const seq = val as SequenceValue;
+    if (seq.items.length !== 2) {
+        return undefined;
+    }
+    return seq.items[0].str === `"${EXPR_MARKER}"` ? seq.items[1].str : undefined;
 }
