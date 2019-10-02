@@ -1,5 +1,17 @@
 # Change Log
 
+## 1.1.0 &ndash; 2nd October, 2019
+
+### Enhancements
+
+* Constant expression evaluation: new commands `TLA+: Evaluate selected expression` (also available in the context menu) and `TLA+: Evaluate expression...`.
+* Integration with the [vscode-pdf extension](https://marketplace.visualstudio.com/items?itemName=tomoki1207.pdf) to quickly display generated PDFs.
+* Don't create TLA<sup>+</sup>-related output channels until they are used.
+
+### Bug fixes
+
+* Display zero values correctly in the TLC output visualization panel.
+
 ## 1.0.0 &ndash; 15th September, 2019
 
 ### Enhancements

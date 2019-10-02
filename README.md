@@ -10,6 +10,7 @@ This extension adds support for the [TLA<sup>+</sup> formal specification langua
 - Running the PlusCal-to-TLA<sup>+</sup> translator and module parser.
 - Running TLC model checker on TLA<sup>+</sup> specifications.
 - Model checking process and result visualization.
+- Evaluating constant expressions.
 - Converting TLA<sup>+</sup> specifications to LaTeX and PDF documents.
 - Code completion.
 - Code on-type formatting.
