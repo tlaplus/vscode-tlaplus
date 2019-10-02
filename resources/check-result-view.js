@@ -304,7 +304,7 @@ function displayOutput(lines) {
 
 function num(n) {
     if (n < 1000) {
-        return new String(n);
+        return String(n);
     }
     const parts = [];
     const sign = n < 0 ? '-' : '';

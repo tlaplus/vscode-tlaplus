@@ -149,9 +149,8 @@ function extractCalculatedExpressionValue(val: Value): string | undefined {
     if (!(val instanceof SequenceValue)) {
         return undefined;
     }
-    const seq = val as SequenceValue;
-    if (seq.items.length !== 2) {
+    if (val.items.length !== 2) {
         return undefined;
     }
-    return seq.items[0].str === `"${EXPR_MARKER}"` ? seq.items[1].str : undefined;
+    return val.items[0].str === `"${EXPR_MARKER}"` ? val.items[1].str : undefined;
 }
