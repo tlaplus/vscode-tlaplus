@@ -129,13 +129,13 @@ export async function writeFile(filePath: string, ...contents: string[]): Promis
     });
 }
 
-export async function readFileLines(filePath: string): Promise<string[]> {
+export async function readFile(filePath: string): Promise<string> {
     return new Promise((resolve, reject) => {
         fs.readFile(filePath, { encoding: 'UTF-8' }, (err, data) => {
             if (err) {
                 reject(err);
             } else {
-                resolve(data.split('\n'));
+                resolve(data);
             }
         });
     });
