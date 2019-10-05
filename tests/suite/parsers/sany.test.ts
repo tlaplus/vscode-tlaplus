@@ -3,7 +3,7 @@ import { beforeEach } from 'mocha';
 import { SanyStdoutParser } from '../../../src/parsers/sany';
 import { pathToUri } from '../../../src/common';
 import { applyDCollection } from '../../../src/diagnostic';
-import { Expectation, diagError, range, expectDiag, getTlaDiagnostics } from './testUtils';
+import { Expectation, diagError, diagWarning, range, expectDiag, getTlaDiagnostics } from './testUtils';
 
 const ROOT_PATH = '/Users/alice/TLA/foo.tla';
 const ROOT_NAME = 'foo';
@@ -179,7 +179,7 @@ suite('SANY Output Parser Test Suite', () => {
             ]));
     });
 
-    test ('Captures module-not-found error', () => {
+    test('Captures module-not-found error', () => {
         const stdout = [
             `Parsing file ${ROOT_PATH}`,
             '',
@@ -202,7 +202,7 @@ suite('SANY Output Parser Test Suite', () => {
             ]));
     });
 
-    test ('Captures module-file-name-mismatch error', () => {
+    test('Captures module-file-name-mismatch error', () => {
         const stdout = [
             `Parsing file ${ROOT_PATH}`,
             '',
@@ -225,7 +225,7 @@ suite('SANY Output Parser Test Suite', () => {
             ]));
     });
 
-    test ('Captures circular-dependencies error', () => {
+    test('Captures circular-dependencies error', () => {
         const stdout = [
             `Parsing file ${ROOT_PATH}`,
             '',
@@ -250,7 +250,7 @@ suite('SANY Output Parser Test Suite', () => {
             ]));
     });
 
-    test ('Captures indentation error', () => {
+    test('Captures indentation error', () => {
         const errLine = `Item at line 14, col 9 to line 14, col 9 of module ${ROOT_NAME}`
             + ' is not properly indented inside conjunction or  disjunction list item'
             + ` at line 11, col 9 to line 14, col 9 of module ${ROOT_NAME}`;
@@ -275,6 +275,27 @@ suite('SANY Output Parser Test Suite', () => {
             stdout,
             expectDiag(ROOT_PATH, [
                 diagError(range(13, 8, 13, 8), errLine)
+            ]));
+    });
+
+    test ('CAN IMPROVE: Captures warnings', () => {
+        const stdout = [
+            `Parsing file ${ROOT_PATH}`,
+            `Semantic processing of module ${ROOT_NAME}`,
+            'Semantic errors:',
+            '*** Warnings: 1',
+            `line 24, col 10 to line 24, col 25 of module ${ROOT_NAME}`,
+            'Multiple declarations or definitions for symbol FooConst.',
+            // The following line is not captured, but it would be cool to add it to the warning text
+            `This duplicates the one at line 3, col 10 to line 3, col 25 of module ${ROOT_NAME}.`
+        ].join('\n');
+        assertOutput(
+            stdout,
+            expectDiag(ROOT_PATH, [
+                diagWarning(
+                    range(23, 9, 23, 25),
+                    'Multiple declarations or definitions for symbol FooConst.'
+                )
             ]));
     });
 });

@@ -4,11 +4,12 @@ import { ProcessOutputHandler } from '../outputHandler';
 import { DCollection } from '../diagnostic';
 import { pathToModuleName } from '../common';
 
-enum OutBlock {
+enum OutBlockType {
     Parsing,
     Errors,
     ParseError,
-    AbortMessages
+    AbortMessages,
+    Warnings
 }
 
 export class SanyData {
@@ -22,7 +23,7 @@ export class SanyData {
 export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
     rootModulePath: string | undefined;
     curFilePath: string | undefined;
-    outBlock = OutBlock.Parsing;
+    outBlockType = OutBlockType.Parsing;
     errRange: vscode.Range | undefined;
     errMessage: string | undefined;
     pendingAbortMessage: boolean = false;
@@ -47,14 +48,16 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
         }
         let newBlockType;
         if (line.startsWith('*** Errors:')) {
-            newBlockType = OutBlock.Errors;
+            newBlockType = OutBlockType.Errors;
         } else if (line.startsWith('***Parse Error***')) {
-            newBlockType = OutBlock.ParseError;
+            newBlockType = OutBlockType.ParseError;
         } else if (line.startsWith('*** Abort messages:')) {
-            newBlockType = OutBlock.AbortMessages;
+            newBlockType = OutBlockType.AbortMessages;
+        } else if (line.startsWith('*** Warnings:')) {
+            newBlockType = OutBlockType.Warnings;
         }
         if (newBlockType) {
-            this.outBlock = newBlockType;
+            this.outBlockType = newBlockType;
             this.resetErrData();
             return;
         }
@@ -62,24 +65,25 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
     }
 
     private tryParseOutLine(line: string) {
-        switch (this.outBlock) {
-            case OutBlock.Parsing:
+        switch (this.outBlockType) {
+            case OutBlockType.Parsing:
                 this.tryParseLexicalError(line);
                 break;
-            case OutBlock.Errors:
+            case OutBlockType.Errors:
+            case OutBlockType.Warnings:
                 if (!this.errRange) {
                     this.tryParseErrorRange(line);
                     return;
                 }
                 this.errMessage = line.trim();
                 break;
-            case OutBlock.ParseError:
+            case OutBlockType.ParseError:
                 if (!this.errMessage) {
                     this.errMessage = line.trim();
                 }
                 this.tryParseParseErrorRange(line);
                 break;
-            case OutBlock.AbortMessages:
+            case OutBlockType.AbortMessages:
                 this.tryParseAbortError(line);
                 break;
         }
@@ -94,7 +98,10 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
 
     private tryAddMessage() {
         if (this.curFilePath && this.errMessage && this.errRange) {
-            this.result.dCollection.addMessage(this.curFilePath, this.errRange, this.errMessage);
+            const severity = this.outBlockType === OutBlockType.Warnings
+                ? vscode.DiagnosticSeverity.Warning
+                : vscode.DiagnosticSeverity.Error;
+            this.result.dCollection.addMessage(this.curFilePath, this.errRange, this.errMessage, severity);
             this.resetErrData();
         }
     }
