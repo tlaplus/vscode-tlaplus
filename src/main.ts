@@ -90,11 +90,8 @@ export function activate(context: vscode.ExtensionContext) {
             TLAPLUS_CFG_FILE_SELECTOR,
             new CfgCompletionItemProvider())
     );
-    try {
-        showChangeLog(context.extensionPath);
-    } catch (err) {
-        console.error(err);
-    }
+    showChangeLog(context.extensionPath)
+        .catch((err) => console.error(err));
 }
 
 async function showChangeLog(extPath: string) {
