@@ -20,8 +20,8 @@ export class DCollection {
         this.modules.set(pathToModuleName(filePath), filePath);
     }
 
-    public addMessage(filePath: string, range: vscode.Range, text: string) {
-        this.messages.push(new DMessage(filePath, range, text));
+    public addMessage(filePath: string, range: vscode.Range, text: string, severity = vscode.DiagnosticSeverity.Error) {
+        this.messages.push(new DMessage(filePath, range, text, severity));
         this.addFilePath(filePath);
     }
 
@@ -66,8 +66,13 @@ class DMessage {
     readonly filePath: string;
     readonly diagnostic: vscode.Diagnostic;
 
-    constructor(filePath: string, range: vscode.Range, text: string) {
+    constructor(
+        filePath: string,
+        range: vscode.Range,
+        text: string,
+        severity: vscode.DiagnosticSeverity
+    ) {
         this.filePath = filePath;
-        this.diagnostic = new vscode.Diagnostic(range, text, vscode.DiagnosticSeverity.Error);
+        this.diagnostic = new vscode.Diagnostic(range, text, severity);
     }
 }

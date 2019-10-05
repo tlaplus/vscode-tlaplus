@@ -39,3 +39,10 @@ export function expectDiag(filePath: string, diagnostics: vscode.Diagnostic[]): 
 export function diagError(range: vscode.Range, message: string): vscode.Diagnostic {
     return new vscode.Diagnostic(range, message, vscode.DiagnosticSeverity.Error);
 }
+
+/**
+ * Creates a diagnostic with the Warning severity.
+ */
+export function diagWarning(range: vscode.Range, message: string): vscode.Diagnostic {
+    return new vscode.Diagnostic(range, message, vscode.DiagnosticSeverity.Warning);
+}
