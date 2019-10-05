@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { replaceExtension, deleteDir, readFileLines, exists } from '../common';
+import { replaceExtension, deleteDir, readFile, exists } from '../common';
 import { SpecFiles, getEditorIfCanRunTlc, doCheckModel } from './checkModel';
 import { createCustomModel } from './customModel';
 import { ToolOutputChannel } from '../outputChannels';
@@ -95,7 +95,7 @@ async function doEvaluateExpression(
 }
 
 async function extractConstants(cfgFilePath: string): Promise<string[]> {
-    const lines = await readFileLines(cfgFilePath);
+    const lines = (await readFile(cfgFilePath)).split('\n');
     const constants = [];
     let c = false;
     for (const line of lines) {
