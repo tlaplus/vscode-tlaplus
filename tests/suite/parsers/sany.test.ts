@@ -249,6 +249,34 @@ suite('SANY Output Parser Test Suite', () => {
                 )
             ]));
     });
+
+    test ('Captures indentation error', () => {
+        const errLine = `Item at line 14, col 9 to line 14, col 9 of module ${ROOT_NAME}`
+            + ' is not properly indented inside conjunction or  disjunction list item'
+            + ` at line 11, col 9 to line 14, col 9 of module ${ROOT_NAME}`;
+        const stdout = [
+            `Parsing file ${ROOT_PATH}`,
+            '',
+            '***Parse Error***',
+            errLine,
+            'Residual stack trace follows:',
+            'AND-OR Junction starting at line 9, column 9.',
+            'ExtendableExpr starting at line 9, column 9.',
+            'Definition starting at line 8, column 1.',
+            'Module body starting at line 5, column 1.',
+            `Fatal errors while parsing TLA+ spec in file ${ROOT_NAME}`,
+            'tla2sany.semantic.AbortException',
+            '*** Abort messages: 1',
+            `In module ${ROOT_NAME}`,
+            `Could not parse module ${ROOT_NAME} from file ${ROOT_NAME}.tla`,
+            'SANY finished.'
+        ].join('\n');
+        assertOutput(
+            stdout,
+            expectDiag(ROOT_PATH, [
+                diagError(range(13, 8, 13, 8), errLine)
+            ]));
+    });
 });
 
 function assertOutput(out: string, ...expected: Expectation[]) {

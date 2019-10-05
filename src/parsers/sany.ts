@@ -45,18 +45,16 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
             this.curFilePath = this.result.modulePaths.get(curMod);
             return;
         }
+        let newBlockType;
         if (line.startsWith('*** Errors:')) {
-            this.outBlock = OutBlock.Errors;
-            this.resetErrData();
-            return;
+            newBlockType = OutBlock.Errors;
+        } else if (line.startsWith('***Parse Error***')) {
+            newBlockType = OutBlock.ParseError;
+        } else if (line.startsWith('*** Abort messages:')) {
+            newBlockType = OutBlock.AbortMessages;
         }
-        if (line.startsWith('***Parse Error***')) {
-            this.outBlock = OutBlock.ParseError;
-            this.resetErrData();
-            return;
-        }
-        if (line.startsWith('*** Abort messages:')) {
-            this.outBlock = OutBlock.AbortMessages;
+        if (newBlockType) {
+            this.outBlock = newBlockType;
             this.resetErrData();
             return;
         }
@@ -64,21 +62,26 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
     }
 
     private tryParseOutLine(line: string) {
-        if (this.outBlock === OutBlock.Parsing) {
-            this.tryParseLexicalError(line);
-        } else if (this.outBlock === OutBlock.Errors) {
-            if (!this.errRange) {
-                this.tryParseErrorRange(line);
-                return;
-            }
-            this.errMessage = line.trim();
-        } else if (this.outBlock === OutBlock.ParseError) {
-            if (!this.errMessage) {
+        switch (this.outBlock) {
+            case OutBlock.Parsing:
+                this.tryParseLexicalError(line);
+                break;
+            case OutBlock.Errors:
+                if (!this.errRange) {
+                    this.tryParseErrorRange(line);
+                    return;
+                }
                 this.errMessage = line.trim();
-            }
-            this.tryParseParseErrorRange(line);
-        } else if (this.outBlock === OutBlock.AbortMessages) {
-            this.tryParseAbortError(line);
+                break;
+            case OutBlock.ParseError:
+                if (!this.errMessage) {
+                    this.errMessage = line.trim();
+                }
+                this.tryParseParseErrorRange(line);
+                break;
+            case OutBlock.AbortMessages:
+                this.tryParseAbortError(line);
+                break;
         }
         this.tryAddMessage();
     }
@@ -133,7 +136,7 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
     }
 
     private tryParseParseErrorRange(line: string) {
-        const rxPosition = /^.*\s+at line (\d+), column (\d+)\s+.*$/g;
+        const rxPosition = /\bat line (\d+), col(?:umn)? (\d+)\s+.*$/g;
         const posMatches = rxPosition.exec(line);
         if (!posMatches) {
             return;
