@@ -136,7 +136,7 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
     }
 
     private tryParseParseErrorRange(line: string) {
-        const rxPosition = /^.*\s+at line (\d+), column (\d+)\s+.*$/g;
+        const rxPosition = /\bat line (\d+), col(?:umn)? (\d+)\s+.*$/g;
         const posMatches = rxPosition.exec(line);
         if (!posMatches) {
             return;
