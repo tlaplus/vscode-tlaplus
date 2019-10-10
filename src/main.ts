@@ -13,11 +13,10 @@ import { TlaOnTypeFormattingEditProvider } from './formatters/tla';
 import { CfgOnTypeFormattingEditProvider } from './formatters/cfg';
 import { TlaCodeActionProvider } from './actions';
 import { TlaDocumentSymbolsProvider } from './symbols/tlaSymbols';
-import { LANG_TLAPLUS, LANG_TLAPLUS_CFG, exists, writeFile } from './common';
+import { LANG_TLAPLUS, LANG_TLAPLUS_CFG, exists, readFile, writeFile } from './common';
 import { TlaCompletionItemProvider } from './completions/tlaCompletions';
 import { CfgCompletionItemProvider } from './completions/cfgCompletions';
 import { TlaDocumentInfos } from './model/documentInfo';
-import { readFile } from './common';
 
 const TLAPLUS_FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file', language: LANG_TLAPLUS };
 const TLAPLUS_CFG_FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file', language: LANG_TLAPLUS_CFG };
