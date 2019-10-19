@@ -76,12 +76,12 @@
                     "name": "keyword.other"
                 }
             },
-            "end": "(end\\s+algorithm)(;)?\\s*(\\*\\))",
+            "end": "(?:(end\\s+algorithm)(?:;)?|\\})\\s*(\\*\\))",
             "endCaptures": {
                 "1": {
                     "name": "keyword.other"
                 },
-                "3": {
+                "2": {
                     "name": "comment.line"
                 }
             },
