@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import * as assert from 'assert';
 import { LANG_TLAPLUS } from '../../../src/common';
-import { TlaCompletionItemProvider, TLA_CONSTANTS, TLA_STARTING_KEYWORDS, TLA_OTHER_KEYWORDS, TLA_OPERATORS
-    } from '../../../src/completions/tlaCompletions';
+import { TlaCompletionItemProvider, TLA_CONSTANTS, TLA_STARTING_KEYWORDS, TLA_OTHER_KEYWORDS, TLA_OPERATORS,
+    TLA_STD_MODULES } from '../../../src/completions/tlaCompletions';
 import { parseDocInfo, replaceDocContents } from '../document';
 import { loc, pos } from '../shortcuts';
 import { TlaDocumentInfos } from '../../../src/model/documentInfo';
@@ -13,6 +13,7 @@ const EXPECT_OTHER_KEYWORDS = 2;
 const EXPECT_CONSTANTS = 4;
 const EXPECT_OPERATORS = 8;
 const EXPECT_SYMBOLS = 16;
+const EXPECT_STD_MODULES = 32;
 const EXPECT_INNER_CLASS = EXPECT_OTHER_KEYWORDS | EXPECT_CONSTANTS | EXPECT_SYMBOLS;
 
 const PREFIXED_OPERATORS = TLA_OPERATORS.map((op) => '\\' + op);
@@ -71,6 +72,11 @@ suite('TLA Completions Provider Test Suite', () => {
         ], EXPECT_INNER_CLASS);
     });
 
+    test('Completes std modules after EXTENDS', () => {
+        return assertCompletions(doc, [
+            'EXTENDS {r}'
+        ], EXPECT_STD_MODULES);
+    });
 });
 
 async function assertCompletions(
@@ -109,6 +115,9 @@ async function assertCompletions(
     if ((expectFlags & EXPECT_SYMBOLS) !== 0) {
         total += assertSymbols(completions);
     }
+    if ((expectFlags & EXPECT_STD_MODULES) !== 0) {
+        total += assertStdModules(completions);
+    }
     assert.equal(
         total,
         completions.items.length,
@@ -136,6 +145,10 @@ function assertOperators(list: vscode.CompletionList): number {
 function assertSymbols(list: vscode.CompletionList) {
     assertCompletion('Foo', vscode.CompletionItemKind.Field, list);
     return 1;
+}
+
+function assertStdModules(list: vscode.CompletionList) {
+    return assertSymbolClass(TLA_STD_MODULES, vscode.CompletionItemKind.Module, list);
 }
 
 function assertSymbolClass(labels: string[], expKind: vscode.CompletionItemKind, list: vscode.CompletionList): number {

@@ -20,6 +20,9 @@ export const TLA_OTHER_KEYWORDS = [     // These keywords can be found pretty ev
     'BOOLEAN'
 ];
 export const TLA_CONSTANTS = [ 'TRUE', 'FALSE' ];
+export const TLA_STD_MODULES = [
+    'Bags', 'FiniteSets', 'Integers', 'Naturals', 'Randomization', 'Reals', 'RealTime', 'Sequences', 'TLC'
+];
 
 const TLA_STARTING_KEYWORD_ITEMS = TLA_STARTING_KEYWORDS.map(w => {
     return new vscode.CompletionItem(w, vscode.CompletionItemKind.Keyword);
@@ -32,6 +35,9 @@ const TLA_OPERATOR_ITEMS = TLA_OPERATORS.map(w => {
     return new vscode.CompletionItem('\\' + w, vscode.CompletionItemKind.Operator);
 });
 const TLA_INNER_ITEMS = TLA_OTHER_KEYWORD_ITEMS.concat(TLA_CONST_ITEMS);
+const TLA_STD_MODULE_ITEMS = TLA_STD_MODULES.map(m => {
+    return new vscode.CompletionItem(m, vscode.CompletionItemKind.Module);
+});
 
 /**
  * Completes TLA+ text.
@@ -48,6 +54,9 @@ export class TlaCompletionItemProvider implements vscode.CompletionItemProvider 
         context: vscode.CompletionContext
     ): vscode.ProviderResult<vscode.CompletionList> {
         const prevText = getPrevText(document, position);
+        if (prevText.startsWith('EXTENDS')) {
+            return new vscode.CompletionList(TLA_STD_MODULE_ITEMS, false);
+        }
         const isOperator = /^.*(?<!\/)\\\w*$/g.test(prevText);  // contains \ before the trailing letters, but not /\
         if (isOperator) {
             return new vscode.CompletionList(TLA_OPERATOR_ITEMS, false);
