@@ -57,6 +57,9 @@ export class TlaCompletionItemProvider implements vscode.CompletionItemProvider 
         if (prevText.startsWith('EXTENDS')) {
             return new vscode.CompletionList(TLA_STD_MODULE_ITEMS, false);
         }
+        if (prevText.startsWith('CONSTANT')) {
+            return new vscode.CompletionList([], false);
+        }
         const isOperator = /^.*(?<!\/)\\\w*$/g.test(prevText);  // contains \ before the trailing letters, but not /\
         if (isOperator) {
             return new vscode.CompletionList(TLA_OPERATOR_ITEMS, false);
