@@ -234,3 +234,19 @@ th {
 .output-line-count::after {
     content: ')';
 }
+
+.textfield {
+    background-color: var(--vscode-input-background);
+    border: 1px solid var(--vscode-input-border);
+    color: var(--input-foreground);
+    padding: 2px 4px 2px 4px;
+}
+
+.textfield::placeholder {
+    color: var(--vscode-input-placeholderForeground);
+}
+
+#error-trace-filter {
+    width: 100px;
+    margin-right: 10px;
+}
