@@ -8,10 +8,10 @@ export const TLA_OPERATORS = [
 ];
 export const TLA_STARTING_KEYWORDS = [  // These keywords start blocks, should not be in the middle of an expression
     'EXTENDS', 'VARIABLE', 'VARIABLES', 'CONSTANT', 'CONSTANTS', 'ASSUME', 'ASSUMPTION', 'AXIOM', 'THEOREM', 'DEFINE',
-    'PROOF', 'LEMMA', 'PROPOSITION', 'COROLLARY', 'QED', 'SUFFICES'
+    'PROOF', 'LEMMA', 'PROPOSITION', 'COROLLARY', 'QED', 'SUFFICES', 'RECURSIVE'
 ];
 export const TLA_OTHER_KEYWORDS = [     // These keywords can be found pretty everywhere
-    'LET', 'IN', 'EXCEPT', 'ENABLED', 'UNCHANGED', 'LAMBDA', 'DOMAIN', 'CHOOSE', 'LOCAL', 'RECURSIVE',
+    'LET', 'IN', 'EXCEPT', 'ENABLED', 'UNCHANGED', 'LAMBDA', 'DOMAIN', 'CHOOSE', 'LOCAL',
     'INSTANCE', 'WITH', 'SUBSET', 'UNION', 'SF_', 'WF_', 'USE', 'DEFS', 'BY', 'DEF', 'PROVE', 'OBVIOUS',
     'NEW', 'PICK', 'HIDE', 'WITNESS', 'HAVE', 'TAKE', 'ACTION', 'OMITTED', 'ONLY', 'STATE', 'TEMPORAL',
     // -- control keywords
@@ -57,7 +57,7 @@ export class TlaCompletionItemProvider implements vscode.CompletionItemProvider 
         if (prevText.startsWith('EXTENDS')) {
             return new vscode.CompletionList(TLA_STD_MODULE_ITEMS, false);
         }
-        if (prevText.startsWith('CONSTANT')) {
+        if (prevText.startsWith('CONSTANT') || prevText.startsWith('RECURSIVE')) {
             return new vscode.CompletionList([], false);
         }
         const isOperator = /^.*(?<!\/)\\\w*$/g.test(prevText);  // contains \ before the trailing letters, but not /\
