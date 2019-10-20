@@ -17,8 +17,8 @@ export class ParsingError extends Error {
     }
 }
 
-export function pathToUri(path: string): vscode.Uri {
-    return vscode.Uri.file(path).with({ scheme: 'file' });
+export function pathToUri(filePath: string): vscode.Uri {
+    return vscode.Uri.file(filePath).with({ scheme: 'file' });
 }
 
 export function replaceExtension(filePath: string, newExt: string): string {
@@ -156,6 +156,6 @@ export async function listFiles(dirPath: string, predicate?: (name: string) => b
 
 export async function exists(filePath: string): Promise<boolean> {
     return new Promise(resolve => {
-        fs.exists(filePath, (exists) => resolve(exists));
+        fs.exists(filePath, (ex) => resolve(ex));
     });
 }
