@@ -16,6 +16,7 @@ import { TlaDocumentSymbolsProvider } from './symbols/tlaSymbols';
 import { LANG_TLAPLUS, LANG_TLAPLUS_CFG, exists, readFile, writeFile } from './common';
 import { TlaCompletionItemProvider } from './completions/tlaCompletions';
 import { CfgCompletionItemProvider } from './completions/cfgCompletions';
+import { TlaDeclarationsProvider } from './declarations/tlaDeclarations';
 import { TlaDocumentInfos } from './model/documentInfo';
 
 const TLAPLUS_FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file', language: LANG_TLAPLUS };
@@ -87,7 +88,11 @@ export function activate(context: vscode.ExtensionContext) {
             new TlaCompletionItemProvider(tlaDocInfos)),
         vscode.languages.registerCompletionItemProvider(
             TLAPLUS_CFG_FILE_SELECTOR,
-            new CfgCompletionItemProvider())
+            new CfgCompletionItemProvider()),
+        vscode.languages.registerDeclarationProvider(
+            TLAPLUS_FILE_SELECTOR,
+            new TlaDeclarationsProvider(tlaDocInfos)
+        )
     );
     showChangeLog(context.extensionPath)
         .catch((err) => console.error(err));
