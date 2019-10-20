@@ -26,13 +26,14 @@ export function parseModule(diagnostic: vscode.DiagnosticCollection) {
         vscode.window.showWarningMessage('File in the active editor is not a TLA+ file, it cannot be transpiled');
         return;
     }
-    editor.document.save().then(() => doParseFile(editor.document.uri, diagnostic));
+    editor.document.save().then(() => doParseFile(editor.document, diagnostic));
 }
 
-async function doParseFile(fileUri: vscode.Uri, diagnostic: vscode.DiagnosticCollection) {
+async function doParseFile(doc: vscode.TextDocument, diagnostic: vscode.DiagnosticCollection) {
     try {
-        const messages = await transpilePlusCal(fileUri);
-        const specData = await parseSpec(fileUri);
+        const messages = await transpilePlusCal(doc.uri);
+        vscode.window.showTextDocument(doc);    // To force changes reloading
+        const specData = await parseSpec(doc.uri);
         messages.addAll(specData.dCollection);
         applyDCollection(messages, diagnostic);
     } catch (e) {
