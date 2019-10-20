@@ -20,12 +20,12 @@ export class TlaDeclarationsProvider implements vscode.DeclarationProvider {
             return undefined;
         }
         const word = document.lineAt(position.line).text.substring(range.start.character, range.end.character);
-        const symbols = docInfo.plusCalRange && docInfo.plusCalRange.contains(position)
-            ? docInfo.plusCalSymbols
+        const symbols = (docInfo.plusCalRange && docInfo.plusCalRange.contains(position))
+            ? docInfo.symbols.concat(docInfo.plusCalSymbols)
             : docInfo.symbols;
         const locations = [];
         for (const symbol of symbols) {
-            if (symbol.name === word) {
+            if (symbol.name === word && symbol.location.range.start.isBeforeOrEqual(range.start)) {
                 locations.push(symbol.location);
             }
         }

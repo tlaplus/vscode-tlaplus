@@ -59,6 +59,7 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
         const docInfo = this.docInfos.get(document.uri);
         // We only put TLA+ symbols to DocInfos, not PlusCal to exclude duplications on code completion
         docInfo.symbols = context.symbols.filter((s) => s.name !== PLUS_CAL_SYMBOL_NAME);
+        docInfo.plusCalSymbols = context.plusCalSymbols;
         docInfo.plusCalRange = context.plusCalRange;
         return context.symbols.concat(context.plusCalSymbols);
     }
