@@ -1,5 +1,20 @@
 # Change Log
 
+## 1.2.0 &ndash; 20th October, 2019
+
+### Enhancements
+
+* Filter error-traces by variable names.
+* "Go to definition" and "Peek definition" code actions.
+* Display parsing warnings.
+* Improve support for c-style PlusCal algorithms.
+* Smarter code completion.
+* Notify user about significant extension updates.
+
+### Bug fixes
+
+* Fix capturing of "bad indentation" SANY errors.
+
 ## 1.1.0 &ndash; 2nd October, 2019
 
 ### Enhancements
