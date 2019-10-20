@@ -6,14 +6,17 @@ export const TLA_OPERATORS = [
     'E', 'A', 'X', 'lnot', 'land', 'lor', 'cdot', 'equiv', 'subseteq', 'in', 'notin', 'intersect',
     'union', 'leq', 'geq', 'cup', 'cap'
 ];
-export const TLA_STARTING_KEYWORDS = [  // These keywords start blocks, should not be in the middle of an expression
-    'EXTENDS', 'VARIABLE', 'VARIABLES', 'CONSTANT', 'CONSTANTS', 'ASSUME', 'ASSUMPTION', 'AXIOM', 'THEOREM', 'DEFINE',
-    'PROOF', 'LEMMA', 'PROPOSITION', 'COROLLARY', 'QED', 'SUFFICES', 'RECURSIVE'
+export const TLA_STARTING_KEYWORDS = [  // These keywords start blocks, and should not be in the middle of an expression
+    'EXTENDS', 'VARIABLE', 'VARIABLES', 'CONSTANT', 'CONSTANTS', 'ASSUME', 'ASSUMPTION', 'AXIOM', 'THEOREM',
+    'PROOF', 'LEMMA', 'PROPOSITION', 'COROLLARY', 'RECURSIVE'
+];
+export const TLA_PROOF_STARTING_KEYWORDS = [ // These keywords start proof steps
+    'DEFINE', 'QED', 'HIDE', 'SUFFICES', 'PICK', 'HAVE', 'TAKE', 'WITNESS'
 ];
 export const TLA_OTHER_KEYWORDS = [     // These keywords can be found pretty everywhere
     'LET', 'IN', 'EXCEPT', 'ENABLED', 'UNCHANGED', 'LAMBDA', 'DOMAIN', 'CHOOSE', 'LOCAL',
-    'INSTANCE', 'WITH', 'SUBSET', 'UNION', 'SF_', 'WF_', 'USE', 'DEFS', 'BY', 'DEF', 'PROVE', 'OBVIOUS',
-    'NEW', 'PICK', 'HIDE', 'WITNESS', 'HAVE', 'TAKE', 'ACTION', 'OMITTED', 'ONLY', 'STATE', 'TEMPORAL',
+    'INSTANCE', 'WITH', 'SUBSET', 'UNION', 'SF_', 'WF_', 'USE', 'BY', 'DEF', 'DEFS', 'PROVE', 'OBVIOUS',
+    'NEW', 'ACTION', 'OMITTED', 'ONLY', 'STATE', 'TEMPORAL',
     // -- control keywords
     'IF', 'THEN', 'ELSE', 'CASE', 'OTHER',
     // -- other
@@ -25,6 +28,9 @@ export const TLA_STD_MODULES = [
 ];
 
 const TLA_STARTING_KEYWORD_ITEMS = TLA_STARTING_KEYWORDS.map(w => {
+    return new vscode.CompletionItem(w, vscode.CompletionItemKind.Keyword);
+});
+const TLA_PROOF_STARTING_KEYWORD_ITEMS = TLA_PROOF_STARTING_KEYWORDS.map(w => {
     return new vscode.CompletionItem(w, vscode.CompletionItemKind.Keyword);
 });
 const TLA_OTHER_KEYWORD_ITEMS = TLA_OTHER_KEYWORDS.map(w => {
@@ -66,12 +72,17 @@ export class TlaCompletionItemProvider implements vscode.CompletionItemProvider 
         }
         const docInfo = this.docInfos.get(document.uri);
         const isPlusCal = docInfo.plusCalRange ? docInfo.plusCalRange.contains(position) : false;
-        const isNewLine = /^[\s<>\d\.]*[a-zA-Z]*$/g.test(prevText);
         const symbols = docInfo.symbols || [];
         const symbolInfos = symbols.map(s => new vscode.CompletionItem(s.name, mapKind(s.kind)));
         let items = TLA_INNER_ITEMS.concat(symbolInfos);
-        if (isNewLine && !isPlusCal) {
-            items = items.concat(TLA_STARTING_KEYWORD_ITEMS);
+        if (!isPlusCal) {
+            const isProofStep = /^\s*<\d+>[<>\d\.a-zA-Z]*\s+[a-zA-Z]*$/g.test(prevText);
+            const isNewLine = /^\s*[a-zA-Z]*$/g.test(prevText);
+            if (isProofStep) {
+                items = items.concat(TLA_PROOF_STARTING_KEYWORD_ITEMS);
+            } else if (isNewLine) {
+                items = items.concat(TLA_STARTING_KEYWORD_ITEMS);
+            }
         }
         return new vscode.CompletionList(items, false);
     }

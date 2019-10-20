@@ -1,19 +1,20 @@
 import * as vscode from 'vscode';
 import * as assert from 'assert';
 import { LANG_TLAPLUS } from '../../../src/common';
-import { TlaCompletionItemProvider, TLA_CONSTANTS, TLA_STARTING_KEYWORDS, TLA_OTHER_KEYWORDS, TLA_OPERATORS,
-    TLA_STD_MODULES } from '../../../src/completions/tlaCompletions';
+import { TlaCompletionItemProvider, TLA_CONSTANTS, TLA_STARTING_KEYWORDS, TLA_PROOF_STARTING_KEYWORDS,
+    TLA_OTHER_KEYWORDS, TLA_OPERATORS, TLA_STD_MODULES } from '../../../src/completions/tlaCompletions';
 import { parseDocInfo, replaceDocContents } from '../document';
 import { loc, pos } from '../shortcuts';
 import { TlaDocumentInfos } from '../../../src/model/documentInfo';
 
 const EXPECT_NOTHING = 0;
 const EXPECT_STARTING_KEYWORDS = 1;
-const EXPECT_OTHER_KEYWORDS = 2;
-const EXPECT_CONSTANTS = 4;
-const EXPECT_OPERATORS = 8;
-const EXPECT_SYMBOLS = 16;
-const EXPECT_STD_MODULES = 32;
+const EXPECT_PROOF_STARTING_KEYWORDS = 2;
+const EXPECT_OTHER_KEYWORDS = 4;
+const EXPECT_CONSTANTS = 8;
+const EXPECT_OPERATORS = 16;
+const EXPECT_SYMBOLS = 32;
+const EXPECT_STD_MODULES = 64;
 const EXPECT_INNER_CLASS = EXPECT_OTHER_KEYWORDS | EXPECT_CONSTANTS | EXPECT_SYMBOLS;
 
 const PREFIXED_OPERATORS = TLA_OPERATORS.map((op) => '\\' + op);
@@ -36,16 +37,22 @@ suite('TLA Completions Provider Test Suite', () => {
         ], EXPECT_STARTING_KEYWORDS | EXPECT_INNER_CLASS);
     });
 
-    test('Treats section numbers as new line', () => {
+    test('Treats step numbers as new line in proof block', () => {
         return assertCompletions(doc, [
             '<1>. {t}'
-        ], EXPECT_STARTING_KEYWORDS | EXPECT_INNER_CLASS);
+        ], EXPECT_PROOF_STARTING_KEYWORDS | EXPECT_INNER_CLASS);
     });
 
-    test('Treats subsection numbers as new line', () => {
+    test('Treats subsection numbers as new line in proof block', () => {
         return assertCompletions(doc, [
             '<12>.4 {t}'
-        ], EXPECT_STARTING_KEYWORDS | EXPECT_INNER_CLASS);
+        ], EXPECT_PROOF_STARTING_KEYWORDS | EXPECT_INNER_CLASS);
+    });
+
+    test('Reckognizes letters in proof step numbers', () => {
+        return assertCompletions(doc, [
+            '<8>.a {t}'
+        ], EXPECT_PROOF_STARTING_KEYWORDS | EXPECT_INNER_CLASS);
     });
 
     test('Completes all but operators after /\\', () => {
@@ -103,6 +110,9 @@ async function assertCompletions(
     if ((expectFlags & EXPECT_STARTING_KEYWORDS) !== 0) {
         total += assertStartingKeywords(completions);
     }
+    if ((expectFlags & EXPECT_PROOF_STARTING_KEYWORDS) !== 0) {
+        total += assertProofStartingKeywords(completions);
+    }
     if ((expectFlags & EXPECT_OTHER_KEYWORDS) !== 0) {
         total += assertOtherKeywords(completions);
     }
@@ -128,6 +138,10 @@ async function assertCompletions(
 
 function assertStartingKeywords(list: vscode.CompletionList): number {
     return assertSymbolClass(TLA_STARTING_KEYWORDS, vscode.CompletionItemKind.Keyword, list);
+}
+
+function assertProofStartingKeywords(list: vscode.CompletionList): number {
+    return assertSymbolClass(TLA_PROOF_STARTING_KEYWORDS, vscode.CompletionItemKind.Keyword, list);
 }
 
 function assertOtherKeywords(list: vscode.CompletionList): number {
