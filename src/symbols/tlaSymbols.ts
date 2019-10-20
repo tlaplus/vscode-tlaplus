@@ -267,7 +267,10 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
 
     tryExtractPlusCalEnd(line: vscode.TextLine): SpecialSymbol | undefined {
         const matches = /(end\s+algorithm)(;)?\s*(\*\))/g.test(line.text);
-        return matches ? SpecialSymbol.PlusCalEnd : undefined;
+        if (matches) {
+            return SpecialSymbol.PlusCalEnd;
+        }
+        return line.text === '\* BEGIN TRANSLATION' ? SpecialSymbol.PlusCalEnd : undefined;
     }
 }
 
