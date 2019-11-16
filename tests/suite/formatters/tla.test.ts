@@ -587,6 +587,32 @@ suite('TLA On Type Formatting Test Suite', () => {
         ]);
     });
 
+    test('Indents block contents, c-syntax', () => {
+        return assertTlaOnTypeFormatting(doc, [
+            '    procedure Foo() {',
+            '    ${enter}',
+            '    }'
+        ], [
+            '    procedure Foo() {',
+            '        ',
+            '    }'
+        ]);
+    });
+
+    test('Keeps correct indentation after closed block, c-syntax', () => {
+        return assertTlaOnTypeFormatting(doc, [
+            '    procedure Foo() {',
+            '        skip;',
+            '    }',
+            '    ${enter}'
+        ], [
+            '    procedure Foo() {',
+            '        skip;',
+            '    }',
+            '    '
+        ]);
+    });
+
     test('CAN IMPROVE: Indents to the body of enclosing block', () => {
         return assertTlaOnTypeFormatting(doc, [
                 '    begin',

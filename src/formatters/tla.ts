@@ -118,11 +118,11 @@ function testStateDefBlockStart(line: vscode.TextLine, options: vscode.Formattin
 }
 
 function testBlockStart(line: vscode.TextLine): LineInfo | undefined {
-    const matches = /^(\s*)(?:\w+\:)?\s*(?:begin|if|else|elsif|while|either|or|with|define|macro|procedure)\b.*/g.exec(line.text);
+    const matches = /^(\s*)(?:\w+\:)?\s*(?:begin\b|if\b|else\b|elsif\b|while\b|either\b|or\b|with\b|define\b|macro\b|procedure\b|\{).*/g.exec(line.text);
     return matches ? new LineInfo(line, matches[1], IndentationType.Right) : undefined;
 }
 
 function testBlockEnd(line: vscode.TextLine): LineInfo | undefined {
-    const matches = /^(\s*)(?:end|else|elsif|or)\b.*/g.exec(line.text);
+    const matches = /^(\s*)(?:end\b|else\b|elsif\b|or\b|\}).*/g.exec(line.text);
     return matches ? new LineInfo(line, matches[1], IndentationType.Left) : undefined;
 }
