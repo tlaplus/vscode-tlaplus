@@ -18,7 +18,7 @@ suite('Config On Type Formatting Test Suite', () => {
     test('Indents constants-block body', () => {
         return assertCfgOnTypeFormatting(doc, [
                 'CONSTANTS',
-                '{enter}'
+                '${enter}'
             ], [
                 'CONSTANTS',
                 '  '
@@ -29,7 +29,7 @@ suite('Config On Type Formatting Test Suite', () => {
     test('Indents invariants-block body', () => {
         return assertCfgOnTypeFormatting(doc, [
                 'INVARIANTS',
-                '{enter}EverythingIsCorrect'
+                '${enter}EverythingIsCorrect'
             ], [
                 'INVARIANTS',
                 '  EverythingIsCorrect'
@@ -40,7 +40,7 @@ suite('Config On Type Formatting Test Suite', () => {
     test('Indents properties-block body', () => {
         return assertCfgOnTypeFormatting(doc, [
                 'PROPERTIES',
-                '{enter}(**)'
+                '${enter}(**)'
             ], [
                 'PROPERTIES',
                 '  (**)'
@@ -51,7 +51,7 @@ suite('Config On Type Formatting Test Suite', () => {
     test('Indents constraints-block body', () => {
         return assertCfgOnTypeFormatting(doc, [
                 'CONSTRAINTS',
-                '{enter}'
+                '${enter}'
             ], [
                 'CONSTRAINTS',
                 '  '
@@ -62,7 +62,7 @@ suite('Config On Type Formatting Test Suite', () => {
     test('Doesn\'t indent if the block already has contents', () => {
         return assertCfgOnTypeFormatting(doc, [
                 'CONSTANTS Foo = 3',
-                '{enter}'
+                '${enter}'
             ], [
                 'CONSTANTS Foo = 3',
                 ''

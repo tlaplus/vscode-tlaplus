@@ -38,7 +38,7 @@ export function parseDocInfo(lines: string[]): DocInfo {
     let n = 0;
     const clearLines = lines.map(line => {
         let eLine = line;
-        const matches = /^(.*){(\w+)}(.*)$/g.exec(line);
+        const matches = /^(.*)\${(\w+)}(.*)$/g.exec(line);
         if (matches) {
             char = matches[2] === 'enter' ? '\n' : matches[2];
             position = new vscode.Position(n, matches[1].length);

@@ -18,13 +18,13 @@ suite('Cfg Completions Provider Test Suite', () => {
 
     test('Completes on new line', () => {
         return assertCompletions(doc, [
-            '{i}'
+            '${i}'
         ], true);
     });
 
     test('Doesn\'t complete in the middle of a line', () => {
         return assertCompletions(doc, [
-            'CONSTANTS Foo, B{a}'
+            'CONSTANTS Foo, B${a}'
         ], false);
     });
 });

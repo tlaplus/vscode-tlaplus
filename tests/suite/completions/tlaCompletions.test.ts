@@ -33,55 +33,55 @@ suite('TLA Completions Provider Test Suite', () => {
 
     test('Completes all but operators on new line', () => {
         return assertCompletions(doc, [
-            '{i}'
+            '${i}'
         ], EXPECT_STARTING_KEYWORDS | EXPECT_INNER_CLASS);
     });
 
     test('Treats step numbers as new line in proof block', () => {
         return assertCompletions(doc, [
-            '<1>. {t}'
+            '<1>. ${t}'
         ], EXPECT_PROOF_STARTING_KEYWORDS | EXPECT_INNER_CLASS);
     });
 
     test('Treats subsection numbers as new line in proof block', () => {
         return assertCompletions(doc, [
-            '<12>.4 {t}'
+            '<12>.4 ${t}'
         ], EXPECT_PROOF_STARTING_KEYWORDS | EXPECT_INNER_CLASS);
     });
 
     test('Reckognizes letters in proof step numbers', () => {
         return assertCompletions(doc, [
-            '<8>.a {t}'
+            '<8>.a ${t}'
         ], EXPECT_PROOF_STARTING_KEYWORDS | EXPECT_INNER_CLASS);
     });
 
     test('Completes all but operators after /\\', () => {
         return assertCompletions(doc, [
-            'Foo == /\\{a}'
+            'Foo == /\\${a}'
         ], EXPECT_INNER_CLASS);
     });
 
     test('Completes only operators after \\', () => {
         return assertCompletions(doc, [
-            '\\{i}'
+            '\\${i}'
         ], EXPECT_OPERATORS);
     });
 
     test('Completes only operators after \\ followed by symbols', () => {
         return assertCompletions(doc, [
-            '\\e{q}'
+            '\\e${q}'
         ], EXPECT_OPERATORS);
     });
 
     test('Completes all but operators after \\ followed by a space', () => {
         return assertCompletions(doc, [
-            '\\ e{q}'
+            '\\ e${q}'
         ], EXPECT_INNER_CLASS);
     });
 
     test('Completes std modules after EXTENDS', () => {
         return assertCompletions(doc, [
-            'EXTENDS {r}'
+            'EXTENDS ${r}'
         ], EXPECT_STD_MODULES);
     });
 });

@@ -18,7 +18,7 @@ suite('TLA On Type Formatting Test Suite', () => {
     test('Indents begin-block body', () => {
         return assertTlaOnTypeFormatting(doc, [
                 'begin',
-                '{enter}(**)'
+                '${enter}(**)'
             ], [
                 'begin',
                 '    (**)'
@@ -29,7 +29,7 @@ suite('TLA On Type Formatting Test Suite', () => {
     test('Indents define-block body', () => {
         return assertTlaOnTypeFormatting(doc, [
                 'define',
-                '{enter}(**)'
+                '${enter}(**)'
             ], [
                 'define',
                 '    (**)'
@@ -41,7 +41,7 @@ suite('TLA On Type Formatting Test Suite', () => {
         return assertTlaOnTypeFormatting(doc, [
                 'define',
                 '    FOO == 10',
-                '    en{d}',
+                '    en${d}',
             ], [
                 'define',
                 '    FOO == 10',
@@ -53,7 +53,7 @@ suite('TLA On Type Formatting Test Suite', () => {
     test('Indents macro-block body', () => {
         return assertTlaOnTypeFormatting(doc, [
                 'macro foo(x) begin',
-                '{enter}(**)'
+                '${enter}(**)'
             ], [
                 'macro foo(x) begin',
                 '    (**)'
@@ -65,7 +65,7 @@ suite('TLA On Type Formatting Test Suite', () => {
         return assertTlaOnTypeFormatting(doc, [
                 'macro foo(x) begin',
                 '     skip;',
-                '     en{d} macro;'
+                '     en${d} macro;'
             ], [
                 'macro foo(x) begin',
                 '     skip;',
@@ -77,7 +77,7 @@ suite('TLA On Type Formatting Test Suite', () => {
     test('Indents procedure-block body', () => {
         return assertTlaOnTypeFormatting(doc, [
                 'procedure foo(x) begin',
-                '{enter}(**)'
+                '${enter}(**)'
             ], [
                 'procedure foo(x) begin',
                 '    (**)'
@@ -89,7 +89,7 @@ suite('TLA On Type Formatting Test Suite', () => {
         return assertTlaOnTypeFormatting(doc, [
                 'procedure foo(x) begin',
                 '    Ret: return;',
-                '    en{d}'
+                '    en${d}'
             ], [
                 'procedure foo(x) begin',
                 '    Ret: return;',
@@ -101,7 +101,7 @@ suite('TLA On Type Formatting Test Suite', () => {
     test('Indents if-block body', () => {
         return assertTlaOnTypeFormatting(doc, [
                 '    if TRUE then',
-                '    {enter}(**)'
+                '    ${enter}(**)'
             ], [
                 '    if TRUE then',
                 '        (**)'
@@ -113,7 +113,7 @@ suite('TLA On Type Formatting Test Suite', () => {
         return assertTlaOnTypeFormatting(doc, [
                 '    if foo = bar then',
                 '        skip;',
-                '        els{e}'
+                '        els${e}'
             ], [
                 '    if foo = bar then',
                 '        skip;',
@@ -127,7 +127,7 @@ suite('TLA On Type Formatting Test Suite', () => {
                 '    if foo = bar then',
                 '        skip;',
                 '    else',
-                '    {enter}(**)'
+                '    ${enter}(**)'
             ], [
                 '    if foo = bar then',
                 '        skip;',
@@ -141,7 +141,7 @@ suite('TLA On Type Formatting Test Suite', () => {
         return assertTlaOnTypeFormatting(doc, [
                 '    if foo = bar then',
                 '        skip;',
-                '        elsi{f}'
+                '        elsi${f}'
             ], [
                 '    if foo = bar then',
                 '        skip;',
@@ -155,7 +155,7 @@ suite('TLA On Type Formatting Test Suite', () => {
                 '    if foo = bar then',
                 '        skip;',
                 '    elsif foo = bar-1 then',
-                '    {enter}(**)'
+                '    ${enter}(**)'
             ], [
                 '    if foo = bar then',
                 '        skip;',
@@ -169,7 +169,7 @@ suite('TLA On Type Formatting Test Suite', () => {
         return assertTlaOnTypeFormatting(doc, [
                 '    if foo = bar then',
                 '        skip;',
-                '        en{d}',
+                '        en${d}',
             ], [
                 '    if foo = bar then',
                 '        skip;',
@@ -184,7 +184,7 @@ suite('TLA On Type Formatting Test Suite', () => {
                 '        skip;',
                 '    else',
                 '        skip;',
-                '        en{d}',
+                '        en${d}',
             ], [
                 '    if foo = bar then',
                 '        skip;',
@@ -201,7 +201,7 @@ suite('TLA On Type Formatting Test Suite', () => {
                 '        skip;',
                 '    elsif foo = 10 then',
                 '        skip;',
-                '        en{d}',
+                '        en${d}',
             ], [
                 '    if foo = bar then',
                 '        skip;',
@@ -215,7 +215,7 @@ suite('TLA On Type Formatting Test Suite', () => {
     test('Indents either-block body', () => {
         return assertTlaOnTypeFormatting(doc, [
                 '    either',
-                '    {enter}(**)'
+                '    ${enter}(**)'
             ], [
                 '    either',
                 '        (**)'
@@ -227,7 +227,7 @@ suite('TLA On Type Formatting Test Suite', () => {
         return assertTlaOnTypeFormatting(doc, [
                 '    either',
                 '        foo := 1;',
-                '        o{r}'
+                '        o${r}'
             ], [
                 '    either',
                 '        foo := 1;',
@@ -241,7 +241,7 @@ suite('TLA On Type Formatting Test Suite', () => {
                 '    either',
                 '        foo := 1;',
                 '    or',
-                '    {enter}(**)'
+                '    ${enter}(**)'
             ], [
                 '    either',
                 '        foo := 1;',
@@ -255,7 +255,7 @@ suite('TLA On Type Formatting Test Suite', () => {
         return assertTlaOnTypeFormatting(doc, [
                 '    either',
                 '        skip;',
-                '        en{d}'
+                '        en${d}'
             ], [
                 '    either',
                 '        skip;',
@@ -270,7 +270,7 @@ suite('TLA On Type Formatting Test Suite', () => {
                 '        skip;',
                 '    or',
                 '        foo := 20;',
-                '        en{d}'
+                '        en${d}'
             ], [
                 '    either',
                 '        skip;',
@@ -284,7 +284,7 @@ suite('TLA On Type Formatting Test Suite', () => {
     test('Indents while-block body', () => {
         return assertTlaOnTypeFormatting(doc, [
                 '    while a < b do',
-                '    {enter}(**)'
+                '    ${enter}(**)'
             ], [
                 '    while a < b do',
                 '        (**)'
@@ -296,7 +296,7 @@ suite('TLA On Type Formatting Test Suite', () => {
         return assertTlaOnTypeFormatting(doc, [
                 '    while a < b do',
                 '        skip;',
-                '        en{d}'
+                '        en${d}'
             ], [
                 '    while a < b do',
                 '        skip;',
@@ -308,7 +308,7 @@ suite('TLA On Type Formatting Test Suite', () => {
     test('Indents with-block body', () => {
         return assertTlaOnTypeFormatting(doc, [
                 'with a = 100 do',
-                '{enter}(**)'
+                '${enter}(**)'
             ], [
                 'with a = 100 do',
                 '    (**)'
@@ -320,7 +320,7 @@ suite('TLA On Type Formatting Test Suite', () => {
         return assertTlaOnTypeFormatting(doc, [
                 '    with a = 100 do',
                 '        skip;',
-                '    en{d}'
+                '    en${d}'
             ], [
                 '    with a = 100 do',
                 '        skip;',
@@ -332,7 +332,7 @@ suite('TLA On Type Formatting Test Suite', () => {
     test('Indents variables-block when it\'s empty', () => {
         return assertTlaOnTypeFormatting(doc, [
             '    variables',
-            '    {enter}'
+            '    ${enter}'
         ], [
             '    variables',
             '        '
@@ -342,7 +342,7 @@ suite('TLA On Type Formatting Test Suite', () => {
     test('Indents VARIABLES-block when it\'s empty', () => {
         return assertTlaOnTypeFormatting(doc, [
             '    VARIABLES',
-            '    {enter}'
+            '    ${enter}'
         ], [
             '    VARIABLES',
             '        '
@@ -352,7 +352,7 @@ suite('TLA On Type Formatting Test Suite', () => {
     test('Indents VARIABLE-block when it\'s empty', () => {
         return assertTlaOnTypeFormatting(doc, [
             '    VARIABLE',
-            '    {enter}'
+            '    ${enter}'
         ], [
             '    VARIABLE',
             '        '
@@ -362,7 +362,7 @@ suite('TLA On Type Formatting Test Suite', () => {
     test('Indents CONSTANTS-block when it\'s empty', () => {
         return assertTlaOnTypeFormatting(doc, [
             '    CONSTANTS',
-            '    {enter}'
+            '    ${enter}'
         ], [
             '    CONSTANTS',
             '        '
@@ -372,7 +372,7 @@ suite('TLA On Type Formatting Test Suite', () => {
     test('Indents CONSTANT-block when it\'s empty', () => {
         return assertTlaOnTypeFormatting(doc, [
             '    CONSTANT',
-            '    {enter}'
+            '    ${enter}'
         ], [
             '    CONSTANT',
             '        '
@@ -382,7 +382,7 @@ suite('TLA On Type Formatting Test Suite', () => {
     test('Indents label-blocks', () => {
         return assertTlaOnTypeFormatting(doc, [
             '    LabelA:',
-            '    {enter}'
+            '    ${enter}'
         ], [
             '    LabelA:',
             '        '
@@ -392,7 +392,7 @@ suite('TLA On Type Formatting Test Suite', () => {
     test('Indents definitions with AND', () => {
         return assertTlaOnTypeFormatting(doc, [
             '  NewState == /\\ TRUE',
-            '  {enter}'
+            '  ${enter}'
         ], [
             '  NewState == /\\ TRUE',
             '              '
@@ -402,7 +402,7 @@ suite('TLA On Type Formatting Test Suite', () => {
     test('Indents definitions with OR', () => {
         return assertTlaOnTypeFormatting(doc, [
             '  NewState == \\/ Foo = Bar',
-            '  {enter}'
+            '  ${enter}'
         ], [
             '  NewState == \\/ Foo = Bar',
             '              '
@@ -412,7 +412,7 @@ suite('TLA On Type Formatting Test Suite', () => {
     test('Indents definitions new line', () => {
         return assertTlaOnTypeFormatting(doc, [
             '  NewState ==',
-            '  {enter}'
+            '  ${enter}'
         ], [
             '  NewState ==',
             '      '
@@ -422,7 +422,7 @@ suite('TLA On Type Formatting Test Suite', () => {
     test('Indents operator definitions with AND', () => {
         return assertTlaOnTypeFormatting(doc, [
             '  NewOp(a, b) == /\\ Foo = a',
-            '  {enter}'
+            '  ${enter}'
         ], [
             '  NewOp(a, b) == /\\ Foo = a',
             '                 '
@@ -432,7 +432,7 @@ suite('TLA On Type Formatting Test Suite', () => {
     test('Indents operator definitions new line', () => {
         return assertTlaOnTypeFormatting(doc, [
             '  NewOp(a, b) ==',
-            '  {enter}'
+            '  ${enter}'
         ], [
             '  NewOp(a, b) ==',
             '      '
@@ -442,7 +442,7 @@ suite('TLA On Type Formatting Test Suite', () => {
     test('Doesn\'t indent definitions without AND / OR', () => {
         return assertTlaOnTypeFormatting(doc, [
             '  NewState == TRUE',
-            '  {enter}'
+            '  ${enter}'
         ], [
             '  NewState == TRUE',
             '  '
@@ -453,7 +453,7 @@ suite('TLA On Type Formatting Test Suite', () => {
         return assertTlaOnTypeFormatting(doc, [
             'Foo == \\/ <<>>',
             '',
-            '{enter}'
+            '${enter}'
         ], [
             'Foo == \\/ <<>>',
             '',
@@ -464,7 +464,7 @@ suite('TLA On Type Formatting Test Suite', () => {
     test('Doesn\'t indent variables-block when it\'s not empty', () => {
         return assertTlaOnTypeFormatting(doc, [
             '    variables foo = 10;',
-            '    {enter}'
+            '    ${enter}'
         ], [
             '    variables foo = 10;',
             '    '
@@ -475,7 +475,7 @@ suite('TLA On Type Formatting Test Suite', () => {
         return assertTlaOnTypeFormatting(doc, [
             '    variables',
             '',
-            '{enter}'
+            '${enter}'
         ], [
             '    variables',
             '',
@@ -487,7 +487,7 @@ suite('TLA On Type Formatting Test Suite', () => {
         return assertTlaOnTypeFormatting(doc, [
             '    CONSTANTS',
             '        Foo,',
-            '        {enter}'
+            '        ${enter}'
         ], [
             '    CONSTANTS',
             '        Foo,',
@@ -498,7 +498,7 @@ suite('TLA On Type Formatting Test Suite', () => {
     test('Indents body first line and saves end of line', () => {
         return assertTlaOnTypeFormatting(doc, [
                 '    if TRUE then',
-                '    {enter} \\* end of line'
+                '    ${enter} \\* end of line'
             ], [
                 '    if TRUE then',
                 '         \\* end of line'
@@ -510,7 +510,7 @@ suite('TLA On Type Formatting Test Suite', () => {
         return assertTlaOnTypeFormatting(doc, [
                 '    while a = 10 do',
                 '        do_something(1);',
-                '        {enter}(**)'
+                '        ${enter}(**)'
             ], [
                 '    while a = 10 do',
                 '        do_something(1);',
@@ -524,7 +524,7 @@ suite('TLA On Type Formatting Test Suite', () => {
                 '    define',
                 '        FOO == 10',
                 '',
-                '{enter}(**)'
+                '${enter}(**)'
             ], [
                 '    define',
                 '        FOO == 10',
@@ -538,7 +538,7 @@ suite('TLA On Type Formatting Test Suite', () => {
         return assertTlaOnTypeFormatting(doc, [
                 '    if TRUE then',
                 '        skip;',
-                ' en{d}'
+                ' en${d}'
             ], [
                 '    if TRUE then',
                 '        skip;',
@@ -551,7 +551,7 @@ suite('TLA On Type Formatting Test Suite', () => {
         return assertTlaOnTypeFormatting(doc, [
                 '    if TRUE then',
                 '        skip;',
-                '    end i{f}'
+                '    end i${f}'
             ], [
                 '    if TRUE then',
                 '        skip;',
@@ -566,7 +566,7 @@ suite('TLA On Type Formatting Test Suite', () => {
                 '        while a < 20 do',
                 '            a := a + 1;',
                 '        end while;',
-                '        {enter}'
+                '        ${enter}'
             ], [
                 '    begin',
                 '        while a < 20 do',
@@ -580,7 +580,7 @@ suite('TLA On Type Formatting Test Suite', () => {
     test('Supports labelled blocks', () => {
         return assertTlaOnTypeFormatting(doc, [
             '    Check: while a >= 10 do',
-            '    {enter}'
+            '    ${enter}'
         ], [
             '    Check: while a >= 10 do',
             '        '
@@ -594,7 +594,7 @@ suite('TLA On Type Formatting Test Suite', () => {
                 '            a := a + 1;',
                 '        end while;',
                 '',
-                '{enter}(**)'
+                '${enter}(**)'
             ], [
                 '    begin',
                 '        while a < 20 do',
@@ -609,7 +609,7 @@ suite('TLA On Type Formatting Test Suite', () => {
     test('Respects formatting options, tabs', () => {
         return assertTlaOnTypeFormatting(doc, [
             '    while TRUE do',
-            '    {enter}'
+            '    ${enter}'
         ], [
             '    while TRUE do',
             '    \t'
@@ -620,7 +620,7 @@ suite('TLA On Type Formatting Test Suite', () => {
     test('Respects formatting options, 7 spaces', () => {
         return assertTlaOnTypeFormatting(doc, [
             '    while TRUE do',
-            '    {enter}'
+            '    ${enter}'
         ], [
             '    while TRUE do',
             '           '
@@ -631,7 +631,7 @@ suite('TLA On Type Formatting Test Suite', () => {
     test('Respects formatting options, 2 spaces', () => {
         return assertTlaOnTypeFormatting(doc, [
             '    while TRUE do',
-            '    {enter}'
+            '    ${enter}'
         ], [
             '    while TRUE do',
             '      '

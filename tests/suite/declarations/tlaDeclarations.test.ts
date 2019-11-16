@@ -18,7 +18,7 @@ suite('TLA Declarations Provider Test Suite', () => {
         return assertDeclarations(doc, [
             '---- MODULE foo ----',
             'Foo == TRUE',
-            'Bar == Fo{o}',
+            'Bar == Fo${o}',
             '===='
         ], [
             loc(doc.uri, pos(1, 0))
@@ -28,7 +28,7 @@ suite('TLA Declarations Provider Test Suite', () => {
     test('Ignores symbols that go after the current position', () => {
         return assertDeclarations(doc, [
             '---- MODULE foo ----',
-            'Bar == Fo{o}',
+            'Bar == Fo${o}',
             'Foo == TRUE',
             '===='
         ], []);
@@ -38,7 +38,7 @@ suite('TLA Declarations Provider Test Suite', () => {
         return assertDeclarations(doc, [
             '---- MODULE foo ----',
             '/* foo',
-            'F{o}o == TRUE',
+            'F${o}o == TRUE',
             '===='
         ], [
             loc(doc.uri, pos(2, 0))
@@ -50,7 +50,7 @@ suite('TLA Declarations Provider Test Suite', () => {
             '---- MODULE foo ----',
             'CONSTANTS Foo',
             'Foo(x) == x + 1',
-            'Bar == {F}oo',
+            'Bar == ${F}oo',
             '===='
         ], [
             loc(doc.uri, pos(1, 10)),
@@ -62,7 +62,7 @@ suite('TLA Declarations Provider Test Suite', () => {
         return assertDeclarations(doc, [
             '---- MODULE foo ----',
             'VARIABLES bar',
-            "Next == /\ b{a}r' = bar + 1",
+            "Next == /\ b${a}r' = bar + 1",
             '===='
         ], [
             loc(doc.uri, pos(1, 10))
@@ -78,7 +78,7 @@ suite('TLA Declarations Provider Test Suite', () => {
             '  Foo == TRUE',
             'end define',
             'begin',
-            '  x := F{o}o',
+            '  x := F${o}o',
             'end algorithm; *)',
             '===='
         ], [
@@ -93,7 +93,7 @@ suite('TLA Declarations Provider Test Suite', () => {
             '(*--algorithm foo',
             'variables x',
             'begin',
-            '  x := F{o}o',
+            '  x := F${o}o',
             'end algorithm; *)',
             '===='
         ], [
@@ -107,9 +107,9 @@ suite('TLA Declarations Provider Test Suite', () => {
             '(*--algorithm foo',
             'variables xyz',
             'begin',
-            '  x := F{o}o',
+            '  x := Foo',
             'end algorithm; *)',
-            'Foo == UNCHANGED x{y}z',
+            'Foo == UNCHANGED x${y}z',
             '===='
         ], []);
     });
