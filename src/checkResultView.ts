@@ -103,11 +103,13 @@ function ensurePanelBody(extContext: vscode.ExtensionContext) {
     const resourcesDiskPath = vscode.Uri.file(
         path.join(extContext.extensionPath, 'resources')
     );
-    const resourcesPath = resourcesDiskPath.with({ scheme: 'vscode-resource' });
+    const resourcesPath = viewPanel.webview.asWebviewUri(resourcesDiskPath);
     if (!viewHtml) {
         viewHtml = fs.readFileSync(path.join(resourcesPath.fsPath, 'check-result-view.html'), 'utf8');
     }
-    viewHtml = viewHtml.replace(/\${resourcesPath}/g, String(resourcesPath));
+    viewHtml = viewHtml
+        .replace(/\${cspSource}/g, viewPanel.webview.cspSource)
+        .replace(/\${resourcesPath}/g, String(resourcesPath));
     viewPanel.webview.html = viewHtml;
 }
 
