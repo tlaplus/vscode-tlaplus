@@ -105,7 +105,7 @@ function ensurePanelBody(extContext: vscode.ExtensionContext) {
     );
     const resourcesPath = viewPanel.webview.asWebviewUri(resourcesDiskPath);
     if (!viewHtml) {
-        viewHtml = fs.readFileSync(path.join(resourcesPath.fsPath, 'check-result-view.html'), 'utf8');
+         viewHtml = fs.readFileSync(path.join(extContext.extensionPath, 'resources', 'check-result-view.html'), 'utf8');
     }
     viewHtml = viewHtml
         .replace(/\${cspSource}/g, viewPanel.webview.cspSource)
