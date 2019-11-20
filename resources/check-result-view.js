@@ -192,7 +192,6 @@ function displayMessageLine(elParent, line) {
 
 function displayErrorTrace(trace, settings) {
     const filterItems = parseFilter(settings.errorTraceFilter);
-console.log(`Filter: ${settings.errorTraceFilter} -> [${filterItems}]`)
     const elErrorTrace = document.getElementById('error-trace');
     const elErrorTraceItems = document.getElementById('error-trace-items');
     removeAllChildren(elErrorTraceItems);
