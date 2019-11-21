@@ -11,7 +11,6 @@ import { DCollection, addDiagnostics } from '../diagnostic';
 import { parseDateTime } from '../common';
 import * as msg from './tlcCodes';
 import { getTlcCode, TlcCodeType } from './tlcCodes';
-import { downloadAndUnzipVSCode } from 'vscode-test';
 
 const STATUS_EMIT_TIMEOUT = 500;    // msec
 const NONE = -1938477103984;

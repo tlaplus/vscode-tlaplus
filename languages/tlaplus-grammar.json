@@ -24,10 +24,10 @@
         },
         {
             "include": "#block_comments"
-		},
-		{
-			"include": "#lines"
-		},
+        },
+        {
+            "include": "#lines"
+        },
         {
             "include": "#module_start"
         },
