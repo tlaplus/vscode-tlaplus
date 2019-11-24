@@ -120,7 +120,7 @@ export const TLC_CHOOSE_UPPER_BOUND = registerCode(2165, TlcCodeType.Error);
 
 export const TLC_VALUE_ASSERT_FAILED = registerCode(2132, TlcCodeType.Error);
 export const TLC_MODULE_VALUE_JAVA_METHOD_OVERRIDE = registerCode(2154, TlcCodeType.Error);
-export const TLC_MODULE_VALUE_JAVA_METHOD_OVERRIDE_LOADED = registerCode(2168, TlcCodeType.Error);
+export const TLC_MODULE_VALUE_JAVA_METHOD_OVERRIDE_LOADED = registerCode(2168, TlcCodeType.Ignore);
 export const TLC_MODULE_VALUE_JAVA_METHOD_OVERRIDE_MISMATCH = registerCode(2400, TlcCodeType.Error);
 export const TLC_MODULE_VALUE_JAVA_METHOD_OVERRIDE_MODULE_MISMATCH = registerCode(2402, TlcCodeType.Error);
 export const TLC_MODULE_VALUE_JAVA_METHOD_OVERRIDE_IDENTIFIER_MISMATCH = registerCode(2403, TlcCodeType.Error);
