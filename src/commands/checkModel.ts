@@ -7,7 +7,7 @@ import { updateCheckResultView, revealEmptyCheckResultView, revealLastCheckResul
 import { applyDCollection } from '../diagnostic';
 import { ChildProcess } from 'child_process';
 import { saveStreamToFile } from '../outputSaver';
-import { replaceExtension, LANG_TLAPLUS, LANG_TLAPLUS_CFG, listFiles, exists } from '../common';
+import { replaceExtension, LANG_TLAPLUS, LANG_TLAPLUS_CFG, listFiles, exists, pathToUri } from '../common';
 import { ModelCheckResultSource, ModelCheckResult } from '../model/check';
 import { ToolOutputChannel } from '../outputChannels';
 
@@ -163,7 +163,8 @@ export async function doCheckModel(
 }
 
 function attachFileSaver(tlaFilePath: string, proc: ChildProcess) {
-    const createOutFiles = vscode.workspace.getConfiguration().get<boolean>(CFG_CREATE_OUT_FILES);
+    const workDirUri = pathToUri(path.dirname(tlaFilePath));
+    const createOutFiles = vscode.workspace.getConfiguration(undefined, workDirUri).get<boolean>(CFG_CREATE_OUT_FILES);
     if (typeof(createOutFiles) === 'undefined' || createOutFiles) {
         const outFilePath = replaceExtension(tlaFilePath, 'out');
         saveStreamToFile(proc.stdout, outFilePath);

@@ -55,7 +55,8 @@ export class JavaVersion {
 }
 
 export async function runPlusCal(tlaFilePath: string): Promise<ToolProcessInfo> {
-    const customOptions = getConfigOptions(CFG_PLUSCAL_OPTIONS);
+    const workDirUri = pathToUri(path.dirname(tlaFilePath));
+    const customOptions = getConfigOptions(CFG_PLUSCAL_OPTIONS, workDirUri);
     return runTool(
         TlaTool.PLUS_CAL,
         tlaFilePath,
@@ -80,7 +81,8 @@ export async function runTex(tlaFilePath: string): Promise<ToolProcessInfo> {
 }
 
 export async function runTlc(tlaFilePath: string, cfgFilePath: string): Promise<ToolProcessInfo> {
-    const customOptions = getConfigOptions(CFG_TLC_OPTIONS);
+    const workDirUri = pathToUri(path.dirname(tlaFilePath));
+    const customOptions = getConfigOptions(CFG_TLC_OPTIONS, workDirUri);
     return runTool(
         TlaTool.TLC,
         tlaFilePath,
@@ -89,12 +91,14 @@ export async function runTlc(tlaFilePath: string, cfgFilePath: string): Promise<
 }
 
 async function runTool(toolName: string, filePath: string, toolOptions: string[]): Promise<ToolProcessInfo> {
-    const javaPath = await obtainJavaPath();
-    const cfgOptions = getConfigOptions(CFG_JAVA_OPTIONS);
+    const workDir = path.dirname(filePath);
+    const workDirUri = pathToUri(workDir);
+    const javaPath = await obtainJavaPath(workDirUri);
+    const cfgOptions = getConfigOptions(CFG_JAVA_OPTIONS, workDirUri);
     const args = buildJavaOptions(cfgOptions).concat(toolsBaseArgs);
     args.push(toolName);
     toolOptions.forEach(opt => args.push(opt));
-    const proc = spawn(javaPath, args, { cwd: path.dirname(filePath) });
+    const proc = spawn(javaPath, args, { cwd: workDir });
     addReturnCodeHandler(proc, toolName);
     return new ToolProcessInfo(buildCommandLine(javaPath, args), proc);
 }
@@ -113,12 +117,12 @@ export function reportBrokenToolchain(err: any) {
     vscode.window.showErrorMessage('Toolchain is broken');
 }
 
-async function obtainJavaPath(): Promise<string> {
-    const javaHome = vscode.workspace.getConfiguration().get<string>(CFG_JAVA_HOME);
+async function obtainJavaPath(resource: vscode.Uri): Promise<string> {
+    const javaHome = vscode.workspace.getConfiguration(undefined, resource).get<string>(CFG_JAVA_HOME);
     if (cachedJavaPath && javaHome === lastUsedJavaHome) {
         return cachedJavaPath;
     }
-    const javaPath = buildJavaPath();
+    const javaPath = buildJavaPath(resource);
     cachedJavaPath = javaPath;
     lastUsedJavaHome = javaHome;
     await checkJavaVersion(javaPath);
@@ -128,9 +132,9 @@ async function obtainJavaPath(): Promise<string> {
 /**
  * Builds path to the Java executable based on the configuration.
  */
-function buildJavaPath(): string {
+function buildJavaPath(resource: vscode.Uri): string {
     let javaPath = javaCmd;
-    const javaHome = vscode.workspace.getConfiguration().get<string>(CFG_JAVA_HOME);
+    const javaHome = vscode.workspace.getConfiguration(undefined, resource).get<string>(CFG_JAVA_HOME);
     if (javaHome) {
         const homeUri = pathToUri(javaHome);
         javaPath = homeUri.fsPath + path.sep + 'bin' + path.sep + javaCmd;
@@ -223,8 +227,8 @@ function addReturnCodeHandler(proc: ChildProcess, toolName?: string) {
     });
 }
 
-function getConfigOptions(cfgName: string): string[] {
-    const optsString = vscode.workspace.getConfiguration().get<string>(cfgName) || '';
+function getConfigOptions(cfgName: string, resource: vscode.Uri): string[] {
+    const optsString = vscode.workspace.getConfiguration(undefined, resource).get<string>(cfgName) || '';
     return optsString.split(' ').map(opt => opt.trim()).filter(opt => opt !== '');
 }
 
