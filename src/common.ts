@@ -59,6 +59,18 @@ export function createTempDirSync(): string | undefined {
     return undefined;
 }
 
+export async function mkDir(dirPath: string) {
+    return new Promise((resolve, reject) => {
+        fs.mkdir(dirPath, null, (err) => {
+            if (err) {
+                reject(err);
+                return;
+            }
+            resolve();
+        });
+    });
+}
+
 export async function deleteDir(dirPath: string) {
     for (const fileName of fs.readdirSync(dirPath)) {
         const filePath = path.join(dirPath, fileName);

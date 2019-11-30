@@ -10,6 +10,7 @@ import { saveStreamToFile } from '../outputSaver';
 import { replaceExtension, LANG_TLAPLUS, LANG_TLAPLUS_CFG, listFiles, exists } from '../common';
 import { ModelCheckResultSource, ModelCheckResult } from '../model/check';
 import { ToolOutputChannel } from '../outputChannels';
+import { processTlcStatisticsSetting } from './tlcStatisticsCfg';
 
 export const CMD_CHECK_MODEL_RUN = 'tlaplus.model.check.run';
 export const CMD_CHECK_MODEL_CUSTOM_RUN = 'tlaplus.model.check.customRun';
@@ -53,6 +54,7 @@ export async function checkModel(diagnostic: vscode.DiagnosticCollection, extCon
     if (!specFiles) {
         return;
     }
+    await processTlcStatisticsSetting();
     doCheckModel(specFiles, false, extContext, diagnostic);
 }
 
