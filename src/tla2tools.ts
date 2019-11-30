@@ -83,11 +83,7 @@ export async function runTex(tlaFilePath: string): Promise<ToolProcessInfo> {
 }
 
 export async function runTlc(tlaFilePath: string, cfgFilePath: string): Promise<ToolProcessInfo> {
-    const customOptions = getConfigOptions(CFG_TLC_OPTIONS).map((opt) => {
-        return opt
-            .replace(VAR_TLC_SPEC_NAME, path.basename(tlaFilePath, '.tla'))
-            .replace(VAR_TLC_MODEL_NAME, path.basename(cfgFilePath, '.cfg'));
-    });
+    const customOptions = getConfigOptions(CFG_TLC_OPTIONS);
     return runTool(
         TlaTool.TLC,
         tlaFilePath,
@@ -165,7 +161,11 @@ export function buildJavaOptions(customOptions: string[]): string[] {
  * Builds an array of options to pass to the TLC tool.
  */
 export function buildTlcOptions(tlaFilePath: string, cfgFilePath: string, customOptions: string[]): string[] {
-    const custOpts = customOptions.slice(0);
+    const custOpts = customOptions.map((opt) => {
+        return opt
+            .replace(VAR_TLC_SPEC_NAME, path.basename(tlaFilePath, '.tla'))
+            .replace(VAR_TLC_MODEL_NAME, path.basename(cfgFilePath, '.cfg'));
+    });
     const opts = [path.basename(tlaFilePath), '-tool', '-modelcheck'];
     addValueOrDefault('-coverage', '1', custOpts, opts);
     addValueOrDefault('-config', cfgFilePath, custOpts, opts);
