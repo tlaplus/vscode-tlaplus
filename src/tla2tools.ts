@@ -11,6 +11,9 @@ const CFG_JAVA_OPTIONS = 'tlaplus.java.options';
 const CFG_TLC_OPTIONS = 'tlaplus.tlc.modelChecker.options';
 const CFG_PLUSCAL_OPTIONS = 'tlaplus.pluscal.options';
 
+const VAR_TLC_SPEC_NAME = /\$\{specName\}/g;
+const VAR_TLC_MODEL_NAME = /\$\{modelName\}/g;
+
 const NO_ERROR = 0;
 const MIN_TLA_ERROR = 10;           // Exit codes not related to tooling start from this number
 const LOWEST_JAVA_VERSION = 8;
@@ -80,7 +83,11 @@ export async function runTex(tlaFilePath: string): Promise<ToolProcessInfo> {
 }
 
 export async function runTlc(tlaFilePath: string, cfgFilePath: string): Promise<ToolProcessInfo> {
-    const customOptions = getConfigOptions(CFG_TLC_OPTIONS);
+    const customOptions = getConfigOptions(CFG_TLC_OPTIONS).map((opt) => {
+        return opt
+            .replace(VAR_TLC_SPEC_NAME, path.basename(tlaFilePath, '.tla'))
+            .replace(VAR_TLC_MODEL_NAME, path.basename(cfgFilePath, '.cfg'));
+    });
     return runTool(
         TlaTool.TLC,
         tlaFilePath,
