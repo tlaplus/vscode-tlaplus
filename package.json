@@ -265,6 +265,22 @@
                     "default": true,
                     "description": "Send TLC output to .out file."
                 },
+                "tlaplus.tlc.statisticsSharing": {
+                    "type": "string",
+                    "scope": "application",
+                    "default": "doNotShare",
+                    "markdownDescription": "Allows you to send the TLC usage statistics to [the plublicly available database](https://exec-stats.tlapl.us). You can find more details on what is shared [here](https://github.com/alygin/vscode-tlaplus/wiki/TLC-Statistics-Sharing).",
+                    "enum": [
+                        "share",
+                        "shareWithoutId",
+                        "doNotShare"
+                    ],
+                    "enumDescriptions": [
+                        "TLC statistics will be shared along with the installation ID.",
+                        "TLC statistics will be shared witout the installation ID.",
+                        "No TLC statistics will be shared."
+                    ]
+                },
                 "tlaplus.pdf.convertCommand": {
                     "default": "pdflatex",
                     "type": "string",
