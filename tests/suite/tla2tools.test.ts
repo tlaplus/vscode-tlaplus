@@ -58,6 +58,32 @@ suite('TLA+ Tools Test Suite', () => {
         );
     });
 
+    test('Supports the specName variable in TLC options', () => {
+        assert.deepEqual(
+            buildTlcOptions(
+                '/path/to/foo.tla',
+                '/path/to/bar.cfg',
+                ['-dump', 'dot', '${specName}.dot']
+            ), [
+                'foo.tla', '-tool', '-modelcheck', '-coverage', '1', '-config', '/path/to/bar.cfg',
+                '-dump', 'dot', 'foo.dot'
+            ]
+        );
+    });
+
+    test('Supports the modelName variable in TLC options', () => {
+        assert.deepEqual(
+            buildTlcOptions(
+                '/path/to/foo.tla',
+                '/path/to/bar.cfg',
+                ['-dump', 'dot', '${modelName}.dot']
+            ), [
+                'foo.tla', '-tool', '-modelcheck', '-coverage', '1', '-config', '/path/to/bar.cfg',
+                '-dump', 'dot', 'bar.dot'
+            ]
+        );
+    });
+
     test('Provides default GC in Java options', () => {
         assert.deepEqual(buildJavaOptions([]), ['-XX:+UseParallelGC']);
     });

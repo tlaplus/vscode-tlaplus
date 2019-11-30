@@ -11,6 +11,9 @@ const CFG_JAVA_OPTIONS = 'tlaplus.java.options';
 const CFG_TLC_OPTIONS = 'tlaplus.tlc.modelChecker.options';
 const CFG_PLUSCAL_OPTIONS = 'tlaplus.pluscal.options';
 
+const VAR_TLC_SPEC_NAME = /\$\{specName\}/g;
+const VAR_TLC_MODEL_NAME = /\$\{modelName\}/g;
+
 const NO_ERROR = 0;
 const MIN_TLA_ERROR = 10;           // Exit codes not related to tooling start from this number
 const LOWEST_JAVA_VERSION = 8;
@@ -158,7 +161,11 @@ export function buildJavaOptions(customOptions: string[]): string[] {
  * Builds an array of options to pass to the TLC tool.
  */
 export function buildTlcOptions(tlaFilePath: string, cfgFilePath: string, customOptions: string[]): string[] {
-    const custOpts = customOptions.slice(0);
+    const custOpts = customOptions.map((opt) => {
+        return opt
+            .replace(VAR_TLC_SPEC_NAME, path.basename(tlaFilePath, '.tla'))
+            .replace(VAR_TLC_MODEL_NAME, path.basename(cfgFilePath, '.cfg'));
+    });
     const opts = [path.basename(tlaFilePath), '-tool', '-modelcheck'];
     addValueOrDefault('-coverage', '1', custOpts, opts);
     addValueOrDefault('-config', cfgFilePath, custOpts, opts);
