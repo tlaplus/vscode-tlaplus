@@ -232,7 +232,7 @@
             "properties": {
                 "tlaplus.java.home": {
                     "type": "string",
-                    "scope": "application",
+                    "scope": "window",
                     "default": "",
                     "format": "uri",
                     "description": "Path to Java (8 or higher, 11 is recommended) home directory that should be used to run TLA+ tools.",
@@ -240,28 +240,28 @@
                 },
                 "tlaplus.java.options": {
                     "type": "string",
-                    "scope": "application",
+                    "scope": "window",
                     "default": "",
                     "description": "Java options to use when running TLA+ tools.",
                     "maxLength": 1000
                 },
                 "tlaplus.pluscal.options": {
                     "type": "string",
-                    "scope": "application",
+                    "scope": "window",
                     "default": "",
                     "description": "Additional options to pass to PlusCal transpiler.",
                     "maxLength": 1000
                 },
                 "tlaplus.tlc.modelChecker.options": {
                     "type": "string",
-                    "scope": "application",
+                    "scope": "window",
                     "default": "",
                     "description": "Additional options to pass to TLC.",
                     "maxLength": 1000
                 },
                 "tlaplus.tlc.modelChecker.createOutFiles": {
                     "type": "boolean",
-                    "scope": "application",
+                    "scope": "window",
                     "default": true,
                     "description": "Send TLC output to .out file."
                 },
