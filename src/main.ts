@@ -18,6 +18,7 @@ import { TlaCompletionItemProvider } from './completions/tlaCompletions';
 import { CfgCompletionItemProvider } from './completions/cfgCompletions';
 import { TlaDeclarationsProvider } from './declarations/tlaDeclarations';
 import { TlaDocumentInfos } from './model/documentInfo';
+import { syncTlcStatisticsSetting, listenTlcStatConfigurationChanges } from './commands/tlcStatisticsCfg';
 
 const TLAPLUS_FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file', language: LANG_TLAPLUS };
 const TLAPLUS_CFG_FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file', language: LANG_TLAPLUS_CFG };
@@ -94,6 +95,9 @@ export function activate(context: vscode.ExtensionContext) {
             new TlaDeclarationsProvider(tlaDocInfos)
         )
     );
+    syncTlcStatisticsSetting()
+        .catch((err) => console.error(err))
+        .then(() => listenTlcStatConfigurationChanges(context.subscriptions));
     showChangeLog(context.extensionPath)
         .catch((err) => console.error(err));
 }
