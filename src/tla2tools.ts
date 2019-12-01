@@ -62,7 +62,8 @@ export async function runPlusCal(tlaFilePath: string): Promise<ToolProcessInfo> 
     return runTool(
         TlaTool.PLUS_CAL,
         tlaFilePath,
-        buildPlusCalOptions(tlaFilePath, customOptions)
+        buildPlusCalOptions(tlaFilePath, customOptions),
+        []
     );
 }
 
@@ -70,7 +71,8 @@ export async function runSany(tlaFilePath: string): Promise<ToolProcessInfo> {
     return runTool(
         TlaTool.SANY,
         tlaFilePath,
-        [ path.basename(tlaFilePath) ]
+        [ path.basename(tlaFilePath) ],
+        []
     );
 }
 
@@ -78,7 +80,8 @@ export async function runTex(tlaFilePath: string): Promise<ToolProcessInfo> {
     return runTool(
         TlaTool.TEX,
         tlaFilePath,
-        [ path.basename(tlaFilePath) ]
+        [ path.basename(tlaFilePath) ],
+        []
     );
 }
 
@@ -87,14 +90,20 @@ export async function runTlc(tlaFilePath: string, cfgFilePath: string): Promise<
     return runTool(
         TlaTool.TLC,
         tlaFilePath,
-        buildTlcOptions(tlaFilePath, cfgFilePath, customOptions)
+        buildTlcOptions(tlaFilePath, cfgFilePath, customOptions),
+        [ '-Dtlc2.TLC.ide=vscode' ]
     );
 }
 
-async function runTool(toolName: string, filePath: string, toolOptions: string[]): Promise<ToolProcessInfo> {
+async function runTool(
+    toolName: string,
+    filePath: string,
+    toolOptions: string[],
+    javaOptions: string[]
+): Promise<ToolProcessInfo> {
     const javaPath = await obtainJavaPath();
     const cfgOptions = getConfigOptions(CFG_JAVA_OPTIONS);
-    const args = buildJavaOptions(cfgOptions).concat(toolsBaseArgs);
+    const args = buildJavaOptions(cfgOptions).concat(toolsBaseArgs).concat(javaOptions);
     args.push(toolName);
     toolOptions.forEach(opt => args.push(opt));
     const proc = spawn(javaPath, args, { cwd: path.dirname(filePath) });
