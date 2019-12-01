@@ -6,61 +6,80 @@ import { exists, readFile, writeFile, mkDir } from '../common';
 const CFG_TLC_STATISTICS_TYPE = 'tlaplus.tlc.statisticsSharing';
 const STAT_SETTINGS_DIR = '.tlaplus';
 const STAT_SETTINGS_FILE = 'esc.txt';
-const STAT_OPT_SHARE = '*';
 const STAT_OPT_SHARE_NO_ID = 'RANDOM_IDENTIFIER';
 const STAT_OPT_DO_NOT_SHARE = 'NO_STATISTICS';
 
-let lastStatCfgValue: string | undefined;
-
-/**
- * Checks the TLC statistics collection setting, rewrites the statistics config file if necessary.
- * The statistics config file contains one of the following:
- * - {installation ID} - when the user allows to share statistics along with the installation ID.
- * - NO_STATISTICS - when the user doesn't want to share statistics.
- * - RANDOM_IDENTIFIER - when the user allows to share statistics but without the installation ID.
- * TLC handles this file automatically when running.
- */
-export async function processTlcStatisticsSetting() {
-    const statCfg = vscode.workspace.getConfiguration().get<string>(CFG_TLC_STATISTICS_TYPE);
-    if (statCfg === lastStatCfgValue) {
-        return;
-    }
-    lastStatCfgValue = statCfg;
-    switch (statCfg) {
-        case 'share':
-            setStatisticsSetting(STAT_OPT_SHARE);
-            break;
-        case 'shareWithoutId':
-            setStatisticsSetting(STAT_OPT_SHARE_NO_ID);
-            break;
-        case 'doNotShare':
-            setStatisticsSetting(STAT_OPT_DO_NOT_SHARE);
-            break;
-        default:
-            console.error('Unsupported TLC statistics option: ' + statCfg);
-            return;
-    }
+enum ShareOption {
+    Share = 'share',
+    ShareWithoutId = 'shareWithoutId',
+    DoNotShare = 'doNotShare'
 }
 
-async function setStatisticsSetting(option: string) {
+/**
+ * Writes TLC statistics sharing cfg file when the corresponding configuration setting is changed.
+ */
+export function listenTlcStatConfigurationChanges(disposables: vscode.Disposable[]) {
+    vscode.workspace.onDidChangeConfiguration((event) => {
+        if (event.affectsConfiguration(CFG_TLC_STATISTICS_TYPE)) {
+            const cfgOption = vscode.workspace.getConfiguration().get<ShareOption>(CFG_TLC_STATISTICS_TYPE);
+            if (cfgOption) {
+                writeFileOption(cfgOption);
+            }
+        }
+    }, undefined, disposables);
+}
+
+/**
+ * Updates the TLC statistics sharing setting in accordance with the config file if necessary.
+ */
+export async function syncTlcStatisticsSetting() {
+    const cfgOption = vscode.workspace.getConfiguration().get<string>(CFG_TLC_STATISTICS_TYPE);
+    const fileOption = await readFileOption();
+    if (cfgOption === fileOption) {
+        return;
+    }
+    const target = vscode.ConfigurationTarget.Global;
+    return vscode.workspace.getConfiguration().update(CFG_TLC_STATISTICS_TYPE, fileOption, target);
+}
+
+async function readFileOption(): Promise<ShareOption> {
+    const file = path.join(homedir(), STAT_SETTINGS_DIR, STAT_SETTINGS_FILE);
+    if (!await exists(file)) {
+        return ShareOption.DoNotShare;
+    }
+    const fileContents = await readFile(file);
+    if (fileContents.startsWith(STAT_OPT_DO_NOT_SHARE)) {
+        return ShareOption.DoNotShare;
+    } else if (fileContents.startsWith(STAT_OPT_SHARE_NO_ID)) {
+        return ShareOption.ShareWithoutId;
+    } else if (fileContents.length > 0) {
+        return ShareOption.Share;
+    }
+    return ShareOption.DoNotShare;
+}
+
+async function writeFileOption(option: ShareOption) {
+    let contents;
+    switch (option) {
+        case ShareOption.Share:
+            contents = generateRandomInstallationId();
+            break;
+        case ShareOption.ShareWithoutId:
+            contents = STAT_OPT_SHARE_NO_ID;
+            break;
+        case ShareOption.DoNotShare:
+            contents = STAT_OPT_DO_NOT_SHARE;
+            break;
+        default:
+            console.error('Unsupported TLC statistics option: ' + option);
+            return;
+    }
     const dir = path.join(homedir(), STAT_SETTINGS_DIR);
     const file = path.join(dir, STAT_SETTINGS_FILE);
-    if (await exists(file)) {
-        const curOption = await readFile(file);
-        if ((option === STAT_OPT_DO_NOT_SHARE || option === STAT_OPT_SHARE_NO_ID) && curOption.startsWith(option)) {
-            return;
-        }
-        if (option === STAT_OPT_SHARE
-                && !curOption.startsWith(STAT_OPT_DO_NOT_SHARE)
-                && !curOption.startsWith(STAT_OPT_SHARE_NO_ID)) {
-            return;
-        }
-    }
-    const fileContents = option === STAT_OPT_SHARE ? generateRandomInstallationId() : option;
     if (!await exists(dir)) {
         await mkDir(dir);
     }
-    await writeFile(file, fileContents + '\n');
+    return writeFile(file, contents + '\n');
 }
 
 function generateRandomInstallationId(): string {
