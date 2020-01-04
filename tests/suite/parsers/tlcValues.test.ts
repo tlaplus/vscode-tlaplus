@@ -276,9 +276,15 @@ suite('TLC Values Output Parser Test Suite', () => {
     test('Formats simple functions', () => {
         assertFormat(func(ROOT, v('from', 'foo'), v('to', '30')), '  ', ['(foo :> 30)']);
         assertFormat(
-            func(ROOT, v('from', 'foo'), struct('to', v('bar', '10'), v('baz', '20'))),
-            '', [
-                '(foo :> [bar |-> 10, baz |-> 20])'
+            func(ROOT,
+                v('from', 'foo'),
+                struct('to', v('bar', '10'), v('baz', '"some long-long-long string to exceed threshold"'))
+            ), '', [
+                '(foo :> [',
+                '    bar |-> 10,',
+                '    baz |-> "some long-long-long string to exceed threshold"',
+                '  ]',
+                ')'
             ]
         );
     });

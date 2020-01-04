@@ -317,6 +317,14 @@ export class SimpleFunctionItem extends Value {
     ) {
         super(key, `${from.str} :> ${to.str}`);
     }
+
+    format(indent: string): string {
+        if (this.str.length <= VALUE_FORMAT_LENGTH_THRESHOLD || !(this.to instanceof CollectionValue)) {
+            return `(${this.str})`;
+        }
+        const body = this.to.format(indent + '  ');
+        return `(${this.from.str} :> ${body}\n${indent})`;
+    }
 }
 
 /**
@@ -333,8 +341,11 @@ export class SimpleFunction extends Value {
         super(key, makeCollectionValueString(items, '(', ')', ' @@ ', (v => v.str)));
     }
 
-    formatKey(indent: string, value: Value): string {
-        return `${indent}${value.key} :> `;
+    format(indent: string): string {
+        if (this.items.length === 1) {
+            return this.items[0].format(indent);
+        }
+        return super.format(indent);
     }
 }
 
