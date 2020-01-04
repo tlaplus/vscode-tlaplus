@@ -141,7 +141,7 @@ export class Value {
     }
 
     /**
-     * Swithces off ID incrementation. For tests only.
+     * Switches off ID incrementation. For tests only.
      */
     static switchIdsOff() {
         Value.idStep = 0;
