@@ -343,14 +343,16 @@ function displayOutput(lines) {
 function renderValueMenu(value) {
     const elMenu = document.createElement('div');
     elMenu.classList.add('var-menu');
-    // "Display value"
-    const elDislplay = document.createElement('div');
-    elDislplay.classList.add('var-button');
-    elDislplay.classList.add('var-button-display');
-    elDislplay.innerHTML = '&nbsp;';
-    elDislplay.setAttribute('title', 'Dislpay value');
-    elDislplay.onclick = () => showVariableValue(value.id);
-    elMenu.appendChild(elDislplay);
+    if (value.changeType !== 'D') {
+        // "Display value" item
+        const elDislplay = document.createElement('div');
+        elDislplay.classList.add('var-button');
+        elDislplay.classList.add('var-button-display');
+        elDislplay.innerHTML = '&nbsp;';
+        elDislplay.setAttribute('title', 'Dislpay value');
+        elDislplay.onclick = () => showVariableValue(value.id);
+        elMenu.appendChild(elDislplay);
+    }
     // "Copy to clipboard" item
     const elCopy = document.createElement('div');
     elCopy.classList.add('var-button');

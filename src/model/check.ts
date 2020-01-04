@@ -147,6 +147,13 @@ export class Value {
         Value.idStep = 0;
     }
 
+    /**
+     * Switches on ID incrementation. For tests only.
+     */
+    static switchIdsOn() {
+        Value.idStep = 1;
+    }
+
     setModified(): Value {
         this.changeType = Change.MODIFIED;
         return this;
@@ -212,15 +219,21 @@ export abstract class CollectionValue extends Value {
     }
 
     findItem(id: number): Value | undefined {
-        return this.items.find((it) => {
-            if (it.id === id) {
-                return true;
+        for (const item of this.items) {
+            if (item.changeType === Change.DELETED) {
+                continue;
             }
-            if (it instanceof CollectionValue) {
-                return it.findItem(id);
+            if (item.id === id) {
+                return item;
             }
-            return false;
-        });
+            if (item instanceof CollectionValue) {
+                const subItem = item.findItem(id);
+                if (subItem) {
+                    return subItem;
+                }
+            }
+        }
+        return undefined;
     }
 
     format(indent: string): string {
@@ -441,13 +454,13 @@ export class ModelCheckResult {
     }
 
     formatValue(valueId: number): string | undefined {
-        const value = this.errorTrace
-            .map(t => t.variables.findItem(valueId))
-            .find(v => v !== undefined);
-        if (!value) {
-            return undefined;
+        for (const items of this.errorTrace) {
+            const value = items.variables.findItem(valueId);
+            if (value) {
+                return value.format('');
+            }
         }
-        return value.format('');
+        return undefined;
     }
 }
 

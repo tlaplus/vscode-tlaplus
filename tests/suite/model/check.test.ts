@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { before } from 'mocha';
+import { beforeEach } from 'mocha';
 import { CheckStatus, getStatusName, findChanges, Change, ValueKey, Value,
     CollectionValue, StructureValue} from '../../../src/model/check';
 import { v, set, seq, struct } from '../shortcuts';
@@ -7,7 +7,7 @@ import { v, set, seq, struct } from '../shortcuts';
 const ROOT = 'root';
 
 suite('Check Model Test Suite', () => {
-    before(() => {
+    beforeEach(() => {
         Value.switchIdsOff();
     });
 
@@ -134,6 +134,34 @@ suite('Check Model Test Suite', () => {
                     vX(1, Change.NOT_CHANGED, 'one'),
                     vX(2, Change.MODIFIED, 'three')))
         );
+    });
+
+    test('Finds subitem by ID', () => {
+        Value.switchIdsOn();
+        const varOne = v(1, 'one');
+        const root = struct(ROOT,
+            v('bar', 'BAR'),
+            seq('foo',
+                varOne,
+                v(2, 'two')));
+        const found = root.findItem(varOne.id);
+        if (found) {
+            assert.equal(found.id, varOne.id);
+        } else {
+            assert.fail('Value not found by ID');
+        }
+    });
+
+    test('Skips deleted items when searching by ID', () => {
+        Value.switchIdsOn();
+        const varOne = vX(1, Change.DELETED, 'one');
+        const root = struct(ROOT,
+            v('bar', 'BAR'),
+            seq('foo',
+                varOne,
+                v(2, 'two')));
+        const found = root.findItem(varOne.id);
+        assert.equal(typeof found, 'undefined');
     });
 });
 
