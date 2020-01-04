@@ -394,13 +394,19 @@ class ModelCheckResultBuilder {
     private parseProgressStats(lines: string[]) {
         const matches = this.tryMatchBufferLine(lines, /^Progress\(([\d,]+)\) at (\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}): ([\d,]+) states generated.*, ([\d,]+) distinct states found.*, ([\d,]+) states left on queue.*/g);
         if (matches) {
-            this.initialStatesStat.push(new InitialStateStatItem(
+            const item = new InitialStateStatItem(
                 this.calcTimestamp(matches[2]),
                 parseIntWithComma(matches[1]),
                 parseIntWithComma(matches[3]),
                 parseIntWithComma(matches[4]),
                 parseIntWithComma(matches[5])
-            ));
+            );
+            if (this.initialStatesStat.length > 0
+                && this.initialStatesStat[this.initialStatesStat.length - 1].timeStamp === item.timeStamp) {
+                this.initialStatesStat[this.initialStatesStat.length - 1] = item;
+            } else {
+                this.initialStatesStat.push(item);
+            }
         }
     }
 

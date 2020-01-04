@@ -27,7 +27,7 @@ suite('TLC Output Parser Test Suite', () => {
                         + ' with 1 worker on 4 cores with 1820MB heap and 64MB offheap memory [pid: 91333]'
                         + ' (Mac OS X 10.14.5 x86_64, Amazon.com Inc. 11.0.3 x86_64, MSBDiskFPSet, DiskStateQueue).')
                 .addInitState('00:00:00', 0, 1, 1, 1)
-                .addInitState('00:00:00', 2, 3, 2, 0)
+                .addInitState('00:00:01', 2, 3, 2, 0)
                 .addCoverage('example', 'Init', '/Users/bob/example.tla', range(13, 0, 13, 4), 1, 1)
                 .addCoverage('example', 'Lbl_1', '/Users/bob/example.tla', range(15, 0, 15, 5), 1, 1)
                 .addCoverage('example', 'Terminating', '/Users/bob/example.tla', range(20, 0, 20, 11), 1, 0)
@@ -65,7 +65,7 @@ suite('TLC Output Parser Test Suite', () => {
                         + ' with 1 worker on 4 cores with 1820MB heap and 64MB offheap memory [pid: 91333]'
                         + ' (Mac OS X 10.14.5 x86_64, Amazon.com Inc. 11.0.3 x86_64, MSBDiskFPSet, DiskStateQueue).')
                 .addInitState('00:00:00', 0, 1, 1, 1)
-                .addInitState('00:00:00', 2, 3, 2, 0)
+                .addInitState('00:00:01', 2, 3, 2, 0)
                 .addCoverage('example', 'Init', '/Users/bob/example.tla', range(13, 0, 13, 4), 1, 1)
                 .build()
             );
@@ -97,7 +97,7 @@ suite('TLC Output Parser Test Suite', () => {
                 .setEndDateTime('2019-08-17 02:37:51')
                 .setDuration(1041)
                 .addInitState('00:00:00', 0, 1, 1, 1)
-                .addInitState('00:00:00', 3, 4, 4, 1)
+                .addInitState('00:00:01', 3, 4, 4, 1)
                 .addCoverage('error_trace', 'Init', '/Users/bob/error_trace.tla', range(7, 0, 7, 4), 2, 2)
                 .addCoverage('error_trace', 'SomeFunc', '/Users/bob/error_trace.tla', range(11, 0, 11, 11), 5, 3)
                 .addError([message('Invariant FooInvariant is violated.')])
@@ -135,7 +135,7 @@ suite('TLC Output Parser Test Suite', () => {
                 .setEndDateTime('2019-08-17 02:37:51')
                 .setDuration(1041)
                 .addInitState('00:00:00', 0, 1, 1, 1)
-                .addInitState('00:00:00', 3, 4, 4, 1)
+                .addInitState('00:00:01', 3, 4, 4, 1)
                 .addError([ message('Temporal properties were violated.')])
                 .addTraceItem(1, 'Initial predicate', '', '', undefined, range(0, 0, 0, 0),
                     struct('', v('Foo', '1'))
@@ -156,7 +156,7 @@ suite('TLC Output Parser Test Suite', () => {
                 .setEndDateTime('2019-08-17 02:37:51')
                 .setDuration(1041)
                 .addInitState('00:00:00', 0, 1, 1, 1)
-                .addInitState('00:00:00', 3, 4, 4, 1)
+                .addInitState('00:00:01', 3, 4, 4, 1)
                 .addError([ message('Temporal properties were violated.')])
                 .addTraceItem(1, 'Initial predicate', '', '', undefined, range(0, 0, 0, 0),
                     struct('', v('Foo', '1'))
@@ -183,7 +183,7 @@ suite('TLC Output Parser Test Suite', () => {
                 .setEndDateTime('2019-08-17 02:37:51')
                 .setDuration(1041)
                 .addInitState('00:00:00', 0, 1, 1, 1)
-                .addInitState('00:00:00', 3, 4, 4, 1)
+                .addInitState('00:00:01', 3, 4, 4, 1)
                 .addError([ message('Invariant FooInvariant is violated.')])
                 .addTraceItem(1, 'Initial predicate', '', '', undefined, range(0, 0, 0, 0),
                     struct('', struct('Var', v('foo', '1'), v('bar', '2')))
@@ -222,7 +222,7 @@ suite('TLC Output Parser Test Suite', () => {
                 .setEndDateTime('2019-08-17 02:37:51')
                 .setDuration(1041)
                 .addInitState('00:00:00', 0, 1, 1, 1)
-                .addInitState('00:00:00', 3, 4, 4, 1)
+                .addInitState('00:00:01', 3, 4, 4, 1)
                 .addError([
                     message('The error occurred when TLC was evaluating the nested'),
                     message('expressions at the following positions:'),
@@ -261,7 +261,7 @@ suite('TLC Output Parser Test Suite', () => {
                         + ' with 1 worker on 4 cores with 1820MB heap and 64MB offheap memory [pid: 91333]'
                         + ' (Mac OS X 10.14.5 x86_64, Amazon.com Inc. 11.0.3 x86_64, MSBDiskFPSet, DiskStateQueue).')
                 .addInitState('00:00:00', 0, 1, 1, 1)
-                .addInitState('00:00:00', 2, 3, 2, 0)
+                .addInitState('00:00:01', 2, 3, 2, 0)
                 .addCoverage('example', 'Init', '/Users/bob/example.tla', range(13, 0, 13, 4), 1, 1)
                 .build()
             );
@@ -280,8 +280,27 @@ suite('TLC Output Parser Test Suite', () => {
                         + ' with 1 worker on 4 cores with 1820MB heap and 64MB offheap memory [pid: 91333]'
                         + ' (Mac OS X 10.14.5 x86_64, Amazon.com Inc. 11.0.3 x86_64, MSBDiskFPSet, DiskStateQueue).')
                 .addInitState('00:00:00', 0, 1, 1, 1)
-                .addInitState('00:00:00', 2, 3, 2, 0)
+                .addInitState('00:00:01', 2, 3, 2, 0)
                 .addCoverage('example', 'Init', '/Users/bob/example.tla', range(13, 0, 13, 4), 1, 1)
+                .build()
+            );
+    });
+
+    test('Rewrites initial state item with the same timestamp', () => {
+        return assertOutput('state-timestamp-duplication.out', ROOT_PATH,
+            new CheckResultBuilder('state-timestamp-duplication.out', CheckState.Success, CheckStatus.Finished)
+                .addDColFilePath('/Users/bob/example.tla')
+                .addDColFilePath('/private/var/folders/tla/T/TLC.tla')
+                .setStartDateTime('2019-08-17 00:11:08')
+                .setEndDateTime('2019-08-17 00:11:09')
+                .setDuration(886)
+                .setProcessInfo('Running breadth-first search Model-Checking with fp 22 and seed -5755320172003082571.')
+                .addInitState('00:00:00', 0, 1, 1, 1)
+                // .addInitState('00:00:01', 2, 3, 2, 0) <-- This one must be substituted for the following
+                .addInitState('00:00:01', 2, 13, 12, 0)
+                .addCoverage('example', 'Init', '/Users/bob/example.tla', range(13, 0, 13, 4), 1, 1)
+                .addCoverage('example', 'Lbl_1', '/Users/bob/example.tla', range(15, 0, 15, 5), 1, 1)
+                .addCoverage('example', 'Terminating', '/Users/bob/example.tla', range(20, 0, 20, 11), 1, 0)
                 .build()
             );
     });
