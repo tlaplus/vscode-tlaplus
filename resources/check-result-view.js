@@ -71,6 +71,20 @@ function showTlcOutput() {
     });
 }
 
+function showInfoMessage(text) {
+    vscode.postMessage({
+        command: 'showInfoMessage',
+        text: text
+    });
+}
+
+function showVariableValue(id) {
+    vscode.postMessage({
+        command: 'showVariableValue',
+        valueId: id
+    });
+}
+
 function openFile(event, filePath, location) {
     event.preventDefault();
     event.stopPropagation();
@@ -246,6 +260,7 @@ function displayValue(elParent, value, showUnmodified) {
     }
     const elVar = document.createElement('li');
     const elVarValueBlock = document.createElement('div');
+    elVarValueBlock.classList.add('var-block');
     const elVarKey = renderValueTitle(value);
     elVarValueBlock.appendChild(elVarKey);
     const elVarValue = document.createElement('div');
@@ -267,6 +282,7 @@ function displayValue(elParent, value, showUnmodified) {
         }
         elVar.appendChild(elSubList);
     }
+    elVarValueBlock.appendChild(renderValueMenu(value));
     elParent.appendChild(elVar);
 }
 
@@ -322,6 +338,40 @@ function displayOutput(lines) {
         elText.innerText = line.text;
         elLines.appendChild(elLine);
     });
+}
+
+function renderValueMenu(value) {
+    const elMenu = document.createElement('div');
+    elMenu.classList.add('var-menu');
+    // "Display value"
+    const elDislplay = document.createElement('div');
+    elDislplay.classList.add('var-button');
+    elDislplay.classList.add('var-button-display');
+    elDislplay.innerHTML = '&nbsp;';
+    elDislplay.setAttribute('title', 'Dislpay value');
+    elDislplay.onclick = () => showVariableValue(value.id);
+    elMenu.appendChild(elDislplay);
+    // "Copy to clipboard" item
+    const elCopy = document.createElement('div');
+    elCopy.classList.add('var-button');
+    elCopy.classList.add('var-button-copy');
+    elCopy.innerHTML = '&nbsp;';
+    elCopy.setAttribute('title', 'Copy value to clipboard');
+    elCopy.onclick = () => {
+        copyValueToClipboard(value);
+        showInfoMessage('Value has been copied to clipboard');
+    };
+    elMenu.appendChild(elCopy);
+    return elMenu;
+}
+
+function copyValueToClipboard(value) {
+    const el = document.createElement('textarea');
+    el.value = value.str;
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand('copy');
+    document.body.removeChild(el);
 }
 
 function num(n) {

@@ -2,9 +2,29 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src ${cspSource}; style-src ${cspSource};">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src ${cspSource}; style-src 'unsafe-inline' ${cspSource}; img-src ${cspSource};">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" type="text/css" href="${resourcesPath}/check-result-view.css">
+<style>
+.vscode-dark .var-button-copy {
+    background-image: url('${resourcesPath}/images/copy-dark.svg');
+}
+.vscode-light .var-button-copy {
+    background-image: url('${resourcesPath}/images/copy-light.svg');
+}
+.vscode-high-contrast .var-button-copy {
+    background-image: url('${resourcesPath}/images/copy-hc.svg');
+}
+.vscode-dark .var-button-display {
+    background-image: url('${resourcesPath}/images/display-val-dark.svg');
+}
+.vscode-light .var-button-display {
+    background-image: url('${resourcesPath}/images/display-val-light.svg');
+}
+.vscode-high-contrast .var-button-display {
+    background-image: url('${resourcesPath}/images/display-val-hc.svg');
+}
+</style>
 <title>Model checking</title>
 </head>
 <body>

@@ -135,6 +135,11 @@ th {
     clear: both;
 }
 
+.var-block {
+    line-height: 1.4em;
+    position: relative;
+}
+
 .var-name {
     display: inline-block;
     width: 30%;
@@ -155,6 +160,28 @@ th {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.var-menu {
+    position: absolute;
+    right: 0;
+    top: 0;
+    display: none;
+}
+
+.var-button {
+    display: inline-block;
+    width: 1.5em;
+    text-align: center;
+    background-size: 1.2em 1.2em;
+    background-repeat: no-repeat;
+    background-color: var(--vscode-editor-background);
+    background-position: 0.3em 0.1em;
+    cursor: pointer;
+}
+
+.var-block:hover .var-menu {
+    display: block;
 }
 
 .change-marker {

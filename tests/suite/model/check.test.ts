@@ -1,4 +1,5 @@
 import * as assert from 'assert';
+import { before } from 'mocha';
 import { CheckStatus, getStatusName, findChanges, Change, ValueKey, Value,
     CollectionValue, StructureValue} from '../../../src/model/check';
 import { v, set, seq, struct } from '../shortcuts';
@@ -6,6 +7,9 @@ import { v, set, seq, struct } from '../shortcuts';
 const ROOT = 'root';
 
 suite('Check Model Test Suite', () => {
+    before(() => {
+        Value.switchIdsOff();
+    });
 
     test('Throws when trying to get undefined status name', () => {
         const nonexistentStatus = Object.values(CheckStatus).length + 100;
@@ -13,7 +17,9 @@ suite('Check Model Test Suite', () => {
     });
 
     test('All check statuses have names', () => {
-        const statuses: CheckStatus[] = Object.values(CheckStatus).filter(x => typeof x === 'number');
+        const statuses: CheckStatus[] = Object.values(CheckStatus)
+            .filter(x => typeof x === 'number')
+            .map(x => x as CheckStatus);
         statuses.forEach(s => getStatusName(s));
     });
 

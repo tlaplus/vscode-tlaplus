@@ -1,8 +1,9 @@
 import * as assert from 'assert';
 import * as path from 'path';
 import * as fs from 'fs';
+import { before } from 'mocha';
 import { PassThrough } from 'stream';
-import { ModelCheckResult, CheckState, CheckStatus, ModelCheckResultSource } from '../../../src/model/check';
+import { ModelCheckResult, CheckState, CheckStatus, ModelCheckResultSource, Value } from '../../../src/model/check';
 import { TlcModelCheckerStdoutParser } from '../../../src/parsers/tlc';
 import { CheckResultBuilder, pos, range, struct, v, set, message, sourceLink } from '../shortcuts';
 
@@ -10,6 +11,9 @@ const ROOT_PATH = '/Users/alice/TLA/foo.tla';
 const FIXTURES_PATH = path.resolve(__dirname, '../../../../tests/fixtures/parsers/tlc');
 
 suite('TLC Output Parser Test Suite', () => {
+    before(() => {
+        Value.switchIdsOff();
+    });
 
     test('Parses minimal PlusCal output', () => {
         return assertOutput('empty-calplus.out', ROOT_PATH,
