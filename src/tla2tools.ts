@@ -91,7 +91,7 @@ export async function runTlc(tlaFilePath: string, cfgFilePath: string): Promise<
         TlaTool.TLC,
         tlaFilePath,
         buildTlcOptions(tlaFilePath, cfgFilePath, customOptions),
-        [ '-Dtlc2.TLC.ide=vscode' ]
+        [ /*'-Dtlc2.TLC.ide=vscode'*/ ]
     );
 }
 
