@@ -43,6 +43,8 @@ STATE_NAMES.set(CheckState.Success, 'Success');
 STATE_NAMES.set(CheckState.Error, 'Errors');
 STATE_NAMES.set(CheckState.Stopped, 'Stopped');
 
+const VALUE_FORMAT_LENGTH_THRESHOLD = 30;
+
 /**
  * Statistics on initial state generation.
  */
@@ -125,12 +127,25 @@ export enum Change {
  * Base class for values.
  */
 export class Value {
+    static idCounter = 0;
+    static idStep = 1;
     changeType = Change.NOT_CHANGED;
+    readonly id: number;
 
     constructor(
         readonly key: ValueKey,
         readonly str: string
-    ) {}
+    ) {
+        Value.idCounter += Value.idStep;
+        this.id = Value.idCounter;
+    }
+
+    /**
+     * Swithces off ID incrementation. For tests only.
+     */
+    static switchIdsOff() {
+        Value.idStep = 0;
+    }
 
     setModified(): Value {
         this.changeType = Change.MODIFIED;
@@ -145,6 +160,13 @@ export class Value {
     setDeleted(): Value {
         this.changeType = Change.MODIFIED;
         return this;
+    }
+
+    /**
+     * Adds formatted representation of the value to the given array of strings.
+     */
+    format(indent: string): string {
+        return `${this.str}`;
     }
 }
 
@@ -164,7 +186,13 @@ export abstract class CollectionValue extends Value {
     readonly expandSingle = true;
     deletedItems: Value[] | undefined;
 
-    constructor(key: ValueKey, readonly items: Value[], prefix: string, postfix: string, toStr?: (v: Value) => string) {
+    constructor(
+        key: ValueKey,
+        readonly items: Value[],
+        readonly prefix: string,
+        readonly postfix: string,
+        toStr?: (v: Value) => string
+    ) {
         super(key, makeCollectionValueString(items, prefix, postfix, ', ', toStr || (v => v.str)));
     }
 
@@ -182,6 +210,35 @@ export abstract class CollectionValue extends Value {
             delItems.push(newValue);
         });
     }
+
+    findItem(id: number): Value | undefined {
+        return this.items.find((it) => {
+            if (it.id === id) {
+                return true;
+            }
+            if (it instanceof CollectionValue) {
+                return it.findItem(id);
+            }
+            return false;
+        });
+    }
+
+    format(indent: string): string {
+        if (this.items.length === 0) {
+            return `${this.prefix}${this.postfix}`;
+        }
+        if (this.str.length <= VALUE_FORMAT_LENGTH_THRESHOLD) {
+            return this.str;
+        }
+        const subIndent = indent + '  ';
+        const fmtFunc = (v: Value) => this.formatKey(subIndent, v) + '' + v.format(subIndent);
+        const body = makeCollectionValueString(this.items, '', '', ',\n', fmtFunc);
+        return `${this.prefix}\n${body}\n${indent}${this.postfix}`;
+    }
+
+    formatKey(indent: string, value: Value): string {
+        return `${indent}${value.key}: `;
+    }
 }
 
 /**
@@ -196,6 +253,10 @@ export class SetValue extends CollectionValue {
         super.setModified();
         return this;
     }
+
+    formatKey(indent: string, _: Value): string {
+        return indent;
+    }
 }
 
 /**
@@ -204,6 +265,10 @@ export class SetValue extends CollectionValue {
 export class SequenceValue extends CollectionValue {
     constructor(key: ValueKey, items: Value[]) {
         super(key, items, '<<', '>>');
+    }
+
+    formatKey(indent: string, _: Value): string {
+        return indent;
     }
 }
 
@@ -235,6 +300,10 @@ export class StructureValue extends CollectionValue {
         super.setModified();
         return this;
     }
+
+    formatKey(indent: string, value: Value): string {
+        return `${indent}${value.key} |-> `;
+    }
 }
 
 /**
@@ -262,6 +331,10 @@ export class SimpleFunction extends Value {
         readonly items: SimpleFunctionItem[]
     ) {
         super(key, makeCollectionValueString(items, '(', ')', ' @@ ', (v => v.str)));
+    }
+
+    formatKey(indent: string, value: Value): string {
+        return `${indent}${value.key} :> `;
     }
 }
 
@@ -354,6 +427,16 @@ export class ModelCheckResult {
         return new ModelCheckResult(
             source, false, CheckState.Running, CheckStatus.Starting, undefined, [], [], [], [], [],
             undefined, undefined, undefined, undefined, 0, undefined, []);
+    }
+
+    formatValue(valueId: number): string | undefined {
+        const value = this.errorTrace
+            .map(t => t.variables.findItem(valueId))
+            .find(v => v !== undefined);
+        if (!value) {
+            return undefined;
+        }
+        return value.format('');
     }
 }
 

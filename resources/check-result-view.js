@@ -78,6 +78,13 @@ function showInfoMessage(text) {
     });
 }
 
+function showVariableValue(id) {
+    vscode.postMessage({
+        command: 'showVariableValue',
+        valueId: id
+    });
+}
+
 function openFile(event, filePath, location) {
     event.preventDefault();
     event.stopPropagation();
@@ -334,21 +341,33 @@ function displayOutput(lines) {
 }
 
 function renderValueMenu(value) {
+    const elMenu = document.createElement('div');
+    elMenu.classList.add('var-menu');
+    // "Display value"
+    const elDislplay = document.createElement('div');
+    elDislplay.classList.add('var-button');
+    elDislplay.classList.add('var-button-display');
+    elDislplay.innerHTML = '&nbsp;';
+    elDislplay.setAttribute('title', 'Dislpay value');
+    elDislplay.onclick = () => showVariableValue(value.id);
+    elMenu.appendChild(elDislplay);
+    // "Copy to clipboard" item
     const elCopy = document.createElement('div');
     elCopy.classList.add('var-button');
     elCopy.classList.add('var-button-copy');
     elCopy.innerHTML = '&nbsp;';
     elCopy.setAttribute('title', 'Copy value to clipboard');
     elCopy.onclick = () => {
-        copyToClipboard(value.str);
+        copyValueToClipboard(value);
         showInfoMessage('Value has been copied to clipboard');
     };
-    return elCopy;
+    elMenu.appendChild(elCopy);
+    return elMenu;
 }
 
-function copyToClipboard(text) {
+function copyValueToClipboard(value) {
     const el = document.createElement('textarea');
-    el.value = text;
+    el.value = value.str;
     document.body.appendChild(el);
     el.select();
     document.execCommand('copy');

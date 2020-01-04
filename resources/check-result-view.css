@@ -162,21 +162,26 @@ th {
     text-overflow: ellipsis;
 }
 
-.var-button {
+.var-menu {
     position: absolute;
     right: 0;
     top: 0;
-    width: 2em;
+    display: none;
+    padding-left: 0.2em;
+}
+
+.var-button {
+    display: inline-block;
+    width: 1.5em;
     text-align: center;
     background-size: 1.2em 1.2em;
     background-repeat: no-repeat;
     background-color: var(--vscode-editor-background);
-    background-position: 0.5em 0.1em;
-    display: none;
+    background-position: 0.3em 0.1em;
     cursor: pointer;
 }
 
-.var-block:hover .var-button {
+.var-block:hover .var-menu {
     display: block;
 }
 
