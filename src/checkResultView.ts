@@ -91,6 +91,8 @@ function createNewPanel() {
             // `One` is used here because at the moment, VSCode doesn't provide API
             // for revealing existing document, so we're speculating here to reduce open documents duplication.
             revealFile(message.filePath, vscode.ViewColumn.One, message.location.line, message.location.character);
+        } else if (message.command === 'showInfoMessage') {
+            vscode.window.showInformationMessage(message.text);
         }
     });
     panelIsVisible = true;
