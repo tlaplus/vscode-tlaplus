@@ -29,7 +29,7 @@ export function replaceExtension(filePath: string, newExt: string): string {
 
 export function parseDateTime(str: string): moment.Moment {
     const dateTime = moment(str, moment.ISO_8601, true);
-    if (dateTime.isValid) {
+    if (dateTime.isValid()) {
         return dateTime;
     }
     throw new ParsingError('Cannot parse date/time ' + str);
