@@ -196,7 +196,8 @@
                     "when": "editorLangId == tlaplus"
                 },
                 {
-                    "command": "tlaplus.model.check.stop"
+                    "command": "tlaplus.model.check.stop",
+                    "when": "tlaplus.tlc.isRunning"
                 },
                 {
                     "command": "tlaplus.out.visualize",
