@@ -7,3 +7,9 @@ scripts/
 **/tslint.json
 **/*.code-workspace
 resources/images/screencast.gif
+version
+.gitignore
+.sonarcloud.properties
+.travis.yml
+.github/**/*
+.vscode/**/*
