@@ -1,5 +1,20 @@
 # Change Log
 
+## 1.3.0 &ndash; 5th January, 2020
+
+### Enhancements
+
+* Display variable values and copy them to clipboard from error trace.
+* `TLC: Model Checker Options` setting now supports variables `${specName}` and `${modelName}`.
+* New `TLC: Statistics Sharing` setting that allows to opt-in / opt-out sharing of TLC usage statistics ([more information](https://github.com/tlaplus/tlaplus/blob/master/tlatools/src/util/ExecutionStatisticsCollector.md)). Please, consider sharing.
+* Allow workspace-level configuration.
+* Various UI improvements.
+
+### Bug fixes
+
+* Fix some auto-indentation problems in C-style PlusCal algorithms.
+* Fix operator overloading notification when using external modules.
+
 ## 1.2.0 &ndash; 20th October, 2019
 
 ### Enhancements
