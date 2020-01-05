@@ -16,6 +16,7 @@ export const CMD_CHECK_MODEL_CUSTOM_RUN = 'tlaplus.model.check.customRun';
 export const CMD_CHECK_MODEL_STOP = 'tlaplus.model.check.stop';
 export const CMD_CHECK_MODEL_DISPLAY = 'tlaplus.model.check.display';
 export const CMD_SHOW_TLC_OUTPUT = 'tlaplus.showTlcOutput';
+export const CTX_TLC_RUNNING = 'tlaplus.tlc.isRunning';
 
 const CFG_CREATE_OUT_FILES = 'tlaplus.tlc.modelChecker.createOutFiles';
 const TEMPLATE_CFG_PATH = path.resolve(__dirname, '../../../tools/template.cfg');
@@ -209,6 +210,7 @@ function updateStatusBarItem(active: boolean) {
     statusBarItem.tooltip = 'TLA+ model checking' + (active ? ' is running' : ' result');
     statusBarItem.command = CMD_CHECK_MODEL_DISPLAY;
     statusBarItem.show();
+    vscode.commands.executeCommand('setContext', CTX_TLC_RUNNING, active);
 }
 
 function showConfigAbsenceWarning(cfgPath: string) {
