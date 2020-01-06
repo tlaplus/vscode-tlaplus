@@ -13,7 +13,7 @@
 ### Bug fixes
 
 * Fix some auto-indentation problems in C-style PlusCal algorithms.
-* Fix operator overloading notification when using external modules.
+* Fix operator overriding notification when using external modules.
 
 ## 1.2.0 &ndash; 20th October, 2019
 
