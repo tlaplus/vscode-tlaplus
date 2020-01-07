@@ -29,6 +29,12 @@ This extension adds support for the [TLA<sup>+</sup> formal specification langua
 * [Caveats](https://github.com/alygin/vscode-tlaplus/wiki/Caveats)
 * [Troubleshooting](https://github.com/alygin/vscode-tlaplus/wiki/Troubleshooting)
 
+## Contributing
+
+All forms of contribution are highly welcome! Feel free to file bugs, propose improvements, ask questions, send other feedback.
+
+If you decide to pitch in and write some code, this document will provide you with useful information: [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## TLA<sup>+</sup> Resources
 
 If you're not familiar with TLA<sup>+</sup>, but want to get a grasp on it, the following list of resources is a good starting point:
