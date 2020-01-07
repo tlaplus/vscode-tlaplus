@@ -87,7 +87,7 @@ Names of files and subdirectories are usually self-descriptive. Here're the most
 - `src/main.ts` &mdash; This is the starting point of the extension. It sets things up when the extension is loaded.
 - `src/tla2tools.ts` &mdash; All the calls to `tla2tools.jar` go through methods from this file.
 - `src/checkResultView.ts` &mdash; The main functions that are responsible for interaction between the main extension code and the Check Result View panel.
-- `src/commands/` &mdash; This folder contains implementation of all the [VS Code commands](https://code.visualstudio.com/api/extension-guides/command) that the extension provides.
+- `src/commands/` &mdash; This directory contains implementation of all the [VS Code commands](https://code.visualstudio.com/api/extension-guides/command) that the extension provides.
 - `src/completions/` &mdash; The [code completion providers](https://code.visualstudio.com/api/references/vscode-api#CompletionItemProvider).
 - `src/formatters/` &mdash; Classes that provide auto-formatting functionality.
 - `src/model/` &mdash; The classes that describe model check results. Objects of these classes are used by the Check Result View panel.
