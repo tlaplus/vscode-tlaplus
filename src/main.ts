@@ -16,7 +16,7 @@ import { TlaDocumentSymbolsProvider } from './symbols/tlaSymbols';
 import { LANG_TLAPLUS, LANG_TLAPLUS_CFG, exists, readFile, writeFile } from './common';
 import { TlaCompletionItemProvider } from './completions/tlaCompletions';
 import { CfgCompletionItemProvider } from './completions/cfgCompletions';
-import { TlaDeclarationsProvider } from './declarations/tlaDeclarations';
+import { TlaDeclarationsProvider, TlaDefinitionsProvider } from './declarations/tlaDeclarations';
 import { TlaDocumentInfos } from './model/documentInfo';
 import { syncTlcStatisticsSetting, listenTlcStatConfigurationChanges } from './commands/tlcStatisticsCfg';
 
@@ -93,6 +93,10 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.languages.registerDeclarationProvider(
             TLAPLUS_FILE_SELECTOR,
             new TlaDeclarationsProvider(tlaDocInfos)
+        ),
+        vscode.languages.registerDefinitionProvider(
+            TLAPLUS_FILE_SELECTOR,
+            new TlaDefinitionsProvider(tlaDocInfos)
         )
     );
     syncTlcStatisticsSetting()
