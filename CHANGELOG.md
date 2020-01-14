@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.3.2 &ndash; 14th January, 2020
+
+### Bug fixes
+
+* Fix Model Check Result view in VSCode Online.
+
 ## 1.3.0 &ndash; 5th January, 2020
 
 ### Enhancements
