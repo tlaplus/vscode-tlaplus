@@ -1,0 +1,22 @@
+@!@!@STARTMSG 2262:0 @!@!@
+TLC2 Version X.Y of 1 Jan 2019 (rev: 0000000)
+@!@!@ENDMSG 2262 @!@!@
+@!@!@STARTMSG 2185:0 @!@!@
+Starting... (2019-01-01 01:02:03)
+@!@!@ENDMSG 2185 @!@!@
+@!@!@STARTMSG 2190:0 @!@!@
+Finished computing initial states: 5184 distinct states generated at 2019-01-01 00:02:03.
+@!@!@ENDMSG 2190 @!@!@
+@!@!@STARTMSG 20000:0 @!@!@
+Line 1 from external module
+Line 2
+@!@!@ENDMSG 20000 @!@!@
+@!@!@STARTMSG 2193:0 @!@!@
+Model checking completed. No error has been found.
+Estimates of the probability that TLC did not check all reachable states
+because two distinct states had the same fingerprint:
+calculated (optimistic):  val = 5.0E-13
+@!@!@ENDMSG 2193 @!@!@
+@!@!@STARTMSG 2186:0 @!@!@
+Finished in 2345ms at (2019-01-01 01:02:05)
+@!@!@ENDMSG 2186 @!@!@

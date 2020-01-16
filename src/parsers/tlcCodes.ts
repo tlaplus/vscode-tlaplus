@@ -1,6 +1,6 @@
 // TLC message constants
 // https://github.com/tlaplus/tlaplus/blob/master/tlatools/src/tlc2/output/EC.java
-// Commit eb42f9e
+// Commit bb64cfd
 
 export enum TlcCodeType {
     Info,       // Such messages must be processed by the parser somehow
@@ -53,6 +53,7 @@ export const UNIT_TEST = registerCode(-123456, TlcCodeType.Ignore);
 
 export const TLC_FEATURE_UNSUPPORTED = registerCode(2156, TlcCodeType.Error);
 export const TLC_FEATURE_UNSUPPORTED_LIVENESS_SYMMETRY = registerCode(2279, TlcCodeType.Error);
+export const TLC_FEATURE_LIVENESS_CONSTRAINTS = registerCode(2284, TlcCodeType.Warning);
 
 export const GENERAL = registerCode(1000, TlcCodeType.Error);
 export const SYSTEM_OUT_OF_MEMORY = registerCode(1001, TlcCodeType.Error);
@@ -124,6 +125,7 @@ export const TLC_MODULE_VALUE_JAVA_METHOD_OVERRIDE_LOADED = registerCode(2168, T
 export const TLC_MODULE_VALUE_JAVA_METHOD_OVERRIDE_MISMATCH = registerCode(2400, TlcCodeType.Error);
 export const TLC_MODULE_VALUE_JAVA_METHOD_OVERRIDE_MODULE_MISMATCH = registerCode(2402, TlcCodeType.Error);
 export const TLC_MODULE_VALUE_JAVA_METHOD_OVERRIDE_IDENTIFIER_MISMATCH = registerCode(2403, TlcCodeType.Error);
+export const TLC_MODULE_OVERRIDE_STDOUT = registerCode(20000, TlcCodeType.Info);
 
 export const TLC_FP_NOT_IN_SET = registerCode(2133, TlcCodeType.Error);
 export const TLC_FP_VALUE_ALREADY_ON_DISK = registerCode(2166, TlcCodeType.Error);

@@ -53,6 +53,19 @@ suite('TLC Output Parser Test Suite', () => {
         );
     });
 
+    test('Captures output from external modules that override stdout', () => {
+        return assertOutput('override-stdout.out', ROOT_PATH,
+            new CheckResultBuilder('foo', CheckState.Success, CheckStatus.Finished)
+                .setStartDateTime('2019-01-01 01:02:03')
+                .setEndDateTime('2019-01-01 01:02:05')
+                .setDuration(2345)
+                .addInitState('00:00:00', 0, 5184, 5184, 5184)
+                .addOutLine('Line 1 from external module')
+                .addOutLine('Line 2')
+                .build()
+        );
+    });
+
     test('Captures warnings', () => {
         return assertOutput('warning.out', ROOT_PATH,
             new CheckResultBuilder('warning.out', CheckState.Success, CheckStatus.Finished)

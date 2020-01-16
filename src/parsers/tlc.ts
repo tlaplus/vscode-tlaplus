@@ -312,6 +312,9 @@ class ModelCheckResultBuilder {
             case msg.TLC_BACK_TO_STATE:
                 this.parseErrorTraceItem(message.lines);
                 break;
+            case msg.TLC_MODULE_OVERRIDE_STDOUT:
+                message.lines.forEach((line) => this.addOutputLine(line));
+                break;
             case msg.TLC_SUCCESS:
                 this.parseSuccess(message.lines);
                 this.state = CheckState.Success;
