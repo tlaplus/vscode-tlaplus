@@ -13,7 +13,12 @@ import * as msg from './tlcCodes';
 import { getTlcCode, TlcCodeType } from './tlcCodes';
 
 const STATUS_EMIT_TIMEOUT = 500;    // msec
-const NONE = -1938477103984;
+
+// TLC message severity from
+// https://github.com/tlaplus/tlaplus/blob/2f229f1d3e5ed1e2eadeff3bcd877b416e45d477/tlatools/src/tlc2/output/MP.java#L104
+const SEVERITY_ERROR = 1;
+const SEVERITY_TLC_BUG = 2;
+const SEVERITY_WARNING = 3;
 
 /**
  * Parses stdout of TLC model checker.
@@ -87,39 +92,57 @@ class LineParsingResult {
 }
 
 /**
- * TLC output message;
+ * Represents a message type, parsed from its header.
+ * 1000   -> { 1000, undefined }
+ * 1000:1 -> { 1000, Error }
+ * 3044:3 -> { 3044, Warning }
+ * etc.
+ */
+class MessageType {
+    static readonly Unknown = new MessageType(-1938477103983);      // Some constant that is not used as a TLC code
+
+    constructor(
+        readonly code: number,
+        readonly forcedType?: TlcCodeType
+    ) {}
+
+    isUnknown(): boolean {
+        return this.code === MessageType.Unknown.code;
+    }
+}
+
+/**
+ * TLC output message.
  */
 class Message {
     readonly lines: string[] = [];
 
-    constructor(readonly type: number) {}
+    constructor(readonly type: MessageType) {}
 }
 
 /**
  * Tracks hierarchy of TLC output messages.
  */
 class MessageStack {
-    private static NO_MESSAGE = new Message(NONE);
+    private static NO_MESSAGE = new Message(MessageType.Unknown);
 
     private current: Message = MessageStack.NO_MESSAGE;
     private previous: Message[] = [];
 
-    public getCurrentType(): number {
+    public getCurrentType(): MessageType {
         return this.current.type;
     }
 
-    public start(type: number) {
-        if (type === NONE) {
-            throw Error('Cannot start message of type NONE');
+    public start(type: MessageType) {
+        if (type.isUnknown()) {
+            throw Error('Cannot start message of unknown type');
         }
-        if (this.current.type !== NONE) {
-            this.previous.push(this.current);
-        }
+        this.previous.push(this.current);
         this.current = new Message(type);
     }
 
     public finish(): Message {
-        if (this.current.type === NONE) {
+        if (this.current.type.isUnknown()) {
             window.showErrorMessage('Unexpected message end');
             console.error('Unexpected message end');
             return MessageStack.NO_MESSAGE;
@@ -130,7 +153,7 @@ class MessageStack {
     }
 
     public addLine(line: string) {
-        if (this.current.type === NONE) {
+        if (this.current.type.isUnknown()) {
             console.error("Unexpected line when there's no current message");
             return;
         }
@@ -194,7 +217,7 @@ class ModelCheckResultBuilder {
             this.sanyLines.push(eLine);
             return;
         }
-        if (this.messages.getCurrentType() !== NONE) {
+        if (!this.messages.getCurrentType().isUnknown()) {
             this.messages.addLine(eLine);
             return;
         }
@@ -234,19 +257,22 @@ class ModelCheckResultBuilder {
         if (this.status === CheckStatus.NotStarted) {
             this.status = CheckStatus.Starting;
         }
-        const tlcCode = getTlcCode(message.type);
+        const tlcCode = getTlcCode(message.type.code);
         if (!tlcCode) {
             window.showErrorMessage(`Unexpected message code ${message.type}`);
             return;
         }
         if (tlcCode.type === TlcCodeType.Ignore) {
+            // Ignoring has precedence over forced type, otherwise there will bee to much noise
+            // in the Error section
             return;
         }
-        if (tlcCode.type === TlcCodeType.Warning) {
+        const effectiveType = message.type.forcedType ? message.type.forcedType : tlcCode.type;
+        if (effectiveType === TlcCodeType.Warning) {
             this.parseWarningMessage(message.lines);
             return;
         }
-        if (tlcCode.type === TlcCodeType.Error) {
+        if (effectiveType === TlcCodeType.Error) {
             this.parseErrorMessage(message.lines);
             return;
         }
@@ -312,6 +338,7 @@ class ModelCheckResultBuilder {
             case msg.TLC_BACK_TO_STATE:
                 this.parseErrorTraceItem(message.lines);
                 break;
+            case msg.GENERAL:
             case msg.TLC_MODULE_OVERRIDE_STDOUT:
                 message.lines.forEach((line) => this.addOutputLine(line));
                 break;
@@ -332,7 +359,7 @@ class ModelCheckResultBuilder {
         }
     }
 
-    private tryParseMessageStart(line: string): number | undefined {
+    private tryParseMessageStart(line: string): MessageType | undefined {
         const matches = /^(.*)@!@!@STARTMSG (-?\d+)(:\d+)? @!@!@$/g.exec(line);
         if (!matches) {
             return undefined;
@@ -340,7 +367,17 @@ class ModelCheckResultBuilder {
         if (matches[1] !== '') {
             this.messages.addLine(matches[1]);
         }
-        return parseInt(matches[2]);
+        const code = parseInt(matches[2]);
+        let forcedType;
+        if (matches[3] !== '') {
+            const severity = parseInt(matches[3].substring(1));
+            if (severity === SEVERITY_ERROR || severity === SEVERITY_TLC_BUG) {
+                forcedType = TlcCodeType.Error;
+            } else if (severity === SEVERITY_WARNING) {
+                forcedType = TlcCodeType.Warning;
+            }
+        }
+        return new MessageType(code, forcedType);
     }
 
     private tryParseMessageEnd(line: string): LineParsingResult {

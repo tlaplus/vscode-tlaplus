@@ -55,7 +55,7 @@ export const TLC_FEATURE_UNSUPPORTED = registerCode(2156, TlcCodeType.Error);
 export const TLC_FEATURE_UNSUPPORTED_LIVENESS_SYMMETRY = registerCode(2279, TlcCodeType.Error);
 export const TLC_FEATURE_LIVENESS_CONSTRAINTS = registerCode(2284, TlcCodeType.Warning);
 
-export const GENERAL = registerCode(1000, TlcCodeType.Error);
+export const GENERAL = registerCode(1000, TlcCodeType.Info);
 export const SYSTEM_OUT_OF_MEMORY = registerCode(1001, TlcCodeType.Error);
 export const SYSTEM_OUT_OF_MEMORY_TOO_MANY_INIT = registerCode(1002, TlcCodeType.Error);
 export const SYSTEM_STACK_OVERFLOW = registerCode(1005, TlcCodeType.Error);

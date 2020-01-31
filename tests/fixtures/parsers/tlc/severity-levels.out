@@ -7,13 +7,21 @@ Starting... (2019-01-01 01:02:03)
 @!@!@STARTMSG 2190:0 @!@!@
 Finished computing initial states: 5184 distinct states generated at 2019-01-01 00:02:03.
 @!@!@ENDMSG 2190 @!@!@
-Foo
-Bar
-@!@!@STARTMSG -123456:0 @!@!@
-Some message.
-@!@!@ENDMSG -123456 @!@!@
-Bar
-Baz
+@!@!@STARTMSG 1000:0 @!@!@
+Info message.
+@!@!@ENDMSG 1000 @!@!@
+@!@!@STARTMSG 1000:3 @!@!@
+Warning message.
+@!@!@ENDMSG 1000 @!@!@
+@!@!@STARTMSG 1000:1 @!@!@
+Error message.
+@!@!@ENDMSG 1000 @!@!@
+@!@!@STARTMSG 1000:2 @!@!@
+TLC bug info.
+@!@!@ENDMSG 1000 @!@!@
+@!@!@STARTMSG 2263:2 @!@!@
+This message must be skipped despite its severity level because of the code with the Ignored type.
+@!@!@ENDMSG 2263 @!@!@
 @!@!@STARTMSG 2193:0 @!@!@
 Model checking completed. No error has been found.
 Estimates of the probability that TLC did not check all reachable states
