@@ -7,13 +7,10 @@ Starting... (2019-01-01 01:02:03)
 @!@!@STARTMSG 2190:0 @!@!@
 Finished computing initial states: 5184 distinct states generated at 2019-01-01 00:02:03.
 @!@!@ENDMSG 2190 @!@!@
-Foo
-Bar
-@!@!@STARTMSG -123456:0 @!@!@
-Some message.
-@!@!@ENDMSG -123456 @!@!@
-Bar
-Baz
+@!@!@STARTMSG 20000:0 @!@!@
+Line 1 from external module
+Line 2
+@!@!@ENDMSG 20000 @!@!@
 @!@!@STARTMSG 2193:0 @!@!@
 Model checking completed. No error has been found.
 Estimates of the probability that TLC did not check all reachable states
