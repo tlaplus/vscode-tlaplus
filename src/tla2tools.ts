@@ -17,10 +17,12 @@ const VAR_TLC_MODEL_NAME = /\$\{modelName\}/g;
 const NO_ERROR = 0;
 const MIN_TLA_ERROR = 10;           // Exit codes not related to tooling start from this number
 const LOWEST_JAVA_VERSION = 8;
+const DEFAULT_GC_OPTION = '-XX:+UseParallelGC';
+const TLA_TOOLS_LIB_NAME = 'tla2tools.jar';
+const TLA_TOOLS_LIB_NAME_END_UNIX = '/' + TLA_TOOLS_LIB_NAME;
+const TLA_TOOLS_LIB_NAME_END_WIN = '\\' + TLA_TOOLS_LIB_NAME;
+const toolsJarPath = path.resolve(__dirname, '../../tools/' + TLA_TOOLS_LIB_NAME);
 const javaCmd = 'java' + (process.platform === 'win32' ? '.exe' : '');
-const toolsJarPath = path.resolve(__dirname, '../../tools/tla2tools.jar');
-const defaultGCArg = '-XX:+UseParallelGC';
-const toolsBaseArgs: ReadonlyArray<string> = ['-cp', toolsJarPath];
 
 let lastUsedJavaHome: string | undefined;
 let cachedJavaPath: string | undefined;
@@ -103,7 +105,7 @@ async function runTool(
 ): Promise<ToolProcessInfo> {
     const javaPath = await obtainJavaPath();
     const cfgOptions = getConfigOptions(CFG_JAVA_OPTIONS);
-    const args = buildJavaOptions(cfgOptions).concat(toolsBaseArgs).concat(javaOptions);
+    const args = buildJavaOptions(cfgOptions, toolsJarPath).concat(javaOptions);
     args.push(toolName);
     toolOptions.forEach(opt => args.push(opt));
     const proc = spawn(javaPath, args, { cwd: path.dirname(filePath) });
@@ -156,13 +158,10 @@ function buildJavaPath(): string {
 /**
  * Builds an array of options to pass to Java process when running TLA tools.
  */
-export function buildJavaOptions(customOptions: string[]): string[] {
+export function buildJavaOptions(customOptions: string[], defaultClassPath: string): string[] {
     const opts = customOptions.slice(0);
-    // If GC is provided by the user, don't use the default one. Otherwise, add GC option.
-    const gcOption = opts.find(opt => opt.startsWith('-XX:+Use') && opt.endsWith('GC'));
-    if (!gcOption) {
-        opts.push(defaultGCArg);
-    }
+    mergeClassPathOption(opts, defaultClassPath);
+    mergeGCOption(opts, DEFAULT_GC_OPTION);
     return opts;
 }
 
@@ -250,4 +249,53 @@ function buildCommandLine(programName: string, args: string[]): string {
         .map(arg => arg.indexOf(' ') >= 0 ? '"' + arg + '"' : arg)
         .forEach(arg => line.push(arg));
     return line.join(' ');
+}
+
+/**
+ * Adds the default GC option if no custom one is provided.
+ */
+function mergeGCOption(options: string[], defaultGC: string) {
+    const gcOption = options.find(opt => opt.startsWith('-XX:+Use') && opt.endsWith('GC'));
+    if (!gcOption) {
+        options.push(defaultGC);
+    }
+}
+
+/**
+ * Searches for -cp or -classpath option and merges its value with the default classpath.
+ * Custom libraries must be geven precedence over default ones.
+ */
+function mergeClassPathOption(options: string[], defaultClassPath: string) {
+    let cpIdx = -1;
+    for (let i = 0; i < options.length; i++) {
+        const option = options[i];
+        if (option === '-cp' || option === '-classpath') {
+            cpIdx = i + 1;
+            break;
+        }
+    }
+    if (cpIdx < 0 || cpIdx >= options.length) {
+        // No custom classpath provided, use the default one
+        options.push('-cp', defaultClassPath);
+        return;
+    }
+    let classPath = options[cpIdx];
+    if (containsTlaToolsLib(classPath)) {
+        return;
+    }
+    classPath = defaultClassPath + path.delimiter + classPath;
+    options[cpIdx] = classPath;
+}
+
+function containsTlaToolsLib(classPath: string): boolean {
+    const paths = classPath.split(path.delimiter);
+    for (const p of paths) {
+        if (p === TLA_TOOLS_LIB_NAME
+            || p.endsWith(TLA_TOOLS_LIB_NAME_END_UNIX)
+            || p.endsWith(TLA_TOOLS_LIB_NAME_END_WIN)
+        ) {
+            return true;
+        }
+    }
+    return false;
 }
