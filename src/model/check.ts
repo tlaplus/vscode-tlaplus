@@ -415,7 +415,7 @@ export class ModelCheckResult {
         readonly processInfo: string | undefined,
         readonly initialStatesStat: InitialStateStatItem[],
         readonly coverageStat: CoverageItem[],
-        readonly warnings: string[][],
+        readonly warnings: MessageLine[][],
         readonly errors: MessageLine[][],
         readonly errorTrace: ErrorTraceItem[],
         readonly sanyMessages: DCollection | undefined,

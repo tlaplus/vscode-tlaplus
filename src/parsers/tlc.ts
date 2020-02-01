@@ -173,7 +173,7 @@ class ModelCheckResultBuilder {
     private processInfo: string | undefined;
     private initialStatesStat: InitialStateStatItem[] = [];
     private coverageStat: CoverageItem[] = [];
-    private warnings: string[][] = [];
+    private warnings: MessageLine[][] = [];
     private errors: MessageLine[][] = [];
     private errorTrace: ErrorTraceItem[] = [];
     private messages = new MessageStack();
@@ -475,7 +475,8 @@ class ModelCheckResultBuilder {
         if (lines.length === 0) {
             return;
         }
-        this.warnings.push(lines);
+        const msgLines = lines.map((l) => this.makeMessageLine(l));
+        this.warnings.push(msgLines);
     }
 
     private parseErrorMessage(lines: string[]) {

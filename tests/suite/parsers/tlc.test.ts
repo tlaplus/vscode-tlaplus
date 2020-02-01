@@ -74,7 +74,7 @@ suite('TLC Output Parser Test Suite', () => {
                 .setDuration(2345)
                 .addInitState('00:00:00', 0, 5184, 5184, 5184)
                 .addOutLine('Info message.')
-                .addWarning(['Warning message.'])
+                .addWarning([message('Warning message.')])
                 .addError([message('Error message.')])
                 .addError([message('TLC bug info.')])
                 .build()
@@ -89,8 +89,8 @@ suite('TLC Output Parser Test Suite', () => {
                 .setEndDateTime('2019-08-17 00:11:09')
                 .setDuration(886)
                 .addWarning([
-                    'Please run the Java VM which executes TLC with a throughput optimized garbage collector'
-                    + ' by passing the "-XX:+UseParallelGC" property.'
+                    message('Please run the Java VM which executes TLC with a throughput optimized garbage collector'
+                    + ' by passing the "-XX:+UseParallelGC" property.')
                 ])
                 .setProcessInfo(
                     'Running breadth-first search Model-Checking with fp 22 and seed -5755320172003082571'
