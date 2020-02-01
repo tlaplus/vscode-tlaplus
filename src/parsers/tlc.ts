@@ -344,7 +344,9 @@ class ModelCheckResultBuilder {
                 break;
             case msg.TLC_SUCCESS:
                 this.parseSuccess(message.lines);
-                this.state = CheckState.Success;
+                if (this.errors.length === 0) {   // There might be error messages if the -continue option was used
+                    this.state = CheckState.Success;
+                }
                 break;
             case msg.TLC_FINISHED:
                 this.status = CheckStatus.Finished;
