@@ -84,21 +84,44 @@ suite('TLA+ Tools Test Suite', () => {
         );
     });
 
-    test('Provides default GC in Java options', () => {
-        assert.deepEqual(buildJavaOptions([]), ['-XX:+UseParallelGC']);
+    test('Provides default GC and classpath in Java options', () => {
+        assert.deepEqual(
+            buildJavaOptions(
+                [], '/path/tla2tools.jar'
+            ), [
+                '-XX:+UseParallelGC',
+                '-cp',
+                '/path/tla2tools.jar'
+            ]);
     });
 
     test('Adds custom Java options', () => {
         assert.deepEqual(
-            buildJavaOptions(['-Xmx2048M', '-Xms512M']),
-            ['-Xmx2048M', '-Xms512M', '-XX:+UseParallelGC']
+            buildJavaOptions(
+                ['-Xmx2048M', '-Xms512M'],
+                '/path/to/tla2tools.jar'
+            ), [
+                '-Xmx2048M',
+                '-Xms512M',
+                '-XX:+UseParallelGC',
+                '-cp',
+                '/path/to/tla2tools.jar'
+            ]
         );
     });
 
     test('Allows to change default GC via Java options', () => {
         assert.deepEqual(
-            buildJavaOptions(['-Xmx2048M', '-XX:+UseG1GC', '-Xms512M']),
-            ['-Xmx2048M', '-XX:+UseG1GC', '-Xms512M']
+            buildJavaOptions(
+                ['-Xmx2048M', '-XX:+UseG1GC', '-Xms512M'],
+                '/path/to/tla2tools.jar'
+            ), [
+                '-Xmx2048M',
+                '-XX:+UseG1GC',
+                '-Xms512M',
+                '-cp',
+                '/path/to/tla2tools.jar'
+            ]
         );
     });
 });
