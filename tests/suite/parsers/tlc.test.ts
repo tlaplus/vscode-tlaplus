@@ -68,13 +68,13 @@ suite('TLC Output Parser Test Suite', () => {
 
     test('Respects severity levels', () => {
         return assertOutput('severity-levels.out', ROOT_PATH,
-            new CheckResultBuilder('foo', CheckState.Success, CheckStatus.Finished)
+            new CheckResultBuilder('foo', CheckState.Error, CheckStatus.Finished)
                 .setStartDateTime('2019-01-01 01:02:03')
                 .setEndDateTime('2019-01-01 01:02:05')
                 .setDuration(2345)
                 .addInitState('00:00:00', 0, 5184, 5184, 5184)
                 .addOutLine('Info message.')
-                .addWarning(['Warning message.'])
+                .addWarning([message('Warning message.')])
                 .addError([message('Error message.')])
                 .addError([message('TLC bug info.')])
                 .build()
@@ -89,8 +89,8 @@ suite('TLC Output Parser Test Suite', () => {
                 .setEndDateTime('2019-08-17 00:11:09')
                 .setDuration(886)
                 .addWarning([
-                    'Please run the Java VM which executes TLC with a throughput optimized garbage collector'
-                    + ' by passing the "-XX:+UseParallelGC" property.'
+                    message('Please run the Java VM which executes TLC with a throughput optimized garbage collector'
+                    + ' by passing the "-XX:+UseParallelGC" property.')
                 ])
                 .setProcessInfo(
                     'Running breadth-first search Model-Checking with fp 22 and seed -5755320172003082571'
@@ -99,6 +99,30 @@ suite('TLC Output Parser Test Suite', () => {
                 .addInitState('00:00:00', 0, 1, 1, 1)
                 .addInitState('00:00:01', 2, 3, 2, 0)
                 .addCoverage('example', 'Init', '/Users/bob/example.tla', range(13, 0, 13, 4), 1, 1)
+                .build()
+            );
+    });
+
+    test('Reports failure when errors are present', () => {
+        // The check state is Error despite the 2193 (TLC_SUCCESS) message.
+        // It happens when the -continue option is used.
+        return assertOutput('error-continue.out', ROOT_PATH,
+            new CheckResultBuilder('error-continue.out', CheckState.Error, CheckStatus.Finished)
+                .addDColFilePath('/Users/bob/example.tla')
+                .setStartDateTime('2019-08-17 00:11:08')
+                .setEndDateTime('2019-08-17 00:11:09')
+                .setDuration(886)
+                .setProcessInfo(
+                    'Running breadth-first search Model-Checking with fp 22 and seed -5755320172003082571'
+                        + ' with 1 worker on 4 cores with 1820MB heap and 64MB offheap memory [pid: 91333]'
+                        + ' (Mac OS X 10.14.5 x86_64, Amazon.com Inc. 11.0.3 x86_64, MSBDiskFPSet, DiskStateQueue).')
+                .addInitState('00:00:00', 0, 1, 1, 1)
+                .addInitState('00:00:01', 2, 3, 2, 0)
+                .addCoverage('example', 'Init', '/Users/bob/example.tla', range(13, 0, 13, 4), 1, 1)
+                .addError([message('Invariant FooInvariant is violated.')])
+                .addTraceItem(1, 'Initial predicate', '', '', undefined, range(0, 0, 0, 0),
+                    struct('', v('FooVar', '1..2'), v('BarVar', '-1'))
+                )
                 .build()
             );
     });

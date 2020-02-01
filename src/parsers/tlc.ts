@@ -173,7 +173,7 @@ class ModelCheckResultBuilder {
     private processInfo: string | undefined;
     private initialStatesStat: InitialStateStatItem[] = [];
     private coverageStat: CoverageItem[] = [];
-    private warnings: string[][] = [];
+    private warnings: MessageLine[][] = [];
     private errors: MessageLine[][] = [];
     private errorTrace: ErrorTraceItem[] = [];
     private messages = new MessageStack();
@@ -344,7 +344,9 @@ class ModelCheckResultBuilder {
                 break;
             case msg.TLC_SUCCESS:
                 this.parseSuccess(message.lines);
-                this.state = CheckState.Success;
+                if (this.errors.length === 0) {   // There might be error messages if the -continue option was used
+                    this.state = CheckState.Success;
+                }
                 break;
             case msg.TLC_FINISHED:
                 this.status = CheckStatus.Finished;
@@ -475,7 +477,8 @@ class ModelCheckResultBuilder {
         if (lines.length === 0) {
             return;
         }
-        this.warnings.push(lines);
+        const msgLines = lines.map((l) => this.makeMessageLine(l));
+        this.warnings.push(msgLines);
     }
 
     private parseErrorMessage(lines: string[]) {

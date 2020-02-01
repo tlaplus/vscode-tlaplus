@@ -100,7 +100,7 @@ export class CheckResultBuilder {
     private processInfo: string | undefined;
     private initialStatesStat: InitialStateStatItem[] = [];
     private coverageStat: CoverageItem[] = [];
-    private warnings: string[][] = [];
+    private warnings: MessageLine[][] = [];
     private errors: MessageLine[][] = [];
     private errorTrace: ErrorTraceItem[] = [];
     private sanyMessages: DCollection | undefined;
@@ -194,7 +194,7 @@ export class CheckResultBuilder {
         return this;
     }
 
-    addWarning(lines: string[]): CheckResultBuilder {
+    addWarning(lines: MessageLine[]): CheckResultBuilder {
         this.warnings.push(lines);
         return this;
     }
