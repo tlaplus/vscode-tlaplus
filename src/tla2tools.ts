@@ -19,8 +19,10 @@ const MIN_TLA_ERROR = 10;           // Exit codes not related to tooling start f
 const LOWEST_JAVA_VERSION = 8;
 const DEFAULT_GC_OPTION = '-XX:+UseParallelGC';
 const TLA_TOOLS_LIB_NAME = 'tla2tools.jar';
-const javaCmd = 'java' + (process.platform === 'win32' ? '.exe' : '');
+const TLA_TOOLS_LIB_NAME_END_UNIX = '/' + TLA_TOOLS_LIB_NAME;
+const TLA_TOOLS_LIB_NAME_END_WIN = '\\' + TLA_TOOLS_LIB_NAME;
 const toolsJarPath = path.resolve(__dirname, '../../tools/' + TLA_TOOLS_LIB_NAME);
+const javaCmd = 'java' + (process.platform === 'win32' ? '.exe' : '');
 
 let lastUsedJavaHome: string | undefined;
 let cachedJavaPath: string | undefined;
@@ -158,8 +160,8 @@ function buildJavaPath(): string {
  */
 export function buildJavaOptions(customOptions: string[], defaultClassPath: string): string[] {
     const opts = customOptions.slice(0);
-    mergeGCOption(opts, DEFAULT_GC_OPTION);
     mergeClassPathOption(opts, defaultClassPath);
+    mergeGCOption(opts, DEFAULT_GC_OPTION);
     return opts;
 }
 
@@ -277,5 +279,23 @@ function mergeClassPathOption(options: string[], defaultClassPath: string) {
         options.push('-cp', defaultClassPath);
         return;
     }
-    // TODO: Merge classpath here
+    let classPath = options[cpIdx];
+    if (containsTlaToolsLib(classPath)) {
+        return;
+    }
+    classPath = defaultClassPath + path.delimiter + classPath;
+    options[cpIdx] = classPath;
+}
+
+function containsTlaToolsLib(classPath: string): boolean {
+    const paths = classPath.split(path.delimiter);
+    for (const p of paths) {
+        if (p === TLA_TOOLS_LIB_NAME
+            || p.endsWith(TLA_TOOLS_LIB_NAME_END_UNIX)
+            || p.endsWith(TLA_TOOLS_LIB_NAME_END_WIN)
+        ) {
+            return true;
+        }
+    }
+    return false;
 }

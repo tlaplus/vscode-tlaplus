@@ -1,4 +1,5 @@
 import * as assert from 'assert';
+import * as path from 'path';
 import { buildJavaOptions, buildTlcOptions, buildPlusCalOptions } from '../../src/tla2tools';
 
 suite('TLA+ Tools Test Suite', () => {
@@ -84,14 +85,14 @@ suite('TLA+ Tools Test Suite', () => {
         );
     });
 
-    test('Provides default GC and classpath in Java options', () => {
+    test('Provides default classpath and GC in Java options', () => {
         assert.deepEqual(
             buildJavaOptions(
                 [], '/path/tla2tools.jar'
             ), [
-                '-XX:+UseParallelGC',
                 '-cp',
-                '/path/tla2tools.jar'
+                '/path/tla2tools.jar',
+                '-XX:+UseParallelGC'
             ]);
     });
 
@@ -103,9 +104,9 @@ suite('TLA+ Tools Test Suite', () => {
             ), [
                 '-Xmx2048M',
                 '-Xms512M',
-                '-XX:+UseParallelGC',
                 '-cp',
-                '/path/to/tla2tools.jar'
+                '/path/to/tla2tools.jar',
+                '-XX:+UseParallelGC'
             ]
         );
     });
@@ -121,6 +122,104 @@ suite('TLA+ Tools Test Suite', () => {
                 '-Xms512M',
                 '-cp',
                 '/path/to/tla2tools.jar'
+            ]
+        );
+    });
+
+    test('Allows to add custom libraries to classpath via -cp', () => {
+        assert.deepEqual(
+            buildJavaOptions(
+                ['-cp', 'CommunityModules.jar' + path.delimiter + 'Foo.jar'],
+                '/default/tla2tools.jar'
+            ), [
+                '-cp',
+                '/default/tla2tools.jar' + path.delimiter + 'CommunityModules.jar:Foo.jar',
+                '-XX:+UseParallelGC'
+            ]
+        );
+    });
+
+    test('Allows to add custom libraries to classpath via -classpath', () => {
+        assert.deepEqual(
+            buildJavaOptions(
+                ['-classpath', 'Foo.jar' + path.delimiter + 'Bar.jar'],
+                '/default/tla2tools.jar'
+            ), [
+                '-classpath',
+                '/default/tla2tools.jar' + path.delimiter + 'Foo.jar' + path.delimiter + 'Bar.jar',
+                '-XX:+UseParallelGC'
+            ]
+        );
+    });
+
+    test('Substitutes path to tla2tools.jar if a custom one is provided', () => {
+        assert.deepEqual(
+            buildJavaOptions(
+                ['-cp', 'Foo.jar' + path.delimiter + '/custom/tla2tools.jar' + path.delimiter + 'Bar.jar'],
+                '/default/tla2tools.jar'
+            ), [
+                '-cp',
+                'Foo.jar' + path.delimiter + '/custom/tla2tools.jar' + path.delimiter + 'Bar.jar',
+                '-XX:+UseParallelGC'
+            ]
+        );
+    });
+
+    test('Merges classpath when many custom options are provided', () => {
+        assert.deepEqual(
+            buildJavaOptions(
+                [
+                    '-Xmx2048M',
+                    '-classpath',
+                    'Foo.jar' + path.delimiter + 'Baz.jar',
+                    '-XX:+UseG1GC'
+                ],
+                '/default/tla2tools.jar'
+            ), [
+                '-Xmx2048M',
+                '-classpath',
+                '/default/tla2tools.jar' + path.delimiter + 'Foo.jar' + path.delimiter + 'Baz.jar',
+                '-XX:+UseG1GC'
+            ]
+        );
+    });
+
+    test('Doesn\'t treat any library with a similar name as a tla2tool.jar reference', () => {
+        assert.deepEqual(
+            buildJavaOptions(
+                ['-cp', 'not_tla2tools.jar'],
+                '/default/tla2tools.jar'
+            ), [
+                '-cp',
+                '/default/tla2tools.jar' + path.delimiter + 'not_tla2tools.jar',
+                '-XX:+UseParallelGC'
+            ]
+        );
+    });
+
+    test('Finds tla2tools.jar in classpath when no full path is provided', () => {
+        assert.deepEqual(
+            buildJavaOptions(
+                ['-cp', 'tla2tools.jar'],
+                '/default/tla2tools.jar'
+            ), [
+                '-cp',
+                'tla2tools.jar',
+                '-XX:+UseParallelGC'
+            ]
+        );
+    });
+
+    test('Ignores classpath option without value', () => {
+        assert.deepEqual(
+            buildJavaOptions(
+                ['-cp'],
+                '/default/tla2tools.jar'
+            ), [
+                '-cp',      // We don't remove this one, user must fix the problem himself after JVM issues an error
+                '-cp',
+                '/default/tla2tools.jar',
+                '-XX:+UseParallelGC'
             ]
         );
     });
