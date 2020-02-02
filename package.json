@@ -243,7 +243,7 @@
                     "type": "string",
                     "scope": "window",
                     "default": "",
-                    "description": "Java options to use when running TLA+ tools.",
+                    "markdownDescription": "Java options to use when running TLA+ tools. [How it works.](https://github.com/alygin/vscode-tlaplus/wiki/Java-Options)",
                     "maxLength": 1000
                 },
                 "tlaplus.pluscal.options": {
