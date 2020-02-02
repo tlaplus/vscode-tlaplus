@@ -40,7 +40,7 @@ function handleErrorTraceFilterChange(filterText) {
     clearTimeout(findChangeTimer);
     findChangeTimer = setTimeout(() => {
         curState.settings.errorTraceFilter = filterText;
-        displayErrorTrace(curState.checkResult.errorTrace, curState.settings);
+        displayErrorTrace(curState.checkResult.errors, curState.settings);
         vscode.setState(curState);
     }, 500);
 }
@@ -53,9 +53,9 @@ function displayCheckResult(state) {
     displayStatus(res);
     displayStatesStat(res.initialStatesStat);
     displayCoverage(res.coverageStat);
-    displayWarnings(res.warnings);
-    displayErrors(res.errors);
-    displayErrorTrace(res.errorTrace, state.settings);
+    displayMessages(res.warnings, 'warnings', 'warnings-list');
+    displayMessages(res.errors, 'errors', 'errors-list');
+    displayErrorTrace(res.errors, state.settings);
     displayOutput(res.outputLines);
 }
 
@@ -164,29 +164,21 @@ function displayCoverage(stat) {
     });
 }
 
-function displayWarnings(warnings) {
-    displayMessages(warnings, 'warnings', 'warnings-list');
-}
-
-function displayErrors(errors) {
-    displayMessages(errors, 'errors', 'errors-list');
-}
-
-function displayMessages(messages, wrapperId, listId) {
+function displayMessages(infos, wrapperId, listId) {
     const elWrapper = document.getElementById(wrapperId);
     const elList = document.getElementById(listId);
     removeAllChildren(elList);
-    if (!messages || messages.length === 0) {
+    if (!infos || infos.length === 0) {
         elWrapper.classList.add('hidden');
         return;
     }
     elWrapper.classList.remove('hidden');
-    messages.forEach((msg) => {
+    for (let info of infos) {
         const elMessage = document.createElement('p');
         elMessage.classList = ['message'];
-        msg.forEach((line) => displayMessageLine(elMessage, line));
+        info.lines.forEach((line) => displayMessageLine(elMessage, line));
         elList.appendChild(elMessage);
-    });
+    }
 }
 
 function displayMessageLine(elParent, line) {
@@ -204,15 +196,17 @@ function displayMessageLine(elParent, line) {
     elParent.appendChild(elLine);
 }
 
-function displayErrorTrace(trace, settings) {
+function displayErrorTrace(errors, settings) {
+    const errorIndex = 0;
     const filterItems = parseFilter(settings.errorTraceFilter);
     const elErrorTrace = document.getElementById('error-trace');
     const elErrorTraceItems = document.getElementById('error-trace-items');
     removeAllChildren(elErrorTraceItems);
-    if (!trace || trace.length === 0) {
+    if (!errors || errors.length === 0 || errorIndex < 0 || errorIndex > errors.length) {
         elErrorTrace.classList.add('hidden');
         return;
     }
+    const trace = errors[errorIndex].errorTrace;
     const elShowHideSwitch = document.getElementById('unmodified-switch');
     elShowHideSwitch.onclick = (e) => setShowUnmodified(e, !settings.showUnmodified);
     elErrorTrace.classList.remove('hidden');
@@ -443,7 +437,7 @@ function setShowUnmodified(event, show) {
     event.target.blur();
     syncHideShowUnmodifiedText(show);
     curState.settings.showUnmodified = show;
-    displayErrorTrace(curState.checkResult.errorTrace, curState.settings);
+    displayErrorTrace(curState.checkResult.errors, curState.settings);
     vscode.setState(curState);
 }
 
