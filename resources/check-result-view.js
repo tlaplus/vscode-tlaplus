@@ -40,6 +40,7 @@ function initialize() {
     errTraceFilter.oninput = (e) => handleErrorTraceFilterChange(e.target.value);
 
     syncHideShowUnmodifiedText(curState.settings.showUnmodified);
+    notifyInitialized();
 }
 
 function handleErrorTraceFilterChange(filterText) {
@@ -63,6 +64,12 @@ function displayCheckResult(state) {
     displayMessages(res.errors, 'errors', 'errors-list', res.errors.length > 1);
     displayErrorTrace(res.errors, state.settings);
     displayOutput(res.outputLines);
+}
+
+function notifyInitialized() {
+    vscode.postMessage({
+        command: 'init'
+    });
 }
 
 function stopProcess() {
