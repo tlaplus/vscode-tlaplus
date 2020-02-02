@@ -7,7 +7,13 @@ const changeHints = {
     D: 'This item has been deleted since the previous state'
 };
 
-let curState = vscode.getState() || { settings: { showUnmodified: true, errorTraceFilter: '' } };
+let curState = vscode.getState() || {
+    settings: {
+        showUnmodified: true,   // Whether or not show error trace items whose values were not modified
+        errorTraceFilter: '',   // Search string for filtering error trace items
+        errorIndex: 0           // Index of the error whose trace is displayed at the moment
+    }
+};
 let findChangeTimer;
 
 initialize();
@@ -53,8 +59,8 @@ function displayCheckResult(state) {
     displayStatus(res);
     displayStatesStat(res.initialStatesStat);
     displayCoverage(res.coverageStat);
-    displayMessages(res.warnings, 'warnings', 'warnings-list');
-    displayMessages(res.errors, 'errors', 'errors-list');
+    displayMessages(res.warnings, 'warnings', 'warnings-list', false);
+    displayMessages(res.errors, 'errors', 'errors-list', res.errors.length > 1);
     displayErrorTrace(res.errors, state.settings);
     displayOutput(res.outputLines);
 }
@@ -164,7 +170,7 @@ function displayCoverage(stat) {
     });
 }
 
-function displayMessages(infos, wrapperId, listId) {
+function displayMessages(infos, wrapperId, listId, errorTraceLinks) {
     const elWrapper = document.getElementById(wrapperId);
     const elList = document.getElementById(listId);
     removeAllChildren(elList);
@@ -173,11 +179,21 @@ function displayMessages(infos, wrapperId, listId) {
         return;
     }
     elWrapper.classList.remove('hidden');
+    let idx = 0;
     for (let info of infos) {
         const elMessage = document.createElement('p');
         elMessage.classList = ['message'];
         info.lines.forEach((line) => displayMessageLine(elMessage, line));
+        if (errorTraceLinks && info.errorTrace && info.errorTrace.length > 0) {
+            const elLink = document.createElement('a');
+            elLink.setAttribute('href', '#');
+            elLink.innerText = 'Show error trace';
+            const errIdx = idx;
+            elLink.onclick = (e) => setErrorIndex(e, errIdx);
+            elMessage.appendChild(elLink);
+        }
         elList.appendChild(elMessage);
+        idx += 1;
     }
 }
 
@@ -197,16 +213,17 @@ function displayMessageLine(elParent, line) {
 }
 
 function displayErrorTrace(errors, settings) {
-    const errorIndex = 0;
     const filterItems = parseFilter(settings.errorTraceFilter);
     const elErrorTrace = document.getElementById('error-trace');
     const elErrorTraceItems = document.getElementById('error-trace-items');
     removeAllChildren(elErrorTraceItems);
-    if (!errors || errors.length === 0 || errorIndex < 0 || errorIndex > errors.length) {
+    adjustErrorIndex(errors, settings);
+    if (!errors || errors.length === 0 || settings.errorIndex < 0) {
         elErrorTrace.classList.add('hidden');
         return;
     }
-    const trace = errors[errorIndex].errorTrace;
+    const trace = errors[settings.errorIndex].errorTrace;
+    document.getElementById('error-trace-idx').innerText = errors.length > 1 ? `#${settings.errorIndex + 1}` : '';
     const elShowHideSwitch = document.getElementById('unmodified-switch');
     elShowHideSwitch.onclick = (e) => setShowUnmodified(e, !settings.showUnmodified);
     elErrorTrace.classList.remove('hidden');
@@ -431,6 +448,15 @@ function appendCodeLinkChild(elParent, tag, innerText, filePath, location, class
     return el;
 }
 
+function setErrorIndex(event, errorIndex) {
+    event.preventDefault();
+    event.stopPropagation();
+    curState.settings.errorIndex = errorIndex;
+    displayErrorTrace(curState.checkResult.errors, curState.settings);
+    vscode.setState(curState);
+    document.getElementById('error-trace').scrollIntoView();
+}
+
 function setShowUnmodified(event, show) {
     event.preventDefault();
     event.stopPropagation();
@@ -442,12 +468,7 @@ function setShowUnmodified(event, show) {
 }
 
 function syncHideShowUnmodifiedText(show) {
-    const elShowHideSwitch = document.getElementById('unmodified-switch');
-    if (show) {
-        elShowHideSwitch.innerText = 'Hide unmodified';
-    } else {
-        elShowHideSwitch.innerText = 'Show unmodified';
-    }
+    document.getElementById('unmodified-switch').innerText = show ? 'Hide unmodified' : 'Show unmodified';
 }
 
 function parseFilter(filterText) {
@@ -468,4 +489,22 @@ function checkFilter(str, filterItems) {
         }
     }
     return false;
+}
+
+function adjustErrorIndex(errors, settings) {
+    if (!errors || errors.length === 0) {
+        settings.errorIndex = -1;
+        return;
+    }
+    if (settings.errorIndex >= 0 && settings.errorIndex < errors.length) {
+        return;
+    }
+    // Search for the first error with error trace
+    settings.errorIndex = -1;
+    for (let i = 0; i < errors.length; i++) {
+        if (errors[i].errorTrace && errors[i].errorTrace.length > 0) {
+            settings.errorIndex = i;
+            break;
+        }
+    }
 }
