@@ -133,7 +133,7 @@ suite('TLA+ Tools Test Suite', () => {
                 '/default/tla2tools.jar'
             ), [
                 '-cp',
-                '/default/tla2tools.jar' + path.delimiter + 'CommunityModules.jar:Foo.jar',
+                'CommunityModules.jar:Foo.jar' + path.delimiter + '/default/tla2tools.jar',
                 '-XX:+UseParallelGC'
             ]
         );
@@ -146,7 +146,7 @@ suite('TLA+ Tools Test Suite', () => {
                 '/default/tla2tools.jar'
             ), [
                 '-classpath',
-                '/default/tla2tools.jar' + path.delimiter + 'Foo.jar' + path.delimiter + 'Bar.jar',
+                'Foo.jar' + path.delimiter + 'Bar.jar' + path.delimiter + '/default/tla2tools.jar',
                 '-XX:+UseParallelGC'
             ]
         );
@@ -178,7 +178,7 @@ suite('TLA+ Tools Test Suite', () => {
             ), [
                 '-Xmx2048M',
                 '-classpath',
-                '/default/tla2tools.jar' + path.delimiter + 'Foo.jar' + path.delimiter + 'Baz.jar',
+                'Foo.jar' + path.delimiter + 'Baz.jar' + path.delimiter + '/default/tla2tools.jar',
                 '-XX:+UseG1GC'
             ]
         );
@@ -191,7 +191,7 @@ suite('TLA+ Tools Test Suite', () => {
                 '/default/tla2tools.jar'
             ), [
                 '-cp',
-                '/default/tla2tools.jar' + path.delimiter + 'not_tla2tools.jar',
+                'not_tla2tools.jar' + path.delimiter + '/default/tla2tools.jar',
                 '-XX:+UseParallelGC'
             ]
         );

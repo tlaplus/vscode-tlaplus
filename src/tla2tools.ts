@@ -283,7 +283,10 @@ function mergeClassPathOption(options: string[], defaultClassPath: string) {
     if (containsTlaToolsLib(classPath)) {
         return;
     }
-    classPath = defaultClassPath + path.delimiter + classPath;
+    if (classPath.length > 0) {
+        classPath += path.delimiter;
+    }
+    classPath += defaultClassPath;
     options[cpIdx] = classPath;
 }
 
