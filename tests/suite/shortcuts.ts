@@ -3,7 +3,8 @@ import moment = require('moment');
 import { Moment } from 'moment';
 import { Value, ValueKey, SetValue, SequenceValue, StructureValue, SimpleFunction,
     InitialStateStatItem, CoverageItem, ModelCheckResult, CheckState, CheckStatus, MessageLine, MessageSpan,
-    ErrorTraceItem, OutputLine, ModelCheckResultSource, SimpleFunctionItem } from '../../src/model/check';
+    ErrorTraceItem, OutputLine, ModelCheckResultSource, SimpleFunctionItem, ErrorInfo,
+    WarningInfo } from '../../src/model/check';
 import { DCollection } from '../../src/diagnostic';
 import { ROOT_SYMBOL_NAME, PLUS_CAL_SYMBOL_NAME } from '../../src/symbols/tlaSymbols';
 
@@ -96,13 +97,24 @@ export function symBool(name: string, parentName: string, location: vscode.Locat
     return new vscode.SymbolInformation(name, vscode.SymbolKind.Boolean, parentName, location);
 }
 
+export function traceItem(
+    num: number,
+    title: string,
+    module: string,
+    action: string,
+    filePath: string | undefined,
+    range: vscode.Range,
+    variables: StructureValue  // Variables are presented as items of a structure
+): ErrorTraceItem {
+    return new ErrorTraceItem(num, title, module, action, filePath, range, variables);
+}
+
 export class CheckResultBuilder {
     private processInfo: string | undefined;
     private initialStatesStat: InitialStateStatItem[] = [];
     private coverageStat: CoverageItem[] = [];
-    private warnings: MessageLine[][] = [];
-    private errors: MessageLine[][] = [];
-    private errorTrace: ErrorTraceItem[] = [];
+    private warnings: WarningInfo[] = [];
+    private errors: ErrorInfo[] = [];
     private sanyMessages: DCollection | undefined;
     private startDateTime: Moment | undefined;
     private endDateTime: Moment | undefined;
@@ -128,7 +140,6 @@ export class CheckResultBuilder {
             this.coverageStat,
             this.warnings,
             this.errors,
-            this.errorTrace,
             this.sanyMessages,
             this.startDateTime,
             this.endDateTime,
@@ -195,12 +206,12 @@ export class CheckResultBuilder {
     }
 
     addWarning(lines: MessageLine[]): CheckResultBuilder {
-        this.warnings.push(lines);
+        this.warnings.push(new WarningInfo(lines));
         return this;
     }
 
-    addError(lines: MessageLine[]): CheckResultBuilder {
-        this.errors.push(lines);
+    addError(lines: MessageLine[], errorTrace: ErrorTraceItem[] = []): CheckResultBuilder {
+        this.errors.push(new ErrorInfo(lines, errorTrace));
         return this;
     }
 
@@ -213,19 +224,6 @@ export class CheckResultBuilder {
     addDColMessage(filePath: string, range: vscode.Range, text: string): CheckResultBuilder {
         this.ensureSanyMessages();
         this.sanyMessages!.addMessage(filePath, range, text);
-        return this;
-    }
-
-    addTraceItem(
-        num: number,
-        title: string,
-        module: string,
-        action: string,
-        filePath: string | undefined,
-        range: vscode.Range,
-        variables: StructureValue  // Variables are presented as items of a structure
-    ): CheckResultBuilder {
-        this.errorTrace.push(new ErrorTraceItem(num, title, module, action, filePath, range, variables));
         return this;
     }
 

@@ -7,7 +7,13 @@ const changeHints = {
     D: 'This item has been deleted since the previous state'
 };
 
-let curState = vscode.getState() || { settings: { showUnmodified: true, errorTraceFilter: '' } };
+let curState = vscode.getState() || {
+    settings: {
+        showUnmodified: true,   // Whether or not show error trace items whose values were not modified
+        errorTraceFilter: '',   // Search string for filtering error trace items
+        errorIndex: 0           // Index of the error whose trace is displayed at the moment
+    }
+};
 let findChangeTimer;
 
 initialize();
@@ -34,13 +40,14 @@ function initialize() {
     errTraceFilter.oninput = (e) => handleErrorTraceFilterChange(e.target.value);
 
     syncHideShowUnmodifiedText(curState.settings.showUnmodified);
+    notifyInitialized();
 }
 
 function handleErrorTraceFilterChange(filterText) {
     clearTimeout(findChangeTimer);
     findChangeTimer = setTimeout(() => {
         curState.settings.errorTraceFilter = filterText;
-        displayErrorTrace(curState.checkResult.errorTrace, curState.settings);
+        displayErrorTrace(curState.checkResult.errors, curState.settings);
         vscode.setState(curState);
     }, 500);
 }
@@ -53,10 +60,16 @@ function displayCheckResult(state) {
     displayStatus(res);
     displayStatesStat(res.initialStatesStat);
     displayCoverage(res.coverageStat);
-    displayWarnings(res.warnings);
-    displayErrors(res.errors);
-    displayErrorTrace(res.errorTrace, state.settings);
+    displayMessages(res.warnings, 'warnings', 'warnings-list', false);
+    displayMessages(res.errors, 'errors', 'errors-list', res.errors.length > 1);
+    displayErrorTrace(res.errors, state.settings);
     displayOutput(res.outputLines);
+}
+
+function notifyInitialized() {
+    vscode.postMessage({
+        command: 'init'
+    });
 }
 
 function stopProcess() {
@@ -164,29 +177,31 @@ function displayCoverage(stat) {
     });
 }
 
-function displayWarnings(warnings) {
-    displayMessages(warnings, 'warnings', 'warnings-list');
-}
-
-function displayErrors(errors) {
-    displayMessages(errors, 'errors', 'errors-list');
-}
-
-function displayMessages(messages, wrapperId, listId) {
+function displayMessages(infos, wrapperId, listId, errorTraceLinks) {
     const elWrapper = document.getElementById(wrapperId);
     const elList = document.getElementById(listId);
     removeAllChildren(elList);
-    if (!messages || messages.length === 0) {
+    if (!infos || infos.length === 0) {
         elWrapper.classList.add('hidden');
         return;
     }
     elWrapper.classList.remove('hidden');
-    messages.forEach((msg) => {
+    let idx = 0;
+    for (let info of infos) {
         const elMessage = document.createElement('p');
         elMessage.classList = ['message'];
-        msg.forEach((line) => displayMessageLine(elMessage, line));
+        info.lines.forEach((line) => displayMessageLine(elMessage, line));
+        if (errorTraceLinks && info.errorTrace && info.errorTrace.length > 0) {
+            const elLink = document.createElement('a');
+            elLink.setAttribute('href', '#');
+            elLink.innerText = 'Show error trace';
+            const errIdx = idx;
+            elLink.onclick = (e) => setErrorIndex(e, errIdx);
+            elMessage.appendChild(elLink);
+        }
         elList.appendChild(elMessage);
-    });
+        idx += 1;
+    }
 }
 
 function displayMessageLine(elParent, line) {
@@ -204,15 +219,18 @@ function displayMessageLine(elParent, line) {
     elParent.appendChild(elLine);
 }
 
-function displayErrorTrace(trace, settings) {
+function displayErrorTrace(errors, settings) {
     const filterItems = parseFilter(settings.errorTraceFilter);
     const elErrorTrace = document.getElementById('error-trace');
     const elErrorTraceItems = document.getElementById('error-trace-items');
     removeAllChildren(elErrorTraceItems);
-    if (!trace || trace.length === 0) {
+    adjustErrorIndex(errors, settings);
+    if (!errors || errors.length === 0 || settings.errorIndex < 0) {
         elErrorTrace.classList.add('hidden');
         return;
     }
+    const trace = errors[settings.errorIndex].errorTrace;
+    document.getElementById('error-trace-idx').innerText = errors.length > 1 ? `#${settings.errorIndex + 1}` : '';
     const elShowHideSwitch = document.getElementById('unmodified-switch');
     elShowHideSwitch.onclick = (e) => setShowUnmodified(e, !settings.showUnmodified);
     elErrorTrace.classList.remove('hidden');
@@ -437,23 +455,27 @@ function appendCodeLinkChild(elParent, tag, innerText, filePath, location, class
     return el;
 }
 
+function setErrorIndex(event, errorIndex) {
+    event.preventDefault();
+    event.stopPropagation();
+    curState.settings.errorIndex = errorIndex;
+    displayErrorTrace(curState.checkResult.errors, curState.settings);
+    vscode.setState(curState);
+    document.getElementById('error-trace').scrollIntoView();
+}
+
 function setShowUnmodified(event, show) {
     event.preventDefault();
     event.stopPropagation();
     event.target.blur();
     syncHideShowUnmodifiedText(show);
     curState.settings.showUnmodified = show;
-    displayErrorTrace(curState.checkResult.errorTrace, curState.settings);
+    displayErrorTrace(curState.checkResult.errors, curState.settings);
     vscode.setState(curState);
 }
 
 function syncHideShowUnmodifiedText(show) {
-    const elShowHideSwitch = document.getElementById('unmodified-switch');
-    if (show) {
-        elShowHideSwitch.innerText = 'Hide unmodified';
-    } else {
-        elShowHideSwitch.innerText = 'Show unmodified';
-    }
+    document.getElementById('unmodified-switch').innerText = show ? 'Hide unmodified' : 'Show unmodified';
 }
 
 function parseFilter(filterText) {
@@ -474,4 +496,22 @@ function checkFilter(str, filterItems) {
         }
     }
     return false;
+}
+
+function adjustErrorIndex(errors, settings) {
+    if (!errors || errors.length === 0) {
+        settings.errorIndex = -1;
+        return;
+    }
+    if (settings.errorIndex >= 0 && settings.errorIndex < errors.length) {
+        return;
+    }
+    // Search for the first error with error trace
+    settings.errorIndex = -1;
+    for (let i = 0; i < errors.length; i++) {
+        if (errors[i].errorTrace && errors[i].errorTrace.length > 0) {
+            settings.errorIndex = i;
+            break;
+        }
+    }
 }

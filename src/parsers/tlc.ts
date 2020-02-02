@@ -3,7 +3,8 @@ import * as moment from 'moment/moment';
 import { Readable } from 'stream';
 import { clearTimeout } from 'timers';
 import { CheckStatus, ModelCheckResult, InitialStateStatItem, CoverageItem, MessageLine, MessageSpan, ErrorTraceItem,
-    CheckState, OutputLine, StructureValue, findChanges, ModelCheckResultSource} from '../model/check';
+    CheckState, OutputLine, StructureValue, findChanges, ModelCheckResultSource, WarningInfo,
+    ErrorInfo } from '../model/check';
 import { ProcessOutputHandler } from '../outputHandler';
 import { parseVariableValue } from './tlcValues';
 import { SanyData, SanyStdoutParser } from './sany';
@@ -173,9 +174,8 @@ class ModelCheckResultBuilder {
     private processInfo: string | undefined;
     private initialStatesStat: InitialStateStatItem[] = [];
     private coverageStat: CoverageItem[] = [];
-    private warnings: MessageLine[][] = [];
-    private errors: MessageLine[][] = [];
-    private errorTrace: ErrorTraceItem[] = [];
+    private warnings: WarningInfo[] = [];
+    private errors: ErrorInfo[] = [];
     private messages = new MessageStack();
     private sanyLines: string[] = [];
     private sanyData: SanyData | undefined;
@@ -242,7 +242,6 @@ class ModelCheckResultBuilder {
             this.coverageStat,
             this.warnings,
             this.errors,
-            this.errorTrace,
             this.sanyData ? this.sanyData.dCollection : undefined,
             this.startDateTime,
             this.endDateTime,
@@ -344,9 +343,9 @@ class ModelCheckResultBuilder {
                 break;
             case msg.TLC_SUCCESS:
                 this.parseSuccess(message.lines);
-                if (this.errors.length === 0) {   // There might be error messages if the -continue option was used
-                    this.state = CheckState.Success;
-                }
+                this.state = this.errors.length === 0
+                    ? CheckState.Success
+                    : CheckState.Error;     // There might be error messages if the -continue option was used
                 break;
             case msg.TLC_FINISHED:
                 this.status = CheckStatus.Finished;
@@ -420,7 +419,8 @@ class ModelCheckResultBuilder {
         this.sanyData = sany.readAllSync();
         // Display SANY error messages as model checking errors
         this.sanyData.dCollection.getMessages().forEach(diag => {
-            this.errors.push([ MessageLine.fromText(diag.diagnostic.message) ]);
+            const errMessage = MessageLine.fromText(diag.diagnostic.message);
+            this.errors.push(new ErrorInfo([errMessage], []));
         });
     }
 
@@ -478,7 +478,7 @@ class ModelCheckResultBuilder {
             return;
         }
         const msgLines = lines.map((l) => this.makeMessageLine(l));
-        this.warnings.push(msgLines);
+        this.warnings.push(new WarningInfo(msgLines));
     }
 
     private parseErrorMessage(lines: string[]) {
@@ -489,10 +489,10 @@ class ModelCheckResultBuilder {
         if (lines[0] === 'TLC threw an unexpected exception.' && this.errors.length > 0) {
             // Such message must be combined with the previous one (that was actually nested)
             const prevError = this.errors[this.errors.length - 1];
-            this.errors[this.errors.length - 1] = msgLines.concat(prevError);
-        } else {
-            this.errors.push(msgLines);
+            prevError.lines = msgLines.concat(prevError.lines);
+            return;
         }
+        this.errors.push(new ErrorInfo(msgLines, []));
     }
 
     private parseErrorTraceItem(lines: string[]) {
@@ -515,10 +515,14 @@ class ModelCheckResultBuilder {
                 0, lines[1], '', '', undefined, new Range(0, 0, 0, 0), itemVars
             );
         }
-        if (checkChanges && this.errorTrace.length > 0) {
-            findChanges(this.errorTrace[this.errorTrace.length - 1].variables, traceItem.variables);
+        if (this.errors.length === 0) {
+            this.errors.push(new ErrorInfo([this.makeMessageLine('[Unknown error]')], []));
         }
-        this.errorTrace.push(traceItem);
+        const lastError = this.errors[this.errors.length - 1];
+        if (checkChanges) {
+            findChanges(lastError.errorTrace[lastError.errorTrace.length - 1].variables, traceItem.variables);
+        }
+        lastError.errorTrace.push(traceItem);
     }
 
     private tryParseSimpleErrorTraceItem(lines: string[]): ErrorTraceItem | undefined {

@@ -11,7 +11,6 @@ let missing: boolean;
 let currentSource: ModelCheckResultSource | undefined;
 let lastProcessCheckResult: ModelCheckResult | undefined;   // Only results with source=process go here
 let lastCheckResult: ModelCheckResult | undefined;          // The last known check result, no matter what its source is
-let panelIsVisible = false;
 
 export function updateCheckResultView(checkResult: ModelCheckResult) {
     if (checkResult.source === currentSource) {
@@ -75,15 +74,13 @@ function createNewPanel() {
     viewPanel.onDidDispose(() => {
         viewPanel = undefined;
     });
-    viewPanel.onDidChangeViewState(e => {
-        if (e.webviewPanel.visible && !panelIsVisible && missing && lastCheckResult) {
-            // Show what has been missed while the panel was invisible
-            updateCheckResultView(lastCheckResult);
-        }
-        panelIsVisible = e.webviewPanel.visible;
-    });
     viewPanel.webview.onDidReceiveMessage(message => {
-        if (message.command === 'stop') {
+        if (message.command === 'init') {
+            if (lastCheckResult) {
+                // Show what has been missed while the panel was invisible
+                updateCheckResultView(lastCheckResult);
+            }
+        } else if (message.command === 'stop') {
             vscode.commands.executeCommand(CMD_CHECK_MODEL_STOP);
         } else if (message.command === 'showTlcOutput') {
             vscode.commands.executeCommand(CMD_SHOW_TLC_OUTPUT);
@@ -100,7 +97,6 @@ function createNewPanel() {
             }
         }
     });
-    panelIsVisible = true;
 }
 
 function ensurePanelBody(extContext: vscode.ExtensionContext) {

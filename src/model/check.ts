@@ -391,6 +391,25 @@ export class OutputLine {
     }
 }
 
+/**
+ * A warning, issued by TLC.
+ */
+export class WarningInfo {
+    constructor(
+        readonly lines: MessageLine[]
+    ) {}
+}
+
+/**
+ * An error, issued by TLC.
+ */
+export class ErrorInfo {
+    constructor(
+        public lines: MessageLine[],
+        readonly errorTrace: ErrorTraceItem[]
+    ) {}
+}
+
 export enum ModelCheckResultSource {
     Process,    // The result comes from an ongoing TLC process
     OutFile     // The result comes from a .out file
@@ -415,9 +434,8 @@ export class ModelCheckResult {
         readonly processInfo: string | undefined,
         readonly initialStatesStat: InitialStateStatItem[],
         readonly coverageStat: CoverageItem[],
-        readonly warnings: MessageLine[][],
-        readonly errors: MessageLine[][],
-        readonly errorTrace: ErrorTraceItem[],
+        readonly warnings: WarningInfo[],
+        readonly errors: ErrorInfo[],
         readonly sanyMessages: DCollection | undefined,
         readonly startDateTime: Moment | undefined,
         readonly endDateTime: Moment | undefined,
@@ -449,15 +467,17 @@ export class ModelCheckResult {
 
     static createEmpty(source: ModelCheckResultSource): ModelCheckResult {
         return new ModelCheckResult(
-            source, false, CheckState.Running, CheckStatus.Starting, undefined, [], [], [], [], [],
+            source, false, CheckState.Running, CheckStatus.Starting, undefined, [], [], [], [],
             undefined, undefined, undefined, undefined, 0, undefined, []);
     }
 
     formatValue(valueId: number): string | undefined {
-        for (const items of this.errorTrace) {
-            const value = items.variables.findItem(valueId);
-            if (value) {
-                return value.format('');
+        for (const err of this.errors) {
+            for (const items of err.errorTrace) {
+                const value = items.variables.findItem(valueId);
+                if (value) {
+                    return value.format('');
+                }
             }
         }
         return undefined;

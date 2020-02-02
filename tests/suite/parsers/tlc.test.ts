@@ -5,7 +5,7 @@ import { before } from 'mocha';
 import { PassThrough } from 'stream';
 import { ModelCheckResult, CheckState, CheckStatus, ModelCheckResultSource, Value } from '../../../src/model/check';
 import { TlcModelCheckerStdoutParser } from '../../../src/parsers/tlc';
-import { CheckResultBuilder, pos, range, struct, v, set, message, sourceLink } from '../shortcuts';
+import { CheckResultBuilder, pos, range, struct, v, set, message, sourceLink, traceItem } from '../shortcuts';
 
 const ROOT_PATH = '/Users/alice/TLA/foo.tla';
 const FIXTURES_PATH = path.resolve(__dirname, '../../../../tests/fixtures/parsers/tlc');
@@ -119,9 +119,13 @@ suite('TLC Output Parser Test Suite', () => {
                 .addInitState('00:00:00', 0, 1, 1, 1)
                 .addInitState('00:00:01', 2, 3, 2, 0)
                 .addCoverage('example', 'Init', '/Users/bob/example.tla', range(13, 0, 13, 4), 1, 1)
-                .addError([message('Invariant FooInvariant is violated.')])
-                .addTraceItem(1, 'Initial predicate', '', '', undefined, range(0, 0, 0, 0),
-                    struct('', v('FooVar', '1..2'), v('BarVar', '-1'))
+                .addError(
+                    [message('Invariant FooInvariant is violated.')],
+                    [
+                        traceItem(1, 'Initial predicate', '', '', undefined, range(0, 0, 0, 0),
+                            struct('', v('FooVar', '1..2'), v('BarVar', '-1'))
+                        )
+                    ]
                 )
                 .build()
             );
@@ -156,27 +160,31 @@ suite('TLC Output Parser Test Suite', () => {
                 .addInitState('00:00:01', 3, 4, 4, 1)
                 .addCoverage('error_trace', 'Init', '/Users/bob/error_trace.tla', range(7, 0, 7, 4), 2, 2)
                 .addCoverage('error_trace', 'SomeFunc', '/Users/bob/error_trace.tla', range(11, 0, 11, 11), 5, 3)
-                .addError([message('Invariant FooInvariant is violated.')])
-                .addTraceItem(1, 'Initial predicate', '', '', undefined, range(0, 0, 0, 0),
-                    struct('', v('FooVar', '1..2'), v('BarVar', '-1'))
-                )
-                .addTraceItem(2,
-                    'SomeFunc in error_trace', 'error_trace', 'SomeFunc',
-                    '/Users/bob/error_trace.tla', range(12, 8, 14, 24),
-                    struct('',
-                        set('FooVar', v(1, '1')).setModified(),
-                        v('BarVar', '1').setModified()
-                    ).setModified()
-                )
-                .addTraceItem(3,
-                    'SomeFunc in error_trace', 'error_trace', 'SomeFunc',
-                    '/Users/bob/error_trace.tla', range(12, 8, 14, 24),
-                    struct('',
-                        set('FooVar',
-                            v(1, '4').setModified(),
-                            v(2, 'TRUE').setAdded()).setModified(),
-                        v('BarVar', '40').setModified()
-                    ).setModified()
+                .addError(
+                    [message('Invariant FooInvariant is violated.')],
+                    [
+                        traceItem(1, 'Initial predicate', '', '', undefined, range(0, 0, 0, 0),
+                            struct('', v('FooVar', '1..2'), v('BarVar', '-1'))
+                        ),
+                        traceItem(2,
+                            'SomeFunc in error_trace', 'error_trace', 'SomeFunc',
+                            '/Users/bob/error_trace.tla', range(12, 8, 14, 24),
+                            struct('',
+                                set('FooVar', v(1, '1')).setModified(),
+                                v('BarVar', '1').setModified()
+                            ).setModified()
+                        ),
+                        traceItem(3,
+                            'SomeFunc in error_trace', 'error_trace', 'SomeFunc',
+                            '/Users/bob/error_trace.tla', range(12, 8, 14, 24),
+                            struct('',
+                                set('FooVar',
+                                    v(1, '4').setModified(),
+                                    v(2, 'TRUE').setAdded()).setModified(),
+                                v('BarVar', '40').setModified()
+                            ).setModified()
+                        )
+                    ]
                 )
                 .build()
         );
@@ -192,12 +200,16 @@ suite('TLC Output Parser Test Suite', () => {
                 .setDuration(1041)
                 .addInitState('00:00:00', 0, 1, 1, 1)
                 .addInitState('00:00:01', 3, 4, 4, 1)
-                .addError([ message('Temporal properties were violated.')])
-                .addTraceItem(1, 'Initial predicate', '', '', undefined, range(0, 0, 0, 0),
-                    struct('', v('Foo', '1'))
-                )
-                .addTraceItem(2,
-                    'Stuttering', '', '', undefined, range(0, 0, 0, 0), struct('')
+                .addError(
+                    [ message('Temporal properties were violated.')],
+                    [
+                        traceItem(1, 'Initial predicate', '', '', undefined, range(0, 0, 0, 0),
+                            struct('', v('Foo', '1'))
+                        ),
+                        traceItem(2,
+                            'Stuttering', '', '', undefined, range(0, 0, 0, 0), struct('')
+                        )
+                    ]
                 )
                 .build()
         );
@@ -213,17 +225,21 @@ suite('TLC Output Parser Test Suite', () => {
                 .setDuration(1041)
                 .addInitState('00:00:00', 0, 1, 1, 1)
                 .addInitState('00:00:01', 3, 4, 4, 1)
-                .addError([ message('Temporal properties were violated.')])
-                .addTraceItem(1, 'Initial predicate', '', '', undefined, range(0, 0, 0, 0),
-                    struct('', v('Foo', '1'))
-                )
-                .addTraceItem(2, 'Cycle in back_to_state', 'back_to_state', 'Cycle',
-                    '/Users/bob/back_to_state.tla', range(41, 9, 47, 30),
-                    struct('', v('Foo', '2').setModified()).setModified()
-                )
-                .addTraceItem(2, 'Back to state', 'back_to_state', 'Cycle',
-                    '/Users/bob/back_to_state.tla', range(41, 9, 47, 30),
-                    struct('')
+                .addError(
+                    [ message('Temporal properties were violated.')],
+                    [
+                        traceItem(1, 'Initial predicate', '', '', undefined, range(0, 0, 0, 0),
+                            struct('', v('Foo', '1'))
+                        ),
+                        traceItem(2, 'Cycle in back_to_state', 'back_to_state', 'Cycle',
+                            '/Users/bob/back_to_state.tla', range(41, 9, 47, 30),
+                            struct('', v('Foo', '2').setModified()).setModified()
+                        ),
+                        traceItem(2, 'Back to state', 'back_to_state', 'Cycle',
+                            '/Users/bob/back_to_state.tla', range(41, 9, 47, 30),
+                            struct('')
+                        )
+                    ]
                 )
                 .build()
         );
@@ -240,9 +256,13 @@ suite('TLC Output Parser Test Suite', () => {
                 .setDuration(1041)
                 .addInitState('00:00:00', 0, 1, 1, 1)
                 .addInitState('00:00:01', 3, 4, 4, 1)
-                .addError([ message('Invariant FooInvariant is violated.')])
-                .addTraceItem(1, 'Initial predicate', '', '', undefined, range(0, 0, 0, 0),
-                    struct('', struct('Var', v('foo', '1'), v('bar', '2')))
+                .addError(
+                    [ message('Invariant FooInvariant is violated.')],
+                    [
+                        traceItem(1, 'Initial predicate', '', '', undefined, range(0, 0, 0, 0),
+                            struct('', struct('Var', v('foo', '1'), v('bar', '2')))
+                        )
+                    ]
                 )
                 .build()
         );
@@ -379,7 +399,6 @@ function assertEquals(actual: ModelCheckResult, expected: ModelCheckResult) {
     assert.deepEqual(actual.sanyMessages, expected.sanyMessages);
     assert.deepEqual(actual.warnings, expected.warnings);
     assert.deepEqual(actual.errors, expected.errors);
-    assert.deepEqual(actual.errorTrace, expected.errorTrace);
 }
 
 async function assertOutput(fileName: string, tlaFilePath: string, expected: ModelCheckResult): Promise<void> {
