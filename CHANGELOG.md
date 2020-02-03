@@ -1,5 +1,20 @@
 # Change Log
 
+## 1.4.0 &ndash; 3rd February, 2020
+
+### Enhancements
+
+* `Go to Definition` action implementation.
+* Support custom class path in the `Java Options` setting.
+* Switch between error traces when there are multiple of them.
+
+### Bug fixes
+
+* Fix warnings display.
+* Correctly handle TLC results when the `-continue` option is used.
+* Support new TLC message codes.
+* Process TLC message codes with respect to severity levels.
+
 ## 1.3.2 &ndash; 14th January, 2020
 
 ### Bug fixes
