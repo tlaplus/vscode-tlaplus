@@ -39,18 +39,16 @@ export class SpecFiles {
 /**
  * Runs TLC on a TLA+ specification.
  */
-export async function checkModel(diagnostic: vscode.DiagnosticCollection, extContext: vscode.ExtensionContext) {
-    const editor = getEditorIfCanRunTlc(extContext);
-    if (!editor) {
+export async function checkModel(
+    fileUri: vscode.Uri | undefined,
+    diagnostic: vscode.DiagnosticCollection,
+    extContext: vscode.ExtensionContext
+) {
+    const uri = fileUri ? fileUri : getActiveEditorFileUri(extContext);
+    if (!uri) {
         return;
     }
-    const doc = editor.document;
-    if (doc.languageId !== LANG_TLAPLUS && doc.languageId !== LANG_TLAPLUS_CFG) {
-        vscode.window.showWarningMessage(
-            'File in the active editor is not a .tla or .cfg file, it cannot be checked as a model');
-        return;
-    }
-    const specFiles = await getSpecFiles(doc.uri);
+    const specFiles = await getSpecFiles(uri);
     if (!specFiles) {
         return;
     }
@@ -103,6 +101,20 @@ export function stopModelChecking() {
 
 export function showTlcOutput() {
     outChannel.revealWindow();
+}
+
+function getActiveEditorFileUri(extContext: vscode.ExtensionContext): vscode.Uri | undefined {
+    const editor = getEditorIfCanRunTlc(extContext);
+    if (!editor) {
+        return undefined;
+    }
+    const doc = editor.document;
+    if (doc.languageId !== LANG_TLAPLUS && doc.languageId !== LANG_TLAPLUS_CFG) {
+        vscode.window.showWarningMessage(
+            'File in the active editor is not a .tla or .cfg file, it cannot be checked as a model');
+        return undefined;
+    }
+    return doc.uri;
 }
 
 export function getEditorIfCanRunTlc(extContext: vscode.ExtensionContext): vscode.TextEditor | undefined {

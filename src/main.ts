@@ -46,7 +46,7 @@ export function activate(context: vscode.ExtensionContext) {
             () => exportModuleToPdf(context)),
         vscode.commands.registerCommand(
             CMD_CHECK_MODEL_RUN,
-            () => checkModel(diagnostic, context)),
+            (uri) => checkModel(uri, diagnostic, context)),
         vscode.commands.registerCommand(
             CMD_CHECK_MODEL_CUSTOM_RUN,
             () => checkModelCustom(diagnostic, context)),
