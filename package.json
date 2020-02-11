@@ -212,18 +212,28 @@
                     "when": "editorLangId == tlaplus"
                 }
             ],
+            "explorer/context": [
+                {
+                    "command": "tlaplus.model.check.run",
+                    "when": "resourceLangId == tlaplus || resourceLangId == tlaplus_cfg",
+                    "group": "z_commands"
+                }
+            ],
             "editor/context": [
                 {
                     "command": "tlaplus.model.check.run",
-                    "when": "editorLangId == tlaplus || editorLangId == tlaplus_cfg"
+                    "when": "editorLangId == tlaplus || editorLangId == tlaplus_cfg",
+                    "group": "z_commands"
                 },
                 {
                     "command": "tlaplus.out.visualize",
-                    "when": "resourceExtname == .out"
+                    "when": "resourceExtname == .out",
+                    "group": "z_commands"
                 },
                 {
                     "command": "tlaplus.evaluateSelection",
-                    "when": "editorLangId == tlaplus"
+                    "when": "editorLangId == tlaplus",
+                    "group": "z_commands"
                 }
             ]
         },
