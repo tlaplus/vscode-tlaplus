@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { ModelCheckResult, ModelCheckResultSource } from './model/check';
-import { CMD_CHECK_MODEL_STOP, CMD_SHOW_TLC_OUTPUT } from './commands/checkModel';
+import { CMD_CHECK_MODEL_STOP, CMD_SHOW_TLC_OUTPUT, CMD_CHECK_MODEL_REPEAT } from './commands/checkModel';
 
 // Cached HTML template for the WebView
 let viewHtml: string | undefined;
@@ -84,6 +84,8 @@ function createNewPanel() {
             vscode.commands.executeCommand(CMD_CHECK_MODEL_STOP);
         } else if (message.command === 'showTlcOutput') {
             vscode.commands.executeCommand(CMD_SHOW_TLC_OUTPUT);
+        } else if (message.command === 'repeat') {
+            vscode.commands.executeCommand(CMD_CHECK_MODEL_REPEAT);
         } else if (message.command === 'openFile') {
             // `One` is used here because at the moment, VSCode doesn't provide API
             // for revealing existing document, so we're speculating here to reduce open documents duplication.

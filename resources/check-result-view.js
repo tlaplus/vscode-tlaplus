@@ -78,6 +78,12 @@ function stopProcess() {
     });
 }
 
+function repeatCheck() {
+    vscode.postMessage({
+        command: 'repeat'
+    });
+}
+
 function showTlcOutput() {
     vscode.postMessage({
         command: 'showTlcOutput'
@@ -135,14 +141,18 @@ function displayStatus(result) {
     }
 }
 
-function displayStatusHeader(showFullOutput) {
-    const elOutputLink = document.getElementById('output-link');
-    if (showFullOutput) {
-        elOutputLink.classList.remove('hidden');
-        elOutputLink.onclick = () => showTlcOutput();
+function displayStatusHeader(showActions) {
+    const elActions = document.getElementById('actions');
+    const elShowOutput = document.getElementById('act-show-output');
+    const elRepeat = document.getElementById('act-repeat');
+    if (showActions) {
+        elActions.classList.remove('hidden');
+        elShowOutput.onclick = () => showTlcOutput();
+        elRepeat.onclick = () => repeatCheck();
     } else {
-        elOutputLink.classList.add('hidden');
-        delete elOutputLink.onclick;
+        elActions.classList.add('hidden');
+        delete elShowOutput.onclick;
+        delete elRepeat.onclick;
     }
 }
 
