@@ -12,16 +12,19 @@ import { ModelCheckResultSource, ModelCheckResult } from '../model/check';
 import { ToolOutputChannel } from '../outputChannels';
 
 export const CMD_CHECK_MODEL_RUN = 'tlaplus.model.check.run';
+export const CMD_CHECK_MODEL_REPEAT = 'tlaplus.model.check.repeat';
 export const CMD_CHECK_MODEL_CUSTOM_RUN = 'tlaplus.model.check.customRun';
 export const CMD_CHECK_MODEL_STOP = 'tlaplus.model.check.stop';
 export const CMD_CHECK_MODEL_DISPLAY = 'tlaplus.model.check.display';
 export const CMD_SHOW_TLC_OUTPUT = 'tlaplus.showTlcOutput';
 export const CTX_TLC_RUNNING = 'tlaplus.tlc.isRunning';
+export const CTX_TLC_CAN_REPEAT = 'tlaplus.tlc.canRepeat';
 
 const CFG_CREATE_OUT_FILES = 'tlaplus.tlc.modelChecker.createOutFiles';
 const TEMPLATE_CFG_PATH = path.resolve(__dirname, '../../../tools/template.cfg');
 
 let checkProcess: ChildProcess | undefined;
+let lastCheckFiles: SpecFiles | undefined;
 const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);
 const outChannel = new ToolOutputChannel('TLC', mapTlcOutputLine);
 
@@ -53,6 +56,17 @@ export async function checkModel(
         return;
     }
     doCheckModel(specFiles, false, extContext, diagnostic);
+}
+
+export async function repeatLastCheck(
+    diagnostic: vscode.DiagnosticCollection,
+    extContext: vscode.ExtensionContext
+) {
+    if (!lastCheckFiles) {
+        vscode.window.showWarningMessage('No check to repeat');
+        return;
+    }
+    doCheckModel(lastCheckFiles, false, extContext, diagnostic);
 }
 
 export async function checkModelCustom(diagnostic: vscode.DiagnosticCollection, extContext: vscode.ExtensionContext) {
@@ -140,6 +154,8 @@ export async function doCheckModel(
     diagnostic: vscode.DiagnosticCollection
 ): Promise<ModelCheckResult | undefined> {
     try {
+        lastCheckFiles = specFiles;
+        vscode.commands.executeCommand('setContext', CTX_TLC_CAN_REPEAT, true);
         updateStatusBarItem(true);
         const procInfo = await runTlc(specFiles.tlaFilePath, path.basename(specFiles.cfgFilePath));
         outChannel.bindTo(procInfo);

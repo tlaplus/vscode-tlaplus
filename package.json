@@ -135,6 +135,11 @@
                 "category": "TLA+"
             },
             {
+                "command": "tlaplus.model.check.repeat",
+                "title": "Repeat last model check",
+                "category": "TLA+"
+            },
+            {
                 "command": "tlaplus.model.check.stop",
                 "title": "Stop model checking process",
                 "category": "TLA+"
@@ -190,6 +195,10 @@
                 {
                     "command": "tlaplus.model.check.run",
                     "when": "editorLangId == tlaplus || editorLangId == tlaplus_cfg"
+                },
+                {
+                    "command": "tlaplus.model.check.repeat",
+                    "when": "tlaplus.tlc.canRepeat"
                 },
                 {
                     "command": "tlaplus.model.check.customRun",

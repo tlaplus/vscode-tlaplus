@@ -16,6 +16,11 @@ h1 {
     float: right;
 }
 
+.action {
+    display: inline-block;
+    margin-left: 1em;
+}
+
 .header::after {
     clear: both;
 }
