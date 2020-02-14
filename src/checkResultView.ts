@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { ModelCheckResult, ModelCheckResultSource, SpecFiles } from './model/check';
+import { ModelCheckResult, ModelCheckResultSource } from './model/check';
 import { CMD_CHECK_MODEL_STOP, CMD_SHOW_TLC_OUTPUT, CMD_CHECK_MODEL_RUN_AGAIN } from './commands/checkModel';
 
 // Cached HTML template for the WebView
