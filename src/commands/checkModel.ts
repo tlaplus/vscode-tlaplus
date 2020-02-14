@@ -12,13 +12,13 @@ import { ModelCheckResultSource, ModelCheckResult } from '../model/check';
 import { ToolOutputChannel } from '../outputChannels';
 
 export const CMD_CHECK_MODEL_RUN = 'tlaplus.model.check.run';
-export const CMD_CHECK_MODEL_REPEAT = 'tlaplus.model.check.repeat';
+export const CMD_CHECK_MODEL_RUN_AGAIN = 'tlaplus.model.check.runAgain';
 export const CMD_CHECK_MODEL_CUSTOM_RUN = 'tlaplus.model.check.customRun';
 export const CMD_CHECK_MODEL_STOP = 'tlaplus.model.check.stop';
 export const CMD_CHECK_MODEL_DISPLAY = 'tlaplus.model.check.display';
 export const CMD_SHOW_TLC_OUTPUT = 'tlaplus.showTlcOutput';
 export const CTX_TLC_RUNNING = 'tlaplus.tlc.isRunning';
-export const CTX_TLC_CAN_REPEAT = 'tlaplus.tlc.canRepeat';
+export const CTX_TLC_CAN_RUN_AGAIN = 'tlaplus.tlc.canRunAgain';
 
 const CFG_CREATE_OUT_FILES = 'tlaplus.tlc.modelChecker.createOutFiles';
 const TEMPLATE_CFG_PATH = path.resolve(__dirname, '../../../tools/template.cfg');
@@ -58,12 +58,12 @@ export async function checkModel(
     doCheckModel(specFiles, false, extContext, diagnostic);
 }
 
-export async function repeatLastCheck(
+export async function runLastCheckAgain(
     diagnostic: vscode.DiagnosticCollection,
     extContext: vscode.ExtensionContext
 ) {
     if (!lastCheckFiles) {
-        vscode.window.showWarningMessage('No check to repeat');
+        vscode.window.showWarningMessage('No last check to run');
         return;
     }
     if (!canRunTlc(extContext)) {
@@ -165,7 +165,7 @@ export async function doCheckModel(
 ): Promise<ModelCheckResult | undefined> {
     try {
         lastCheckFiles = specFiles;
-        vscode.commands.executeCommand('setContext', CTX_TLC_CAN_REPEAT, true);
+        vscode.commands.executeCommand('setContext', CTX_TLC_CAN_RUN_AGAIN, true);
         updateStatusBarItem(true);
         const procInfo = await runTlc(specFiles.tlaFilePath, path.basename(specFiles.cfgFilePath));
         outChannel.bindTo(procInfo);

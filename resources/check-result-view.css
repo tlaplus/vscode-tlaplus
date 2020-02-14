@@ -19,6 +19,7 @@ h1 {
 .action {
     display: inline-block;
     margin-left: 1em;
+    white-space: nowrap;
 }
 
 .header::after {
