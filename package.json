@@ -135,8 +135,8 @@
                 "category": "TLA+"
             },
             {
-                "command": "tlaplus.model.check.repeat",
-                "title": "Repeat last model check",
+                "command": "tlaplus.model.check.runAgain",
+                "title": "Run last model check again",
                 "category": "TLA+"
             },
             {
@@ -197,8 +197,8 @@
                     "when": "editorLangId == tlaplus || editorLangId == tlaplus_cfg"
                 },
                 {
-                    "command": "tlaplus.model.check.repeat",
-                    "when": "tlaplus.tlc.canRepeat"
+                    "command": "tlaplus.model.check.runAgain",
+                    "when": "tlaplus.tlc.canRunAgain"
                 },
                 {
                     "command": "tlaplus.model.check.customRun",

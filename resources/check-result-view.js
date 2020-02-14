@@ -58,6 +58,7 @@ function displayCheckResult(state) {
         return;
     }
     displayStatus(res);
+    displaySpecFiles(res.specFiles);
     displayStatesStat(res.initialStatesStat);
     displayCoverage(res.coverageStat);
     displayMessages(res.warnings, 'warnings', 'warnings-list', false);
@@ -78,9 +79,9 @@ function stopProcess() {
     });
 }
 
-function repeatCheck() {
+function runCheckAgain() {
     vscode.postMessage({
-        command: 'repeat'
+        command: 'runAgain'
     });
 }
 
@@ -141,24 +142,36 @@ function displayStatus(result) {
     }
 }
 
+function displaySpecFiles(specFiles) {
+    const elSpecFiles = document.getElementById('spec-files');
+    if (specFiles) {
+        const elTlaFileName = document.getElementById('tla-file-name');
+        const elCfgFileName = document.getElementById('cfg-file-name');
+        elTlaFileName.innerText = specFiles.tlaFileName;
+        elCfgFileName.innerText = specFiles.cfgFileName;
+        elSpecFiles.classList.remove('hidden');
+    } else {
+        elSpecFiles.classList.add('hidden');
+    }
+}
+
 function displayStatusHeader(showActions, stillRunning) {
     const elActions = document.getElementById('actions');
     const elShowOutput = document.getElementById('act-show-output');
-    const elRepeat = document.getElementById('act-repeat');
+    const elRunAgain = document.getElementById('act-run-again');
     if (showActions) {
         elActions.classList.remove('hidden');
         elShowOutput.onclick = () => showTlcOutput();
     } else {
         elActions.classList.add('hidden');
         delete elShowOutput.onclick;
-        delete elRepeat.onclick;
     }
     if (stillRunning) {
-        delete elRepeat.onclick;
-        elRepeat.classList.add('hidden');
+        delete elRunAgain.onclick;
+        elRunAgain.classList.add('hidden');
     } else {
-        elRepeat.onclick = () => repeatCheck();
-        elRepeat.classList.remove('hidden');
+        elRunAgain.onclick = () => runCheckAgain();
+        elRunAgain.classList.remove('hidden');
     }
 }
 

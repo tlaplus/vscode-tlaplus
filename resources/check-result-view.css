@@ -19,6 +19,7 @@ h1 {
 .action {
     display: inline-block;
     margin-left: 1em;
+    white-space: nowrap;
 }
 
 .header::after {
@@ -69,6 +70,10 @@ th {
 
 .state-E {
     color: var(--vscode-errorForeground);
+}
+
+.spec-files {
+    margin-bottom: 1em;
 }
 
 .check-status-details {

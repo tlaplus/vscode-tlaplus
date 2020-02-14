@@ -132,6 +132,7 @@ export class CheckResultBuilder {
     build(): ModelCheckResult {
         return new ModelCheckResult(
             ModelCheckResultSource.OutFile,
+            undefined,
             false,
             this.checkState,
             this.checkStatus,

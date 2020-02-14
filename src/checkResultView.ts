@@ -1,13 +1,12 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { ModelCheckResult, ModelCheckResultSource } from './model/check';
-import { CMD_CHECK_MODEL_STOP, CMD_SHOW_TLC_OUTPUT, CMD_CHECK_MODEL_REPEAT } from './commands/checkModel';
+import { ModelCheckResult, ModelCheckResultSource, SpecFiles } from './model/check';
+import { CMD_CHECK_MODEL_STOP, CMD_SHOW_TLC_OUTPUT, CMD_CHECK_MODEL_RUN_AGAIN } from './commands/checkModel';
 
 // Cached HTML template for the WebView
 let viewHtml: string | undefined;
 let viewPanel: vscode.WebviewPanel | undefined;
-let missing: boolean;
 let currentSource: ModelCheckResultSource | undefined;
 let lastProcessCheckResult: ModelCheckResult | undefined;   // Only results with source=process go here
 let lastCheckResult: ModelCheckResult | undefined;          // The last known check result, no matter what its source is
@@ -18,9 +17,6 @@ export function updateCheckResultView(checkResult: ModelCheckResult) {
             viewPanel.webview.postMessage({
                 checkResult: checkResult
             });
-            missing = false;
-        } else {
-            missing = true;
         }
     }
     lastCheckResult = checkResult;
@@ -84,8 +80,8 @@ function createNewPanel() {
             vscode.commands.executeCommand(CMD_CHECK_MODEL_STOP);
         } else if (message.command === 'showTlcOutput') {
             vscode.commands.executeCommand(CMD_SHOW_TLC_OUTPUT);
-        } else if (message.command === 'repeat') {
-            vscode.commands.executeCommand(CMD_CHECK_MODEL_REPEAT);
+        } else if (message.command === 'runAgain') {
+            vscode.commands.executeCommand(CMD_CHECK_MODEL_RUN_AGAIN);
         } else if (message.command === 'openFile') {
             // `One` is used here because at the moment, VSCode doesn't provide API
             // for revealing existing document, so we're speculating here to reduce open documents duplication.
@@ -105,16 +101,16 @@ function ensurePanelBody(extContext: vscode.ExtensionContext) {
     if (!viewPanel) {
         return;
     }
-    const resourcesDiskPath = vscode.Uri.file(
-        path.join(extContext.extensionPath, 'resources')
-    );
-    const resourcesPath = viewPanel.webview.asWebviewUri(resourcesDiskPath);
     if (!viewHtml) {
+        const resourcesDiskPath = vscode.Uri.file(
+            path.join(extContext.extensionPath, 'resources')
+        );
+        const resourcesPath = viewPanel.webview.asWebviewUri(resourcesDiskPath);
         viewHtml = fs.readFileSync(path.join(extContext.extensionPath, 'resources', 'check-result-view.html'), 'utf8');
+        viewHtml = viewHtml
+            .replace(/\${cspSource}/g, viewPanel.webview.cspSource)
+            .replace(/\${resourcesPath}/g, String(resourcesPath));
     }
-    viewHtml = viewHtml
-        .replace(/\${cspSource}/g, viewPanel.webview.cspSource)
-        .replace(/\${resourcesPath}/g, String(resourcesPath));
     viewPanel.webview.html = viewHtml;
 }
 
