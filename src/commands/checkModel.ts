@@ -66,6 +66,9 @@ export async function repeatLastCheck(
         vscode.window.showWarningMessage('No check to repeat');
         return;
     }
+    if (!canRunTlc(extContext)) {
+        return;
+    }
     doCheckModel(lastCheckFiles, false, extContext, diagnostic);
 }
 
@@ -132,11 +135,7 @@ function getActiveEditorFileUri(extContext: vscode.ExtensionContext): vscode.Uri
 }
 
 export function getEditorIfCanRunTlc(extContext: vscode.ExtensionContext): vscode.TextEditor | undefined {
-    if (checkProcess) {
-        vscode.window.showWarningMessage(
-                'Another model checking process is currently running',
-                'Show currently running process'
-            ).then(() => revealLastCheckResultView(extContext));
+    if (!canRunTlc(extContext)) {
         return undefined;
     }
     const editor = vscode.window.activeTextEditor;
@@ -145,6 +144,17 @@ export function getEditorIfCanRunTlc(extContext: vscode.ExtensionContext): vscod
         return undefined;
     }
     return editor;
+}
+
+function canRunTlc(extContext: vscode.ExtensionContext): boolean {
+    if (checkProcess) {
+        vscode.window.showWarningMessage(
+                'Another model checking process is currently running',
+                'Show currently running process'
+            ).then(() => revealLastCheckResultView(extContext));
+        return false;
+    }
+    return true;
 }
 
 export async function doCheckModel(

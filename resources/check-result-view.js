@@ -115,7 +115,8 @@ function openFile(event, filePath, location) {
 }
 
 function displayStatus(result) {
-    displayStatusHeader(result.showFullOutput);
+    const stillRunning = result.state === 'R';
+    displayStatusHeader(result.showFullOutput, stillRunning);
     const elTimeStart = document.getElementById('time-start');
     const elTimeEnd = document.getElementById('time-end');
     const elState = document.getElementById('check-state');
@@ -125,8 +126,7 @@ function displayStatus(result) {
     elTimeEnd.innerText = result.endDateTimeStr;
     elState.innerText = result.stateName;
     elState.classList = ['state-' + result.state];
-    if (result.state === 'R') {
-        // Still running
+    if (stillRunning) {
         elCmdStopWrapper.classList.remove('hidden');
         elCmdStopWrapper.onclick = () => stopProcess();
     } else {
@@ -141,18 +141,24 @@ function displayStatus(result) {
     }
 }
 
-function displayStatusHeader(showActions) {
+function displayStatusHeader(showActions, stillRunning) {
     const elActions = document.getElementById('actions');
     const elShowOutput = document.getElementById('act-show-output');
     const elRepeat = document.getElementById('act-repeat');
     if (showActions) {
         elActions.classList.remove('hidden');
         elShowOutput.onclick = () => showTlcOutput();
-        elRepeat.onclick = () => repeatCheck();
     } else {
         elActions.classList.add('hidden');
         delete elShowOutput.onclick;
         delete elRepeat.onclick;
+    }
+    if (stillRunning) {
+        delete elRepeat.onclick;
+        elRepeat.classList.add('hidden');
+    } else {
+        elRepeat.onclick = () => repeatCheck();
+        elRepeat.classList.remove('hidden');
     }
 }
 

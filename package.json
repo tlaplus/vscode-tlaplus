@@ -126,12 +126,12 @@
             },
             {
                 "command": "tlaplus.model.check.run",
-                "title": "Check model",
+                "title": "Check model with TLC",
                 "category": "TLA+"
             },
             {
                 "command": "tlaplus.model.check.customRun",
-                "title": "Check model with non-default config...",
+                "title": "Check model with TLC using non-default config...",
                 "category": "TLA+"
             },
             {
