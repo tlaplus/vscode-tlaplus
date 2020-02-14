@@ -336,15 +336,15 @@
     },
     "devDependencies": {
         "@types/glob": "^7.1.1",
-        "@types/mocha": "^5.2.6",
+        "@types/mocha": "^5.2.7",
         "@types/node": "^8.10.51",
         "@types/vscode": "^1.38.0",
-        "glob": "^7.1.4",
-        "mocha": "^6.2.0",
-        "source-map-support": "^0.5.12",
-        "tslint": "^5.18.0",
-        "typescript": "^3.5.3",
-        "vscode-test": "^1.0.2"
+        "glob": "^7.1.6",
+        "mocha": "^6.2.2",
+        "source-map-support": "^0.5.16",
+        "tslint": "^5.20.0",
+        "typescript": "^3.7.5",
+        "vscode-test": "^1.3.0"
     },
     "dependencies": {
         "moment": "^2.24.0"
