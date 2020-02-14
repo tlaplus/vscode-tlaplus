@@ -3,11 +3,11 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { before } from 'mocha';
 import { PassThrough } from 'stream';
-import { ModelCheckResult, CheckState, CheckStatus, ModelCheckResultSource, Value } from '../../../src/model/check';
+import { ModelCheckResult, CheckState, CheckStatus, ModelCheckResultSource, Value, SpecFiles } from '../../../src/model/check';
 import { TlcModelCheckerStdoutParser } from '../../../src/parsers/tlc';
 import { CheckResultBuilder, pos, range, struct, v, set, message, sourceLink, traceItem } from '../shortcuts';
 
-const ROOT_PATH = '/Users/alice/TLA/foo.tla';
+const TEST_SPEC_FILES = new SpecFiles('/Users/alice/TLA/foo.tla', '/Users/alice/TLA/foo.cfg');
 const FIXTURES_PATH = path.resolve(__dirname, '../../../../tests/fixtures/parsers/tlc');
 
 suite('TLC Output Parser Test Suite', () => {
@@ -16,7 +16,7 @@ suite('TLC Output Parser Test Suite', () => {
     });
 
     test('Parses minimal PlusCal output', () => {
-        return assertOutput('empty-calplus.out', ROOT_PATH,
+        return assertOutput('empty-calplus.out', TEST_SPEC_FILES,
             new CheckResultBuilder('empty-calplus.out', CheckState.Success, CheckStatus.Finished)
                 .addDColFilePath('/Users/bob/example.tla')
                 .addDColFilePath('/private/var/folders/tla/T/TLC.tla')
@@ -40,7 +40,7 @@ suite('TLC Output Parser Test Suite', () => {
     });
 
     test('Captures Print/PrintT output', () => {
-        return assertOutput('print-output.out', ROOT_PATH,
+        return assertOutput('print-output.out', TEST_SPEC_FILES,
             new CheckResultBuilder('foo', CheckState.Success, CheckStatus.Finished)
                 .setStartDateTime('2019-01-01 01:02:03')
                 .setEndDateTime('2019-01-01 01:02:05')
@@ -54,7 +54,7 @@ suite('TLC Output Parser Test Suite', () => {
     });
 
     test('Captures output from external modules that override stdout', () => {
-        return assertOutput('override-stdout.out', ROOT_PATH,
+        return assertOutput('override-stdout.out', TEST_SPEC_FILES,
             new CheckResultBuilder('foo', CheckState.Success, CheckStatus.Finished)
                 .setStartDateTime('2019-01-01 01:02:03')
                 .setEndDateTime('2019-01-01 01:02:05')
@@ -67,7 +67,7 @@ suite('TLC Output Parser Test Suite', () => {
     });
 
     test('Respects severity levels', () => {
-        return assertOutput('severity-levels.out', ROOT_PATH,
+        return assertOutput('severity-levels.out', TEST_SPEC_FILES,
             new CheckResultBuilder('foo', CheckState.Error, CheckStatus.Finished)
                 .setStartDateTime('2019-01-01 01:02:03')
                 .setEndDateTime('2019-01-01 01:02:05')
@@ -82,7 +82,7 @@ suite('TLC Output Parser Test Suite', () => {
     });
 
     test('Captures warnings', () => {
-        return assertOutput('warning.out', ROOT_PATH,
+        return assertOutput('warning.out', TEST_SPEC_FILES,
             new CheckResultBuilder('warning.out', CheckState.Success, CheckStatus.Finished)
                 .addDColFilePath('/Users/bob/example.tla')
                 .setStartDateTime('2019-08-17 00:11:08')
@@ -106,7 +106,7 @@ suite('TLC Output Parser Test Suite', () => {
     test('Reports failure when errors are present', () => {
         // The check state is Error despite the 2193 (TLC_SUCCESS) message.
         // It happens when the -continue option is used.
-        return assertOutput('error-continue.out', ROOT_PATH,
+        return assertOutput('error-continue.out', TEST_SPEC_FILES,
             new CheckResultBuilder('error-continue.out', CheckState.Error, CheckStatus.Finished)
                 .addDColFilePath('/Users/bob/example.tla')
                 .setStartDateTime('2019-08-17 00:11:08')
@@ -132,14 +132,14 @@ suite('TLC Output Parser Test Suite', () => {
     });
 
     test('Captures SANY errors', () => {
-        return assertOutput('sany-error.out', ROOT_PATH,
+        return assertOutput('sany-error.out', TEST_SPEC_FILES,
             new CheckResultBuilder('sany-error.out', CheckState.Error, CheckStatus.Finished)
                 .setProcessInfo('Running breadth-first search Model-Checking with fp 86 and seed -5126315020031287108.')
-                .addDColFilePath(ROOT_PATH)
+                .addDColFilePath(TEST_SPEC_FILES.tlaFilePath)
                 .setStartDateTime('2019-08-17 02:04:44')
                 .setEndDateTime('2019-08-17 02:04:44')
                 .setDuration(380)
-                .addDColMessage(ROOT_PATH, range(4, 7, 4, 8), "Unknown operator: `a'.")
+                .addDColMessage(TEST_SPEC_FILES.tlaFilePath, range(4, 7, 4, 8), "Unknown operator: `a'.")
                 .addError([message("Unknown operator: `a'.")])
                 .addError([message('Parsing or semantic analysis failed.')])
                 .build()
@@ -147,7 +147,8 @@ suite('TLC Output Parser Test Suite', () => {
     });
 
     test('Parses error trace', () => {
-        return assertOutput('error-trace.out', '/Users/bob/error_trace.tla',
+        const specFiles = new SpecFiles('/Users/bob/error_trace.tla', '/Users/bob/error_trace.cfg');
+        return assertOutput('error-trace.out', specFiles,
             new CheckResultBuilder('error-trace.out', CheckState.Error, CheckStatus.Finished)
                 .addDColFilePath('/Users/bob/error_trace.tla')
                 .addDColFilePath('/private/var/folders/tla/Integers.tla')
@@ -191,7 +192,8 @@ suite('TLC Output Parser Test Suite', () => {
     });
 
     test('Parses error trace with stuttering state', () => {
-        return assertOutput('error-trace-stuttering.out', '/Users/bob/stuttering.tla',
+        const specFiles = new SpecFiles('/Users/bob/stuttering.tla', '/Users/bob/stuttering.cfg');
+        return assertOutput('error-trace-stuttering.out', specFiles,
             new CheckResultBuilder('stuttering.out', CheckState.Error, CheckStatus.Finished)
                 .addDColFilePath('/Users/bob/stuttering.tla')
                 .setProcessInfo('Running breadth-first search Model-Checking with fp 6 and seed -9020681683977717109.')
@@ -216,7 +218,8 @@ suite('TLC Output Parser Test Suite', () => {
     });
 
     test('Parses error trace with back-to-previous-state', () => {
-        return assertOutput('error-trace-back-to-state.out', '/Users/bob/back_to_state.tla',
+        const specFiles = new SpecFiles('/Users/bob/back_to_state.tla', '/Users/bob/back_to_state.cfg');
+        return assertOutput('error-trace-back-to-state.out', specFiles,
             new CheckResultBuilder('back_to_state.out', CheckState.Error, CheckStatus.Finished)
                 .addDColFilePath('/Users/bob/back_to_state.tla')
                 .setProcessInfo('Running breadth-first search Model-Checking with fp 6 and seed -9020681683977717109.')
@@ -247,7 +250,8 @@ suite('TLC Output Parser Test Suite', () => {
 
     test('Parses error trace with a single variable', () => {
         // Such variables has no `/\` at the beginning
-        return assertOutput('error-trace-single.out', '/Users/bob/error_trace.tla',
+        const specFiles = new SpecFiles('/Users/bob/error_trace.tla', '/Users/bob/error_trace.cfg');
+        return assertOutput('error-trace-single.out', specFiles,
             new CheckResultBuilder('error-trace-single.out', CheckState.Error, CheckStatus.Finished)
                 .addDColFilePath('/Users/bob/error_trace.tla')
                 .setProcessInfo('Running breadth-first search Model-Checking with fp 6 and seed -9020681683977717109.')
@@ -271,7 +275,7 @@ suite('TLC Output Parser Test Suite', () => {
     test('Handles nested exception messages', () => {
         // Messages 1000 `TLC threw an unexpected exception...`
         // contains a nested message with details that must be combined with the outer one.
-        return assertOutput('nested-exception-message.out', ROOT_PATH,
+        return assertOutput('nested-exception-message.out', TEST_SPEC_FILES,
             new CheckResultBuilder('nested-exception-message.out', CheckState.Error, CheckStatus.Finished)
                 .setProcessInfo('Running breadth-first search Model-Checking with fp 95 and seed -5827499341661814189.')
                 .setEndDateTime('2019-08-18 21:16:19')
@@ -290,7 +294,7 @@ suite('TLC Output Parser Test Suite', () => {
     });
 
     test('Extracts links from error messages', () => {
-        return assertOutput('error-message-links.out', ROOT_PATH,
+        return assertOutput('error-message-links.out', TEST_SPEC_FILES,
             new CheckResultBuilder('error-message-links.out', CheckState.Error, CheckStatus.Finished)
                 .addDColFilePath('/Users/bob/error_message_links.tla')
                 .setProcessInfo('Running breadth-first search Model-Checking with fp 6 and seed -9020681683977717109.')
@@ -326,7 +330,7 @@ suite('TLC Output Parser Test Suite', () => {
 
     test('Handles no-line-break message end', () => {
         // bla-bla-bla@!@!@ENDMSG 2193 @!@!@
-        return assertOutput('no-line-break-end.out', ROOT_PATH,
+        return assertOutput('no-line-break-end.out', TEST_SPEC_FILES,
             new CheckResultBuilder('no-line-break-end.out', CheckState.Success, CheckStatus.Finished)
                 .addDColFilePath('/Users/bob/example.tla')
                 .setStartDateTime('2019-08-17 00:12:01')
@@ -345,7 +349,7 @@ suite('TLC Output Parser Test Suite', () => {
 
     test('Handles no-line-break message switch', () => {
         // https://github.com/alygin/vscode-tlaplus/issues/47
-        return assertOutput('no-line-break-switch.out', ROOT_PATH,
+        return assertOutput('no-line-break-switch.out', TEST_SPEC_FILES,
             new CheckResultBuilder('no-line-break-switch.out', CheckState.Success, CheckStatus.Finished)
                 .addDColFilePath('/Users/bob/example.tla')
                 .setStartDateTime('2019-08-17 00:12:01')
@@ -363,7 +367,7 @@ suite('TLC Output Parser Test Suite', () => {
     });
 
     test('Rewrites initial state item with the same timestamp', () => {
-        return assertOutput('state-timestamp-duplication.out', ROOT_PATH,
+        return assertOutput('state-timestamp-duplication.out', TEST_SPEC_FILES,
             new CheckResultBuilder('state-timestamp-duplication.out', CheckState.Success, CheckStatus.Finished)
                 .addDColFilePath('/Users/bob/example.tla')
                 .addDColFilePath('/private/var/folders/tla/T/TLC.tla')
@@ -401,7 +405,7 @@ function assertEquals(actual: ModelCheckResult, expected: ModelCheckResult) {
     assert.deepEqual(actual.errors, expected.errors);
 }
 
-async function assertOutput(fileName: string, tlaFilePath: string, expected: ModelCheckResult): Promise<void> {
+async function assertOutput(fileName: string, specFiles: SpecFiles, expected: ModelCheckResult): Promise<void> {
     const filePath = path.join(FIXTURES_PATH, fileName);
     const buffer = fs.readFileSync(filePath);
     const stream = new PassThrough();
@@ -410,7 +414,7 @@ async function assertOutput(fileName: string, tlaFilePath: string, expected: Mod
     const parser = new TlcModelCheckerStdoutParser(
         ModelCheckResultSource.OutFile,
         stream,
-        tlaFilePath,
+        specFiles,
         false,
         cr => { crh.checkResult = cr; }
     );

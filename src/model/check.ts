@@ -1,4 +1,5 @@
 import { Range, Position } from 'vscode';
+import * as path from 'path';
 import { DCollection } from '../diagnostic';
 import { isNumber } from 'util';
 import { Moment } from 'moment';
@@ -415,6 +416,19 @@ export enum ModelCheckResultSource {
     OutFile     // The result comes from a .out file
 }
 
+export class SpecFiles {
+    readonly tlaFileName: string;
+    readonly cfgFileName: string;
+
+    constructor(
+        readonly tlaFilePath: string,
+        readonly cfgFilePath: string
+    ) {
+        this.tlaFileName = path.basename(tlaFilePath);
+        this.cfgFileName = path.basename(cfgFilePath);
+    }
+}
+
 /**
  * Represents the state of a TLA model checking process.
  */
@@ -428,6 +442,7 @@ export class ModelCheckResult {
 
     constructor(
         readonly source: ModelCheckResultSource,
+        readonly specFiles: SpecFiles | unknown,
         readonly showFullOutput: boolean,
         readonly state: CheckState,
         readonly status: CheckStatus,
@@ -467,7 +482,7 @@ export class ModelCheckResult {
 
     static createEmpty(source: ModelCheckResultSource): ModelCheckResult {
         return new ModelCheckResult(
-            source, false, CheckState.Running, CheckStatus.Starting, undefined, [], [], [], [],
+            source, undefined, false, CheckState.Running, CheckStatus.Starting, undefined, [], [], [], [],
             undefined, undefined, undefined, undefined, 0, undefined, []);
     }
 

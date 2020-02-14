@@ -8,7 +8,7 @@ import { applyDCollection } from '../diagnostic';
 import { ChildProcess } from 'child_process';
 import { saveStreamToFile } from '../outputSaver';
 import { replaceExtension, LANG_TLAPLUS, LANG_TLAPLUS_CFG, listFiles, exists } from '../common';
-import { ModelCheckResultSource, ModelCheckResult } from '../model/check';
+import { ModelCheckResultSource, ModelCheckResult, SpecFiles } from '../model/check';
 import { ToolOutputChannel } from '../outputChannels';
 
 export const CMD_CHECK_MODEL_RUN = 'tlaplus.model.check.run';
@@ -30,13 +30,6 @@ const outChannel = new ToolOutputChannel('TLC', mapTlcOutputLine);
 
 class CheckResultHolder {
     checkResult: ModelCheckResult | undefined;
-}
-
-export class SpecFiles {
-    constructor(
-        readonly tlaFilePath: string,
-        readonly cfgFilePath: string
-    ) {}
 }
 
 /**
@@ -182,7 +175,7 @@ export async function doCheckModel(
         const stdoutParser = new TlcModelCheckerStdoutParser(
             ModelCheckResultSource.Process,
             checkProcess.stdout,
-            specFiles.tlaFilePath,
+            specFiles,
             true,
             (checkResult) => {
                 resultHolder.checkResult = checkResult;

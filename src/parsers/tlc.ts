@@ -4,7 +4,8 @@ import { Readable } from 'stream';
 import { clearTimeout } from 'timers';
 import { CheckStatus, ModelCheckResult, InitialStateStatItem, CoverageItem, MessageLine, MessageSpan, ErrorTraceItem,
     CheckState, OutputLine, StructureValue, findChanges, ModelCheckResultSource, WarningInfo,
-    ErrorInfo } from '../model/check';
+    ErrorInfo,
+    SpecFiles} from '../model/check';
 import { ProcessOutputHandler } from '../outputHandler';
 import { parseVariableValue } from './tlcValues';
 import { SanyData, SanyStdoutParser } from './sany';
@@ -32,15 +33,15 @@ export class TlcModelCheckerStdoutParser extends ProcessOutputHandler<DCollectio
     constructor(
         source: ModelCheckResultSource,
         stdout: Readable | string[],
-        tlaFilePath: string | undefined,
+        specFiles: SpecFiles | undefined,
         showFullOutput: boolean,
         private handler: (checkResult: ModelCheckResult) => void
     ) {
         super(stdout, new DCollection());
         this.handler = handler;
-        this.checkResultBuilder = new ModelCheckResultBuilder(source, showFullOutput);
-        if (tlaFilePath) {
-            this.result.addFilePath(tlaFilePath);
+        this.checkResultBuilder = new ModelCheckResultBuilder(source, specFiles, showFullOutput);
+        if (specFiles) {
+            this.result.addFilePath(specFiles.tlaFilePath);
         }
     }
 
@@ -186,6 +187,7 @@ class ModelCheckResultBuilder {
 
     constructor(
         private source: ModelCheckResultSource,
+        private specFiles: SpecFiles | undefined,
         private showFullOutput: boolean
     ) {}
 
@@ -234,6 +236,7 @@ class ModelCheckResultBuilder {
     build(): ModelCheckResult {
         return new ModelCheckResult(
             this.source,
+            this.specFiles,
             this.showFullOutput,
             this.state,
             this.status,

@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { replaceExtension, deleteDir, readFile, exists } from '../common';
-import { SpecFiles, getEditorIfCanRunTlc, doCheckModel } from './checkModel';
+import { getEditorIfCanRunTlc, doCheckModel } from './checkModel';
 import { createCustomModel } from './customModel';
 import { ToolOutputChannel } from '../outputChannels';
-import { ModelCheckResult, CheckState, SequenceValue, Value, OutputLine } from '../model/check';
+import { ModelCheckResult, CheckState, SequenceValue, Value, OutputLine, SpecFiles } from '../model/check';
 import { parseVariableValue } from '../parsers/tlcValues';
 
 export const CMD_EVALUATE_SELECTION = 'tlaplus.evaluateSelection';

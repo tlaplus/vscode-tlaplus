@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { ModelCheckResult, ModelCheckResultSource } from './model/check';
+import { ModelCheckResult, ModelCheckResultSource, SpecFiles } from './model/check';
 import { CMD_CHECK_MODEL_STOP, CMD_SHOW_TLC_OUTPUT, CMD_CHECK_MODEL_RUN_AGAIN } from './commands/checkModel';
 
 // Cached HTML template for the WebView
@@ -101,16 +101,16 @@ function ensurePanelBody(extContext: vscode.ExtensionContext) {
     if (!viewPanel) {
         return;
     }
-    const resourcesDiskPath = vscode.Uri.file(
-        path.join(extContext.extensionPath, 'resources')
-    );
-    const resourcesPath = viewPanel.webview.asWebviewUri(resourcesDiskPath);
     if (!viewHtml) {
+        const resourcesDiskPath = vscode.Uri.file(
+            path.join(extContext.extensionPath, 'resources')
+        );
+        const resourcesPath = viewPanel.webview.asWebviewUri(resourcesDiskPath);
         viewHtml = fs.readFileSync(path.join(extContext.extensionPath, 'resources', 'check-result-view.html'), 'utf8');
+        viewHtml = viewHtml
+            .replace(/\${cspSource}/g, viewPanel.webview.cspSource)
+            .replace(/\${resourcesPath}/g, String(resourcesPath));
     }
-    viewHtml = viewHtml
-        .replace(/\${cspSource}/g, viewPanel.webview.cspSource)
-        .replace(/\${resourcesPath}/g, String(resourcesPath));
     viewPanel.webview.html = viewHtml;
 }
 

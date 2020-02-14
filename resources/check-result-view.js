@@ -58,6 +58,7 @@ function displayCheckResult(state) {
         return;
     }
     displayStatus(res);
+    displaySpecFiles(res.specFiles);
     displayStatesStat(res.initialStatesStat);
     displayCoverage(res.coverageStat);
     displayMessages(res.warnings, 'warnings', 'warnings-list', false);
@@ -138,6 +139,19 @@ function displayStatus(result) {
         elStatusDetails.innerText = result.statusDetails;
     } else {
         elStatusDetails.classList.add('hidden');
+    }
+}
+
+function displaySpecFiles(specFiles) {
+    const elSpecFiles = document.getElementById('spec-files');
+    if (specFiles) {
+        const elTlaFileName = document.getElementById('tla-file-name');
+        const elCfgFileName = document.getElementById('cfg-file-name');
+        elTlaFileName.innerText = specFiles.tlaFileName;
+        elCfgFileName.innerText = specFiles.cfgFileName;
+        elSpecFiles.classList.remove('hidden');
+    } else {
+        elSpecFiles.classList.add('hidden');
     }
 }
 

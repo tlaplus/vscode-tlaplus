@@ -72,6 +72,10 @@ th {
     color: var(--vscode-errorForeground);
 }
 
+.spec-files {
+    margin-bottom: 1em;
+}
+
 .check-status-details {
     display: inline-block;
 }
