@@ -150,6 +150,11 @@
                 "category": "TLA+"
             },
             {
+                "command": "tlaplus.model.editor.display",
+                "title": "Display model editor",
+                "category": "TLA+"
+            },
+            {
                 "command": "tlaplus.out.visualize",
                 "title": "Visualize TLC output",
                 "category": "TLA+"
@@ -197,6 +202,10 @@
                     "when": "editorLangId == tlaplus || editorLangId == tlaplus_cfg"
                 },
                 {
+                    "command": "tlaplus.model.editor.display",
+                    "when": "editorLangId == tlaplus"
+                },
+                {
                     "command": "tlaplus.model.check.runAgain",
                     "when": "tlaplus.tlc.canRunAgain"
                 },
@@ -226,12 +235,22 @@
                     "command": "tlaplus.model.check.run",
                     "when": "resourceLangId == tlaplus || resourceLangId == tlaplus_cfg",
                     "group": "z_commands"
+                },
+                {
+                    "command": "tlaplus.model.editor.display",
+                    "when": "resourceLangId == tlaplus",
+                    "group": "z_commands"
                 }
             ],
             "editor/context": [
                 {
                     "command": "tlaplus.model.check.run",
                     "when": "editorLangId == tlaplus || editorLangId == tlaplus_cfg",
+                    "group": "z_commands"
+                },
+                {
+                    "command": "tlaplus.model.editor.display",
+                    "when": "editorLangId == tlaplus",
                     "group": "z_commands"
                 },
                 {

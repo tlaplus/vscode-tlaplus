@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+  <!--
+    This is the web view for the Model Editor display; it is visually hideous and functions
+      only as a proof of concept. Please read the comments in the associated TypeScript and
+      JavaScript files.
+  -->
+  <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' ${cspSource}; style-src 'self' 'unsafe-inline' ${cspSource}; img-src 'self' ${cspSource};">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <link rel="stylesheet" type="text/css" href="${resourcesPath}/check-result-view.css">
+      <link rel="stylesheet" type="text/css" href="${resourcesPath}/model-editor-view.css">
+      <style>
+        .vscode-dark .var-button-copy {
+            background-image: url('${resourcesPath}/images/copy-dark.svg');
+        }
+        .vscode-light .var-button-copy {
+            background-image: url('${resourcesPath}/images/copy-light.svg');
+        }
+        .vscode-high-contrast .var-button-copy {
+            background-image: url('${resourcesPath}/images/copy-hc.svg');
+        }
+        .vscode-dark .var-button-display {
+            background-image: url('${resourcesPath}/images/display-val-dark.svg');
+        }
+        .vscode-light .var-button-display {
+            background-image: url('${resourcesPath}/images/display-val-light.svg');
+        }
+        .vscode-high-contrast .var-button-display {
+            background-image: url('${resourcesPath}/images/display-val-hc.svg');
+        }
+      </style>
+      <title>Model Editor</title>
+    </head>
+    <body>
+      <section>
+        <div class="header">
+          <h1>Choose spec:</h1>
+        </div>
+        <p>
+          <select id="editor-chooser">
+          </select>
+      </section>
+      <section>
+        <div class="header">
+          <h1>What is the behavior spec?</h1>
+        </div>
+        <p>
+          <select id="behavior-spec">
+            <option value="init-next">Initial predicate and next-state</option>
+            <option value="temporal">Temporal formula</option>
+            <option value="none">No behavior spec</option>
+          </select>
+
+          <div id="init-next-div">
+            Init: <textarea rows="4" cols="50" id="init-declaration"></textarea>
+            <br/>
+            Next: <textarea rows="4" cols="50" id="next-declaration"></textarea>
+          </div>
+
+          <div id="temporal-div" style="display: none;">
+            <textarea rows="5" cols="50" id="temporal-declaration"></textarea>
+          </div>
+      </section>
+      <section>
+        <div class="header">
+          <h1>What is the model?</h1>
+        </div>
+        <p>
+          <div id="model-constants-div">
+            <!--
+              population determined by the model and populated on view request (and, later, on spec save)
+                constant name: _value_textfield_  ( ) ordinary assignment  ( ) model value  ( ) set of model values [ ] symmetry set [ ] Type [A |v]
+            -->
+          </div>
+        </p>
+      </section>
+      <section>
+        <div id="action-start-model-check" class="action hidden">
+          <a href="#" title="Start the model check">Start Model Check</a>
+        </div>
+        <div id="action-stop-model-check" class="action hidden">
+          <a href="#" title="Stop the model check">Stop Model Checking</a>
+        </div>
+      </section>
+    </body>
+  </html>
+<script src="${resourcesPath}/model-editor-view.js" />

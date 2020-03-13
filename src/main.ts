@@ -5,6 +5,7 @@ import { CMD_CHECK_MODEL_RUN, CMD_CHECK_MODEL_STOP, CMD_CHECK_MODEL_DISPLAY, CMD
     showTlcOutput, checkModelCustom, CMD_CHECK_MODEL_RUN_AGAIN, runLastCheckAgain} from './commands/checkModel';
 import { CMD_EVALUATE_SELECTION, evaluateSelection, CMD_EVALUATE_EXPRESSION,
     evaluateExpression } from './commands/evaluateExpression';
+import { showModelEditor, CMD_MODEL_EDITOR_DISPLAY } from './modelEditorView';
 import { parseModule, CMD_PARSE_MODULE } from './commands/parseModule';
 import { visualizeTlcOutput, CMD_VISUALIZE_TLC_OUTPUT } from './commands/visualizeOutput';
 import { exportModuleToTex, exportModuleToPdf, CMD_EXPORT_TLA_TO_TEX,
@@ -25,6 +26,7 @@ const TLAPLUS_CFG_FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file', lan
 const CHANGELOG_URL = vscode.Uri.parse('https://github.com/alygin/vscode-tlaplus/blob/master/CHANGELOG.md#change-log');
 
 const tlaDocInfos = new TlaDocumentInfos();
+export const symbolsProvider = new TlaDocumentSymbolsProvider(tlaDocInfos);
 
 // Holds all the error messages
 let diagnostic: vscode.DiagnosticCollection;
@@ -63,6 +65,9 @@ export function activate(context: vscode.ExtensionContext) {
             CMD_CHECK_MODEL_DISPLAY,
             () => displayModelChecking(context)),
         vscode.commands.registerCommand(
+            CMD_MODEL_EDITOR_DISPLAY,
+            () => showModelEditor(context)),
+        vscode.commands.registerCommand(
             CMD_VISUALIZE_TLC_OUTPUT,
             () => visualizeTlcOutput(context)),
         vscode.commands.registerCommand(
@@ -85,7 +90,7 @@ export function activate(context: vscode.ExtensionContext) {
             '\n'),
         vscode.languages.registerDocumentSymbolProvider(
             TLAPLUS_FILE_SELECTOR,
-            new TlaDocumentSymbolsProvider(tlaDocInfos),
+            symbolsProvider,
             { label: 'TLA+' }),
         vscode.languages.registerCompletionItemProvider(
             TLAPLUS_FILE_SELECTOR,
