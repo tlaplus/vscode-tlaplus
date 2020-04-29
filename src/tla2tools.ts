@@ -5,6 +5,7 @@ import * as fs from 'fs';
 import { ChildProcess, spawn } from 'child_process';
 import { pathToUri } from './common';
 import { JavaVersionParser } from './parsers/javaVersion';
+import { ShareOption, CFG_TLC_STATISTICS_TYPE } from './commands/tlcStatisticsCfg';
 
 const CFG_JAVA_HOME = 'tlaplus.java.home';
 const CFG_JAVA_OPTIONS = 'tlaplus.java.options';
@@ -89,11 +90,16 @@ export async function runTex(tlaFilePath: string): Promise<ToolProcessInfo> {
 
 export async function runTlc(tlaFilePath: string, cfgFilePath: string): Promise<ToolProcessInfo> {
     const customOptions = getConfigOptions(CFG_TLC_OPTIONS);
+    const javaOptions = [];
+    const shareStats = vscode.workspace.getConfiguration().get<ShareOption>(CFG_TLC_STATISTICS_TYPE);
+    if (shareStats !== ShareOption.DoNotShare) {
+        javaOptions.push('-Dtlc2.TLC.ide=vscode');
+    }
     return runTool(
         TlaTool.TLC,
         tlaFilePath,
         buildTlcOptions(tlaFilePath, cfgFilePath, customOptions),
-        [ /*'-Dtlc2.TLC.ide=vscode'*/ ]
+        javaOptions
     );
 }
 

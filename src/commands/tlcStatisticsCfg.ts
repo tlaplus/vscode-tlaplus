@@ -3,13 +3,13 @@ import * as path from 'path';
 import { homedir } from 'os';
 import { exists, readFile, writeFile, mkDir } from '../common';
 
-const CFG_TLC_STATISTICS_TYPE = 'tlaplus.tlc.statisticsSharing';
+export const CFG_TLC_STATISTICS_TYPE = 'tlaplus.tlc.statisticsSharing';
 const STAT_SETTINGS_DIR = '.tlaplus';
 const STAT_SETTINGS_FILE = 'esc.txt';
 const STAT_OPT_SHARE_NO_ID = 'RANDOM_IDENTIFIER';
 const STAT_OPT_DO_NOT_SHARE = 'NO_STATISTICS';
 
-enum ShareOption {
+export enum ShareOption {
     Share = 'share',
     ShareWithoutId = 'shareWithoutId',
     DoNotShare = 'doNotShare'

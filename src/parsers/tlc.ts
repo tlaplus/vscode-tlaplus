@@ -261,7 +261,7 @@ class ModelCheckResultBuilder {
         }
         const tlcCode = getTlcCode(message.type.code);
         if (!tlcCode) {
-            window.showErrorMessage(`Unexpected message code ${message.type}`);
+            window.showErrorMessage(`Unexpected message code: ${message.type.code}`);
             return;
         }
         if (tlcCode.type === TlcCodeType.Ignore) {

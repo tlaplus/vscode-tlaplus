@@ -1,6 +1,6 @@
 // TLC message constants
-// https://github.com/tlaplus/tlaplus/blob/master/tlatools/src/tlc2/output/EC.java
-// Commit bb64cfd
+// https://github.com/tlaplus/tlaplus/blob/master/tlatools/org.lamport.tlatools/src/tlc2/output/EC.java
+// Commit ab14a33
 
 export enum TlcCodeType {
     Info,       // Such messages must be processed by the parser somehow
@@ -163,6 +163,9 @@ export const TLC_MODULE_EVALUATING = registerCode(2182, TlcCodeType.Error);
 /** The %1% argument of %2% must be in the domain of its first argument:<br>%3%<br>, but instead it is<br>%4% */
 export const TLC_MODULE_ARGUMENT_NOT_IN_DOMAIN = registerCode(2183, TlcCodeType.Error);
 export const TLC_MODULE_APPLY_EMPTY_SEQ = registerCode(2184, TlcCodeType.Error);
+
+export const TLC_SYMMETRY_SET_TOO_SMALL = registerCode(2300, TlcCodeType.Warning);
+export const TLC_SPECIFICATION_FEATURES_TEMPORAL_QUANTIFIER = registerCode(2301, TlcCodeType.Error);
 
 export const TLC_STARTING = registerCode(2185, TlcCodeType.Info);
 export const TLC_FINISHED = registerCode(2186, TlcCodeType.Info);
