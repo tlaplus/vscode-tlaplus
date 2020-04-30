@@ -89,7 +89,7 @@ async function doEvaluateExpression(
     outChannel.clear();
     outChannel.appendLine(`Evaluating constant expression:\n${expr}\n`);
     outChannel.revealWindow();
-    const checkResult = await doCheckModel(specFiles, true, extContext, diagnostic);
+    const checkResult = await doCheckModel(specFiles, false, extContext, diagnostic);
     displayResult(checkResult);
     deleteDir(model.dirPath);
 }
@@ -117,7 +117,10 @@ function displayResult(checkResult: ModelCheckResult | undefined) {
         return;
     }
     if (checkResult.state !== CheckState.Success) {
-        checkResult.errors.forEach((err) => outChannel.appendLine(err.toString()));
+        outChannel.appendLine('Error evaluating expression:');
+        checkResult.errors.forEach((err) => {
+            err.lines.forEach((line) => outChannel.appendLine(line.toString()));
+        });
         return;
     }
     const valLines = extractCalculatedExpressionLines(checkResult.outputLines);

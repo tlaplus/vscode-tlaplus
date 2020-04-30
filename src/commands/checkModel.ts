@@ -48,7 +48,7 @@ export async function checkModel(
     if (!specFiles) {
         return;
     }
-    doCheckModel(specFiles, false, extContext, diagnostic);
+    doCheckModel(specFiles, true, extContext, diagnostic);
 }
 
 export async function runLastCheckAgain(
@@ -62,7 +62,7 @@ export async function runLastCheckAgain(
     if (!canRunTlc(extContext)) {
         return;
     }
-    doCheckModel(lastCheckFiles, false, extContext, diagnostic);
+    doCheckModel(lastCheckFiles, true, extContext, diagnostic);
 }
 
 export async function checkModelCustom(diagnostic: vscode.DiagnosticCollection, extContext: vscode.ExtensionContext) {
@@ -88,7 +88,7 @@ export async function checkModelCustom(diagnostic: vscode.DiagnosticCollection, 
         doc.uri.fsPath,
         path.join(path.dirname(doc.uri.fsPath), cfgFileName)
     );
-    doCheckModel(specFiles, false, extContext, diagnostic);
+    doCheckModel(specFiles, true, extContext, diagnostic);
 }
 
 /**
@@ -152,7 +152,7 @@ function canRunTlc(extContext: vscode.ExtensionContext): boolean {
 
 export async function doCheckModel(
     specFiles: SpecFiles,
-    quiet: boolean,
+    showCheckResultView: boolean,
     extContext: vscode.ExtensionContext,
     diagnostic: vscode.DiagnosticCollection
 ): Promise<ModelCheckResult | undefined> {
@@ -167,7 +167,7 @@ export async function doCheckModel(
             checkProcess = undefined;
             updateStatusBarItem(false);
         });
-        if (!quiet) {
+        if (showCheckResultView) {
             attachFileSaver(specFiles.tlaFilePath, checkProcess);
             revealEmptyCheckResultView(ModelCheckResultSource.Process, extContext);
         }
@@ -179,14 +179,12 @@ export async function doCheckModel(
             true,
             (checkResult) => {
                 resultHolder.checkResult = checkResult;
-                if (!quiet) {
+                if (showCheckResultView) {
                     updateCheckResultView(checkResult);
                 }
             });
         const dCol = await stdoutParser.readAll();
-        if (!quiet) {
-            applyDCollection(dCol, diagnostic);
-        }
+        applyDCollection(dCol, diagnostic);
         return resultHolder.checkResult;
     } catch (err) {
         statusBarItem.hide();
