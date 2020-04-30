@@ -5,7 +5,7 @@
 ### Enhancements
 
 * `Run last model check again` command which allows you to quickly run TLC again without switching to the spec or model file. The `Check again` button on the check visualization panel does the same.
-* Upgrade TLC Tools to v2.15.
+* Upgrade TLA Tools to v2.15.
 * Run the `Check model` command from the Explorer context menu on .tla and .cfg files.
 * Display spec and model file names on the check visualization panel.
 * Display errors when evaluating constant expressions.
