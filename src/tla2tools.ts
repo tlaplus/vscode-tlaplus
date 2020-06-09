@@ -206,12 +206,8 @@ async function checkJavaVersion(javaPath: string) {
         ver.fullOutput.forEach(line => console.debug(line));
         throw new ToolingError('Error while obtaining Java version. Check the Java Home setting.');
     }
-    let num = ver.version;
-    if (num.startsWith('1.')) {
-        num = num.substring(2);
-    }
-    const pIdx = num.indexOf('.');
-    if (pIdx > 0 && parseInt(num.substring(0, pIdx), 10) >= LOWEST_JAVA_VERSION) {
+    const majVersion = extractMajor(ver.version);
+    if (majVersion >= LOWEST_JAVA_VERSION) {
         return;
     }
     vscode.window.showWarningMessage(`Unsupported Java version: ${ver.version}`);
@@ -307,4 +303,20 @@ function containsTlaToolsLib(classPath: string): boolean {
         }
     }
     return false;
+}
+
+/**
+ * Extracts the "major" Java version: 1.6.80 => 6, 1.8.202 => 8, 9.0.7 => 9, 11.0.6 => 11 etc.
+ * @param version The full version as reported by `java -version`.
+ */
+function extractMajor(version: string): number {
+    let majVer = version;
+    if (majVer.startsWith('1.')) {
+        majVer = majVer.substring(2);
+    }
+    const pIdx = majVer.indexOf('.');
+    if (pIdx > 0) {
+        majVer = majVer.substring(0, pIdx);
+    }
+    return parseInt(majVer, 10);
 }
