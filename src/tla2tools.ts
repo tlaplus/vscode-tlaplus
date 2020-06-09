@@ -6,6 +6,7 @@ import { ChildProcess, spawn } from 'child_process';
 import { pathToUri } from './common';
 import { JavaVersionParser } from './parsers/javaVersion';
 import { ShareOption, CFG_TLC_STATISTICS_TYPE } from './commands/tlcStatisticsCfg';
+import { ToolOutputChannel } from './outputChannels';
 
 const CFG_JAVA_HOME = 'tlaplus.java.home';
 const CFG_JAVA_OPTIONS = 'tlaplus.java.options';
@@ -24,6 +25,7 @@ const TLA_TOOLS_LIB_NAME_END_UNIX = '/' + TLA_TOOLS_LIB_NAME;
 const TLA_TOOLS_LIB_NAME_END_WIN = '\\' + TLA_TOOLS_LIB_NAME;
 const toolsJarPath = path.resolve(__dirname, '../../tools/' + TLA_TOOLS_LIB_NAME);
 const javaCmd = 'java' + (process.platform === 'win32' ? '.exe' : '');
+const javaVersionChannel = new ToolOutputChannel('TLA+ Java version');
 
 let lastUsedJavaHome: string | undefined;
 let cachedJavaPath: string | undefined;
@@ -210,7 +212,10 @@ async function checkJavaVersion(javaPath: string) {
     if (majVersion >= LOWEST_JAVA_VERSION) {
         return;
     }
-    vscode.window.showWarningMessage(`Unsupported Java version: ${ver.version}`);
+    vscode.window.showWarningMessage(
+            `Unsupported Java version: ${ver.version}`,
+            'Show Details'
+        ).then(() => showJavaVersionOutput(javaPath, ver));
 }
 
 function addValueOrDefault(option: string, defaultValue: string, args: string[], realArgs: string[]) {
@@ -319,4 +324,14 @@ function extractMajor(version: string): number {
         majVer = majVer.substring(0, pIdx);
     }
     return parseInt(majVer, 10);
+}
+
+/**
+ * Shows full Java version output in an Output channel.
+ */
+function showJavaVersionOutput(javaPath: string, ver: JavaVersion) {
+    javaVersionChannel.clear();
+    javaVersionChannel.appendLine(`${javaPath} -version`);
+    ver.fullOutput.forEach(line => javaVersionChannel.appendLine(line));
+    javaVersionChannel.revealWindow();
 }
