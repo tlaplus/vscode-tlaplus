@@ -174,7 +174,7 @@ class ModelCheckResultBuilder {
     private processInfo: string | undefined;
     private initialStatesStat: InitialStateStatItem[] = [];
     private coverageStat: CoverageItem[] = [];
-    private warnings: WarningInfo[] = [];
+    private readonly warnings: WarningInfo[] = [];
     private readonly errors: ErrorInfo[] = [];
     private readonly messages = new MessageStack();
     private readonly sanyLines: string[] = [];

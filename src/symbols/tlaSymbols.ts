@@ -38,7 +38,7 @@ class ParsingContext {
  */
 export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider {
     constructor(
-        private docInfos: TlaDocumentInfos
+        private readonly docInfos: TlaDocumentInfos
     ) {}
 
     provideDocumentSymbols(

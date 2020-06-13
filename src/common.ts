@@ -28,7 +28,7 @@ export function pathToUri(filePath: string): vscode.Uri {
 export function replaceExtension(filePath: string, newExt: string): string {
     const lastDotIdx = filePath.lastIndexOf('.');
     const basePath = lastDotIdx < 0 ? filePath : filePath.substring(0, lastDotIdx);
-    return basePath + '.' + newExt;
+    return `${basePath}.${newExt}`;
 }
 
 export function parseDateTime(str: string): moment.Moment {
@@ -36,7 +36,7 @@ export function parseDateTime(str: string): moment.Moment {
     if (dateTime.isValid()) {
         return dateTime;
     }
-    throw new ParsingError('Cannot parse date/time ' + str);
+    throw new ParsingError(`Cannot parse date/time ${str}`);
 }
 
 export function pathToModuleName(filePath: string): string {
@@ -45,8 +45,7 @@ export function pathToModuleName(filePath: string): string {
     // so it breaks nothing.
     // path.basename() doesn't work in some cases
     const sid = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'));
-    const modName = filePath.substring(sid + 1, filePath.length - 4);   // remove path and .tla
-    return modName;
+    return filePath.substring(sid + 1, filePath.length - 4);   // remove path and .tla
 }
 
 export function createTempDirSync(): string | undefined {
