@@ -54,7 +54,7 @@ begin
 end process;
 
 end algorithm; *)
-\* BEGIN TRANSLATION
+\* BEGIN TRANSLATION - the hash of the PCal code: PCal-e313c8def40ad1e3112011f0db802650
 VARIABLES box, pc, stack
 
 (* define statement *)
@@ -138,5 +138,5 @@ Spec == Init /\ [][Next]_vars
 
 Termination == <>(\A self \in ProcSet: pc[self] = "Done")
 
-\* END TRANSLATION
+\* END TRANSLATION - the hash of the generated TLA code (remove to silence divergence warnings): TLA-99759f1c5215f35e6e3d7f37c9798c1a
 ====
