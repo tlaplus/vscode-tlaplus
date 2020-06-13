@@ -18,7 +18,10 @@ const outChannel = new ToolOutputChannel('TLA+ evaluation');
 /**
  * Evaluates the expression, currently selected in the active editor.
  */
-export async function evaluateSelection(diagnostic: vscode.DiagnosticCollection, extContext: vscode.ExtensionContext) {
+export async function evaluateSelection(
+    diagnostic: vscode.DiagnosticCollection,
+    extContext: vscode.ExtensionContext
+): Promise<void> {
     const editor = getEditorIfCanRunTlc(extContext);
     if (!editor) {
         return;
@@ -31,7 +34,10 @@ export async function evaluateSelection(diagnostic: vscode.DiagnosticCollection,
 /**
  * Asks the user to enter an expression and evalutes it in the context of the specification from the active editor.
  */
-export async function evaluateExpression(diagnostic: vscode.DiagnosticCollection, extContext: vscode.ExtensionContext) {
+export async function evaluateExpression(
+    diagnostic: vscode.DiagnosticCollection,
+    extContext: vscode.ExtensionContext
+): Promise<void> {
     const editor = getEditorIfCanRunTlc(extContext);
     if (!editor) {
         return;
@@ -98,10 +104,12 @@ async function extractConstants(cfgFilePath: string): Promise<string[]> {
     const lines = (await readFile(cfgFilePath)).split('\n');
     const constants = [];
     let c = false;
+    // eslint-disable-next-line max-len
+    const wordsRegex = /^\s*(SPECIFICATION|INVARIANT(S)?|PROPERT(Y|IES)|INIT|NEXT|SYMMETRY|CONSTRAINT(S)?|ACTION_CONSTRAINT(S)?|VIEW)\b/g;
     for (const line of lines) {
         if (/^\s*CONSTANT(S)?\b/g.test(line)) {
             c = true;
-        } else if (/^\s*(SPECIFICATION|INVARIANT(S)?|PROPERT(Y|IES)|INIT|NEXT|SYMMETRY|CONSTRAINT(S)?|ACTION_CONSTRAINT(S)?|VIEW)\b/g.test(line)) {
+        } else if (wordsRegex.test(line)) {
             c = false;
         }
         if (c && line !== '') {
@@ -131,7 +139,6 @@ function displayResult(checkResult: ModelCheckResult | undefined) {
     }
     outChannel.appendLine(exprVal || 'Error: Expression value output not found.');
     outChannel.revealWindow();  // VS Code sometimes swithes the window to TLC output, so we need to get it back
-    return;
 }
 
 function extractCalculatedExpressionLines(outLines: OutputLine[]): string[] {

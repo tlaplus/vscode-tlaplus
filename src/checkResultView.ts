@@ -11,7 +11,7 @@ let currentSource: ModelCheckResultSource | undefined;
 let lastProcessCheckResult: ModelCheckResult | undefined;   // Only results with source=process go here
 let lastCheckResult: ModelCheckResult | undefined;          // The last known check result, no matter what its source is
 
-export function updateCheckResultView(checkResult: ModelCheckResult) {
+export function updateCheckResultView(checkResult: ModelCheckResult): void {
     if (checkResult.source === currentSource) {
         if (viewPanel && viewPanel.visible) {
             viewPanel.webview.postMessage({
@@ -25,11 +25,11 @@ export function updateCheckResultView(checkResult: ModelCheckResult) {
     }
 }
 
-export function revealEmptyCheckResultView(source: ModelCheckResultSource, extContext: vscode.ExtensionContext) {
+export function revealEmptyCheckResultView(source: ModelCheckResultSource, extContext: vscode.ExtensionContext): void {
     revealCheckResultView(ModelCheckResult.createEmpty(source), extContext);
 }
 
-export function revealLastCheckResultView(extContext: vscode.ExtensionContext) {
+export function revealLastCheckResultView(extContext: vscode.ExtensionContext): void {
     if (lastProcessCheckResult) {
         revealCheckResultView(lastProcessCheckResult, extContext);
     } else {

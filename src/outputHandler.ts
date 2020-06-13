@@ -9,18 +9,17 @@ const CHAR_RETURN = 13;
  */
 export abstract class ProcessOutputHandler<T> {
     protected result: T;
-    private closed: boolean = false;
+    private closed = false;
     private buf: string | null = null;
     private resolve?: (result: T) => void;
-    private lines: string[] | undefined;
+    private readonly lines: string[] | undefined;
 
-    constructor(source: Readable | string[], initialResult: T) {
+    constructor(source: Readable | string[] | null, initialResult: T) {
         if (source instanceof Readable) {
-            const me = this;
-            source.on('data', chunk => me.handleData(chunk));
-            source.on('end', () => me.handleData(null));
+            source.on('data', chunk => this.handleData(chunk));
+            source.on('end', () => this.handleData(null));
         } else {
-            this.lines = source;
+            this.lines = source === null ? [] : source;
         }
         this.result = initialResult;
     }
@@ -29,9 +28,8 @@ export abstract class ProcessOutputHandler<T> {
      * Reads the stream to the end, parsing all the lines.
      */
     async readAll(): Promise<T> {
-        const me = this;
         return new Promise(resolve => {
-            me.resolve = resolve;
+            this.resolve = resolve;
         });
     }
 
@@ -55,7 +53,7 @@ export abstract class ProcessOutputHandler<T> {
 
     protected abstract handleLine(line: string | null): void;
 
-    protected handleError(err: any) {
+    protected handleError(err: unknown): void {
         // Do nothing by default
     }
 
@@ -64,7 +62,6 @@ export abstract class ProcessOutputHandler<T> {
             throw new Error('Stream is closed.');
         }
         if (chunk === null) {
-            // console.log(':END:');
             this.tryHandleLine(this.buf);
             this.buf = null;
             this.closed = true;
@@ -82,11 +79,7 @@ export abstract class ProcessOutputHandler<T> {
         } else {
             this.buf = lines.pop() || null;
         }
-        const me = this;
-        lines.forEach(line => {
-            // console.log('> ' + line);
-            me.tryHandleLine(line);
-        });
+        lines.forEach(line => this.tryHandleLine(line));
     }
 
     private tryHandleLine(line: string | null) {

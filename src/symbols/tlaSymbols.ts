@@ -38,7 +38,7 @@ class ParsingContext {
  */
 export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider {
     constructor(
-        private docInfos: TlaDocumentInfos
+        private readonly docInfos: TlaDocumentInfos
     ) {}
 
     provideDocumentSymbols(
@@ -137,7 +137,7 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
         docUri: vscode.Uri,
         line: vscode.TextLine
     ): boolean {
-        const matches = /^\s*(\w+)\s*([\(|\[)].*)?\s*==\s*(.*)?/g.exec(line.text);
+        const matches = /^\s*(\w+)\s*([(|[)].*)?\s*==\s*(.*)?/g.exec(line.text);
         if (!matches) {
             return false;
         }
@@ -171,7 +171,7 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
             ? vscode.SymbolKind.Variable
             : vscode.SymbolKind.Constant;
         const startIdx = matches[1].length + matches[2].length;
-        return this.tryCollectListItems(context, docUri, line.lineNumber,  startIdx, matches[3]);
+        return this.tryCollectListItems(context, docUri, line.lineNumber, startIdx, matches[3]);
     }
 
     tryCollectListItems(
@@ -270,7 +270,7 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
         if (matches) {
             return SpecialSymbol.PlusCalEnd;
         }
-        return line.text === '\* BEGIN TRANSLATION' ? SpecialSymbol.PlusCalEnd : undefined;
+        return line.text === '\\* BEGIN TRANSLATION' ? SpecialSymbol.PlusCalEnd : undefined;
     }
 }
 

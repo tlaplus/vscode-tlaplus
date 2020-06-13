@@ -7,9 +7,9 @@ type LineMapper = (line: string) => string | undefined;
 
 class OutputToOutChannelSender extends ProcessOutputHandler<void> {
     constructor(
-        source: Readable | string[],
-        private outChannel: vscode.OutputChannel,
-        private lineMapper: LineMapper | undefined
+        source: Readable | string[] | null,
+        private readonly outChannel: vscode.OutputChannel,
+        private readonly lineMapper: LineMapper | undefined
     ) {
         super(source);
     }
@@ -37,7 +37,7 @@ export class ToolOutputChannel {
         this.lineMapper = lineMapper;
     }
 
-    bindTo(procInfo: ToolProcessInfo) {
+    bindTo(procInfo: ToolProcessInfo): void {
         const channel = this.getChannel();
         channel.clear();
         channel.appendLine(procInfo.commandLine);
@@ -45,15 +45,15 @@ export class ToolOutputChannel {
         this.outSender = new OutputToOutChannelSender(procInfo.process.stdout, channel, this.lineMapper);
     }
 
-    revealWindow() {
+    revealWindow(): void {
         this.getChannel().show();
     }
 
-    clear() {
+    clear(): void {
         this.getChannel().clear();
     }
 
-    appendLine(line: string) {
+    appendLine(line: string): void {
         this.getChannel().appendLine(line);
     }
 

@@ -7,7 +7,7 @@ For those, who whant to write some code, here's a short guide.
 ## Prerequisites
 
 1. Since this is a VS Code extension, you'll need [VS Code](https://code.visualstudio.com/) to check your fixes and improvements.
-2. The extension requires [NodeJS](https://nodejs.org/en/) runtime (8.12 at the moment).
+2. The extension requires [NodeJS](https://nodejs.org/en/) runtime (12.12 at the moment).
 3. It's written mostly in [TypeScript](https://www.typescriptlang.org), so you'll need to install it too.
 
 ## Clone, Build, Test
@@ -114,9 +114,9 @@ There're some other useful stuff in the project:
 
 Yeah, there are some rules about how the code should look, but they are not hard to follow.
 
-[TSLint](https://palantir.github.io/tslint/) is responsible for checking it as a part of building process. It uses the `tslint.json` file as its config.
+[ESLint](https://eslint.org) is responsible for checking it as a part of building process. It uses the `.eslintrc.json` file as its config.
 
-With the [TSLint extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode.vscode-typescript-tslint-plugin) installed, VS Code will check your code automaticaly.
+With the [ESLint extension](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint) installed, VS Code will check your code automaticaly.
 
 # Useful Resources
 

@@ -18,7 +18,7 @@ export enum ShareOption {
 /**
  * Writes TLC statistics sharing cfg file when the corresponding configuration setting is changed.
  */
-export function listenTlcStatConfigurationChanges(disposables: vscode.Disposable[]) {
+export function listenTlcStatConfigurationChanges(disposables: vscode.Disposable[]): void {
     vscode.workspace.onDidChangeConfiguration((event) => {
         if (event.affectsConfiguration(CFG_TLC_STATISTICS_TYPE)) {
             const cfgOption = vscode.workspace.getConfiguration().get<ShareOption>(CFG_TLC_STATISTICS_TYPE);
@@ -32,11 +32,11 @@ export function listenTlcStatConfigurationChanges(disposables: vscode.Disposable
 /**
  * Updates the TLC statistics sharing setting in accordance with the config file if necessary.
  */
-export async function syncTlcStatisticsSetting() {
+export async function syncTlcStatisticsSetting(): Promise<void> {
     const cfgOption = vscode.workspace.getConfiguration().get<string>(CFG_TLC_STATISTICS_TYPE);
     const fileOption = await readFileOption();
     if (cfgOption === fileOption) {
-        return;
+        return Promise.reject();
     }
     const target = vscode.ConfigurationTarget.Global;
     return vscode.workspace.getConfiguration().update(CFG_TLC_STATISTICS_TYPE, fileOption, target);
@@ -58,7 +58,7 @@ async function readFileOption(): Promise<ShareOption> {
     return ShareOption.DoNotShare;
 }
 
-async function writeFileOption(option: ShareOption) {
+async function writeFileOption(option: ShareOption): Promise<boolean> {
     let contents;
     switch (option) {
         case ShareOption.Share:
@@ -71,8 +71,8 @@ async function writeFileOption(option: ShareOption) {
             contents = STAT_OPT_DO_NOT_SHARE;
             break;
         default:
-            console.error('Unsupported TLC statistics option: ' + option);
-            return;
+            console.error(`Unsupported TLC statistics option: ${option}`);
+            return Promise.reject();
     }
     const dir = path.join(homedir(), STAT_SETTINGS_DIR);
     const file = path.join(dir, STAT_SETTINGS_FILE);

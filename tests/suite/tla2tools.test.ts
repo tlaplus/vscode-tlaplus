@@ -29,7 +29,7 @@ suite('TLA+ Tools Test Suite', () => {
         assert.deepEqual(
             buildTlcOptions('/path/to/module.tla', '/path/to/module.cfg', ['-deadlock', '-checkpoint', '5']),
             ['module.tla', '-tool', '-modelcheck', '-coverage', '1', '-config', '/path/to/module.cfg',
-            '-deadlock', '-checkpoint', '5']
+                '-deadlock', '-checkpoint', '5']
         );
     });
 

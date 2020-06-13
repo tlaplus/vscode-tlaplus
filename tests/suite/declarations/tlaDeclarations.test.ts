@@ -63,7 +63,7 @@ suite('TLA Declarations Provider Test Suite', () => {
         return assertDeclarations(doc, [
             '---- MODULE foo ----',
             'VARIABLES bar',
-            "Next == /\ b${a}r' = bar + 1",
+            "Next == /\\ b${a}r' = bar + 1",
             '===='
         ], [
             loc(doc.uri, pos(1, 10))

@@ -50,7 +50,7 @@ const TLA_STD_MODULE_ITEMS = TLA_STD_MODULES.map(m => {
  */
 export class TlaCompletionItemProvider implements vscode.CompletionItemProvider {
     constructor(
-        private docInfos: TlaDocumentInfos
+        private readonly docInfos: TlaDocumentInfos
     ) {}
 
     provideCompletionItems(
@@ -76,7 +76,7 @@ export class TlaCompletionItemProvider implements vscode.CompletionItemProvider 
         const symbolInfos = symbols.map(s => new vscode.CompletionItem(s.name, mapKind(s.kind)));
         let items = TLA_INNER_ITEMS.concat(symbolInfos);
         if (!isPlusCal) {
-            const isProofStep = /^\s*<\d+>[<>\d\.a-zA-Z]*\s+[a-zA-Z]*$/g.test(prevText);
+            const isProofStep = /^\s*<\d+>[<>\d.a-zA-Z]*\s+[a-zA-Z]*$/g.test(prevText);
             const isNewLine = /^\s*[a-zA-Z]*$/g.test(prevText);
             if (isProofStep) {
                 items = items.concat(TLA_PROOF_STARTING_KEYWORD_ITEMS);
@@ -98,7 +98,7 @@ export class TlaCompletionItemProvider implements vscode.CompletionItemProvider 
             case vscode.CompletionItemKind.Operator:
                 item.insertText = item.label.substring(1) + ' ';
                 break;
-            }
+        }
         return item;
     }
 }
@@ -118,6 +118,6 @@ function mapKind(symbolKind: vscode.SymbolKind): vscode.CompletionItemKind {
             return vscode.CompletionItemKind.Module;
         case vscode.SymbolKind.Constant:
             return vscode.CompletionItemKind.Constant;
-        }
+    }
     return vscode.CompletionItemKind.Text;
 }

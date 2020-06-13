@@ -119,7 +119,7 @@ export class CheckResultBuilder {
     private startDateTime: Moment | undefined;
     private endDateTime: Moment | undefined;
     private duration: number | undefined;
-    private workersCount: number = 0;
+    private workersCount = 0;
     private collisionProbability: string | undefined;
     private outputLines: OutputLine[] = [];
 
@@ -218,13 +218,13 @@ export class CheckResultBuilder {
 
     addDColFilePath(path: string): CheckResultBuilder {
         this.ensureSanyMessages();
-        this.sanyMessages!.addFilePath(path);
+        this.sanyMessages?.addFilePath(path);
         return this;
     }
 
     addDColMessage(filePath: string, range: vscode.Range, text: string): CheckResultBuilder {
         this.ensureSanyMessages();
-        this.sanyMessages!.addMessage(filePath, range, text);
+        this.sanyMessages?.addMessage(filePath, range, text);
         return this;
     }
 

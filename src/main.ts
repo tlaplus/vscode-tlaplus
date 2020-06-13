@@ -32,7 +32,7 @@ let diagnostic: vscode.DiagnosticCollection;
 /**
  * Extension entry point.
  */
-export function activate(context: vscode.ExtensionContext) {
+export function activate(context: vscode.ExtensionContext): void {
     diagnostic = vscode.languages.createDiagnosticCollection(LANG_TLAPLUS);
     context.subscriptions.push(
         vscode.commands.registerCommand(
@@ -136,5 +136,3 @@ function getMajorMinor(version: string | undefined): string | undefined {
     const matches = /^(\d+.\d+)/g.exec(version);
     return matches ? matches[1] : undefined;
 }
-
-export function deactivate() {}

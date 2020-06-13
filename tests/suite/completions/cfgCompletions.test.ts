@@ -45,11 +45,9 @@ async function assertCompletions(
     const completions = await completionsProvider.provideCompletionItems(doc, docInfo.position, tokenSrc.token, ctx);
     if (!completions && expectCompletions) {
         assert.fail('No completions returned when expected');
-        return;
     }
     if (completions && completions.items.length > 0 && !expectCompletions) {
         assert.fail('Completions returned when not expected');
-        return;
     }
     if (expectCompletions && completions) {
         assert.equal(completions.items.length, TLA_CFG_KEYWORDS.length);

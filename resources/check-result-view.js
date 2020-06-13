@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 const vscode = acquireVsCodeApi();
 
 const VAL_COL = ['val-col'];
@@ -126,7 +127,7 @@ function displayStatus(result) {
     elTimeStart.innerText = result.startDateTimeStr;
     elTimeEnd.innerText = result.endDateTimeStr;
     elState.innerText = result.stateName;
-    elState.classList = ['state-' + result.state];
+    elState.classList = [`state-${result.state}`];
     if (stillRunning) {
         elCmdStopWrapper.classList.remove('hidden');
         elCmdStopWrapper.onclick = () => stopProcess();
@@ -216,7 +217,7 @@ function displayMessages(infos, wrapperId, listId, errorTraceLinks) {
     }
     elWrapper.classList.remove('hidden');
     let idx = 0;
-    for (let info of infos) {
+    for (const info of infos) {
         const elMessage = document.createElement('p');
         elMessage.classList = ['message'];
         info.lines.forEach((line) => displayMessageLine(elMessage, line));
@@ -240,7 +241,7 @@ function displayMessageLine(elParent, line) {
         if (span.type === 'SL') {
             const elLink = appendTextChild(elLine, 'a', span.text);
             elLink.setAttribute('href', '#');
-            elLink.onclick = (e) => openFile(e, span.filePath, span.location)
+            elLink.onclick = (e) => openFile(e, span.filePath, span.location);
         } else {
             appendTextChild(elLine, 'span', span.text);
         }
@@ -275,7 +276,7 @@ function displayErrorTrace(errors, settings) {
 }
 
 function displayErrorTraceItem(elErrorTraceVars, item, showUnmodified, filterItems) {
-    let eShowUnmodified = showUnmodified || item.num === 1;
+    const eShowUnmodified = showUnmodified || item.num === 1;
     const elItem = document.createElement('li');
     const elItemBlock = document.createElement('div');
     elItemBlock.classList.add('error-trace-item-block');
@@ -353,7 +354,7 @@ function renderValueTitle(value) {
     const elVarChange = document.createElement('span');
     if (value.changeType !== 'N') {
         elVarChange.classList.add('change-marker');
-        elVarChange.classList.add('change-marker-' + value.changeType);
+        elVarChange.classList.add(`change-marker-${value.changeType}`);
         elVarChange.innerText = value.changeType;
         elVarChange.setAttribute('title', changeHints[value.changeType]);
     }
@@ -433,7 +434,7 @@ function num(n) {
     while (en > 0) {
         const r = en % 1000;
         en = (en - r) / 1000;
-        let rStr = en > 0 ? lpadN(r) : String(r);
+        const rStr = en > 0 ? lpadN(r) : String(r);
         parts.push(rStr);
     }
     return sign + parts.reverse().join(' ');
@@ -443,9 +444,9 @@ function lpadN(n) {
     if (n === 0) {
         return '000';
     } else if (n < 10) {
-        return '00' + n;
+        return `00${n}`;
     } else if (n < 100) {
-        return '0' + n;
+        return `0${n}`;
     }
     return String(n);
 }

@@ -39,7 +39,7 @@ export async function checkModel(
     fileUri: vscode.Uri | undefined,
     diagnostic: vscode.DiagnosticCollection,
     extContext: vscode.ExtensionContext
-) {
+): Promise<void> {
     const uri = fileUri ? fileUri : getActiveEditorFileUri(extContext);
     if (!uri) {
         return;
@@ -54,7 +54,7 @@ export async function checkModel(
 export async function runLastCheckAgain(
     diagnostic: vscode.DiagnosticCollection,
     extContext: vscode.ExtensionContext
-) {
+): Promise<void> {
     if (!lastCheckFiles) {
         vscode.window.showWarningMessage('No last check to run');
         return;
@@ -65,7 +65,10 @@ export async function runLastCheckAgain(
     doCheckModel(lastCheckFiles, true, extContext, diagnostic);
 }
 
-export async function checkModelCustom(diagnostic: vscode.DiagnosticCollection, extContext: vscode.ExtensionContext) {
+export async function checkModelCustom(
+    diagnostic: vscode.DiagnosticCollection,
+    extContext: vscode.ExtensionContext
+): Promise<void> {
     const editor = getEditorIfCanRunTlc(extContext);
     if (!editor) {
         return;
@@ -94,14 +97,14 @@ export async function checkModelCustom(diagnostic: vscode.DiagnosticCollection, 
 /**
  * Reveals model checking view panel.
  */
-export function displayModelChecking(extContext: vscode.ExtensionContext) {
+export function displayModelChecking(extContext: vscode.ExtensionContext): void {
     revealLastCheckResultView(extContext);
 }
 
 /**
  * Stops the current model checking process.
  */
-export function stopModelChecking() {
+export function stopModelChecking(): void {
     if (checkProcess) {
         stopProcess(checkProcess);
     } else {
@@ -109,7 +112,7 @@ export function stopModelChecking() {
     }
 }
 
-export function showTlcOutput() {
+export function showTlcOutput(): void {
     outChannel.revealWindow();
 }
 
@@ -142,9 +145,9 @@ export function getEditorIfCanRunTlc(extContext: vscode.ExtensionContext): vscod
 function canRunTlc(extContext: vscode.ExtensionContext): boolean {
     if (checkProcess) {
         vscode.window.showWarningMessage(
-                'Another model checking process is currently running',
-                'Show currently running process'
-            ).then(() => revealLastCheckResultView(extContext));
+            'Another model checking process is currently running',
+            'Show currently running process'
+        ).then(() => revealLastCheckResultView(extContext));
         return false;
     }
     return true;
@@ -190,6 +193,7 @@ export async function doCheckModel(
         statusBarItem.hide();
         vscode.window.showErrorMessage(err.message);
     }
+    return undefined;
 }
 
 function attachFileSaver(tlaFilePath: string, proc: ChildProcess) {
@@ -269,6 +273,6 @@ function mapTlcOutputLine(line: string): string | undefined {
     if (line === '') {
         return line;
     }
-    const cleanLine = line.replace(/@!@!@(START|END)MSG \d+(\:\d+)? @!@!@/g, '');
+    const cleanLine = line.replace(/@!@!@(START|END)MSG \d+(:\d+)? @!@!@/g, '');
     return cleanLine === '' ? undefined : cleanLine;
 }

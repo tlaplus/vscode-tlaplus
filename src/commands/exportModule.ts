@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { spawn } from 'child_process';
 
-import { LANG_TLAPLUS, replaceExtension, pathToUri } from '../common';
+import { LANG_TLAPLUS, replaceExtension, pathToUri, emptyFunc } from '../common';
 import { runTex, ToolProcessInfo } from '../tla2tools';
 import { ToolOutputChannel } from '../outputChannels';
 
@@ -28,7 +28,7 @@ class PdfToolInfo {
 /**
  * Runs tla2tex tool on the currently open TLA+ module.
  */
-export async function exportModuleToTex(extContext: vscode.ExtensionContext) {
+export async function exportModuleToTex(extContext: vscode.ExtensionContext): Promise<void> {
     const doc = getDocumentIfCanRun('LaTeX');
     if (!doc) {
         return;
@@ -39,7 +39,7 @@ export async function exportModuleToTex(extContext: vscode.ExtensionContext) {
 /**
  * Runs generates a .tex file for the currently open TLA+ module and runs tex-to-pdf converter on it.
  */
-export async function exportModuleToPdf(extContext: vscode.ExtensionContext) {
+export async function exportModuleToPdf(extContext: vscode.ExtensionContext): Promise<void> {
     const doc = getDocumentIfCanRun('PDF');
     if (!doc) {
         return;
@@ -87,7 +87,7 @@ async function generatePdfFile(tlaFilePath: string) {
     const cmdLine = [ pdfToolInfo.command ].concat(pdfToolInfo.args).join(' ');
     const procInfo = new ToolProcessInfo(cmdLine, proc);
     pdfOutChannel.bindTo(procInfo);
-    proc.on('error', () => {});  // Without this line, the `close` even doesn't fire in case of invalid command
+    proc.on('error', emptyFunc);  // Without this line, the `close` even doesn't fire in case of invalid command
     proc.on('close', (exitCode: number) => {
         if (exitCode !== NO_ERROR) {
             vscode.window.showErrorMessage(`Error generating PDF: exit code ${exitCode}`);
@@ -106,7 +106,7 @@ async function removeTempFiles(baseFilePath: string, ...extensions: string[]) {
 }
 
 function removeFile(filePath: string): Promise<void> {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
         fs.unlink(filePath, () => resolve());
     });
 }
@@ -155,8 +155,8 @@ async function notifyPdfIsReady(filePath: string) {
     if (option === showPdfOption) {
         vscode.commands.executeCommand(PDF_VIEWER_COMMAND, pathToUri(filePath))
             .then(
-                () => {},
-                (reason) => vscode.window.showErrorMessage('Cannot display PDF: ' + reason)
+                emptyFunc,
+                (reason) => vscode.window.showErrorMessage(`Cannot display PDF: ${reason}`)
             );
     }
 }

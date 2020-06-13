@@ -124,15 +124,10 @@ async function runTool(
 /**
  * Kills the given process.
  */
-export function stopProcess(p: cp.ChildProcess) {
+export function stopProcess(p: cp.ChildProcess): void {
     if (!p.killed) {
         p.kill('SIGINT');
     }
-}
-
-export function reportBrokenToolchain(err: any) {
-    console.log('Toolchain problem: ' + err.message);
-    vscode.window.showErrorMessage('Toolchain is broken');
 }
 
 async function obtainJavaPath(): Promise<string> {
@@ -213,9 +208,9 @@ async function checkJavaVersion(javaPath: string) {
         return;
     }
     vscode.window.showWarningMessage(
-            `Unsupported Java version: ${ver.version}`,
-            'Show Details'
-        ).then(() => showJavaVersionOutput(javaPath, ver));
+        `Unsupported Java version: ${ver.version}`,
+        'Show Details'
+    ).then(() => showJavaVersionOutput(javaPath, ver));
 }
 
 function addValueOrDefault(option: string, defaultValue: string, args: string[], realArgs: string[]) {
@@ -234,7 +229,7 @@ function addValueOrDefault(option: string, defaultValue: string, args: string[],
  */
 function addReturnCodeHandler(proc: ChildProcess, toolName?: string) {
     const stderr: string[] = [];
-    proc.stderr.on('data', chunk => {
+    proc.stderr?.on('data', chunk => {
         stderr.push(String(chunk));
     });
     proc.on('close', exitCode => {

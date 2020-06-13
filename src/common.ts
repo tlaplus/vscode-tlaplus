@@ -8,6 +8,10 @@ export const LANG_TLAPLUS = 'tlaplus';
 export const LANG_TLAPLUS_CFG = 'tlaplus_cfg';
 const MAX_TEMP_DIR_ATTEMPTS = 100;
 
+export const emptyFunc = function(): void {
+    return undefined;
+};
+
 /**
  * Thrown when there's some problem with parsing.
  */
@@ -24,7 +28,7 @@ export function pathToUri(filePath: string): vscode.Uri {
 export function replaceExtension(filePath: string, newExt: string): string {
     const lastDotIdx = filePath.lastIndexOf('.');
     const basePath = lastDotIdx < 0 ? filePath : filePath.substring(0, lastDotIdx);
-    return basePath + '.' + newExt;
+    return `${basePath}.${newExt}`;
 }
 
 export function parseDateTime(str: string): moment.Moment {
@@ -32,7 +36,7 @@ export function parseDateTime(str: string): moment.Moment {
     if (dateTime.isValid()) {
         return dateTime;
     }
-    throw new ParsingError('Cannot parse date/time ' + str);
+    throw new ParsingError(`Cannot parse date/time ${str}`);
 }
 
 export function pathToModuleName(filePath: string): string {
@@ -41,8 +45,7 @@ export function pathToModuleName(filePath: string): string {
     // so it breaks nothing.
     // path.basename() doesn't work in some cases
     const sid = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'));
-    const modName = filePath.substring(sid + 1, filePath.length - 4);   // remove path and .tla
-    return modName;
+    return filePath.substring(sid + 1, filePath.length - 4);   // remove path and .tla
 }
 
 export function createTempDirSync(): string | undefined {
@@ -59,7 +62,7 @@ export function createTempDirSync(): string | undefined {
     return undefined;
 }
 
-export async function mkDir(dirPath: string) {
+export async function mkDir(dirPath: string): Promise<void> {
     return new Promise((resolve, reject) => {
         fs.mkdir(dirPath, null, (err) => {
             if (err) {
@@ -71,7 +74,7 @@ export async function mkDir(dirPath: string) {
     });
 }
 
-export async function deleteDir(dirPath: string) {
+export async function deleteDir(dirPath: string): Promise<void> {
     for (const fileName of fs.readdirSync(dirPath)) {
         const filePath = path.join(dirPath, fileName);
         try {
@@ -92,14 +95,14 @@ export async function deleteDir(dirPath: string) {
     });
 }
 
-async function deleteFile(filePath: string): Promise<any | null> {
+async function deleteFile(filePath: string): Promise<void> {
     return new Promise((resolve, reject) => {
         fs.unlink(filePath, (err) => {
             if (err) {
                 reject(err);
                 return;
             }
-            resolve(null);
+            resolve(undefined);
         });
     });
 }
@@ -116,7 +119,7 @@ async function getFileInfo(filePath: string): Promise<fs.Stats> {
     });
 }
 
-export async function copyFile(filePath: string, destDir: string): Promise<any | null> {
+export async function copyFile(filePath: string, destDir: string): Promise<void> {
     return new Promise((resolve, reject) => {
         const fileName = path.basename(filePath);
         fs.copyFile(filePath, path.join(destDir, fileName), (err) => {
@@ -124,7 +127,7 @@ export async function copyFile(filePath: string, destDir: string): Promise<any |
                 reject(err);
                 return;
             }
-            resolve(null);
+            resolve(undefined);
         });
     });
 }

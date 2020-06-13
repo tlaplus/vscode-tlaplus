@@ -17,7 +17,7 @@ import { getTlcCode, TlcCodeType } from './tlcCodes';
 const STATUS_EMIT_TIMEOUT = 500;    // msec
 
 // TLC message severity from
-// https://github.com/tlaplus/tlaplus/blob/2f229f1d3e5ed1e2eadeff3bcd877b416e45d477/tlatools/src/tlc2/output/MP.java#L104
+// https://github.com/tlaplus/tlaplus/blob/2f229f1d3e5ed1e2eadeff3bcd877b416e45d477/tlatools/src/tlc2/output/MP.java
 const SEVERITY_ERROR = 1;
 const SEVERITY_TLC_BUG = 2;
 const SEVERITY_WARNING = 3;
@@ -28,14 +28,14 @@ const SEVERITY_WARNING = 3;
 export class TlcModelCheckerStdoutParser extends ProcessOutputHandler<DCollection> {
     checkResultBuilder: ModelCheckResultBuilder;
     timer: NodeJS.Timer | undefined = undefined;
-    first: boolean = true;
+    first = true;
 
     constructor(
         source: ModelCheckResultSource,
-        stdout: Readable | string[],
+        stdout: Readable | string[] | null,
         specFiles: SpecFiles | undefined,
         showFullOutput: boolean,
-        private handler: (checkResult: ModelCheckResult) => void
+        private readonly handler: (checkResult: ModelCheckResult) => void
     ) {
         super(stdout, new DCollection());
         this.handler = handler;
@@ -45,7 +45,7 @@ export class TlcModelCheckerStdoutParser extends ProcessOutputHandler<DCollectio
         }
     }
 
-    protected handleLine(line: string | null) {
+    protected handleLine(line: string | null): void {
         if (line !== null) {
             this.checkResultBuilder.addLine(line);
             this.scheduleUpdate();
@@ -71,9 +71,8 @@ export class TlcModelCheckerStdoutParser extends ProcessOutputHandler<DCollectio
             this.first = false;
             timeout = 0;
         }
-        const me = this;
         this.timer = setTimeout(() => {
-            me.issueUpdate();
+            this.issueUpdate();
         }, timeout);
     }
 
@@ -126,10 +125,10 @@ class Message {
  * Tracks hierarchy of TLC output messages.
  */
 class MessageStack {
-    private static NO_MESSAGE = new Message(MessageType.Unknown);
+    private static readonly NO_MESSAGE = new Message(MessageType.Unknown);
 
     private current: Message = MessageStack.NO_MESSAGE;
-    private previous: Message[] = [];
+    private readonly previous: Message[] = [];
 
     public getCurrentType(): MessageType {
         return this.current.type;
@@ -175,20 +174,20 @@ class ModelCheckResultBuilder {
     private processInfo: string | undefined;
     private initialStatesStat: InitialStateStatItem[] = [];
     private coverageStat: CoverageItem[] = [];
-    private warnings: WarningInfo[] = [];
-    private errors: ErrorInfo[] = [];
-    private messages = new MessageStack();
-    private sanyLines: string[] = [];
+    private readonly warnings: WarningInfo[] = [];
+    private readonly errors: ErrorInfo[] = [];
+    private readonly messages = new MessageStack();
+    private readonly sanyLines: string[] = [];
     private sanyData: SanyData | undefined;
-    private outputLines: OutputLine[] = [];
-    private workersCount: number = 0;
+    private readonly outputLines: OutputLine[] = [];
+    private workersCount = 0;
     private firstStatTime: moment.Moment | undefined;
     private fingerprintCollisionProbability: string | undefined;
 
     constructor(
-        private source: ModelCheckResultSource,
-        private specFiles: SpecFiles | undefined,
-        private showFullOutput: boolean
+        private readonly source: ModelCheckResultSource,
+        private readonly specFiles: SpecFiles | undefined,
+        private readonly showFullOutput: boolean
     ) {}
 
     getStatus(): CheckStatus {
@@ -410,7 +409,8 @@ class ModelCheckResultBuilder {
     }
 
     private parseFinished(lines: string[]) {
-        const matches = this.tryMatchBufferLine(lines, /^Finished in (\d+)ms at \((\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\)$/g);
+        const regex = /^Finished in (\d+)ms at \((\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\)$/g;
+        const matches = this.tryMatchBufferLine(lines, regex);
         if (matches) {
             this.duration = parseInt(matches[1]);
             this.endDateTime = parseDateTime(matches[2]);
@@ -428,7 +428,9 @@ class ModelCheckResultBuilder {
     }
 
     private parseInitialStatesComputed(lines: string[]) {
-        const matches = this.tryMatchBufferLine(lines, /^Finished computing initial states: (\d+) distinct state(s)? generated at (\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*$/g);
+        // eslint-disable-next-line max-len
+        const regex = /^Finished computing initial states: (\d+) distinct state(s)? generated at (\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*$/g;
+        const matches = this.tryMatchBufferLine(lines, regex);
         if (matches) {
             const count = parseInt(matches[1]);
             this.firstStatTime = parseDateTime(matches[3]);
@@ -437,7 +439,9 @@ class ModelCheckResultBuilder {
     }
 
     private parseProgressStats(lines: string[]) {
-        const matches = this.tryMatchBufferLine(lines, /^Progress\(([\d,]+)\) at (\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}): ([\d,]+) states generated.*, ([\d,]+) distinct states found.*, ([\d,]+) states left on queue.*/g);
+        // eslint-disable-next-line max-len
+        const regex = /^Progress\(([\d,]+)\) at (\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}): ([\d,]+) states generated.*, ([\d,]+) distinct states found.*, ([\d,]+) states left on queue.*/g;
+        const matches = this.tryMatchBufferLine(lines, regex);
         if (matches) {
             const item = new InitialStateStatItem(
                 this.calcTimestamp(matches[2]),
@@ -456,7 +460,8 @@ class ModelCheckResultBuilder {
     }
 
     private parseCoverage(lines: string[]) {
-        const matches = this.tryMatchBufferLine(lines, /^<(\w+) line (\d+), col (\d+) to line (\d+), col (\d+) of module (\w+)>: (\d+):(\d+)/g);
+        const regex = /^<(\w+) line (\d+), col (\d+) to line (\d+), col (\d+) of module (\w+)>: (\d+):(\d+)/g;
+        const matches = this.tryMatchBufferLine(lines, regex);
         if (matches) {
             const moduleName = matches[6];
             const actionName = matches[1];
@@ -529,7 +534,8 @@ class ModelCheckResultBuilder {
     }
 
     private tryParseSimpleErrorTraceItem(lines: string[]): ErrorTraceItem | undefined {
-        const matches = this.tryMatchBufferLine(lines, /^(\d+): <(\w+) line (\d+), col (\d+) to line (\d+), col (\d+) of module (\w+)>$/g);
+        const regex = /^(\d+): <(\w+) line (\d+), col (\d+) to line (\d+), col (\d+) of module (\w+)>$/g;
+        const matches = this.tryMatchBufferLine(lines, regex);
         if (!matches) {
             return undefined;
         }
@@ -567,7 +573,8 @@ class ModelCheckResultBuilder {
 
     private tryParseBackToStateErrorTraceItem(lines: string[]): ErrorTraceItem | undefined {
         // Try special cases "Back to state: <...>"
-        const matches = this.tryMatchBufferLine(lines, /^(\d+): Back to state: <(\w+) line (\d+), col (\d+) to line (\d+), col (\d+) of module (\w+)>?/g);
+        const regex = /^(\d+): Back to state: <(\w+) line (\d+), col (\d+) to line (\d+), col (\d+) of module (\w+)>?/g;
+        const matches = this.tryMatchBufferLine(lines, regex);
         if (!matches) {
             return undefined;
         }

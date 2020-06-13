@@ -17,57 +17,52 @@ suite('Config On Type Formatting Test Suite', () => {
 
     test('Indents constants-block body', () => {
         return assertCfgOnTypeFormatting(doc, [
-                'CONSTANTS',
-                '${enter}'
-            ], [
-                'CONSTANTS',
-                '  '
-            ]
-        );
+            'CONSTANTS',
+            '${enter}'
+        ], [
+            'CONSTANTS',
+            '  '
+        ]);
     });
 
     test('Indents invariants-block body', () => {
         return assertCfgOnTypeFormatting(doc, [
-                'INVARIANTS',
-                '${enter}EverythingIsCorrect'
-            ], [
-                'INVARIANTS',
-                '  EverythingIsCorrect'
-            ]
-        );
+            'INVARIANTS',
+            '${enter}EverythingIsCorrect'
+        ], [
+            'INVARIANTS',
+            '  EverythingIsCorrect'
+        ]);
     });
 
     test('Indents properties-block body', () => {
         return assertCfgOnTypeFormatting(doc, [
-                'PROPERTIES',
-                '${enter}(**)'
-            ], [
-                'PROPERTIES',
-                '  (**)'
-            ]
-        );
+            'PROPERTIES',
+            '${enter}(**)'
+        ], [
+            'PROPERTIES',
+            '  (**)'
+        ]);
     });
 
     test('Indents constraints-block body', () => {
         return assertCfgOnTypeFormatting(doc, [
-                'CONSTRAINTS',
-                '${enter}'
-            ], [
-                'CONSTRAINTS',
-                '  '
-            ]
-        );
+            'CONSTRAINTS',
+            '${enter}'
+        ], [
+            'CONSTRAINTS',
+            '  '
+        ]);
     });
 
     test('Doesn\'t indent if the block already has contents', () => {
         return assertCfgOnTypeFormatting(doc, [
-                'CONSTANTS Foo = 3',
-                '${enter}'
-            ], [
-                'CONSTANTS Foo = 3',
-                ''
-            ]
-        );
+            'CONSTANTS Foo = 3',
+            '${enter}'
+        ], [
+            'CONSTANTS Foo = 3',
+            ''
+        ]);
     });
 });
 
