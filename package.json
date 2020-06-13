@@ -289,7 +289,7 @@
                     "type": "string",
                     "scope": "machine",
                     "default": "doNotShare",
-                    "markdownDescription": "Allows you to send the TLC usage statistics to [the publicly available database](https://exec-stats.tlapl.us). You can find more details on what is shared [here](https://github.com/tlaplus/tlaplus/blob/master/tlatools/src/util/ExecutionStatisticsCollector.md).",
+                    "markdownDescription": "Allows you to send the TLC usage statistics to [the publicly available database](https://exec-stats.tlapl.us). You can find more details on what is shared [here](https://github.com/tlaplus/tlaplus/blob/master/tlatools/org.lamport.tlatools/src/util/ExecutionStatisticsCollector.md).",
                     "enum": [
                         "share",
                         "shareWithoutId",
