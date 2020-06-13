@@ -208,9 +208,9 @@ async function checkJavaVersion(javaPath: string) {
         return;
     }
     vscode.window.showWarningMessage(
-            `Unsupported Java version: ${ver.version}`,
-            'Show Details'
-        ).then(() => showJavaVersionOutput(javaPath, ver));
+        `Unsupported Java version: ${ver.version}`,
+        'Show Details'
+    ).then(() => showJavaVersionOutput(javaPath, ver));
 }
 
 function addValueOrDefault(option: string, defaultValue: string, args: string[], realArgs: string[]) {

@@ -98,7 +98,7 @@ export class TlaCompletionItemProvider implements vscode.CompletionItemProvider 
             case vscode.CompletionItemKind.Operator:
                 item.insertText = item.label.substring(1) + ' ';
                 break;
-            }
+        }
         return item;
     }
 }
@@ -118,6 +118,6 @@ function mapKind(symbolKind: vscode.SymbolKind): vscode.CompletionItemKind {
             return vscode.CompletionItemKind.Module;
         case vscode.SymbolKind.Constant:
             return vscode.CompletionItemKind.Constant;
-        }
+    }
     return vscode.CompletionItemKind.Text;
 }

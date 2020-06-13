@@ -155,8 +155,10 @@ suite('SANY Output Parser Test Suite', () => {
         assertOutput(
             stdout,
             expectDiag(ROOT_PATH, [
-                diagError(range(20, 37, 20, 37),
-                'Encountered "Beginning of definition" at line 21, column 38 and token ":"')
+                diagError(
+                    range(20, 37, 20, 37),
+                    'Encountered "Beginning of definition" at line 21, column 38 and token ":"'
+                )
             ]));
     });
 

@@ -53,9 +53,8 @@ suite('TLC Values Output Parser Test Suite', () => {
             set(ROOT,
                 seq(1, v(1, '5')),
                 struct(2, v('a', '"A"')),
-                set(3, v(1, '9')
-            )
-        ));
+                set(3, v(1, '9'))
+            ));
     });
 
     test('Parses empty sequence', () => {
@@ -69,8 +68,8 @@ suite('TLC Values Output Parser Test Suite', () => {
     test('Parses sequence of primitives', () => {
         assertValue(
             ['<<19, FALSE, "sequence">>'],
-            seq(ROOT, v(1, '19'), v(2, 'FALSE'), v(3, '"sequence"')
-        ));
+            seq(ROOT, v(1, '19'), v(2, 'FALSE'), v(3, '"sequence"'))
+        );
     });
 
     test('Parses sequence with collections', () => {
@@ -80,7 +79,8 @@ suite('TLC Values Output Parser Test Suite', () => {
                 struct(1, v('p', '8')),
                 seq(2, v(1, '7')),
                 set(3, v(1, '"a"'))
-        ));
+            )
+        );
     });
 
     test('Parses empty structure', () => {
@@ -149,7 +149,7 @@ suite('TLC Values Output Parser Test Suite', () => {
         assertValue(
             ['(foo :> bar)'],
             func(ROOT, n('from', 'foo'), n('to', 'bar')));
-        });
+    });
 
     test('Parses nested simple functions', () => {
         assertValue(

@@ -37,7 +37,7 @@ suite('TLC Output Parser Test Suite', () => {
                 .addCoverage('example', 'Lbl_1', '/Users/bob/example.tla', range(15, 0, 15, 5), 1, 1)
                 .addCoverage('example', 'Terminating', '/Users/bob/example.tla', range(20, 0, 20, 11), 1, 0)
                 .build()
-            );
+        );
     });
 
     test('Captures Print/PrintT output', () => {
@@ -101,7 +101,7 @@ suite('TLC Output Parser Test Suite', () => {
                 .addInitState('00:00:01', 2, 3, 2, 0)
                 .addCoverage('example', 'Init', '/Users/bob/example.tla', range(13, 0, 13, 4), 1, 1)
                 .build()
-            );
+        );
     });
 
     test('Reports failure when errors are present', () => {
@@ -129,7 +129,7 @@ suite('TLC Output Parser Test Suite', () => {
                     ]
                 )
                 .build()
-            );
+        );
     });
 
     test('Captures SANY errors', () => {
@@ -291,7 +291,7 @@ suite('TLC Output Parser Test Suite', () => {
                     message('It was expecting = or <-, but did not find it.')
                 ])
                 .build()
-            );
+        );
     });
 
     test('Extracts links from error messages', () => {
@@ -326,7 +326,7 @@ suite('TLC Output Parser Test Suite', () => {
                     )
                 ])
                 .build()
-            );
+        );
     });
 
     test('Handles no-line-break message end', () => {
@@ -345,7 +345,7 @@ suite('TLC Output Parser Test Suite', () => {
                 .addInitState('00:00:01', 2, 3, 2, 0)
                 .addCoverage('example', 'Init', '/Users/bob/example.tla', range(13, 0, 13, 4), 1, 1)
                 .build()
-            );
+        );
     });
 
     test('Handles no-line-break message switch', () => {
@@ -364,7 +364,7 @@ suite('TLC Output Parser Test Suite', () => {
                 .addInitState('00:00:01', 2, 3, 2, 0)
                 .addCoverage('example', 'Init', '/Users/bob/example.tla', range(13, 0, 13, 4), 1, 1)
                 .build()
-            );
+        );
     });
 
     test('Rewrites initial state item with the same timestamp', () => {
@@ -383,7 +383,7 @@ suite('TLC Output Parser Test Suite', () => {
                 .addCoverage('example', 'Lbl_1', '/Users/bob/example.tla', range(15, 0, 15, 5), 1, 1)
                 .addCoverage('example', 'Terminating', '/Users/bob/example.tla', range(20, 0, 20, 11), 1, 0)
                 .build()
-            );
+        );
     });
 });
 
