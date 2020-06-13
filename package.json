@@ -342,7 +342,7 @@
         "@typescript-eslint/parser": "^3.2.0",
         "eslint": "^7.2.0",
         "glob": "^7.1.6",
-        "mocha": "^6.2.2",
+        "mocha": "^6.2.3",
         "node": "^12.12.0",
         "source-map-support": "^0.5.16",
         "typescript": "^3.7.5",
