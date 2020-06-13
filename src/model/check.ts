@@ -144,14 +144,14 @@ export class Value {
     /**
      * Switches off ID incrementation. For tests only.
      */
-    static switchIdsOff() {
+    static switchIdsOff(): void {
         Value.idStep = 0;
     }
 
     /**
      * Switches on ID incrementation. For tests only.
      */
-    static switchIdsOn() {
+    static switchIdsOn(): void {
         Value.idStep = 1;
     }
 
@@ -204,7 +204,7 @@ export abstract class CollectionValue extends Value {
         super(key, makeCollectionValueString(items, prefix, postfix, ', ', toStr || (v => v.str)));
     }
 
-    addDeletedItems(items: Value[]) {
+    addDeletedItems(items: Value[]): void {
         if (!items || items.length === 0) {
             return;
         }
@@ -297,7 +297,7 @@ export class StructureValue extends CollectionValue {
         super(key, items, '[', ']', StructureValue.itemToString);
     }
 
-    static itemToString(item: Value) {
+    static itemToString(item: Value): string {
         return `${item.key} |-> ${item.str}`;
     }
 
@@ -382,12 +382,12 @@ export class ErrorTraceItem {
  * An output line produced by Print/PrintT along with the number of consecutive occurrences.
  */
 export class OutputLine {
-    count: number = 1;
+    count = 1;
 
     constructor(readonly text: string) {
     }
 
-    increment() {
+    increment(): void {
         this.count += 1;
     }
 }

@@ -76,7 +76,7 @@ export class TlaCompletionItemProvider implements vscode.CompletionItemProvider 
         const symbolInfos = symbols.map(s => new vscode.CompletionItem(s.name, mapKind(s.kind)));
         let items = TLA_INNER_ITEMS.concat(symbolInfos);
         if (!isPlusCal) {
-            const isProofStep = /^\s*<\d+>[<>\d\.a-zA-Z]*\s+[a-zA-Z]*$/g.test(prevText);
+            const isProofStep = /^\s*<\d+>[<>\d.a-zA-Z]*\s+[a-zA-Z]*$/g.test(prevText);
             const isNewLine = /^\s*[a-zA-Z]*$/g.test(prevText);
             if (isProofStep) {
                 items = items.concat(TLA_PROOF_STARTING_KEYWORD_ITEMS);

@@ -107,7 +107,7 @@ function testSimpleBlockStart(line: vscode.TextLine): LineInfo | undefined {
 }
 
 function testStateDefBlockStart(line: vscode.TextLine, options: vscode.FormattingOptions): LineInfo | undefined {
-    const gMatches = /^((\s*)[\w\(\),\s]+==\s*)((?:\/\\|\\\/).*)?\s*$/g.exec(line.text);
+    const gMatches = /^((\s*)[\w(),\s]+==\s*)((?:\/\\|\\\/).*)?\s*$/g.exec(line.text);
     if (!gMatches) {
         return undefined;
     }
@@ -118,7 +118,8 @@ function testStateDefBlockStart(line: vscode.TextLine, options: vscode.Formattin
 }
 
 function testBlockStart(line: vscode.TextLine): LineInfo | undefined {
-    const matches = /^(\s*)(?:\w+\:)?\s*(?:begin\b|if\b|else\b|elsif\b|while\b|either\b|or\b|with\b|define\b|macro\b|procedure\b|\{).*/g.exec(line.text);
+    // eslint-disable-next-line max-len
+    const matches = /^(\s*)(?:\w+:)?\s*(?:begin\b|if\b|else\b|elsif\b|while\b|either\b|or\b|with\b|define\b|macro\b|procedure\b|\{).*/g.exec(line.text);
     return matches ? new LineInfo(line, matches[1], IndentationType.Right) : undefined;
 }
 

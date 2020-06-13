@@ -26,7 +26,7 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
     outBlockType = OutBlockType.Parsing;
     errRange: vscode.Range | undefined;
     errMessage: string | undefined;
-    pendingAbortMessage: boolean = false;
+    pendingAbortMessage = false;
 
     constructor(source: Readable | string[]) {
         super(source, new SanyData());

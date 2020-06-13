@@ -124,15 +124,10 @@ async function runTool(
 /**
  * Kills the given process.
  */
-export function stopProcess(p: cp.ChildProcess) {
+export function stopProcess(p: cp.ChildProcess): void {
     if (!p.killed) {
         p.kill('SIGINT');
     }
-}
-
-export function reportBrokenToolchain(err: any) {
-    console.log('Toolchain problem: ' + err.message);
-    vscode.window.showErrorMessage('Toolchain is broken');
 }
 
 async function obtainJavaPath(): Promise<string> {

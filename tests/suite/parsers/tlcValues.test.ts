@@ -24,7 +24,7 @@ suite('TLC Values Output Parser Test Suite', () => {
     });
 
     test('Parses primitive string values', () => {
-        for (const val of ['""', '"Hello, string"', '"How about \\\"escaped\\\" symbols \\\\?"']) {
+        for (const val of ['""', '"Hello, string"', '"How about \\"escaped\\" symbols \\\\?"']) {
             assertValue([val], v(ROOT, val), `Failed to parse primitive string value: ${val}`);
         }
     });
@@ -44,12 +44,12 @@ suite('TLC Values Output Parser Test Suite', () => {
     });
 
     test('Parses set of primitives', () => {
-        assertValue(['{1, TRUE, "set"}'], set(ROOT, v(1, '1'), v(2, 'TRUE'), v(3, '\"set\"')));
+        assertValue(['{1, TRUE, "set"}'], set(ROOT, v(1, '1'), v(2, 'TRUE'), v(3, '"set"')));
     });
 
     test('Parses set with collections', () => {
         assertValue(
-            ['{<<5>>, [a |-> \"A\"], {9}}'],
+            ['{<<5>>, [a |-> "A"], {9}}'],
             set(ROOT,
                 seq(1, v(1, '5')),
                 struct(2, v('a', '"A"')),
@@ -69,7 +69,7 @@ suite('TLC Values Output Parser Test Suite', () => {
     test('Parses sequence of primitives', () => {
         assertValue(
             ['<<19, FALSE, "sequence">>'],
-            seq(ROOT, v(1, '19'), v(2, 'FALSE'), v(3, '\"sequence\"')
+            seq(ROOT, v(1, '19'), v(2, 'FALSE'), v(3, '"sequence"')
         ));
     });
 

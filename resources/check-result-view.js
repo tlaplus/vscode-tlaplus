@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 const vscode = acquireVsCodeApi();
 
 const VAL_COL = ['val-col'];
@@ -240,7 +241,7 @@ function displayMessageLine(elParent, line) {
         if (span.type === 'SL') {
             const elLink = appendTextChild(elLine, 'a', span.text);
             elLink.setAttribute('href', '#');
-            elLink.onclick = (e) => openFile(e, span.filePath, span.location)
+            elLink.onclick = (e) => openFile(e, span.filePath, span.location);
         } else {
             appendTextChild(elLine, 'span', span.text);
         }

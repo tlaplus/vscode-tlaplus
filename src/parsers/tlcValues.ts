@@ -60,8 +60,8 @@ const UNKNOWN_TO = new Value('to', '?');
  */
 class Tokenizer {
     private lines: string[];
-    private lineIdx: number = 0;
-    private colIdx: number = 0;
+    private lineIdx = 0;
+    private colIdx = 0;
     private position = new Position(0, 0);
 
     constructor(lines: string[]) {
@@ -75,7 +75,7 @@ class Tokenizer {
 
     nextToken(): Token {
         const str = this.nextStr();
-        if (str == null) {
+        if (str === null) {
             return Token.END;
         }
         for (const token of CONST_TOKENS) {
@@ -93,7 +93,7 @@ class Tokenizer {
         ];
         for (const func of tokenFuncs) {
             const token = func(str);
-            if (token != null) {
+            if (token !== null) {
                 return token;
             }
         }
@@ -228,7 +228,7 @@ function parseCollectionItems<T>(
     const items = [];
     let canClose = true;
     let canComma = false;
-    while (true) {
+    for (;;) {
         const token = tokenizer.nextToken();
         if (token.type === endTokenType) {
             if (!canClose) {

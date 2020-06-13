@@ -3,7 +3,8 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { before } from 'mocha';
 import { PassThrough } from 'stream';
-import { ModelCheckResult, CheckState, CheckStatus, ModelCheckResultSource, Value, SpecFiles } from '../../../src/model/check';
+import { ModelCheckResult, CheckState, CheckStatus, ModelCheckResultSource, Value,
+    SpecFiles } from '../../../src/model/check';
 import { TlcModelCheckerStdoutParser } from '../../../src/parsers/tlc';
 import { CheckResultBuilder, pos, range, struct, v, set, message, sourceLink, traceItem } from '../shortcuts';
 

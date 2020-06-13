@@ -14,7 +14,7 @@ export class JavaVersionParser extends ProcessOutputHandler<JavaVersion> {
     }
 
     protected handleLine(line: string | null): void {
-        if (line == null) {
+        if (line === null) {
             this.result = new JavaVersion(this.version, this.outLines);
             return;
         }

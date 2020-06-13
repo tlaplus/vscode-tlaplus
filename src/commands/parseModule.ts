@@ -16,7 +16,7 @@ const sanyOutChannel = new ToolOutputChannel('SANY');
  * - Transpiles PlusCal to TLA+
  * - Parses resulting TLA+ specification and checks for syntax errors
  */
-export function parseModule(diagnostic: vscode.DiagnosticCollection) {
+export function parseModule(diagnostic: vscode.DiagnosticCollection): void {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
         vscode.window.showWarningMessage('No editor is active, cannot find a TLA+ file to transpile');

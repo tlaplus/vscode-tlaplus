@@ -114,9 +114,9 @@ There're some other useful stuff in the project:
 
 Yeah, there are some rules about how the code should look, but they are not hard to follow.
 
-[TSLint](https://palantir.github.io/tslint/) is responsible for checking it as a part of building process. It uses the `tslint.json` file as its config.
+[ESLint](https://eslint.org) is responsible for checking it as a part of building process. It uses the `.eslintrc.json` file as its config.
 
-With the [TSLint extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode.vscode-typescript-tslint-plugin) installed, VS Code will check your code automaticaly.
+With the [ESLint extension](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint) installed, VS Code will check your code automaticaly.
 
 # Useful Resources
 

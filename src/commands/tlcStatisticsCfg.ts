@@ -18,7 +18,7 @@ export enum ShareOption {
 /**
  * Writes TLC statistics sharing cfg file when the corresponding configuration setting is changed.
  */
-export function listenTlcStatConfigurationChanges(disposables: vscode.Disposable[]) {
+export function listenTlcStatConfigurationChanges(disposables: vscode.Disposable[]): void {
     vscode.workspace.onDidChangeConfiguration((event) => {
         if (event.affectsConfiguration(CFG_TLC_STATISTICS_TYPE)) {
             const cfgOption = vscode.workspace.getConfiguration().get<ShareOption>(CFG_TLC_STATISTICS_TYPE);
@@ -32,7 +32,7 @@ export function listenTlcStatConfigurationChanges(disposables: vscode.Disposable
 /**
  * Updates the TLC statistics sharing setting in accordance with the config file if necessary.
  */
-export async function syncTlcStatisticsSetting() {
+export async function syncTlcStatisticsSetting(): Promise<void> {
     const cfgOption = vscode.workspace.getConfiguration().get<string>(CFG_TLC_STATISTICS_TYPE);
     const fileOption = await readFileOption();
     if (cfgOption === fileOption) {

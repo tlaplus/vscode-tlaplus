@@ -1,0 +1,19 @@
+{
+  "root": true,
+  "parser": "@typescript-eslint/parser",
+  "plugins": [
+    "@typescript-eslint"
+  ],
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended"
+  ],
+  "rules": {
+    "max-len": [ "error", { "code": 120 } ],
+    "curly": "error",
+    "quotes": [ "error", "single", { "avoidEscape": true } ],
+    "semi": [ "error", "always" ],
+    "eqeqeq": [ "error", "always" ],
+    "@typescript-eslint/no-unused-vars": [ "warn", { "vars": "all", "args": "none", "ignoreRestSiblings": false }]
+  }
+}

@@ -137,7 +137,7 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
         docUri: vscode.Uri,
         line: vscode.TextLine
     ): boolean {
-        const matches = /^\s*(\w+)\s*([\(|\[)].*)?\s*==\s*(.*)?/g.exec(line.text);
+        const matches = /^\s*(\w+)\s*([(|[)].*)?\s*==\s*(.*)?/g.exec(line.text);
         if (!matches) {
             return false;
         }
@@ -270,7 +270,7 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
         if (matches) {
             return SpecialSymbol.PlusCalEnd;
         }
-        return line.text === '\* BEGIN TRANSLATION' ? SpecialSymbol.PlusCalEnd : undefined;
+        return line.text === '\\* BEGIN TRANSLATION' ? SpecialSymbol.PlusCalEnd : undefined;
     }
 }
 

@@ -10,7 +10,7 @@ export const CMD_VISUALIZE_TLC_OUTPUT = 'tlaplus.out.visualize';
 /**
  * Opens a panel with visualization of the TLC output file (.out).
  */
-export function visualizeTlcOutput(extContext: vscode.ExtensionContext) {
+export function visualizeTlcOutput(extContext: vscode.ExtensionContext): void {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
         vscode.window.showWarningMessage('No editor is active, cannot find an .out file to visualize');

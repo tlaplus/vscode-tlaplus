@@ -8,6 +8,10 @@ export const LANG_TLAPLUS = 'tlaplus';
 export const LANG_TLAPLUS_CFG = 'tlaplus_cfg';
 const MAX_TEMP_DIR_ATTEMPTS = 100;
 
+export const emptyFunc = function(): void {
+    return undefined;
+};
+
 /**
  * Thrown when there's some problem with parsing.
  */
@@ -59,7 +63,7 @@ export function createTempDirSync(): string | undefined {
     return undefined;
 }
 
-export async function mkDir(dirPath: string) {
+export async function mkDir(dirPath: string): Promise<void> {
     return new Promise((resolve, reject) => {
         fs.mkdir(dirPath, null, (err) => {
             if (err) {
@@ -71,7 +75,7 @@ export async function mkDir(dirPath: string) {
     });
 }
 
-export async function deleteDir(dirPath: string) {
+export async function deleteDir(dirPath: string): Promise<void> {
     for (const fileName of fs.readdirSync(dirPath)) {
         const filePath = path.join(dirPath, fileName);
         try {
@@ -92,14 +96,14 @@ export async function deleteDir(dirPath: string) {
     });
 }
 
-async function deleteFile(filePath: string): Promise<any | null> {
+async function deleteFile(filePath: string): Promise<void> {
     return new Promise((resolve, reject) => {
         fs.unlink(filePath, (err) => {
             if (err) {
                 reject(err);
                 return;
             }
-            resolve(null);
+            resolve(undefined);
         });
     });
 }
@@ -116,7 +120,7 @@ async function getFileInfo(filePath: string): Promise<fs.Stats> {
     });
 }
 
-export async function copyFile(filePath: string, destDir: string): Promise<any | null> {
+export async function copyFile(filePath: string, destDir: string): Promise<void> {
     return new Promise((resolve, reject) => {
         const fileName = path.basename(filePath);
         fs.copyFile(filePath, path.join(destDir, fileName), (err) => {
@@ -124,7 +128,7 @@ export async function copyFile(filePath: string, destDir: string): Promise<any |
                 reject(err);
                 return;
             }
-            resolve(null);
+            resolve(undefined);
         });
     });
 }

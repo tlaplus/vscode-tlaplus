@@ -57,7 +57,7 @@ export function indentExact(
     return [ vscode.TextEdit.replace(new vscode.Range(lineStart, position), indentation) ];
 }
 
-export function makeSpaces(num: number) {
+export function makeSpaces(num: number): string {
     if (num < SPACES.length) {
         return SPACES[num];
     }

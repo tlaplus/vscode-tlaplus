@@ -25,7 +25,7 @@ export class TranspilerStdoutParser extends ProcessOutputHandler<DCollection> {
         this.filePath = filePath;
     }
 
-    protected handleLine(line: string | null) {
+    protected handleLine(line: string | null): void {
         if (line === null) {
             if (this.errMessage !== null) {
                 this.result.addMessage(this.filePath, new vscode.Range(0, 0, 0, 0), this.errMessage);

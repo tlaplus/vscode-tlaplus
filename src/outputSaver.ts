@@ -12,7 +12,7 @@ class StreamWriter {
 /**
  * Writes all the data from a stream to the given file.
  */
-export function saveStreamToFile(src: Readable, filePath: string) {
+export function saveStreamToFile(src: Readable, filePath: string): void {
     fs.open(filePath, OPEN_MODE, (err, fd) => {
         if (err) {
             const fileName = basename(filePath);
