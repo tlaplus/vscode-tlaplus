@@ -35,7 +35,7 @@ export class TlcModelCheckerStdoutParser extends ProcessOutputHandler<DCollectio
         stdout: Readable | string[] | null,
         specFiles: SpecFiles | undefined,
         showFullOutput: boolean,
-        private handler: (checkResult: ModelCheckResult) => void
+        private readonly handler: (checkResult: ModelCheckResult) => void
     ) {
         super(stdout, new DCollection());
         this.handler = handler;
@@ -125,10 +125,10 @@ class Message {
  * Tracks hierarchy of TLC output messages.
  */
 class MessageStack {
-    private static NO_MESSAGE = new Message(MessageType.Unknown);
+    private static readonly NO_MESSAGE = new Message(MessageType.Unknown);
 
     private current: Message = MessageStack.NO_MESSAGE;
-    private previous: Message[] = [];
+    private readonly previous: Message[] = [];
 
     public getCurrentType(): MessageType {
         return this.current.type;
@@ -175,19 +175,19 @@ class ModelCheckResultBuilder {
     private initialStatesStat: InitialStateStatItem[] = [];
     private coverageStat: CoverageItem[] = [];
     private warnings: WarningInfo[] = [];
-    private errors: ErrorInfo[] = [];
-    private messages = new MessageStack();
-    private sanyLines: string[] = [];
+    private readonly errors: ErrorInfo[] = [];
+    private readonly messages = new MessageStack();
+    private readonly sanyLines: string[] = [];
     private sanyData: SanyData | undefined;
-    private outputLines: OutputLine[] = [];
+    private readonly outputLines: OutputLine[] = [];
     private workersCount = 0;
     private firstStatTime: moment.Moment | undefined;
     private fingerprintCollisionProbability: string | undefined;
 
     constructor(
-        private source: ModelCheckResultSource,
-        private specFiles: SpecFiles | undefined,
-        private showFullOutput: boolean
+        private readonly source: ModelCheckResultSource,
+        private readonly specFiles: SpecFiles | undefined,
+        private readonly showFullOutput: boolean
     ) {}
 
     getStatus(): CheckStatus {

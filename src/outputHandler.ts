@@ -12,7 +12,7 @@ export abstract class ProcessOutputHandler<T> {
     private closed = false;
     private buf: string | null = null;
     private resolve?: (result: T) => void;
-    private lines: string[] | undefined;
+    private readonly lines: string[] | undefined;
 
     constructor(source: Readable | string[] | null, initialResult: T) {
         if (source instanceof Readable) {
@@ -62,7 +62,6 @@ export abstract class ProcessOutputHandler<T> {
             throw new Error('Stream is closed.');
         }
         if (chunk === null) {
-            // console.log(':END:');
             this.tryHandleLine(this.buf);
             this.buf = null;
             this.closed = true;
@@ -80,10 +79,7 @@ export abstract class ProcessOutputHandler<T> {
         } else {
             this.buf = lines.pop() || null;
         }
-        lines.forEach(line => {
-            // console.log('> ' + line);
-            this.tryHandleLine(line);
-        });
+        lines.forEach(line => this.tryHandleLine(line));
     }
 
     private tryHandleLine(line: string | null) {

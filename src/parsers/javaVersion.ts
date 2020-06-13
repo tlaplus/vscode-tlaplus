@@ -7,7 +7,7 @@ import { JavaVersion } from '../tla2tools';
  */
 export class JavaVersionParser extends ProcessOutputHandler<JavaVersion> {
     private version: string = JavaVersion.UNKNOWN_VERSION;
-    private outLines: string[] = [];
+    private readonly outLines: string[] = [];
 
     constructor(source: Readable | string[]) {
         super(source, new JavaVersion(JavaVersion.UNKNOWN_VERSION, []));

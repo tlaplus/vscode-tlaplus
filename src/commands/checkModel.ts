@@ -193,6 +193,7 @@ export async function doCheckModel(
         statusBarItem.hide();
         vscode.window.showErrorMessage(err.message);
     }
+    return undefined;
 }
 
 function attachFileSaver(tlaFilePath: string, proc: ChildProcess) {

@@ -290,7 +290,7 @@ export class SequenceValue extends CollectionValue {
  * Represents a structure: [a |-> 'A', b |-> 34, c |-> <<TRUE, 2>>], [], etc.
  */
 export class StructureValue extends CollectionValue {
-    constructor(key: ValueKey, items: Value[], preserveOrder?: boolean) {
+    constructor(key: ValueKey, items: Value[], preserveOrder = false) {
         if (!preserveOrder) {
             items.sort(StructureValue.compareItems);
         }
@@ -570,7 +570,7 @@ function durationToStr(dur: number | undefined): string {
     if (!isNumber(dur)) {
         return '';
     }
-    return dur + ' msec';
+    return `${dur} msec`;
 }
 
 function makeCollectionValueString(

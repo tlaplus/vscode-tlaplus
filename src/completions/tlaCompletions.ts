@@ -50,7 +50,7 @@ const TLA_STD_MODULE_ITEMS = TLA_STD_MODULES.map(m => {
  */
 export class TlaCompletionItemProvider implements vscode.CompletionItemProvider {
     constructor(
-        private docInfos: TlaDocumentInfos
+        private readonly docInfos: TlaDocumentInfos
     ) {}
 
     provideCompletionItems(

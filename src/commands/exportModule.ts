@@ -156,7 +156,7 @@ async function notifyPdfIsReady(filePath: string) {
         vscode.commands.executeCommand(PDF_VIEWER_COMMAND, pathToUri(filePath))
             .then(
                 emptyFunc,
-                (reason) => vscode.window.showErrorMessage('Cannot display PDF: ' + reason)
+                (reason) => vscode.window.showErrorMessage(`Cannot display PDF: ${reason}`)
             );
     }
 }

@@ -5,8 +5,8 @@ import { pathToModuleName, pathToUri } from './common';
  * Collection of DMessages that were generated during a single check run.
  */
 export class DCollection {
-    private modules: Map<string, string> = new Map();   // Map of checked modules names to file paths
-    private messages: DMessage[] = [];                  // Collection of diagnostic messages from the check run
+    private readonly modules: Map<string, string> = new Map();   // Map of checked modules names to file paths
+    private readonly messages: DMessage[] = [];                  // Collection of diagnostic messages from the check run
 
     public getModules(): ReadonlyMap<string, string> {
         return this.modules;

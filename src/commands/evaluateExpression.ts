@@ -139,7 +139,6 @@ function displayResult(checkResult: ModelCheckResult | undefined) {
     }
     outChannel.appendLine(exprVal || 'Error: Expression value output not found.');
     outChannel.revealWindow();  // VS Code sometimes swithes the window to TLC output, so we need to get it back
-    return;
 }
 
 function extractCalculatedExpressionLines(outLines: OutputLine[]): string[] {

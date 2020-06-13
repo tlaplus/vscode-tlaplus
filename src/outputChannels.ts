@@ -8,8 +8,8 @@ type LineMapper = (line: string) => string | undefined;
 class OutputToOutChannelSender extends ProcessOutputHandler<void> {
     constructor(
         source: Readable | string[] | null,
-        private outChannel: vscode.OutputChannel,
-        private lineMapper: LineMapper | undefined
+        private readonly outChannel: vscode.OutputChannel,
+        private readonly lineMapper: LineMapper | undefined
     ) {
         super(source);
     }

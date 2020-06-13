@@ -59,7 +59,7 @@ const UNKNOWN_TO = new Value('to', '?');
  * Breaks the given set of lines and allows to read them token-by-token.
  */
 class Tokenizer {
-    private lines: string[];
+    private readonly lines: string[];
     private lineIdx = 0;
     private colIdx = 0;
     private position = new Position(0, 0);
