@@ -229,7 +229,7 @@ function addValueOrDefault(option: string, defaultValue: string, args: string[],
  */
 function addReturnCodeHandler(proc: ChildProcess, toolName?: string) {
     const stderr: string[] = [];
-    proc.stderr.on('data', chunk => {
+    proc.stderr?.on('data', chunk => {
         stderr.push(String(chunk));
     });
     proc.on('close', exitCode => {

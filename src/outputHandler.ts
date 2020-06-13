@@ -14,12 +14,12 @@ export abstract class ProcessOutputHandler<T> {
     private resolve?: (result: T) => void;
     private lines: string[] | undefined;
 
-    constructor(source: Readable | string[], initialResult: T) {
+    constructor(source: Readable | string[] | null, initialResult: T) {
         if (source instanceof Readable) {
             source.on('data', chunk => this.handleData(chunk));
             source.on('end', () => this.handleData(null));
         } else {
-            this.lines = source;
+            this.lines = source === null ? [] : source;
         }
         this.result = initialResult;
     }

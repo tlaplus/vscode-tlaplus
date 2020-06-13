@@ -7,7 +7,7 @@ For those, who whant to write some code, here's a short guide.
 ## Prerequisites
 
 1. Since this is a VS Code extension, you'll need [VS Code](https://code.visualstudio.com/) to check your fixes and improvements.
-2. The extension requires [NodeJS](https://nodejs.org/en/) runtime (8.12 at the moment).
+2. The extension requires [NodeJS](https://nodejs.org/en/) runtime (12.12 at the moment).
 3. It's written mostly in [TypeScript](https://www.typescriptlang.org), so you'll need to install it too.
 
 ## Clone, Build, Test

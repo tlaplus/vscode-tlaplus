@@ -19,7 +19,7 @@ export class TranspilerStdoutParser extends ProcessOutputHandler<DCollection> {
     private readonly filePath: string;
     private errMessage: string | null = null;
 
-    constructor(source: Readable | string[], filePath: string) {
+    constructor(source: Readable | string[] | null, filePath: string) {
         super(source, new DCollection());
         this.result.addFilePath(filePath);
         this.filePath = filePath;

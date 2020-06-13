@@ -32,7 +32,7 @@ export class TlcModelCheckerStdoutParser extends ProcessOutputHandler<DCollectio
 
     constructor(
         source: ModelCheckResultSource,
-        stdout: Readable | string[],
+        stdout: Readable | string[] | null,
         specFiles: SpecFiles | undefined,
         showFullOutput: boolean,
         private handler: (checkResult: ModelCheckResult) => void

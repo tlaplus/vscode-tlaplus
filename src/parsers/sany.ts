@@ -28,7 +28,7 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
     errMessage: string | undefined;
     pendingAbortMessage = false;
 
-    constructor(source: Readable | string[]) {
+    constructor(source: Readable | string[] | null) {
         super(source, new SanyData());
     }
 
