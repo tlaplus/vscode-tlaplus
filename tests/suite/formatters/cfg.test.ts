@@ -55,6 +55,26 @@ suite('Config On Type Formatting Test Suite', () => {
         ]);
     });
 
+    test('Indents postcondition-block body', () => {
+        return assertCfgOnTypeFormatting(doc, [
+            'POSTCONDITION',
+            '${enter}PostCondition'
+        ], [
+            'POSTCONDITION',
+            '  PostCondition'
+        ]);
+    });
+
+    test('Indents check-deadlock-block body', () => {
+        return assertCfgOnTypeFormatting(doc, [
+            'CHECK_DEADLOCK',
+            '${enter}TRUE'
+        ], [
+            'CHECK_DEADLOCK',
+            '  TRUE'
+        ]);
+    });
+
     test('Doesn\'t indent if the block already has contents', () => {
         return assertCfgOnTypeFormatting(doc, [
             'CONSTANTS Foo = 3',

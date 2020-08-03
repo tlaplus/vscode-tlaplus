@@ -4,8 +4,7 @@ import { LANG_TLAPLUS } from '../../../src/common';
 import { TlaCompletionItemProvider, TLA_CONSTANTS, TLA_STARTING_KEYWORDS, TLA_PROOF_STARTING_KEYWORDS,
     TLA_OTHER_KEYWORDS, TLA_OPERATORS, TLA_STD_MODULES } from '../../../src/completions/tlaCompletions';
 import { parseDocInfo, replaceDocContents } from '../document';
-import { loc, pos } from '../shortcuts';
-import { TlaDocumentInfos } from '../../../src/model/documentInfo';
+import { assertCompletion, assertSymbolClass, createTestDocInfos } from './completion';
 
 const EXPECT_NOTHING = 0;
 const EXPECT_STARTING_KEYWORDS = 1;
@@ -163,34 +162,4 @@ function assertSymbols(list: vscode.CompletionList) {
 
 function assertStdModules(list: vscode.CompletionList) {
     return assertSymbolClass(TLA_STD_MODULES, vscode.CompletionItemKind.Module, list);
-}
-
-function assertSymbolClass(labels: string[], expKind: vscode.CompletionItemKind, list: vscode.CompletionList): number {
-    labels.forEach((label) => {
-        assertCompletion(label, expKind, list);
-    });
-    return labels.length;
-}
-
-function assertCompletion(
-    label: string,
-    expectKind: vscode.CompletionItemKind,
-    list: vscode.CompletionList
-) {
-    const comp = list.items.find((c) => c.label === label);
-    if (comp) {
-        assert.equal(comp.kind, expectKind);
-    } else {
-        assert.fail(`Completion ${label} not found`);
-    }
-}
-
-function createTestDocInfos(docUri: vscode.Uri): TlaDocumentInfos {
-    const symbolsList = [];
-    symbolsList.push(
-        new vscode.SymbolInformation('Foo', vscode.SymbolKind.Field, 'test', loc(docUri, pos(0, 0)))
-    );
-    const docInfos = new TlaDocumentInfos();
-    docInfos.get(docUri).symbols = symbolsList;
-    return docInfos;
 }
