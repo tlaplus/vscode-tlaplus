@@ -103,16 +103,16 @@ async function doEvaluateExpression(
 async function extractConstants(cfgFilePath: string): Promise<string[]> {
     const lines = (await readFile(cfgFilePath)).split('\n');
     const constants = [];
-    let c = false;
+    let constLine = false;
     // eslint-disable-next-line max-len
-    const wordsRegex = /^\s*(SPECIFICATION|INVARIANT(S)?|PROPERT(Y|IES)|INIT|NEXT|SYMMETRY|CONSTRAINT(S)?|ACTION_CONSTRAINT(S)?|VIEW)\b/g;
+    const wordsRegex = /^\s*(SPECIFICATION|INVARIANT(S)?|PROPERT(Y|IES)|INIT|NEXT|SYMMETRY|CONSTRAINT(S)?|ACTION_CONSTRAINT(S)?|VIEW|CHECK_DEADLOCK|POSTCONDITION)\b/g;
     for (const line of lines) {
         if (/^\s*CONSTANT(S)?\b/g.test(line)) {
-            c = true;
+            constLine = true;
         } else if (wordsRegex.test(line)) {
-            c = false;
+            constLine = false;
         }
-        if (c && line !== '') {
+        if (constLine && line !== '') {
             constants.push(line);
         }
     }
