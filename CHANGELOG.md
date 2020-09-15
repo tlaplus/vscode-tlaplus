@@ -1,5 +1,18 @@
 # Change Log
 
+## 1.5.1 &ndash; 16th September, 2020
+
+### Enhancements
+
+* Display more details about unsupported Java version.
+* Support `CHECK_DEADLOCK` and `POSTCONDITION` keywords.
+
+### Bug fixes
+
+* Fix Java version parsing.
+* Fix problem with quoted command line arguments.
+* Fix Check Result View issue.
+
 ## 1.5.0 &ndash; 30th April, 2020
 
 ### Enhancements
