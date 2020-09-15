@@ -5,6 +5,7 @@ import { ModelCheckResult, ModelCheckResultSource } from './model/check';
 import { CMD_CHECK_MODEL_STOP, CMD_SHOW_TLC_OUTPUT, CMD_CHECK_MODEL_RUN_AGAIN } from './commands/checkModel';
 
 // Cached HTML template for the WebView
+let viewHtmlTemplate: string | undefined;
 let viewHtml: string | undefined;
 let viewPanel: vscode.WebviewPanel | undefined;
 let currentSource: ModelCheckResultSource | undefined;
@@ -69,6 +70,7 @@ function createNewPanel() {
     };
     viewPanel.onDidDispose(() => {
         viewPanel = undefined;
+        viewHtml = undefined;
     });
     viewPanel.webview.onDidReceiveMessage(message => {
         if (message.command === 'init') {
@@ -101,13 +103,16 @@ function ensurePanelBody(extContext: vscode.ExtensionContext) {
     if (!viewPanel) {
         return;
     }
+    if (!viewHtmlTemplate) {
+        const pagePath = path.join(extContext.extensionPath, 'resources', 'check-result-view.html');
+        viewHtmlTemplate = fs.readFileSync(pagePath, 'utf8');
+    }
     if (!viewHtml) {
         const resourcesDiskPath = vscode.Uri.file(
             path.join(extContext.extensionPath, 'resources')
         );
         const resourcesPath = viewPanel.webview.asWebviewUri(resourcesDiskPath);
-        viewHtml = fs.readFileSync(path.join(extContext.extensionPath, 'resources', 'check-result-view.html'), 'utf8');
-        viewHtml = viewHtml
+        viewHtml = viewHtmlTemplate
             .replace(/\${cspSource}/g, viewPanel.webview.cspSource)
             .replace(/\${resourcesPath}/g, String(resourcesPath));
     }
