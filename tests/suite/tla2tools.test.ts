@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import * as path from 'path';
-import { buildJavaOptions, buildTlcOptions, buildPlusCalOptions } from '../../src/tla2tools';
+import { buildJavaOptions, buildTlcOptions, buildPlusCalOptions, splitArguments } from '../../src/tla2tools';
 
 suite('TLA+ Tools Test Suite', () => {
 
@@ -221,6 +221,56 @@ suite('TLA+ Tools Test Suite', () => {
                 '/default/tla2tools.jar',
                 '-XX:+UseParallelGC'
             ]
+        );
+    });
+
+    test('Splits empty command line into an empty array', () => {
+        assert.deepEqual(splitArguments(''), []);
+    });
+
+    test('Splits blank command line into an empty array', () => {
+        assert.deepEqual(splitArguments('   '), []);
+    });
+
+    test('Splits simple command line with extra spaces', () => {
+        assert.deepEqual(
+            splitArguments('-a b'),
+            ['-a', 'b']
+        );
+    });
+
+    test('Splits simple command line with extra spaces', () => {
+        assert.deepEqual(
+            splitArguments('  -foo   -bar    value   '),
+            ['-foo', '-bar', 'value']
+        );
+    });
+
+    test('Handles empty strings as command line arguments', () => {
+        assert.deepEqual(
+            splitArguments('-foo ""'),
+            ['-foo', '']
+        );
+    });
+
+    test('Handles arguments with spaces', () => {
+        assert.deepEqual(
+            splitArguments('-cp "c:\\Program Files\\MyApp\\my.jar"'),
+            ['-cp', 'c:\\Program Files\\MyApp\\my.jar']
+        );
+    });
+
+    test('Handles single-quoted arguments', () => {
+        assert.deepEqual(
+            splitArguments("-cp 'c:\\Program Files\\My App\\my.jar' '-foo'"),
+            ['-cp', 'c:\\Program Files\\My App\\my.jar', '-foo']
+        );
+    });
+
+    test('Preserves spaces in command line arguments', () => {
+        assert.deepEqual(
+            splitArguments('-foo "     " \'   \''),
+            ['-foo', '     ', '   ']
         );
     });
 });

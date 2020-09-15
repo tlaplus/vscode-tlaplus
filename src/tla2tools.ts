@@ -193,6 +193,21 @@ export function buildPlusCalOptions(tlaFilePath: string, customOptions: string[]
 }
 
 /**
+ * Splits the given string into an array of command line arguments.
+ */
+export function splitArguments(str: string): string[] {
+    const regEx = /(?:[^\s'"]+|"(?:\\.|[^"]|\s)*"|'(?:\\.|[^']|\s)*')/g;
+    const matches = str.match(regEx);
+    if (!matches) {
+        return [];
+    }
+    return matches
+        .map(opt => opt.trim())
+        .filter(opt => opt !== '')
+        .map(opt => removeQuotes(opt));         // This must not be put before throwing out empty strings
+}
+
+/**
  * Executes java -version and analyzes, if the version is 1.8 or higher.
  */
 async function checkJavaVersion(javaPath: string) {
@@ -242,7 +257,7 @@ function addReturnCodeHandler(proc: ChildProcess, toolName?: string) {
 
 function getConfigOptions(cfgName: string): string[] {
     const optsString = vscode.workspace.getConfiguration().get<string>(cfgName) || '';
-    return optsString.split(' ').map(opt => opt.trim()).filter(opt => opt !== '');
+    return splitArguments(optsString);
 }
 
 function buildCommandLine(programName: string, args: string[]): string {
@@ -265,7 +280,7 @@ function mergeGCOption(options: string[], defaultGC: string) {
 
 /**
  * Searches for -cp or -classpath option and merges its value with the default classpath.
- * Custom libraries must be geven precedence over default ones.
+ * Custom libraries must be given precedence over default ones.
  */
 function mergeClassPathOption(options: string[], defaultClassPath: string) {
     let cpIdx = -1;
@@ -329,4 +344,17 @@ function showJavaVersionOutput(javaPath: string, ver: JavaVersion) {
     javaVersionChannel.appendLine(`${javaPath} -version`);
     ver.fullOutput.forEach(line => javaVersionChannel.appendLine(line));
     javaVersionChannel.revealWindow();
+}
+
+/**
+ * Trims quotes from the given string.
+ */
+function removeQuotes(str: string): string {
+    return str.length > 1 && (isQuoted(str, '"') || isQuoted(str, "'"))
+        ? str.substring(1, str.length - 1)
+        : str;
+}
+
+function isQuoted(str: string, q: string): boolean {
+    return str.startsWith(q) && str.endsWith(q);
 }
