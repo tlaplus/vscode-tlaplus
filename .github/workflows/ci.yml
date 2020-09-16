@@ -4,7 +4,10 @@ on: [push]
 
 jobs:
   build:
-    runs-on: [macOS-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macOS-latest, windows-latest]
     steps:
     - uses: actions/checkout@v1
     - uses: actions/setup-node@v1
