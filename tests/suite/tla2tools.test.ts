@@ -133,7 +133,7 @@ suite('TLA+ Tools Test Suite', () => {
                 '/default/tla2tools.jar'
             ), [
                 '-cp',
-                'CommunityModules.jar:Foo.jar' + path.delimiter + '/default/tla2tools.jar',
+                'CommunityModules.jar' + path.delimiter + 'Foo.jar' + path.delimiter + '/default/tla2tools.jar',
                 '-XX:+UseParallelGC'
             ]
         );
