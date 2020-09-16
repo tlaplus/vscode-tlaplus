@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as assert from 'assert';
+import * as os from 'os';
 import { parseDocInfo, replaceDocContents, applyDocEdits } from '../document';
 
 export const OPT_4_SPACES: vscode.FormattingOptions = { insertSpaces: true, tabSize: 4 };
@@ -15,7 +16,7 @@ export async function assertOnTypeFormatting(
     options: vscode.FormattingOptions
 ): Promise<void> {
     const docInfo = parseDocInfo(docLines);
-    await replaceDocContents(doc, docInfo.lines.join('\n'));
+    await replaceDocContents(doc, docInfo.lines.join(os.EOL));
     const tokenSrc = new vscode.CancellationTokenSource();
     const edits = await formatter.provideOnTypeFormattingEdits(
         doc,
@@ -25,6 +26,6 @@ export async function assertOnTypeFormatting(
         tokenSrc.token
     );
     await applyDocEdits(doc.uri, edits);
-    assert.deepEqual(doc.getText().split('\n'), expectLines);
+    assert.deepEqual(doc.getText().split(os.EOL), expectLines);
     return undefined;
 }
