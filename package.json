@@ -15,7 +15,8 @@
         "Programming Languages",
         "Snippets",
         "Formatters",
-        "Other"
+        "Other",
+        "Debuggers"
     ],
     "repository": {
         "type": "git",
@@ -50,6 +51,17 @@
         "tools"
     ],
     "contributes": {
+        "debuggers": [
+            {
+                "type": "tlaplus",
+                "label": "TLA+ Debug"
+            }
+        ],
+        "breakpoints": [
+            {
+                "language": "tlaplus"
+            }
+        ],
         "languages": [
             {
                 "id": "tlaplus",
@@ -164,6 +176,19 @@
                 "command": "tlaplus.evaluateExpression",
                 "title": "Evaluate expression...",
                 "category": "TLA+"
+            },
+            {
+                "command": "tlaplus.debug.checkAndDebugEditorContents",
+                "title": "Check and debug model with TLC",
+                "enablement": "!inDebugMode",
+                "icon": "$(debug-alt)",
+                "category": "TLA+"
+            },
+            {
+                "command": "tlaplus.debug.debugEditorContents",
+                "title": "Debug a running model",
+                "enablement": "!inDebugMode",
+                "category": "TLA+"
             }
         ],
         "snippets": [
@@ -219,6 +244,14 @@
                 {
                     "command": "tlaplus.evaluateExpression",
                     "when": "editorLangId == tlaplus"
+                },
+                {
+                    "command": "tlaplus.debug.debugEditorContents",
+                    "when": "editorLangId == tlaplus"
+                },
+                {
+                    "command": "tlaplus.debug.checkAndDebugEditorContents",
+                    "when": "editorLangId == tlaplus"
                 }
             ],
             "explorer/context": [
@@ -243,6 +276,18 @@
                     "command": "tlaplus.evaluateSelection",
                     "when": "editorLangId == tlaplus",
                     "group": "z_commands"
+                },
+                {
+                    "command": "tlaplus.debug.checkAndDebugEditorContents",
+                    "when": "editorLangId == tlaplus",
+                    "group": "z_commands"
+                }
+            ],
+            "editor/title": [
+                {
+                    "command": "tlaplus.debug.checkAndDebugEditorContents",
+                    "when": "resourceLangId == tlaplus",
+                    "group": "1_run@20"
                 }
             ]
         },
@@ -349,13 +394,15 @@
         "glob": "^7.1.6",
         "mocha": "^8.3.1",
         "node": "^12.12.0",
-        "source-map-support": "^0.5.19",
-        "typescript": "^4.2.3",
-        "vscode-test": "^1.3.0"
+        "source-map-support": "^0.5.16",
+        "typescript": "^3.7.5",
+        "vscode-test": "^1.3.0",
+        "vscode-debugadapter-testsupport": "^1.42.0"
     },
     "dependencies": {
-        "await-notify": "^1.0.1",
+        "await-notify": "1.0.1",
         "moment": "^2.24.0",
+        "vscode-debugadapter": "^1.42.1",
         "vscode-debugadapter-testsupport": "^1.42.0"
     }
 }
