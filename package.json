@@ -45,7 +45,7 @@
         "workspaceContains:**/*.tla"
     ],
     "main": "./out/src/main.js",
-    "filse": [
+    "files": [
         "resources",
         "tools"
     ],
