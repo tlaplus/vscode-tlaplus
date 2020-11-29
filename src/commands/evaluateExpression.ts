@@ -146,7 +146,9 @@ function extractCalculatedExpressionLines(outLines: OutputLine[]): string[] {
     for (const outLine of outLines) {
         const text = outLine.text;
         if (lines.length > 0 || (lines.length === 0 && text.indexOf(EXPR_MARKER) >= 0)) {
-            lines.push(text);
+            for (let i = 0; i < outLine.count; i++) {
+                lines.push(text);
+            }
         }
         if (lines.length > 0 && text.endsWith('>>')) {
             break;
