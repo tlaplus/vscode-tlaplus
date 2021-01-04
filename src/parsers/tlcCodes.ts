@@ -253,6 +253,7 @@ export const TLC_COVERAGE_NEXT = registerCode(2772, TlcCodeType.Info);
 export const TLC_COVERAGE_INIT = registerCode(2773, TlcCodeType.Info);
 export const TLC_COVERAGE_PROPERTY = registerCode(2774, TlcCodeType.Ignore);
 export const TLC_COVERAGE_END_OVERHEAD = registerCode(2777, TlcCodeType.Ignore);
+export const TLC_COVERAGE_CONSTRAINT = registerCode(2778, TlcCodeType.Ignore);
 
 // config file errors
 export const TLC_CONFIG_VALUE_NOT_ASSIGNED_TO_CONSTANT_PARAM = registerCode(2222, TlcCodeType.Error);
@@ -292,6 +293,8 @@ export const TLC_INTEGER_TOO_BIG = registerCode(2265, TlcCodeType.Error);
 export const TLC_TRACE_TOO_LONG = registerCode(2282, TlcCodeType.Error);
 
 export const TLC_ENVIRONMENT_JVM_GC = registerCode(2401, TlcCodeType.Warning);
+export const TLC_TE_SPEC_GENERATION_COMPLETE = registerCode(2501, TlcCodeType.Ignore);
+export const TLC_TE_SPEC_GENERATION_ERROR = registerCode(2502, TlcCodeType.Error);
 
 function registerCode(num: number, type: TlcCodeType): TlcCode {
     const tlcCode = new TlcCode(num, type);
