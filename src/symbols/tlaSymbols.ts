@@ -138,7 +138,7 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
         document: vscode.TextDocument,
         line: vscode.TextLine
     ): boolean {
-        const matches = /^(\s*)(\w+)\s*([(|[)].*)?\s*==\s*(.*)?/g.exec(line.text);
+        const matches = /^((?:\s*|LET|\/\\)+)(\w+)\s*([(|[)].*)?\s*==\s*(.*)?/g.exec(line.text);
         if (!matches) {
             return false;
         }
