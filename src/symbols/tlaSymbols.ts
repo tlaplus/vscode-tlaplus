@@ -11,6 +11,7 @@ enum SpecialSymbol {
 
 class ParsingContext {
     moduleName: string | undefined;
+    lastTopDefBlock: vscode.SymbolInformation | undefined;
     plusCal: vscode.SymbolInformation | undefined;
     symbols: vscode.SymbolInformation[] = [];
     plusCalSymbols: vscode.SymbolInformation[] = [];
@@ -79,7 +80,7 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
                 return true;
             }
         }
-        if (this.tryExtractDefinition(context, document.uri, line)) {
+        if (this.tryExtractDefinition(context, document, line)) {
             return true;
         }
         if (this.tryExtractListStart(context, document.uri, line)) {
@@ -134,27 +135,48 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
 
     tryExtractDefinition(
         context: ParsingContext,
-        docUri: vscode.Uri,
+        document: vscode.TextDocument,
         line: vscode.TextLine
     ): boolean {
-        const matches = /^\s*(\w+)\s*([(|[)].*)?\s*==\s*(.*)?/g.exec(line.text);
+        const matches = /^(\s*)(\w+)\s*([(|[)].*)?\s*==\s*(.*)?/g.exec(line.text);
         if (!matches) {
             return false;
         }
+        const space = matches[1];
+        const name = matches[2];
+        if (space.length > 0
+            && name.charAt(0).toLowerCase() === name.charAt(0)
+            && context.lastTopDefBlock
+            && line.range.start.line >= context.lastTopDefBlock.location.range.start.line
+            && line.range.end.line <= context.lastTopDefBlock.location.range.end.line
+        ) {
+            // This looks like a private variable within a top level definition
+            context.addSymbol(new vscode.SymbolInformation(
+                name,
+                vscode.SymbolKind.Variable,
+                context.lastTopDefBlock.name,
+                new vscode.Location(document.uri, line.range.start)
+            ));
+            return true;
+        }
+        // This is a top level definition
         let kind = vscode.SymbolKind.Field;
-        const next = matches[2];
-        const value = matches[3];
+        const next = matches[3];
+        const value = matches[4];
         if (next && (next[0] === '(' || next[0] === '[')) {
             kind = vscode.SymbolKind.Function;
         } else if (value && value.startsWith('INSTANCE')) {
             kind = vscode.SymbolKind.Namespace;
         }
-        context.addSymbol(new vscode.SymbolInformation(
-            matches[1],
+        const blockEnd = findBlockDefinitionEnd(document, line).range.end;
+        const symbol = new vscode.SymbolInformation(
+            name,
             kind,
             context.getContainerName(),
-            new vscode.Location(docUri, line.range.start)
-        ));
+            new vscode.Location(document.uri, new vscode.Range(line.range.start, blockEnd))
+        );
+        context.addSymbol(symbol);
+        context.lastTopDefBlock = symbol;
         return true;
     }
 
@@ -276,4 +298,23 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
 
 function isCommentStart(str: string): boolean {
     return str.startsWith('\\*') || str.startsWith('(*');
+}
+
+/**
+ * Finds and returns the last line of the definition block, started at the given line.
+ * Definition block expands till the next non-empty line with no leading spaces.
+ */
+function findBlockDefinitionEnd(document: vscode.TextDocument, startLine: vscode.TextLine): vscode.TextLine {
+    let lastLine = startLine;
+    for (let i = startLine.lineNumber + 1; i < document.lineCount; i++) {
+        const line = document.lineAt(i);
+        if (line.isEmptyOrWhitespace) {
+            continue;
+        }
+        if (line.firstNonWhitespaceCharacterIndex === 0) {      // New block started
+            break;
+        }
+        lastLine = line;
+    }
+    return lastLine;
 }

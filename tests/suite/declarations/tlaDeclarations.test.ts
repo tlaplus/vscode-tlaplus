@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as assert from 'assert';
 import { LANG_TLAPLUS } from '../../../src/common';
-import { loc, pos } from '../shortcuts';
+import { loc, pos, range } from '../shortcuts';
 import { parseDocInfo, replaceDocContents } from '../document';
 import { TlaDocumentInfos } from '../../../src/model/documentInfo';
 import { TlaDeclarationsProvider } from '../../../src/declarations/tlaDeclarations';
@@ -22,7 +22,7 @@ suite('TLA Declarations Provider Test Suite', () => {
             'Bar == Fo${o}',
             '===='
         ], [
-            loc(doc.uri, pos(1, 0))
+            loc(doc.uri, range(1, 0, 1, 11))
         ]);
     });
 
@@ -42,7 +42,7 @@ suite('TLA Declarations Provider Test Suite', () => {
             'F${o}o == TRUE',
             '===='
         ], [
-            loc(doc.uri, pos(2, 0))
+            loc(doc.uri, range(2, 0, 2, 11))
         ]);
     });
 
@@ -55,7 +55,7 @@ suite('TLA Declarations Provider Test Suite', () => {
             '===='
         ], [
             loc(doc.uri, pos(1, 10)),
-            loc(doc.uri, pos(2, 0))
+            loc(doc.uri, range(2, 0, 2, 15))
         ]);
     });
 
@@ -83,7 +83,7 @@ suite('TLA Declarations Provider Test Suite', () => {
             'end algorithm; *)',
             '===='
         ], [
-            loc(doc.uri, pos(4, 0))
+            loc(doc.uri, range(4, 0, 4, 13))
         ]);
     });
 
@@ -98,7 +98,7 @@ suite('TLA Declarations Provider Test Suite', () => {
             'end algorithm; *)',
             '===='
         ], [
-            loc(doc.uri, pos(1, 0))
+            loc(doc.uri, range(1, 0, 1, 11))
         ]);
     });
 
@@ -133,7 +133,7 @@ suite('TLA Declarations Provider Test Suite', () => {
             'Bar == ${F}oo',
             '===='
         ], [
-            loc(doc.uri, pos(1, 0))
+            loc(doc.uri, range(1, 0, 1, 11))
         ]);
     });
 
@@ -144,7 +144,7 @@ suite('TLA Declarations Provider Test Suite', () => {
             'Bar == ${F}oo',
             '===='
         ], [
-            loc(doc.uri, pos(1, 0))
+            loc(doc.uri, range(1, 0, 1, 8))
         ]);
     });
 
@@ -157,7 +157,7 @@ suite('TLA Declarations Provider Test Suite', () => {
             '===='
         ], [
             loc(doc.uri, pos(1, 9)),
-            loc(doc.uri, pos(2, 0))
+            loc(doc.uri, range(2, 0, 2, 8))
         ]);
     });
 

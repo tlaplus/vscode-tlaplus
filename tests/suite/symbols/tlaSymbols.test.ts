@@ -112,7 +112,7 @@ suite('TLA Symbols Provider Test Suite', () => {
         ], [
             symConst('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 9))),
             symVar('Bar', ROOT_SYMBOL_NAME, loc(doc.uri, pos(1, 9))),
-            symField('Baz', ROOT_SYMBOL_NAME, loc(doc.uri, pos(2, 0)))
+            symField('Baz', ROOT_SYMBOL_NAME, loc(doc.uri, range(2, 0, 2, 8)))
         ]);
     });
 
@@ -186,7 +186,42 @@ suite('TLA Symbols Provider Test Suite', () => {
         return assertSymbols(doc, [
             'Foo == 10'
         ], [
-            symField('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 0)))
+            symField('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, range(0, 0, 0, 9)))
+        ]);
+    });
+
+    test('Finds simple def block', () => {
+        return assertSymbols(doc, [
+            'Foo == 10',
+            '       /\\ 20',
+            '       /\\ 30',
+        ], [
+            symField('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, range(0, 0, 2, 12)))
+        ]);
+    });
+
+    test('Finds multi-level def block', () => {
+        return assertSymbols(doc, [
+            'Foo ==',
+            '  LET bar = Something',
+            '      IN',
+            '      /\\ bar /= 0',
+            '      /\\ LET baz == FooBarBaz',
+            '(****)'
+        ], [
+            symField('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, range(0, 0, 4, 29)))
+        ]);
+    });
+
+    test('Ignores empty lines in def blocks', () => {
+        return assertSymbols(doc, [
+            'Foo == 10',
+            '       /\\ 20',
+            '',
+            'Bar == 20'
+        ], [
+            symField('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, range(0, 0, 1, 12))),
+            symField('Bar', ROOT_SYMBOL_NAME, loc(doc.uri, range(3, 0, 3, 9))),
         ]);
     });
 
@@ -194,7 +229,7 @@ suite('TLA Symbols Provider Test Suite', () => {
         return assertSymbols(doc, [
             'Bar(foo) == foo + 10'
         ], [
-            symFunc('Bar', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 0)))
+            symFunc('Bar', ROOT_SYMBOL_NAME, loc(doc.uri, range(0, 0, 0, 20)))
         ]);
     });
 
@@ -202,7 +237,7 @@ suite('TLA Symbols Provider Test Suite', () => {
         return assertSymbols(doc, [
             'Baz[foo \\in 1..3] == foo + 11'
         ], [
-            symFunc('Baz', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 0)))
+            symFunc('Baz', ROOT_SYMBOL_NAME, loc(doc.uri, range(0, 0, 0, 29)))
         ]);
     });
 
@@ -210,7 +245,7 @@ suite('TLA Symbols Provider Test Suite', () => {
         return assertSymbols(doc, [
             'FooMod == INSTANCE foo'
         ], [
-            symModRef('FooMod', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 0)))
+            symModRef('FooMod', ROOT_SYMBOL_NAME, loc(doc.uri, range(0, 0, 0, 22)))
         ]);
     });
 
@@ -246,7 +281,7 @@ suite('TLA Symbols Provider Test Suite', () => {
         return assertSymbols(doc, [
             'Multiline =='
         ], [
-            symField('Multiline', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 0)))
+            symField('Multiline', ROOT_SYMBOL_NAME, loc(doc.uri, range(0, 0, 0, 12)))
         ]);
     });
 
@@ -261,8 +296,8 @@ suite('TLA Symbols Provider Test Suite', () => {
             'BAZ(x) == x'
         ], [
             symModule('bar', loc(doc.uri, range(0, 0, 2, 11))),
-            symField('FOO', 'bar', loc(doc.uri, pos(1, 0))),
-            symFunc('BAZ', 'bar', loc(doc.uri, pos(2, 0))),
+            symField('FOO', 'bar', loc(doc.uri, range(1, 0, 1, 9))),
+            symFunc('BAZ', 'bar', loc(doc.uri, range(2, 0, 2, 11))),
         ]);
     });
 
@@ -270,7 +305,7 @@ suite('TLA Symbols Provider Test Suite', () => {
         return assertSymbols(doc, [
             ' \t  Zero == 0'
         ], [
-            symField('Zero', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 0)))
+            symField('Zero', ROOT_SYMBOL_NAME, loc(doc.uri, range(0, 0, 0, 13)))
         ]);
     });
 
@@ -278,7 +313,7 @@ suite('TLA Symbols Provider Test Suite', () => {
         return assertSymbols(doc, [
             'This_is_3 == 3'
         ], [
-            symField('This_is_3', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 0)))
+            symField('This_is_3', ROOT_SYMBOL_NAME, loc(doc.uri, range(0, 0, 0, 14)))
         ]);
     });
 
@@ -291,8 +326,8 @@ suite('TLA Symbols Provider Test Suite', () => {
             '    One == 1',
             'IN Handle(One)'
         ], [
-            symField('One', ROOT_SYMBOL_NAME, loc(doc.uri, pos(1, 0))),
-            symField('One', ROOT_SYMBOL_NAME, loc(doc.uri, pos(4, 0)))
+            symField('One', ROOT_SYMBOL_NAME, loc(doc.uri, range(1, 0, 1, 12))),
+            symField('One', ROOT_SYMBOL_NAME, loc(doc.uri, range(4, 0, 4, 12)))
         ]);
     });
 
@@ -309,7 +344,7 @@ suite('TLA Symbols Provider Test Suite', () => {
             '*)'
         ], [
             // Actually, we don't want to capture this
-            symFunc('Apply', ROOT_SYMBOL_NAME, loc(doc.uri, pos(1, 0)))
+            symFunc('Apply', ROOT_SYMBOL_NAME, loc(doc.uri, range(1, 0, 1, 15)))
         ]);
     });
 
@@ -322,9 +357,9 @@ suite('TLA Symbols Provider Test Suite', () => {
             'end algorithm; *)',
             'B == 20'
         ], [
-            symField('A', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 0))),
+            symField('A', ROOT_SYMBOL_NAME, loc(doc.uri, range(0, 0, 0, 7))),
             symPlusCal(loc(doc.uri, range(1, 0, 4, 17))),
-            symField('B', ROOT_SYMBOL_NAME, loc(doc.uri, pos(5, 0)))
+            symField('B', ROOT_SYMBOL_NAME, loc(doc.uri, range(5, 0, 5, 7)))
         ]);
     });
 
@@ -340,11 +375,12 @@ suite('TLA Symbols Provider Test Suite', () => {
             'Baz == 39'
         ], [
             symPlusCal(loc(doc.uri, range(0, 0, 6, 17))),
-            symField('Baz', ROOT_SYMBOL_NAME, loc(doc.uri, pos(7, 0))),
+            symField('Baz', ROOT_SYMBOL_NAME, loc(doc.uri, range(7, 0, 7, 9))),
             // PlusCal symbols always come last
-            symField('Baz', PLUS_CAL_SYMBOL_NAME, loc(doc.uri, pos(2, 0)))
+            symField('Baz', PLUS_CAL_SYMBOL_NAME, loc(doc.uri, range(2, 0, 2, 11)))
         ]);
     });
+
 });
 
 async function assertSymbols(
