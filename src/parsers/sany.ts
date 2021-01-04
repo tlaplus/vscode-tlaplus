@@ -9,7 +9,8 @@ enum OutBlockType {
     Errors,
     ParseError,
     AbortMessages,
-    Warnings
+    Warnings,
+    StackTrace
 }
 
 export class SanyData {
@@ -33,7 +34,11 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
     }
 
     protected handleLine(line: string | null): void {
-        if (line === null || line === '') {
+        if (line === null) {
+            this.tryAddMessage(true);           // Add error message when there's no range
+            return;
+        }
+        if (line === '') {
             return;
         }
         if (line.startsWith('Parsing file ')) {
@@ -47,6 +52,7 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
             return;
         }
         let newBlockType;
+        let newErrMessage;
         if (line.startsWith('*** Errors:')) {
             newBlockType = OutBlockType.Errors;
         } else if (line.startsWith('***Parse Error***')) {
@@ -55,10 +61,16 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
             newBlockType = OutBlockType.AbortMessages;
         } else if (line.startsWith('*** Warnings:')) {
             newBlockType = OutBlockType.Warnings;
+        } else if (line.startsWith('Fatal errors while parsing TLA+ spec')) {
+            newBlockType = OutBlockType.ParseError;
+            newErrMessage = line.trim();
+        } else if (line.startsWith('Residual stack trace follows:')) {
+            newBlockType = OutBlockType.StackTrace;
         }
         if (newBlockType) {
-            this.outBlockType = newBlockType;
             this.resetErrData();
+            this.outBlockType = newBlockType;
+            this.errMessage = newErrMessage;
             return;
         }
         this.tryParseOutLine(line);
@@ -80,6 +92,8 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
             case OutBlockType.ParseError:
                 if (!this.errMessage) {
                     this.errMessage = line.trim();
+                } else {
+                    this.errMessage += '\n' + line.trim();
                 }
                 this.tryParseParseErrorRange(line);
                 break;
@@ -96,12 +110,16 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
         this.pendingAbortMessage = false;
     }
 
-    private tryAddMessage() {
-        if (this.curFilePath && this.errMessage && this.errRange) {
+    private tryAddMessage(ignoreNoRange = false) {
+        if (this.outBlockType === OutBlockType.StackTrace) {
+            return;
+        }
+        if (this.curFilePath && this.errMessage && (this.errRange || ignoreNoRange)) {
             const severity = this.outBlockType === OutBlockType.Warnings
                 ? vscode.DiagnosticSeverity.Warning
                 : vscode.DiagnosticSeverity.Error;
-            this.result.dCollection.addMessage(this.curFilePath, this.errRange, this.errMessage, severity);
+            const range = this.errRange || new vscode.Range(0, 0, 0, 0);
+            this.result.dCollection.addMessage(this.curFilePath, range, this.errMessage, severity);
             this.resetErrData();
         }
     }
