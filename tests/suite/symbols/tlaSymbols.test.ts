@@ -200,16 +200,20 @@ suite('TLA Symbols Provider Test Suite', () => {
         ]);
     });
 
-    test('Finds multi-level def block', () => {
+    test('Finds local definitions in multi-level def block', () => {
         return assertSymbols(doc, [
             'Foo ==',
-            '  LET bar = Something',
+            '  LET bar == Something',
+            '      baz == OtherThing',
             '      IN',
             '      /\\ bar /= 0',
-            '      /\\ LET baz == FooBarBaz',
+            '      /\\ LET tau == FooBarBaz',
             '(****)'
         ], [
-            symField('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, range(0, 0, 4, 29)))
+            symField('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, range(0, 0, 5, 29))),
+            symVar('bar', 'Foo', loc(doc.uri, pos(1, 0))),
+            symVar('baz', 'Foo', loc(doc.uri, pos(2, 0))),
+            symVar('tau', 'Foo', loc(doc.uri, pos(5, 0))),
         ]);
     });
 
