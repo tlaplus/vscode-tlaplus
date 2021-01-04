@@ -109,7 +109,31 @@ suite('SANY Output Parser Test Suite', () => {
         assertOutput(
             stdout,
             expectDiag(ROOT_PATH, [
-                diagError(range(89, 28, 89, 28), 'Was expecting "==== or more Module body"')
+                diagError(
+                    range(89, 28, 89, 28),
+                    'Was expecting "==== or more Module body"\n'
+                        + 'Encountered "foobarbaz" at line 90, column 29 and token "\\"'
+                )
+            ]));
+    });
+
+    test('Captures parsing internal errors', () => {
+        const stdout = [
+            '',
+            '****** SANY2 Version 2.1 created 24 February 2014',
+            '',
+            `Parsing file ${ROOT_PATH}`,
+            `Fatal errors while parsing TLA+ spec in file ${ROOT_NAME}.tla`,
+            'java.lang.NullPointerException'
+        ].join('\n');
+        assertOutput(
+            stdout,
+            expectDiag(ROOT_PATH, [
+                diagError(
+                    range(0, 0, 0, 0),
+                    `Fatal errors while parsing TLA+ spec in file ${ROOT_NAME}.tla\n`
+                        + 'java.lang.NullPointerException'
+                )
             ]));
     });
 
@@ -132,7 +156,11 @@ suite('SANY Output Parser Test Suite', () => {
         assertOutput(
             stdout,
             expectDiag('/Users/alice/TLA/bar.tla', [
-                diagError(range(89, 28, 89, 28), 'Was expecting "==== or more Module body"')
+                diagError(
+                    range(89, 28, 89, 28),
+                    'Was expecting "==== or more Module body"\n'
+                        + 'Encountered "foobarbaz" at line 90, column 29 and token "\\"'
+                )
             ]));
     });
 
