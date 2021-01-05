@@ -1,4 +1,4 @@
-import { Range, Position, window } from 'vscode';
+import { Range, Position, window, DiagnosticSeverity } from 'vscode';
 import * as moment from 'moment/moment';
 import { Readable } from 'stream';
 import { clearTimeout } from 'timers';
@@ -422,8 +422,12 @@ class ModelCheckResultBuilder {
         this.sanyData = sany.readAllSync();
         // Display SANY error messages as model checking errors
         this.sanyData.dCollection.getMessages().forEach(diag => {
-            const errMessage = MessageLine.fromText(diag.diagnostic.message);
-            this.errors.push(new ErrorInfo([errMessage], []));
+            const message = MessageLine.fromText(diag.diagnostic.message);
+            if (diag.diagnostic.severity === DiagnosticSeverity.Warning) {
+                this.warnings.push(new WarningInfo([message]));
+            } else {
+                this.errors.push(new ErrorInfo([message], []));
+            }
         });
     }
 

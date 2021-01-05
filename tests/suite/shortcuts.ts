@@ -222,9 +222,14 @@ export class CheckResultBuilder {
         return this;
     }
 
-    addDColMessage(filePath: string, range: vscode.Range, text: string): CheckResultBuilder {
+    addDColMessage(
+        filePath: string,
+        range: vscode.Range,
+        text: string,
+        severity: vscode.DiagnosticSeverity
+    ): CheckResultBuilder {
         this.ensureSanyMessages();
-        this.sanyMessages?.addMessage(filePath, range, text);
+        this.sanyMessages?.addMessage(filePath, range, text, severity);
         return this;
     }
 

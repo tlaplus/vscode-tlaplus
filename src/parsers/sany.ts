@@ -68,6 +68,9 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
             newBlockType = OutBlockType.StackTrace;
         }
         if (newBlockType) {
+            if (this.outBlockType !== OutBlockType.StackTrace) {
+                this.tryAddMessage(true);
+            }
             this.resetErrData();
             this.outBlockType = newBlockType;
             this.errMessage = newErrMessage;
@@ -77,24 +80,28 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
     }
 
     private tryParseOutLine(line: string) {
+        if (line === 'SANY finished.') {
+            return;
+        }
+        let range: vscode.Range | undefined;
         switch (this.outBlockType) {
             case OutBlockType.Parsing:
                 this.tryParseLexicalError(line);
                 break;
             case OutBlockType.Errors:
             case OutBlockType.Warnings:
-                if (!this.errRange) {
-                    this.tryParseErrorRange(line);
-                    return;
-                }
-                this.errMessage = line.trim();
-                break;
-            case OutBlockType.ParseError:
-                if (!this.errMessage) {
-                    this.errMessage = line.trim();
+                range = this.tryParseErrorRange(line);
+                if (range) {
+                    if (this.errRange) {
+                        this.tryAddMessage();   // We found the beginning of a new message, so finish the previous one
+                    }
+                    this.errRange = range;
                 } else {
-                    this.errMessage += '\n' + line.trim();
+                    this.appendErrMessage(line);
                 }
+                return;
+            case OutBlockType.ParseError:
+                this.appendErrMessage(line);
                 this.tryParseParseErrorRange(line);
                 break;
             case OutBlockType.AbortMessages:
@@ -112,6 +119,11 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
 
     private tryAddMessage(ignoreNoRange = false) {
         if (this.outBlockType === OutBlockType.StackTrace) {
+            return;
+        }
+        if (!this.errRange && this.errMessage?.endsWith('sany.semantic.AbortException')) {
+            // This message only means that there're other parsing errors
+            this.resetErrData();
             return;
         }
         if (this.curFilePath && this.errMessage && (this.errRange || ignoreNoRange)) {
@@ -146,13 +158,13 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
         this.errRange = new vscode.Range(errLine, errCol, errLine, errCol);
     }
 
-    private tryParseErrorRange(line: string) {
+    private tryParseErrorRange(line: string): vscode.Range | undefined {
         const rxPosition = /^\s*line (\d+), col (\d+) to line (\d+), col (\d+) of module (\w+)\s*$/g;
         const posMatches = rxPosition.exec(line);
         if (!posMatches) {
-            return;
+            return undefined;
         }
-        this.errRange = new vscode.Range(
+        return new vscode.Range(
             parseInt(posMatches[1]) - 1,
             parseInt(posMatches[2]) - 1,
             parseInt(posMatches[3]) - 1,
@@ -188,5 +200,13 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
         const message = this.errMessage ? this.errMessage + '\n' + line : line;
         this.result.dCollection.addMessage(this.rootModulePath, new vscode.Range(0, 0, 0, 0), message);
         this.resetErrData();
+    }
+
+    private appendErrMessage(line: string) {
+        if (!this.errMessage) {
+            this.errMessage = line.trim();
+        } else {
+            this.errMessage += '\n' + line.trim();
+        }
     }
 }
