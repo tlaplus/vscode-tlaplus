@@ -1,6 +1,7 @@
 import * as assert from 'assert';
 import * as path from 'path';
 import * as fs from 'fs';
+import { DiagnosticSeverity } from 'vscode';
 import { before } from 'mocha';
 import { PassThrough } from 'stream';
 import { ModelCheckResult, CheckState, CheckStatus, ModelCheckResultSource, Value,
@@ -140,9 +141,33 @@ suite('TLC Output Parser Test Suite', () => {
                 .setStartDateTime('2019-08-17 02:04:44')
                 .setEndDateTime('2019-08-17 02:04:44')
                 .setDuration(380)
-                .addDColMessage(TEST_SPEC_FILES.tlaFilePath, range(4, 7, 4, 8), "Unknown operator: `a'.")
+                .addDColMessage(
+                    TEST_SPEC_FILES.tlaFilePath,
+                    range(4, 7, 4, 8),
+                    "Unknown operator: `a'.",
+                    DiagnosticSeverity.Error
+                )
                 .addError([message("Unknown operator: `a'.")])
                 .addError([message('Parsing or semantic analysis failed.')])
+                .build()
+        );
+    });
+
+    test('Captures SANY warnings', () => {
+        return assertOutput('sany-warning.out', TEST_SPEC_FILES,
+            new CheckResultBuilder('sany-warning.out', CheckState.Error, CheckStatus.Finished)
+                .setProcessInfo('Running breadth-first search Model-Checking with fp 86 and seed -5126315020031287108.')
+                .addDColFilePath(TEST_SPEC_FILES.tlaFilePath)
+                .setStartDateTime('2019-08-17 02:04:44')
+                .setEndDateTime('2019-08-17 02:04:44')
+                .setDuration(380)
+                .addDColMessage(
+                    TEST_SPEC_FILES.tlaFilePath,
+                    range(4, 7, 4, 8),
+                    "Multiple declarations of operator `a'.",
+                    DiagnosticSeverity.Warning
+                )
+                .addWarning([message("Multiple declarations of operator `a'.")])
                 .build()
         );
     });

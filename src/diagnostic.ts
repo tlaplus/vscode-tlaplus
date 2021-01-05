@@ -61,7 +61,9 @@ export function applyDCollection(dCol: DCollection, dc: vscode.DiagnosticCollect
  */
 export function addDiagnostics(from: DCollection, to: DCollection): void {
     from.getModules().forEach((modPath) => to.addFilePath(modPath));
-    from.getMessages().forEach((msg) => to.addMessage(msg.filePath, msg.diagnostic.range, msg.diagnostic.message));
+    from.getMessages().forEach((msg) =>
+        to.addMessage(msg.filePath, msg.diagnostic.range, msg.diagnostic.message, msg.diagnostic.severity)
+    );
 }
 
 /**

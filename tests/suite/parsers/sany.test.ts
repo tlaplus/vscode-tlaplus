@@ -308,16 +308,14 @@ suite('SANY Output Parser Test Suite', () => {
             ]));
     });
 
-    test ('CAN IMPROVE: Captures warnings', () => {
+    test ('Captures warnings', () => {
         const stdout = [
             `Parsing file ${ROOT_PATH}`,
             `Semantic processing of module ${ROOT_NAME}`,
             'Semantic errors:',
             '*** Warnings: 1',
             `line 24, col 10 to line 24, col 25 of module ${ROOT_NAME}`,
-            'Multiple declarations or definitions for symbol FooConst.',
-            // The following line is not captured, but it would be cool to add it to the warning text
-            `This duplicates the one at line 3, col 10 to line 3, col 25 of module ${ROOT_NAME}.`
+            'Multiple declarations or definitions for symbol FooConst.'
         ].join('\n');
         assertOutput(
             stdout,
@@ -325,6 +323,63 @@ suite('SANY Output Parser Test Suite', () => {
                 diagWarning(
                     range(23, 9, 23, 25),
                     'Multiple declarations or definitions for symbol FooConst.'
+                )
+            ]));
+    });
+
+    test ('Captures multi-line messages', () => {
+        const stdout = [
+            `Parsing file ${ROOT_PATH}`,
+            `Semantic processing of module ${ROOT_NAME}`,
+            'Semantic errors:',
+            '*** Warnings: 1',
+            `line 24, col 10 to line 24, col 25 of module ${ROOT_NAME}`,
+            'Multiple declarations or definitions for symbol FooConst.',
+            `This duplicates the one at line 3, col 10 to line 3, col 25 of module ${ROOT_NAME}.`,
+            `line 31, col 8 to line 31, col 20 of module ${ROOT_NAME}`,
+            'Multiple declarations or definitions for symbol BarConst.',
+            `This duplicates the one at line 4, col 10 to line 4, col 25 of module ${ROOT_NAME}.`,
+        ].join('\n');
+        assertOutput(
+            stdout,
+            expectDiag(ROOT_PATH, [
+                diagWarning(
+                    range(23, 9, 23, 25),
+                    'Multiple declarations or definitions for symbol FooConst.\n'
+                        + `This duplicates the one at line 3, col 10 to line 3, col 25 of module ${ROOT_NAME}.`
+                ),
+                diagWarning(
+                    range(30, 7, 30, 20),
+                    'Multiple declarations or definitions for symbol BarConst.\n'
+                        + `This duplicates the one at line 4, col 10 to line 4, col 25 of module ${ROOT_NAME}.`
+                )
+            ]));
+    });
+
+    test ('Captures both warnings and errors from one output', () => {
+        const stdout = [
+            `Parsing file ${ROOT_PATH}`,
+            `Semantic processing of module ${ROOT_NAME}`,
+            'Semantic errors:',
+            '*** Errors: 1',
+            `line 13, col 1 to line 13, col 26 of module ${ROOT_NAME}`,
+            'Operator FooBar already defined or declared.',
+            '*** Warnings: 1',
+            `line 13, col 1 to line 13, col 26 of module ${ROOT_NAME}`,
+            'Multiple declarations or definitions for symbol FooBar.',
+            `This duplicates the one at line 11, col 1 to line 11, col 26 of module ${ROOT_NAME}.`
+        ].join('\n');
+        assertOutput(
+            stdout,
+            expectDiag(ROOT_PATH, [
+                diagError(
+                    range(12, 0, 12, 26),
+                    'Operator FooBar already defined or declared.'
+                ),
+                diagWarning(
+                    range(12, 0, 12, 26),
+                    'Multiple declarations or definitions for symbol FooBar.\n'
+                        + `This duplicates the one at line 11, col 1 to line 11, col 26 of module ${ROOT_NAME}.`
                 )
             ]));
     });
