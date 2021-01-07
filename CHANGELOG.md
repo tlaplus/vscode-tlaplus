@@ -1,6 +1,6 @@
 # Change Log
 
-## 1.5.2 &ndash; 5th January, 2021
+## 1.5.2 &ndash; 7th January, 2021
 
 ### Enhancements
 
@@ -8,13 +8,13 @@
 * Better local definitions detection.
 * Upgrade tla2tools to v2.16.
 * Support for new TLC message codes.
-* Separate SANY errors and warnings on the Check Result View panel.
 
 ### Bug fixes
 
 * Fix display of constant expression evaluation result.
 * Fix multi-line SANY messages parsing.
 * Capture SANY internal errors correctly.
+* Separate SANY errors and warnings on the Check Result View panel.
 
 ## 1.5.1 &ndash; 16th September, 2020
 
