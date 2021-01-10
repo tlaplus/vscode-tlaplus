@@ -3,6 +3,7 @@ import { Readable } from 'stream';
 import { ProcessOutputHandler } from '../outputHandler';
 import { DCollection } from '../diagnostic';
 import { pathToModuleName } from '../common';
+import { readFileSync } from 'fs';
 
 enum OutBlockType {
     Parsing,
@@ -85,10 +86,31 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
     private tryAddMonolithSpec(line: string) {
         const curMod = line.substring(45).split('\.')[0];
         const actualFilePath = this.result.modulePaths.get(curMod);
+        const sanyData = this.result;
         // If current file path differs from the actual file path, it means we are in a monolith spec.
         // Monolith specs are TLA files which have multiple modules inline.
         if (this.curFilePath && actualFilePath && actualFilePath !== this.curFilePath) {
-            this.result.filePathToMonolithFilePath.set(this.curFilePath, actualFilePath);
+            const filePath = this.curFilePath;
+            const monolithFilePath = actualFilePath;
+            // Adapt monolith error locations.
+            // It modifies the Sany result adding the module offset for in the monolith spec.  
+            const invertedModulePaths = new Map(Array.from(sanyData.modulePaths, (i) => i.reverse() as [string, string]));
+            const text = readFileSync(monolithFilePath).toString();
+            const specName = invertedModulePaths.get(filePath);
+            text.split('\n').forEach(function (line, number) {
+                if (new RegExp(`-----*\\s*MODULE\\s+${specName}\\s*----*`).exec(line)) {
+                    sanyData.dCollection.getMessages().filter(m => m.filePath === filePath).forEach(message => {
+                        const oldRange = message.diagnostic.range;
+                        // Remove message so it does not appear duplicated in the output.
+                        sanyData.dCollection.removeMessage(message);
+                        sanyData.dCollection.addMessage(
+                            monolithFilePath, 
+                            new vscode.Range(oldRange.start.line + number, oldRange.start.character, oldRange.end.line + number, oldRange.end.character),
+                            message.diagnostic.message,
+                            message.diagnostic.severity);
+                    })
+                } 
+            });
         }
     }
 
