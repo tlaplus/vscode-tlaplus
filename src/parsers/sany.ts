@@ -31,6 +31,7 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
     errRange: vscode.Range | undefined;
     errMessage: string | undefined;
     pendingAbortMessage = false;
+    public getFileContents = (filePath : string) => readFileSync(filePath).toString(); // this should be set only at tests
 
     constructor(source: Readable | string[] | null) {
         super(source, new SanyData());
@@ -93,9 +94,9 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
             const filePath = this.curFilePath;
             const monolithFilePath = actualFilePath;
             // Adapt monolith error locations.
-            // It modifies the Sany result adding the module offset for in the monolith spec.  
+            // It modifies the Sany result adding the module offset in the monolith spec.
             const invertedModulePaths = new Map(Array.from(sanyData.modulePaths, (i) => i.reverse() as [string, string]));
-            const text = readFileSync(monolithFilePath).toString();
+            const text = this.getFileContents(monolithFilePath);
             const specName = invertedModulePaths.get(filePath);
             text.split('\n').forEach(function (line, number) {
                 if (new RegExp(`-----*\\s*MODULE\\s+${specName}\\s*----*`).exec(line)) {
@@ -104,12 +105,12 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
                         // Remove message so it does not appear duplicated in the output.
                         sanyData.dCollection.removeMessage(message);
                         sanyData.dCollection.addMessage(
-                            monolithFilePath, 
+                            monolithFilePath,
                             new vscode.Range(oldRange.start.line + number, oldRange.start.character, oldRange.end.line + number, oldRange.end.character),
                             message.diagnostic.message,
                             message.diagnostic.severity);
                     })
-                } 
+                }
             });
         }
     }
