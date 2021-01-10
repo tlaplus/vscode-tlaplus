@@ -64,13 +64,7 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
         } else if (line.startsWith('*** Warnings:')) {
             newBlockType = OutBlockType.Warnings;
         } else if (line.startsWith('Fatal errors while parsing TLA+ spec')) {
-            const curMod = line.substring(45).split('\.')[0];
-            const actualFilePath = this.result.modulePaths.get(curMod);
-            // If current file path differs from the actual file path, it means we are in a monolith spec.
-            // Monolith specs are TLA files which have multiple modules inline.
-            if (this.curFilePath && actualFilePath && actualFilePath != this.curFilePath) {
-                this.result.filePathToMonolithFilePath.set(this.curFilePath, actualFilePath);
-            }
+            this.tryAddMonolithSpec(line);
             newBlockType = OutBlockType.ParseError;
             newErrMessage = line.trim();
         } else if (line.startsWith('Residual stack trace follows:')) {
@@ -86,6 +80,16 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
             return;
         }
         this.tryParseOutLine(line);
+    }
+
+    private tryAddMonolithSpec(line: string) {
+        const curMod = line.substring(45).split('\.')[0];
+        const actualFilePath = this.result.modulePaths.get(curMod);
+        // If current file path differs from the actual file path, it means we are in a monolith spec.
+        // Monolith specs are TLA files which have multiple modules inline.
+        if (this.curFilePath && actualFilePath && actualFilePath !== this.curFilePath) {
+            this.result.filePathToMonolithFilePath.set(this.curFilePath, actualFilePath);
+        }
     }
 
     private tryParseOutLine(line: string) {

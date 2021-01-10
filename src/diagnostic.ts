@@ -33,7 +33,7 @@ export class DCollection {
     public removeMessage(
         dMessage: DMessage,
     ): void {
-        this.messages = this.messages.filter(v => v != dMessage);
+        this.messages = this.messages.filter(v => v !== dMessage);
     }
 
     public addAll(src: DCollection): void {

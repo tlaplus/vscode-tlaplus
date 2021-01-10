@@ -54,11 +54,11 @@ async function transpilePlusCal(fileUri: vscode.Uri): Promise<DCollection> {
 async function adaptMonolithMessages(sanyResult : SanyData) {
     const invertedModulePaths = new Map(Array.from(sanyResult.modulePaths, (i) => i.reverse() as [string, string]));
     for (const [filePath, monolithFilePath] of sanyResult.filePathToMonolithFilePath) {
-        const text = (await vscode.workspace.openTextDocument(monolithFilePath)).getText();;
+        const text = (await vscode.workspace.openTextDocument(monolithFilePath)).getText();
         const specName = invertedModulePaths.get(filePath);
         text.split('\n').forEach(function (line, number) {
-            if (new RegExp("-----*\\s*MODULE\\s+" + specName + "\\s*----*").exec(line)) {
-                sanyResult.dCollection.getMessages().filter(m => m.filePath == filePath).forEach(message => {
+            if (new RegExp(`-----*\\s*MODULE\\s+${specName}\\s*----*`).exec(line)) {
+                sanyResult.dCollection.getMessages().filter(m => m.filePath === filePath).forEach(message => {
                     const oldRange = message.diagnostic.range;
                     // Remove message so it does not appear duplicated in the output.
                     sanyResult.dCollection.removeMessage(message);
