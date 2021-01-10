@@ -6,7 +6,7 @@ import { pathToModuleName, pathToUri } from './common';
  */
 export class DCollection {
     private readonly modules: Map<string, string> = new Map();   // Map of checked modules names to file paths
-    private readonly messages: DMessage[] = [];                  // Collection of diagnostic messages from the check run
+    private messages: DMessage[] = [];                  // Collection of diagnostic messages from the check run
 
     public getModules(): ReadonlyMap<string, string> {
         return this.modules;
@@ -28,6 +28,12 @@ export class DCollection {
     ): void {
         this.messages.push(new DMessage(filePath, range, text, severity));
         this.addFilePath(filePath);
+    }
+
+    public removeMessage(
+        dMessage: DMessage,
+    ): void {
+        this.messages = this.messages.filter(v => v != dMessage);
     }
 
     public addAll(src: DCollection): void {

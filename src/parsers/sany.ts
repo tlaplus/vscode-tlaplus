@@ -16,6 +16,7 @@ enum OutBlockType {
 export class SanyData {
     readonly dCollection = new DCollection();
     readonly modulePaths = new Map<string, string>();
+    readonly filePathToMonolithFilePath = new Map<string, string>();
 }
 
 /**
@@ -23,6 +24,7 @@ export class SanyData {
  */
 export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
     rootModulePath: string | undefined;
+    monolithFilePath: string | undefined;
     curFilePath: string | undefined;
     outBlockType = OutBlockType.Parsing;
     errRange: vscode.Range | undefined;
@@ -62,6 +64,13 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
         } else if (line.startsWith('*** Warnings:')) {
             newBlockType = OutBlockType.Warnings;
         } else if (line.startsWith('Fatal errors while parsing TLA+ spec')) {
+            const curMod = line.substring(45).split('\.')[0];
+            const actualFilePath = this.result.modulePaths.get(curMod);
+            // If current file path differs from the actual file path, it means we are in a monolith spec.
+            // Monolith specs are TLA files which have multiple modules inline.
+            if (this.curFilePath && actualFilePath && actualFilePath != this.curFilePath) {
+                this.result.filePathToMonolithFilePath.set(this.curFilePath, actualFilePath);
+            }
             newBlockType = OutBlockType.ParseError;
             newErrMessage = line.trim();
         } else if (line.startsWith('Residual stack trace follows:')) {
