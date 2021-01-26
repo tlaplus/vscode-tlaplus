@@ -46,14 +46,14 @@ function revealCheckResultView(checkResult: ModelCheckResult, extContext: vscode
 
 function doRevealCheckResultView(extContext: vscode.ExtensionContext) {
     if (!viewPanel) {
-        createNewPanel();
+        createNewPanel(extContext);
         ensurePanelBody(extContext);
     } else {
         viewPanel.reveal();
     }
 }
 
-function createNewPanel() {
+function createNewPanel(extContext: vscode.ExtensionContext) {
     const title = 'TLA+ model checking';
     viewPanel = vscode.window.createWebviewPanel(
         'modelChecking',
@@ -61,12 +61,12 @@ function createNewPanel() {
         vscode.ViewColumn.Beside,
         {
             enableScripts: true,
-            localResourceRoots: [vscode.Uri.file(path.resolve(__dirname, '../../resources'))]
+            localResourceRoots: [vscode.Uri.file(path.join(extContext.extensionPath, 'resources'))]
         }
     );
     viewPanel.iconPath = {
-        dark: vscode.Uri.file(path.resolve(__dirname, '../../resources/images/preview-dark.svg')),
-        light: vscode.Uri.file(path.resolve(__dirname, '../../resources/images/preview-light.svg')),
+        dark: vscode.Uri.file(path.join(extContext.extensionPath, 'resources/images/preview-dark.svg')),
+        light: vscode.Uri.file(path.join(extContext.extensionPath, 'resources/images/preview-light.svg')),
     };
     viewPanel.onDidDispose(() => {
         viewPanel = undefined;
