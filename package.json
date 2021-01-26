@@ -254,7 +254,6 @@
                     "type": "string",
                     "scope": "window",
                     "default": "",
-                    "format": "uri",
                     "description": "Path to Java (8 or higher, 11 is recommended) home directory that should be used to run TLA+ tools.",
                     "maxLength": 1000
                 },
