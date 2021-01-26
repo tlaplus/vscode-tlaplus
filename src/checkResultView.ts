@@ -65,8 +65,8 @@ function createNewPanel(extContext: vscode.ExtensionContext) {
         }
     );
     viewPanel.iconPath = {
-        dark: vscode.Uri.file(path.resolve(__dirname, '../../resources/images/preview-dark.svg')),
-        light: vscode.Uri.file(path.resolve(__dirname, '../../resources/images/preview-light.svg')),
+        dark: vscode.Uri.file(path.join(extContext.extensionPath, 'resources/images/preview-dark.svg')),
+        light: vscode.Uri.file(path.join(extContext.extensionPath, 'resources/images/preview-light.svg')),
     };
     viewPanel.onDidDispose(() => {
         viewPanel = undefined;
