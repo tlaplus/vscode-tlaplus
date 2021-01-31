@@ -102,7 +102,7 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
             const text = this.getFileContents(monolithFilePath);
             const specName = invertedModulePaths.get(filePath);
             const moduleHeaderRegex = new RegExp(`^\\s*-{4,}\\s*(MODULE)\\s*${specName}\\s*-{4,}`);
-            text.split('\n').forEach(function(line, number) {
+            text.split('\n').every(function(line, number) {
                 if (moduleHeaderRegex.test(line)) {
                     sanyData.dCollection.getMessages().filter(m => m.filePath === filePath).forEach(message => {
                         const oldRange = message.diagnostic.range;
@@ -118,8 +118,9 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
                             message.diagnostic.message,
                             message.diagnostic.severity);
                     });
-                    return;
+                    return false; // Break out from `every`.
                 }
+                return true;
             });
         }
     }
