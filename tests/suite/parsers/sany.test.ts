@@ -383,11 +383,48 @@ suite('SANY Output Parser Test Suite', () => {
                 )
             ]));
     });
+
+    test('Captures monolith spec error', () => {
+        const stdout = [
+            '',
+            '****** SANY2 Version 2.1 created 24 February 2014',
+            '',
+            `Parsing file ${ROOT_PATH}`,
+            'Parsing file /private/var/dependencies/TLC.tla',
+            '***Parse Error***',
+            'Encountered "tcolor" at line 8, column 9 and token "active"',
+            '',
+            `Fatal errors while parsing TLA+ spec in file ${ROOT_NAME}.tla`
+        ].join('\n');
+        assertOutputWithFileContents(
+            stdout,
+            (i) => '\n\n\n----- MODULE TLC ----' ,
+            expectDiag(ROOT_PATH, [
+                diagError(range(10, 8, 10, 8), 'Encountered "tcolor" at line 8, column 9 and token "active"')
+            ]),
+            expectDiag('/private/var/dependencies/TLC.tla', [
+                diagError(range(0, 0, 0, 0), 'Fatal errors while parsing TLA+ spec in file foo.tla')
+            ]));
+    });
+
 });
 
 function assertOutput(out: string, ...expected: Expectation[]) {
     const outLines = out.split('\n');
     const parser = new SanyStdoutParser(outLines);
+    const sanyData = parser.readAllSync();
+    applyDCollection(sanyData.dCollection, getTlaDiagnostics());
+    for (const exp of expected) {
+        const actDiags = getTlaDiagnostics().get(pathToUri(exp.filePath));
+        assert.deepEqual(actDiags, exp.diagnostics);
+    }
+}
+
+function assertOutputWithFileContents(
+    out: string, getFileContents : (filePath : string) => string, ...expected: Expectation[]) {
+    const outLines = out.split('\n');
+    const parser = new SanyStdoutParser(outLines);
+    parser.getFileContents = getFileContents;
     const sanyData = parser.readAllSync();
     applyDCollection(sanyData.dCollection, getTlaDiagnostics());
     for (const exp of expected) {

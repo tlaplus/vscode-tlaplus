@@ -3,6 +3,7 @@ import { Readable } from 'stream';
 import { ProcessOutputHandler } from '../outputHandler';
 import { DCollection } from '../diagnostic';
 import { pathToModuleName } from '../common';
+import { readFileSync } from 'fs';
 
 enum OutBlockType {
     Parsing,
@@ -16,6 +17,7 @@ enum OutBlockType {
 export class SanyData {
     readonly dCollection = new DCollection();
     readonly modulePaths = new Map<string, string>();
+    readonly filePathToMonolithFilePath = new Map<string, string>();
 }
 
 /**
@@ -23,11 +25,14 @@ export class SanyData {
  */
 export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
     rootModulePath: string | undefined;
+    monolithFilePath: string | undefined;
     curFilePath: string | undefined;
     outBlockType = OutBlockType.Parsing;
     errRange: vscode.Range | undefined;
     errMessage: string | undefined;
     pendingAbortMessage = false;
+    public getFileContents =
+        (filePath : string) : string => readFileSync(filePath).toString(); // this should be set only at tests
 
     constructor(source: Readable | string[] | null) {
         super(source, new SanyData());
@@ -62,6 +67,7 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
         } else if (line.startsWith('*** Warnings:')) {
             newBlockType = OutBlockType.Warnings;
         } else if (line.startsWith('Fatal errors while parsing TLA+ spec')) {
+            this.tryAddMonolithSpec(line);
             newBlockType = OutBlockType.ParseError;
             newErrMessage = line.trim();
         } else if (line.startsWith('Residual stack trace follows:')) {
@@ -77,6 +83,46 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
             return;
         }
         this.tryParseOutLine(line);
+    }
+
+    private tryAddMonolithSpec(line: string) {
+        const curMod = line.substring(45).split('.')[0];
+        const actualFilePath = this.result.modulePaths.get(curMod);
+        const sanyData = this.result;
+        // If current file path differs from the actual file path, it means we are in a monolith spec.
+        // Monolith specs are TLA files which have multiple modules inline.
+        if (this.curFilePath && actualFilePath && actualFilePath !== this.curFilePath) {
+            const filePath = this.curFilePath;
+            const monolithFilePath = actualFilePath;
+            // Adapt monolith error locations.
+            // It modifies the Sany result adding the module offset in the monolith spec.
+            const invertedModulePaths = new Map(
+                Array.from(sanyData.modulePaths, (i) => i.reverse() as [string, string])
+            );
+            const text = this.getFileContents(monolithFilePath);
+            const specName = invertedModulePaths.get(filePath);
+            const moduleHeaderRegex = new RegExp(`^\\s*-{4,}\\s*(MODULE)\\s*${specName}\\s*-{4,}`);
+            text.split('\n').every(function(line, number) {
+                if (moduleHeaderRegex.test(line)) {
+                    sanyData.dCollection.getMessages().filter(m => m.filePath === filePath).forEach(message => {
+                        const oldRange = message.diagnostic.range;
+                        // Remove message so it does not appear duplicated in the output.
+                        sanyData.dCollection.removeMessage(message);
+                        sanyData.dCollection.addMessage(
+                            monolithFilePath,
+                            new vscode.Range(
+                                oldRange.start.line + number,
+                                oldRange.start.character,
+                                oldRange.end.line + number,
+                                oldRange.end.character),
+                            message.diagnostic.message,
+                            message.diagnostic.severity);
+                    });
+                    return false; // Break out from `every`.
+                }
+                return true;
+            });
+        }
     }
 
     private tryParseOutLine(line: string) {
