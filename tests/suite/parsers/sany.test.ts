@@ -384,7 +384,7 @@ suite('SANY Output Parser Test Suite', () => {
             ]));
     });
 
-    test.only('Captures monolith spec error', () => {
+    test('Captures monolith spec error', () => {
         const stdout = [
             '',
             '****** SANY2 Version 2.1 created 24 February 2014',
@@ -398,7 +398,7 @@ suite('SANY Output Parser Test Suite', () => {
         ].join('\n');
         assertOutputWithFileContents(
             stdout,
-            (i) => "\n\n\n---- MODULE TLC ----",
+            (i) => "\n\n\n----- MODULE TLC ----",
             expectDiag(ROOT_PATH, [
                 diagError(range(10, 8, 10, 8), 'Encountered \"tcolor\" at line 8, column 9 and token \"active\"')
             ]),

@@ -98,8 +98,9 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
             const invertedModulePaths = new Map(Array.from(sanyData.modulePaths, (i) => i.reverse() as [string, string]));
             const text = this.getFileContents(monolithFilePath);
             const specName = invertedModulePaths.get(filePath);
+            const moduleHeaderRegex = new RegExp(`^\\s*-{4,}\\s*(MODULE)\\s*${specName}\\s*-{4,}`);
             text.split('\n').forEach(function (line, number) {
-                if (new RegExp(`-----*\\s*MODULE\\s+${specName}\\s*----*`).exec(line)) {
+                if (moduleHeaderRegex.test(line)) {                
                     sanyData.dCollection.getMessages().filter(m => m.filePath === filePath).forEach(message => {
                         const oldRange = message.diagnostic.range;
                         // Remove message so it does not appear duplicated in the output.
@@ -110,6 +111,7 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
                             message.diagnostic.message,
                             message.diagnostic.severity);
                     })
+                    return;
                 }
             });
         }
