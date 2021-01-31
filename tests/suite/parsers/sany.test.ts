@@ -384,7 +384,7 @@ suite('SANY Output Parser Test Suite', () => {
             ]));
     });
 
-    test.only('Captures monolith spec error', () => {
+    test('Captures monolith spec error', () => {
         const stdout = [
             '',
             '****** SANY2 Version 2.1 created 24 February 2014',
