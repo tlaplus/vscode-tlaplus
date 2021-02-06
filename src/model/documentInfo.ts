@@ -21,9 +21,9 @@ export class TlaDocumentInfo {
     readonly plusCalSymbols: vscode.SymbolInformation[];
 
     constructor(
-        private rootModule: Module | undefined = undefined,
-        private plusCal: Module | undefined = undefined,
-        private modules: Module[] = [],
+        private readonly rootModule: Module | undefined = undefined,
+        private readonly plusCal: Module | undefined = undefined,
+        private readonly modules: Module[] = [],
         public symbols: vscode.SymbolInformation[] = []
     ) {
         this.plusCalSymbols = plusCal?.symbols || [];
