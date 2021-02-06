@@ -10,7 +10,7 @@ export class TlaDocumentInfo {
 }
 
 export class TlaDocumentInfos {
-    private map = new Map<vscode.Uri, TlaDocumentInfo>();
+    private readonly map = new Map<vscode.Uri, TlaDocumentInfo>();
 
     get(uri: vscode.Uri): TlaDocumentInfo {
         let docInfo = this.map.get(uri);

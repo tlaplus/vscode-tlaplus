@@ -21,7 +21,7 @@ function symbolLocations(document: vscode.TextDocument, docInfo: TlaDocumentInfo
 
 export class TlaDeclarationsProvider implements vscode.DeclarationProvider {
     constructor(
-        private docInfos: TlaDocumentInfos
+        private readonly docInfos: TlaDocumentInfos
     ) { }
 
     provideDeclaration(
@@ -30,16 +30,13 @@ export class TlaDeclarationsProvider implements vscode.DeclarationProvider {
         token: vscode.CancellationToken
     ): vscode.ProviderResult<vscode.Declaration> {
         const docInfo = this.docInfos.get(document.uri);
-        if (!docInfo) {
-            return undefined;
-        }
-        return symbolLocations(document, docInfo, position);
+        return docInfo ? symbolLocations(document, docInfo, position) : undefined;
     }
 }
 
 export class TlaDefinitionsProvider implements vscode.DefinitionProvider {
     constructor(
-        private docInfos: TlaDocumentInfos
+        private readonly docInfos: TlaDocumentInfos
     ) { }
 
     provideDefinition(
@@ -48,9 +45,6 @@ export class TlaDefinitionsProvider implements vscode.DefinitionProvider {
         token: vscode.CancellationToken
     ): vscode.ProviderResult<vscode.Declaration> {
         const docInfo = this.docInfos.get(document.uri);
-        if (!docInfo) {
-            return undefined;
-        }
-        return symbolLocations(document, docInfo, position);
+        return docInfo ? symbolLocations(document, docInfo, position) : undefined;
     }
 }

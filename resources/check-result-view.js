@@ -437,7 +437,8 @@ function num(n) {
         const rStr = en > 0 ? lpadN(r) : String(r);
         parts.push(rStr);
     }
-    return sign + parts.reverse().join(' ');
+    const revParts = parts.reverse().join(' ');
+    return sign + revParts;
 }
 
 function lpadN(n) {

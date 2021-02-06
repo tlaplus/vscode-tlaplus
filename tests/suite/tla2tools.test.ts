@@ -239,7 +239,7 @@ suite('TLA+ Tools Test Suite', () => {
         );
     });
 
-    test('Splits simple command line with extra spaces', () => {
+    test('Splits command line with extra spaces', () => {
         assert.deepEqual(
             splitArguments('  -foo   -bar    value   '),
             ['-foo', '-bar', 'value']
