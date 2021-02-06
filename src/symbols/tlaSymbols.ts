@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { TlaDocumentInfos } from '../model/documentInfo';
+import { Module, TlaDocumentInfo, TlaDocumentInfos } from '../model/documentInfo';
 
 const COMMA_LEN = 1;
 export const ROOT_SYMBOL_NAME = '*';
@@ -31,6 +31,14 @@ class ModuleContext {
 
     close(end: vscode.Position) {
         this.rootSymbol.location.range = new vscode.Range(this.rootSymbol.location.range.start, end);
+    }
+
+    convert(): Module {
+        return new Module(
+            this.rootSymbol.name,
+            this.symbols,
+            this.rootSymbol.location.range
+        );
     }
 }
 
@@ -110,15 +118,17 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
         if (context.currentModule && lastLine) {
             context.closeModule(lastLine.range.end);
         }
-        const docInfo = this.docInfos.get(document.uri);
         let symbols = context.rootModule.symbols.filter(s => s.name !== ROOT_SYMBOL_NAME);
         for (const modCtx of context.modules) {
             symbols = symbols.concat(modCtx.symbols);
         }
-        docInfo.symbols = symbols.slice();
+        this.docInfos.set(document.uri, new TlaDocumentInfo(
+            context.rootModule.convert(),
+            context.plusCal?.convert(),
+            context.modules.map(m => m.convert()),
+            symbols.slice()
+        ));
         if (context.plusCal) {
-            docInfo.plusCalSymbols = context.plusCal.symbols;
-            docInfo.plusCalRange = context.plusCal.rootSymbol.location.range;
             symbols = symbols.concat(context.plusCal.symbols);
         }
         return symbols;
