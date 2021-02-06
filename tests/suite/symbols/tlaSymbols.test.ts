@@ -370,6 +370,46 @@ suite('TLA Symbols Provider Test Suite', () => {
         ]);
     });
 
+    test('Binds symbols to module', () => {
+        return assertSymbols(doc, [
+            '---- MODULE foo ----',
+            'CONSTANT Foo, Bar',
+            'Hello == 20',
+            'Baz ==',
+            '   LET barbaz == 30'
+        ], [
+            symModule('foo', loc(doc.uri, range(0, 0, 4, 19))),
+            symConst('Foo', 'foo', loc(doc.uri, pos(1, 9))),
+            symConst('Bar', 'foo', loc(doc.uri, pos(1, 14))),
+            symField('Hello', 'foo', loc(doc.uri, range(2, 0, 2, 11))),
+            symField('Baz', 'foo', loc(doc.uri, range(3, 0, 4, 19))),
+            symVar('barbaz', 'Baz', loc(doc.uri, pos(4, 7)))
+        ]);
+    });
+
+    test('Bids symbols correctly in monolith specs', () => {
+        return assertSymbols(doc, [
+            '---- MODULE foo ----',
+            'Foo == 203',
+            '====',
+            'Orphan == Real',
+            '---- MODULE bar ----',
+            'Bar == 394',
+            '========',
+            'AnotherOrphan == Orphan'
+        ], [
+            // Orphans always come first
+            symField('Orphan', ROOT_CONTAINER_NAME, loc(doc.uri, range(3, 0, 3, 14))),
+            symField('AnotherOrphan', ROOT_CONTAINER_NAME, loc(doc.uri, range(7, 0, 7, 23))),
+            // foo module
+            symModule('foo', loc(doc.uri, range(0, 0, 2, 4))),
+            symField('Foo', 'foo', loc(doc.uri, range(1, 0, 1, 10))),
+            // bar module
+            symModule('bar', loc(doc.uri, range(4, 0, 6, 8))),
+            symField('Bar', 'bar', loc(doc.uri, range(5, 0, 5, 10))),
+        ]);
+    });
+
     test('Finds PlusCal algorithm', () => {
         return assertSymbols(doc, [
             'A == 10',
