@@ -7,7 +7,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macOS-latest, windows-latest]
+        os: [macOS-latest, ubuntu-20.04, windows-latest]
     steps:
     - uses: actions/checkout@v1
     - uses: actions/setup-node@v1
@@ -18,6 +18,10 @@ jobs:
     - name: Build
       run: npm run vscode:prepublish
     - name: Check
-      run: |
-        npm run lint
-        npm test --silent
+      run: npm run lint
+    - name: Test Non-Linux
+      if: matrix.os != 'ubuntu-20.04'
+      run: npm test --silent
+    - name: Test Linux
+      if: matrix.os == 'ubuntu-20.04'
+      run: xvfb-run --auto-servernum npm test --silent
