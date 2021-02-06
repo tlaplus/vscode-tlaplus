@@ -6,7 +6,7 @@ import { Value, ValueKey, SetValue, SequenceValue, StructureValue, SimpleFunctio
     ErrorTraceItem, OutputLine, ModelCheckResultSource, SimpleFunctionItem, ErrorInfo,
     WarningInfo } from '../../src/model/check';
 import { DCollection } from '../../src/diagnostic';
-import { ROOT_SYMBOL_NAME, PLUS_CAL_SYMBOL_NAME } from '../../src/symbols/tlaSymbols';
+import { ROOT_CONTAINER_NAME } from '../../src/symbols/tlaSymbols';
 
 type MessageSpanSrc = string | MessageSpan;
 
@@ -66,11 +66,16 @@ export function sourceLink(text: string, filePath: string, locaction: vscode.Pos
 }
 
 export function symModule(name: string, location: vscode.Location): vscode.SymbolInformation {
-    return new vscode.SymbolInformation(name, vscode.SymbolKind.Module, ROOT_SYMBOL_NAME, location);
+    return new vscode.SymbolInformation(name, vscode.SymbolKind.Module, ROOT_CONTAINER_NAME, location);
 }
 
-export function symPlusCal(location: vscode.Location): vscode.SymbolInformation {
-    return new vscode.SymbolInformation(PLUS_CAL_SYMBOL_NAME, vscode.SymbolKind.Namespace, ROOT_SYMBOL_NAME, location);
+export function symPlusCal(name: string, location: vscode.Location): vscode.SymbolInformation {
+    return new vscode.SymbolInformation(
+        name,
+        vscode.SymbolKind.Namespace,
+        ROOT_CONTAINER_NAME,
+        location
+    );
 }
 
 export function symFunc(name: string, parentName: string, location: vscode.Location): vscode.SymbolInformation {

@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import * as assert from 'assert';
 import { LANG_TLAPLUS } from '../../../src/common';
-import { TlaDocumentSymbolsProvider, ROOT_SYMBOL_NAME, PLUS_CAL_SYMBOL_NAME } from '../../../src/symbols/tlaSymbols';
+import { TlaDocumentSymbolsProvider, ROOT_CONTAINER_NAME,
+    PLUS_CAL_DEFAULT_NAME } from '../../../src/symbols/tlaSymbols';
 import { replaceDocContents } from '../document';
 import { symModule, loc, range, symField, symFunc, symModRef, symBool, pos, symPlusCal, symConst,
     symVar } from '../shortcuts';
@@ -37,8 +38,8 @@ suite('TLA Symbols Provider Test Suite', () => {
         return assertSymbols(doc, [
             'CONSTANT Foo, Bar'
         ], [
-            symConst('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 9))),
-            symConst('Bar', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 14)))
+            symConst('Foo', ROOT_CONTAINER_NAME, loc(doc.uri, pos(0, 9))),
+            symConst('Bar', ROOT_CONTAINER_NAME, loc(doc.uri, pos(0, 14)))
         ]);
     });
 
@@ -46,8 +47,8 @@ suite('TLA Symbols Provider Test Suite', () => {
         return assertSymbols(doc, [
             'CONSTANTS Foo, Bar'
         ], [
-            symConst('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 10))),
-            symConst('Bar', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 15)))
+            symConst('Foo', ROOT_CONTAINER_NAME, loc(doc.uri, pos(0, 10))),
+            symConst('Bar', ROOT_CONTAINER_NAME, loc(doc.uri, pos(0, 15)))
         ]);
     });
 
@@ -55,8 +56,8 @@ suite('TLA Symbols Provider Test Suite', () => {
         return assertSymbols(doc, [
             'VARIABLE Foo, Bar'
         ], [
-            symVar('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 9))),
-            symVar('Bar', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 14)))
+            symVar('Foo', ROOT_CONTAINER_NAME, loc(doc.uri, pos(0, 9))),
+            symVar('Bar', ROOT_CONTAINER_NAME, loc(doc.uri, pos(0, 14)))
         ]);
     });
 
@@ -64,8 +65,8 @@ suite('TLA Symbols Provider Test Suite', () => {
         return assertSymbols(doc, [
             'VARIABLES Foo, Bar'
         ], [
-            symVar('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 10))),
-            symVar('Bar', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 15)))
+            symVar('Foo', ROOT_CONTAINER_NAME, loc(doc.uri, pos(0, 10))),
+            symVar('Bar', ROOT_CONTAINER_NAME, loc(doc.uri, pos(0, 15)))
         ]);
     });
 
@@ -75,11 +76,11 @@ suite('TLA Symbols Provider Test Suite', () => {
             '    Baz,',
             '    BarBaz, FooBaz'
         ], [
-            symConst('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 10))),
-            symConst('Bar', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 15))),
-            symConst('Baz', ROOT_SYMBOL_NAME, loc(doc.uri, pos(1, 4))),
-            symConst('BarBaz', ROOT_SYMBOL_NAME, loc(doc.uri, pos(2, 4))),
-            symConst('FooBaz', ROOT_SYMBOL_NAME, loc(doc.uri, pos(2, 12))),
+            symConst('Foo', ROOT_CONTAINER_NAME, loc(doc.uri, pos(0, 10))),
+            symConst('Bar', ROOT_CONTAINER_NAME, loc(doc.uri, pos(0, 15))),
+            symConst('Baz', ROOT_CONTAINER_NAME, loc(doc.uri, pos(1, 4))),
+            symConst('BarBaz', ROOT_CONTAINER_NAME, loc(doc.uri, pos(2, 4))),
+            symConst('FooBaz', ROOT_CONTAINER_NAME, loc(doc.uri, pos(2, 12))),
         ]);
     });
 
@@ -88,7 +89,7 @@ suite('TLA Symbols Provider Test Suite', () => {
             'CONSTANTS',
             '  Foo'
         ], [
-            symConst('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, pos(1, 2)))
+            symConst('Foo', ROOT_CONTAINER_NAME, loc(doc.uri, pos(1, 2)))
         ]);
     });
 
@@ -97,10 +98,10 @@ suite('TLA Symbols Provider Test Suite', () => {
             'CONSTANTS   Foo  ,, Bar,Baz  ,',
             '   FooBar  '
         ], [
-            symConst('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 12))),
-            symConst('Bar', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 20))),
-            symConst('Baz', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 24))),
-            symConst('FooBar', ROOT_SYMBOL_NAME, loc(doc.uri, pos(1, 3)))
+            symConst('Foo', ROOT_CONTAINER_NAME, loc(doc.uri, pos(0, 12))),
+            symConst('Bar', ROOT_CONTAINER_NAME, loc(doc.uri, pos(0, 20))),
+            symConst('Baz', ROOT_CONTAINER_NAME, loc(doc.uri, pos(0, 24))),
+            symConst('FooBar', ROOT_CONTAINER_NAME, loc(doc.uri, pos(1, 3)))
         ]);
     });
 
@@ -110,9 +111,9 @@ suite('TLA Symbols Provider Test Suite', () => {
             'VARIABLE Bar',
             'Baz == 1'
         ], [
-            symConst('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 9))),
-            symVar('Bar', ROOT_SYMBOL_NAME, loc(doc.uri, pos(1, 9))),
-            symField('Baz', ROOT_SYMBOL_NAME, loc(doc.uri, range(2, 0, 2, 8)))
+            symConst('Foo', ROOT_CONTAINER_NAME, loc(doc.uri, pos(0, 9))),
+            symVar('Bar', ROOT_CONTAINER_NAME, loc(doc.uri, pos(1, 9))),
+            symField('Baz', ROOT_CONTAINER_NAME, loc(doc.uri, range(2, 0, 2, 8)))
         ]);
     });
 
@@ -122,8 +123,8 @@ suite('TLA Symbols Provider Test Suite', () => {
             '',
             '   Bar'
         ], [
-            symVar('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 10))),
-            symVar('Bar', ROOT_SYMBOL_NAME, loc(doc.uri, pos(2, 3)))
+            symVar('Foo', ROOT_CONTAINER_NAME, loc(doc.uri, pos(0, 10))),
+            symVar('Bar', ROOT_CONTAINER_NAME, loc(doc.uri, pos(2, 3)))
         ]);
     });
 
@@ -135,9 +136,9 @@ suite('TLA Symbols Provider Test Suite', () => {
             '   Bar,   \\* this is bar',
             '   Baz'
         ], [
-            symVar('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, pos(1, 3))),
-            symVar('Bar', ROOT_SYMBOL_NAME, loc(doc.uri, pos(3, 3))),
-            symVar('Baz', ROOT_SYMBOL_NAME, loc(doc.uri, pos(4, 3)))
+            symVar('Foo', ROOT_CONTAINER_NAME, loc(doc.uri, pos(1, 3))),
+            symVar('Bar', ROOT_CONTAINER_NAME, loc(doc.uri, pos(3, 3))),
+            symVar('Baz', ROOT_CONTAINER_NAME, loc(doc.uri, pos(4, 3)))
         ]);
     });
 
@@ -149,9 +150,9 @@ suite('TLA Symbols Provider Test Suite', () => {
             '   Bar,   (* this is bar *)',
             '   Baz'
         ], [
-            symVar('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, pos(1, 3))),
-            symVar('Bar', ROOT_SYMBOL_NAME, loc(doc.uri, pos(3, 3))),
-            symVar('Baz', ROOT_SYMBOL_NAME, loc(doc.uri, pos(4, 3)))
+            symVar('Foo', ROOT_CONTAINER_NAME, loc(doc.uri, pos(1, 3))),
+            symVar('Bar', ROOT_CONTAINER_NAME, loc(doc.uri, pos(3, 3))),
+            symVar('Baz', ROOT_CONTAINER_NAME, loc(doc.uri, pos(4, 3)))
         ]);
     });
 
@@ -160,7 +161,7 @@ suite('TLA Symbols Provider Test Suite', () => {
             'VARIABLE',
             '  Foo   \\* some comment'
         ], [
-            symVar('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, pos(1, 2)))
+            symVar('Foo', ROOT_CONTAINER_NAME, loc(doc.uri, pos(1, 2)))
         ]);
     });
 
@@ -169,7 +170,7 @@ suite('TLA Symbols Provider Test Suite', () => {
             'VARIABLE',
             '  Foo   (* some comment *)'
         ], [
-            symVar('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, pos(1, 2)))
+            symVar('Foo', ROOT_CONTAINER_NAME, loc(doc.uri, pos(1, 2)))
         ]);
     });
 
@@ -178,7 +179,7 @@ suite('TLA Symbols Provider Test Suite', () => {
             'VARIABLES Foo',
             'Something'
         ], [
-            symVar('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 10)))
+            symVar('Foo', ROOT_CONTAINER_NAME, loc(doc.uri, pos(0, 10)))
         ]);
     });
 
@@ -186,7 +187,7 @@ suite('TLA Symbols Provider Test Suite', () => {
         return assertSymbols(doc, [
             'Foo == 10'
         ], [
-            symField('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, range(0, 0, 0, 9)))
+            symField('Foo', ROOT_CONTAINER_NAME, loc(doc.uri, range(0, 0, 0, 9)))
         ]);
     });
 
@@ -196,7 +197,7 @@ suite('TLA Symbols Provider Test Suite', () => {
             '       /\\ 20',
             '       /\\ 30',
         ], [
-            symField('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, range(0, 0, 2, 12)))
+            symField('Foo', ROOT_CONTAINER_NAME, loc(doc.uri, range(0, 0, 2, 12)))
         ]);
     });
 
@@ -210,7 +211,7 @@ suite('TLA Symbols Provider Test Suite', () => {
             '      /\\ LET tau == FooBarBaz',
             '(****)'
         ], [
-            symField('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, range(0, 0, 5, 29))),
+            symField('Foo', ROOT_CONTAINER_NAME, loc(doc.uri, range(0, 0, 5, 29))),
             symVar('bar', 'Foo', loc(doc.uri, pos(1, 6))),
             symVar('baz', 'Foo', loc(doc.uri, pos(2, 6))),
             symVar('tau', 'Foo', loc(doc.uri, pos(5, 13))),
@@ -226,9 +227,9 @@ suite('TLA Symbols Provider Test Suite', () => {
             '        /\\ LET tau == FooBarBaz',
             '  (****)'
         ], [
-            symField('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, range(0, 2, 1, 24))),
+            symField('Foo', ROOT_CONTAINER_NAME, loc(doc.uri, range(0, 2, 1, 24))),
             symVar('bar', 'Foo', loc(doc.uri, pos(1, 8))),
-            symField('Bar', ROOT_SYMBOL_NAME, loc(doc.uri, range(2, 2, 4, 31))),
+            symField('Bar', ROOT_CONTAINER_NAME, loc(doc.uri, range(2, 2, 4, 31))),
             symVar('baz', 'Bar', loc(doc.uri, pos(3, 8))),
             symVar('tau', 'Bar', loc(doc.uri, pos(4, 15))),
         ]);
@@ -241,8 +242,8 @@ suite('TLA Symbols Provider Test Suite', () => {
             '',
             'Bar == 20'
         ], [
-            symField('Foo', ROOT_SYMBOL_NAME, loc(doc.uri, range(0, 0, 1, 12))),
-            symField('Bar', ROOT_SYMBOL_NAME, loc(doc.uri, range(3, 0, 3, 9))),
+            symField('Foo', ROOT_CONTAINER_NAME, loc(doc.uri, range(0, 0, 1, 12))),
+            symField('Bar', ROOT_CONTAINER_NAME, loc(doc.uri, range(3, 0, 3, 9))),
         ]);
     });
 
@@ -250,7 +251,7 @@ suite('TLA Symbols Provider Test Suite', () => {
         return assertSymbols(doc, [
             'Bar(foo) == foo + 10'
         ], [
-            symFunc('Bar', ROOT_SYMBOL_NAME, loc(doc.uri, range(0, 0, 0, 20)))
+            symFunc('Bar', ROOT_CONTAINER_NAME, loc(doc.uri, range(0, 0, 0, 20)))
         ]);
     });
 
@@ -258,7 +259,7 @@ suite('TLA Symbols Provider Test Suite', () => {
         return assertSymbols(doc, [
             'Baz[foo \\in 1..3] == foo + 11'
         ], [
-            symFunc('Baz', ROOT_SYMBOL_NAME, loc(doc.uri, range(0, 0, 0, 29)))
+            symFunc('Baz', ROOT_CONTAINER_NAME, loc(doc.uri, range(0, 0, 0, 29)))
         ]);
     });
 
@@ -266,7 +267,7 @@ suite('TLA Symbols Provider Test Suite', () => {
         return assertSymbols(doc, [
             'FooMod == INSTANCE foo'
         ], [
-            symModRef('FooMod', ROOT_SYMBOL_NAME, loc(doc.uri, range(0, 0, 0, 22)))
+            symModRef('FooMod', ROOT_CONTAINER_NAME, loc(doc.uri, range(0, 0, 0, 22)))
         ]);
     });
 
@@ -274,7 +275,7 @@ suite('TLA Symbols Provider Test Suite', () => {
         return assertSymbols(doc, [
             'THEOREM LifeIsGood == \\A day \\in life: IsHappy(day)'
         ], [
-            symBool('LifeIsGood', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 0)))
+            symBool('LifeIsGood', ROOT_CONTAINER_NAME, loc(doc.uri, pos(0, 0)))
         ]);
     });
 
@@ -286,7 +287,7 @@ suite('TLA Symbols Provider Test Suite', () => {
         return assertSymbols(doc, [
             'AXIOM Truth == TRUE'
         ], [
-            symBool('Truth', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 0)))
+            symBool('Truth', ROOT_CONTAINER_NAME, loc(doc.uri, pos(0, 0)))
         ]);
     });
 
@@ -294,7 +295,7 @@ suite('TLA Symbols Provider Test Suite', () => {
         return assertSymbols(doc, [
             'LEMMA LemmA == TRUE'
         ], [
-            symBool('LemmA', ROOT_SYMBOL_NAME, loc(doc.uri, pos(0, 0)))
+            symBool('LemmA', ROOT_CONTAINER_NAME, loc(doc.uri, pos(0, 0)))
         ]);
     });
 
@@ -302,7 +303,7 @@ suite('TLA Symbols Provider Test Suite', () => {
         return assertSymbols(doc, [
             'Multiline =='
         ], [
-            symField('Multiline', ROOT_SYMBOL_NAME, loc(doc.uri, range(0, 0, 0, 12)))
+            symField('Multiline', ROOT_CONTAINER_NAME, loc(doc.uri, range(0, 0, 0, 12)))
         ]);
     });
 
@@ -326,7 +327,7 @@ suite('TLA Symbols Provider Test Suite', () => {
         return assertSymbols(doc, [
             ' \t  Zero == 0'
         ], [
-            symField('Zero', ROOT_SYMBOL_NAME, loc(doc.uri, range(0, 4, 0, 13)))
+            symField('Zero', ROOT_CONTAINER_NAME, loc(doc.uri, range(0, 4, 0, 13)))
         ]);
     });
 
@@ -334,7 +335,7 @@ suite('TLA Symbols Provider Test Suite', () => {
         return assertSymbols(doc, [
             'This_is_3 == 3'
         ], [
-            symField('This_is_3', ROOT_SYMBOL_NAME, loc(doc.uri, range(0, 0, 0, 14)))
+            symField('This_is_3', ROOT_CONTAINER_NAME, loc(doc.uri, range(0, 0, 0, 14)))
         ]);
     });
 
@@ -347,8 +348,8 @@ suite('TLA Symbols Provider Test Suite', () => {
             '    One == 1',
             'IN Handle(One)'
         ], [
-            symField('One', ROOT_SYMBOL_NAME, loc(doc.uri, range(1, 4, 1, 12))),
-            symField('One', ROOT_SYMBOL_NAME, loc(doc.uri, range(4, 4, 4, 12)))
+            symField('One', ROOT_CONTAINER_NAME, loc(doc.uri, range(1, 4, 1, 12))),
+            symField('One', ROOT_CONTAINER_NAME, loc(doc.uri, range(4, 4, 4, 12)))
         ]);
     });
 
@@ -365,7 +366,7 @@ suite('TLA Symbols Provider Test Suite', () => {
             '*)'
         ], [
             // Actually, we don't want to capture this
-            symFunc('Apply', ROOT_SYMBOL_NAME, loc(doc.uri, range(1, 0, 1, 15)))
+            symFunc('Apply', ROOT_CONTAINER_NAME, loc(doc.uri, range(1, 0, 1, 15)))
         ]);
     });
 
@@ -378,9 +379,10 @@ suite('TLA Symbols Provider Test Suite', () => {
             'end algorithm; *)',
             'B == 20'
         ], [
-            symField('A', ROOT_SYMBOL_NAME, loc(doc.uri, range(0, 0, 0, 7))),
-            symPlusCal(loc(doc.uri, range(1, 0, 4, 17))),
-            symField('B', ROOT_SYMBOL_NAME, loc(doc.uri, range(5, 0, 5, 7)))
+            symField('A', ROOT_CONTAINER_NAME, loc(doc.uri, range(0, 0, 0, 7))),
+            symField('B', ROOT_CONTAINER_NAME, loc(doc.uri, range(5, 0, 5, 7))),
+            // PlusCal symbols always come last
+            symPlusCal('foo', loc(doc.uri, range(1, 0, 4, 17)))
         ]);
     });
 
@@ -395,10 +397,21 @@ suite('TLA Symbols Provider Test Suite', () => {
             'end algorithm; *)',
             'Baz == 39'
         ], [
-            symPlusCal(loc(doc.uri, range(0, 0, 6, 17))),
-            symField('Baz', ROOT_SYMBOL_NAME, loc(doc.uri, range(7, 0, 7, 9))),
+            symField('Baz', ROOT_CONTAINER_NAME, loc(doc.uri, range(7, 0, 7, 9))),
             // PlusCal symbols always come last
-            symField('Baz', PLUS_CAL_SYMBOL_NAME, loc(doc.uri, range(2, 2, 2, 11)))
+            symPlusCal('bar', loc(doc.uri, range(0, 0, 6, 17))),
+            symField('Baz', 'bar', loc(doc.uri, range(2, 2, 2, 11)))
+        ]);
+    });
+
+    test('Uses default name for PlusCal algorithm', () => {
+        return assertSymbols(doc, [
+            '(* --algorithm',       // No name provided
+            'begin',
+            '  skip;',
+            'end algorithm; *)'
+        ], [
+            symPlusCal(PLUS_CAL_DEFAULT_NAME, loc(doc.uri, range(0, 0, 3, 17)))
         ]);
     });
 
@@ -426,9 +439,7 @@ function assertDocSymbols(
 ) {
     const docSymbolsList = docInfos.get(docUri).symbols;
     expectSymbols.forEach((expSymbol) => {
-        if (expSymbol.name !== PLUS_CAL_SYMBOL_NAME) {
-            const symbol = docSymbolsList.find(s => s.name === expSymbol.name);
-            assert.ok(symbol);
-        }
+        const symbol = docSymbolsList.find(s => s.name === expSymbol.name);
+        assert.ok(symbol);
     });
 }
