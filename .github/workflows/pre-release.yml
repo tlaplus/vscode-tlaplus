@@ -1,0 +1,53 @@
+name: Pre-Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      suffix:
+        description: 'Version suffix'
+        required: true
+        default: 'alpha.X'
+
+jobs:
+  build:
+    runs-on: macOS-latest
+    steps:
+    - uses: actions/checkout@v1
+    - uses: actions/setup-node@v1
+      with:
+        node-version: '12.12'
+    - name: Get current version
+      id: version
+      run: echo "::set-output name=version::$(jq -r .version package.json)"
+    - name: Install dependencies
+      run: |
+        npm install
+        npm install -g vsce
+    - name: Build
+      run: |
+        npm run vscode:prepublish
+        vsce package
+    - name: Check
+      run: |
+        npm run lint
+        npm test --silent
+    - name: Create Pre-Release
+      id: create_pre_release
+      uses: actions/create-release@v1
+      env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ steps.version.outputs.version }}.${{ github.event.inputs.suffix }}
+        release_name: v${{ steps.version.outputs.version }}.${{ github.event.inputs.suffix }}
+        draft: false
+        prerelease: true
+    - name: Upload Release Asset
+      id: upload-release-asset 
+      uses: actions/upload-release-asset@v1.0.1
+      env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_pre_release.outputs.upload_url }}
+        asset_path: vscode-tlaplus-${{ steps.version.outputs.version }}.vsix
+        asset_name: vscode-tlaplus-${{ steps.version.outputs.version }}.vsix
+        asset_content_type: application/zip
