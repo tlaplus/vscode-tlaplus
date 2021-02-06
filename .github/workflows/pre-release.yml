@@ -37,8 +37,8 @@ jobs:
       env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: v${{ steps.version.outputs.version }}.${{ github.event.inputs.suffix }}
-        release_name: v${{ steps.version.outputs.version }}.${{ github.event.inputs.suffix }}
+        tag_name: v${{ steps.version.outputs.version }}-${{ github.event.inputs.suffix }}
+        release_name: v${{ steps.version.outputs.version }}-${{ github.event.inputs.suffix }}
         draft: false
         prerelease: true
     - name: Upload Release Asset
