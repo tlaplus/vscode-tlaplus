@@ -1,5 +1,16 @@
 # Change Log
 
+## 1.5.3 &ndash; 6th February, 2021
+
+### Enhancements
+
+* Display error messages in monolith specs.
+* Definition blocks parsing improvement.
+
+### Bug fixes
+
+* Fix problems when using Nix for packaging the extension.
+
 ## 1.5.2 &ndash; 7th January, 2021
 
 ### Enhancements
