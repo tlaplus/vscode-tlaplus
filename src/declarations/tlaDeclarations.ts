@@ -7,7 +7,7 @@ function symbolLocations(document: vscode.TextDocument, docInfo: TlaDocumentInfo
         return undefined;
     }
     const word = document.lineAt(position.line).text.substring(range.start.character, range.end.character);
-    const symbols = (docInfo.plusCalRange && docInfo.plusCalRange.contains(position))
+    const symbols = docInfo.isPlusCalAt(position)
         ? docInfo.symbols.concat(docInfo.plusCalSymbols)
         : docInfo.symbols;
     const locations = [];

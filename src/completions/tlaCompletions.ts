@@ -71,11 +71,10 @@ export class TlaCompletionItemProvider implements vscode.CompletionItemProvider 
             return new vscode.CompletionList(TLA_OPERATOR_ITEMS, false);
         }
         const docInfo = this.docInfos.get(document.uri);
-        const isPlusCal = docInfo.plusCalRange ? docInfo.plusCalRange.contains(position) : false;
         const symbols = docInfo.symbols || [];
         const symbolInfos = symbols.map(s => new vscode.CompletionItem(s.name, mapKind(s.kind)));
         let items = TLA_INNER_ITEMS.concat(symbolInfos);
-        if (!isPlusCal) {
+        if (!docInfo.isPlusCalAt(position)) {
             const isProofStep = /^\s*<\d+>[<>\d.a-zA-Z]*\s+[a-zA-Z]*$/g.test(prevText);
             const isNewLine = /^\s*[a-zA-Z]*$/g.test(prevText);
             if (isProofStep) {
