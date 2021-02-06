@@ -9,27 +9,45 @@ enum SpecialSymbol {
     PlusCalEnd
 }
 
-class ParsingContext {
-    moduleName: string | undefined;
+/**
+ * Holds information about currently parsing module (an actual TLA+ module or PlusCal algorithm)
+ */
+class ModuleContext {
+    readonly symbols: vscode.SymbolInformation[] = [];
     lastTopDefBlock: vscode.SymbolInformation | undefined;
-    plusCal: vscode.SymbolInformation | undefined;
-    symbols: vscode.SymbolInformation[] = [];
-    plusCalSymbols: vscode.SymbolInformation[] = [];
-    plusCalRange: vscode.Range | undefined;
     simpleListSymbolKind: vscode.SymbolKind | undefined;
 
-    getContainerName(): string {
-        if (this.plusCal) {
-            return this.plusCal.name;
-        }
-        return this.moduleName || ROOT_SYMBOL_NAME;
+    constructor(
+        readonly rootSymbol: vscode.SymbolInformation
+    ) {
+        this.symbols.push(rootSymbol);
     }
 
     addSymbol(symbol: vscode.SymbolInformation) {
-        if (this.plusCal) {
-            this.plusCalSymbols.push(symbol);
-        } else {
-            this.symbols.push(symbol);
+        this.symbols.push(symbol);
+    }
+
+    close(end: vscode.Position) {
+        this.rootSymbol.location.range = new vscode.Range(this.rootSymbol.location.range.start, end);
+    }
+}
+
+class ParsingContext {
+    readonly modules: ModuleContext[] = [];
+    plusCal: ModuleContext | undefined;
+    currentModule: ModuleContext | undefined;
+
+    startModule(rootSymbol: vscode.SymbolInformation): ModuleContext {
+        const module = new ModuleContext(rootSymbol);
+        this.modules.push(module);
+        this.currentModule = module;
+        return module;
+    }
+
+    closeModule(end: vscode.Position) {
+        if (this.currentModule) {
+            this.currentModule.close(end);
+            this.currentModule = undefined;
         }
     }
 }
@@ -47,8 +65,10 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
         token: vscode.CancellationToken
     ): vscode.ProviderResult<vscode.SymbolInformation[] | vscode.DocumentSymbol[]> {
         const context = new ParsingContext();
+        let lastLine = undefined;
         for (let i = 0; i < document.lineCount; i++) {
             const line = document.lineAt(i);
+            lastLine = line;
             if (line.isEmptyOrWhitespace) {
                 continue;
             }
@@ -57,12 +77,21 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
                 this.tryExtractSpecialSymbol(context, line);
             }
         }
+        if (context.currentModule && lastLine) {
+            context.closeModule(lastLine.range.end);
+        }
         const docInfo = this.docInfos.get(document.uri);
-        // We only put TLA+ symbols to DocInfos, not PlusCal to exclude duplications on code completion
-        docInfo.symbols = context.symbols.filter((s) => s.name !== PLUS_CAL_SYMBOL_NAME);
-        docInfo.plusCalSymbols = context.plusCalSymbols;
-        docInfo.plusCalRange = context.plusCalRange;
-        return context.symbols.concat(context.plusCalSymbols);
+        let symbols: vscode.SymbolInformation[] = [];
+        for (const modCtx of context.modules) {
+            symbols = symbols.concat(modCtx.symbols);
+        }
+        docInfo.symbols = symbols.slice();
+        if (context.plusCal) {
+            docInfo.plusCalSymbols = context.plusCal.symbols;
+            docInfo.plusCalRange = context.plusCal.rootSymbol.location.range;
+            symbols = symbols.concat(context.plusCal.symbols);
+        }
+        return symbols;
     }
 
     tryExtractSymbol(
@@ -70,23 +99,28 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
         document: vscode.TextDocument,
         line: vscode.TextLine
     ): boolean {
-        if (typeof context.simpleListSymbolKind !== 'undefined') {
-            if (this.tryCollectListItems(context, document.uri, line.lineNumber, 0, line.text)) {
+        const newModule = this.tryStartModule(context, document, line);
+        if (newModule) {
+            return true;
+        } if (!context.currentModule) {
+            return false;
+        }
+        if (this.tryEndModule(context, line)) {
+            return true;
+        }
+        const module = context.currentModule;
+        if (typeof module.simpleListSymbolKind !== 'undefined') {
+            if (this.tryCollectListItems(module, document.uri, line.lineNumber, 0, line.text)) {
                 return true;
             }
         }
-        if (!context.moduleName) {
-            if (this.tryExtractModuleName(context, document, line)) {
-                return true;
-            }
-        }
-        if (this.tryExtractDefinition(context, document, line)) {
+        if (this.tryExtractDefinition(module, document, line)) {
             return true;
         }
-        if (this.tryExtractListStart(context, document.uri, line)) {
+        if (this.tryExtractListStart(module, document.uri, line)) {
             return true;
         }
-        if (this.tryExtractTheoremAxiomLemma(context, document.uri, line)) {
+        if (this.tryExtractTheoremAxiomLemma(module, document.uri, line)) {
             return true;
         }
         if (this.tryExtractPlusCalStart(context, document.uri, line)) {
@@ -100,16 +134,17 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
         if (typeof symbol === 'undefined') {
             return false;
         }
-        if (symbol === SpecialSymbol.PlusCalEnd && context.plusCal) {
-            const range = new vscode.Range(context.plusCal.location.range.start, line.range.end);
-            context.plusCal.location = new vscode.Location(context.plusCal.location.uri, range);
-            context.plusCalRange = range;
-            context.plusCal = undefined;
-        }
+        // TODO: uncomment
+        // if (symbol === SpecialSymbol.PlusCalEnd && context.plusCal) {
+        //     const range = new vscode.Range(context.plusCal.location.range.start, line.range.end);
+        //     context.plusCal.location = new vscode.Location(context.plusCal.location.uri, range);
+        //     context.plusCalRange = range;
+        //     context.plusCal = undefined;
+        // }
         return true;
     }
 
-    tryExtractModuleName(
+    tryStartModule(
         context: ParsingContext,
         document: vscode.TextDocument,
         line: vscode.TextLine
@@ -128,13 +163,21 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
                 new vscode.Range(line.range.start, lastLine.range.end)
             )
         );
-        context.addSymbol(symbol);
-        context.moduleName = symbol.name;
+        context.startModule(symbol);
+        return true;
+    }
+
+    tryEndModule(context: ParsingContext, line: vscode.TextLine): boolean {
+        const matches = /^={4,}\s*$/g.exec(line.text);
+        if (!matches) {
+            return false;
+        }
+        context.closeModule(line.range.end);
         return true;
     }
 
     tryExtractDefinition(
-        context: ParsingContext,
+        module: ModuleContext,
         document: vscode.TextDocument,
         line: vscode.TextLine
     ): boolean {
@@ -145,16 +188,17 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
         const prefix = matches[1];
         const name = matches[2];
         const blockStart = new vscode.Position(line.range.start.line, prefix.length);
-        if (context.lastTopDefBlock
-            && line.range.start.line >= context.lastTopDefBlock.location.range.start.line
-            && line.range.end.line <= context.lastTopDefBlock.location.range.end.line
-            && prefix.length > context.lastTopDefBlock.location.range.start.character
+        const ltp = module.lastTopDefBlock;
+        if (ltp
+            && line.range.start.line >= ltp.location.range.start.line
+            && line.range.end.line <= ltp.location.range.end.line
+            && prefix.length > module.rootSymbol.location.range.start.character
         ) {
             // This looks like a private variable within a top level definition
-            context.addSymbol(new vscode.SymbolInformation(
+            module.addSymbol(new vscode.SymbolInformation(
                 name,
                 vscode.SymbolKind.Variable,
-                context.lastTopDefBlock.name,
+                ltp.name,
                 new vscode.Location(document.uri, blockStart)
             ));
             return true;
@@ -172,16 +216,16 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
         const symbol = new vscode.SymbolInformation(
             name,
             kind,
-            context.getContainerName(),
+            module.rootSymbol.name,
             new vscode.Location(document.uri, new vscode.Range(blockStart, blockEnd))
         );
-        context.addSymbol(symbol);
-        context.lastTopDefBlock = symbol;
+        module.addSymbol(symbol);
+        module.lastTopDefBlock = symbol;
         return true;
     }
 
     tryExtractListStart(
-        context: ParsingContext,
+        module: ModuleContext,
         docUri: vscode.Uri,
         line: vscode.TextLine
     ): boolean {
@@ -189,21 +233,21 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
         if (!matches) {
             return false;
         }
-        context.simpleListSymbolKind = matches[2].startsWith('V')
+        module.simpleListSymbolKind = matches[2].startsWith('V')
             ? vscode.SymbolKind.Variable
             : vscode.SymbolKind.Constant;
         const startIdx = matches[1].length + matches[2].length;
-        return this.tryCollectListItems(context, docUri, line.lineNumber, startIdx, matches[3]);
+        return this.tryCollectListItems(module, docUri, line.lineNumber, startIdx, matches[3]);
     }
 
     tryCollectListItems(
-        context: ParsingContext,
+        module: ModuleContext,
         docUri: vscode.Uri,
         lineNum: number,
         startChar: number,
         text: string
     ): boolean {
-        if (!context.simpleListSymbolKind) {
+        if (!module.simpleListSymbolKind) {
             return false;
         }
         let charIdx = startChar;
@@ -217,7 +261,7 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
             charIdx += chunk.length - rChunk.length;    // + number of trimmed spaces
             const matches = /^(\w*)(\s*)(.*)$/g.exec(rChunk);
             if (!matches) {
-                context.simpleListSymbolKind = undefined;
+                module.simpleListSymbolKind = undefined;
                 return false;
             }
             name = matches[1];
@@ -228,29 +272,29 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
                 continue;
             }
             if (rest !== '' && !isCommentStart(rest)) {
-                context.simpleListSymbolKind = undefined;
+                module.simpleListSymbolKind = undefined;
                 return false;
             }
-            context.addSymbol(new vscode.SymbolInformation(
+            module.addSymbol(new vscode.SymbolInformation(
                 name,
-                context.simpleListSymbolKind,
-                context.getContainerName(),
+                module.simpleListSymbolKind,
+                module.rootSymbol.name,
                 new vscode.Location(docUri, new vscode.Position(lineNum, charIdx))
             ));
             charIdx += name.length + spaces.length + COMMA_LEN;
             if (rest !== '') {
-                context.simpleListSymbolKind = undefined;
+                module.simpleListSymbolKind = undefined;
                 break;      // There were no comma after the name
             }
         }
         if (name !== '') {
-            context.simpleListSymbolKind = undefined;   // There were no comma after the last name
+            module.simpleListSymbolKind = undefined;   // There were no comma after the last name
         }
         return true;
     }
 
     tryExtractTheoremAxiomLemma(
-        context: ParsingContext,
+        module: ModuleContext,
         docUri: vscode.Uri,
         line: vscode.TextLine
     ): boolean {
@@ -258,10 +302,10 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
         if (!matches) {
             return false;
         }
-        context.addSymbol(new vscode.SymbolInformation(
+        module.addSymbol(new vscode.SymbolInformation(
             matches[1],
             vscode.SymbolKind.Boolean,
-            context.getContainerName(),
+            module.rootSymbol.name,
             new vscode.Location(docUri, line.range.start)
         ));
         return true;
@@ -279,11 +323,10 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
         const symbol = new vscode.SymbolInformation(
             PLUS_CAL_SYMBOL_NAME,
             vscode.SymbolKind.Namespace,
-            context.getContainerName(),
+            ROOT_SYMBOL_NAME,
             new vscode.Location(docUri, line.range.start)
         );
-        context.addSymbol(symbol);
-        context.plusCal = symbol;
+        context.plusCal = new ModuleContext(symbol);
         return true;
     }
 
