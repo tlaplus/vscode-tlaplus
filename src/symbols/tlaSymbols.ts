@@ -144,17 +144,18 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
         }
         const prefix = matches[1];
         const name = matches[2];
-        if (prefix.length > 0
-            && context.lastTopDefBlock
+        const blockStart = new vscode.Position(line.range.start.line, prefix.length);
+        if (context.lastTopDefBlock
             && line.range.start.line >= context.lastTopDefBlock.location.range.start.line
             && line.range.end.line <= context.lastTopDefBlock.location.range.end.line
+            && prefix.length > context.lastTopDefBlock.location.range.start.character
         ) {
             // This looks like a private variable within a top level definition
             context.addSymbol(new vscode.SymbolInformation(
                 name,
                 vscode.SymbolKind.Variable,
                 context.lastTopDefBlock.name,
-                new vscode.Location(document.uri, line.range.start)
+                new vscode.Location(document.uri, blockStart)
             ));
             return true;
         }
@@ -167,12 +168,12 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
         } else if (value && value.startsWith('INSTANCE')) {
             kind = vscode.SymbolKind.Namespace;
         }
-        const blockEnd = findBlockDefinitionEnd(document, line).range.end;
+        const blockEnd = findBlockDefinitionEnd(document, line, blockStart.character).range.end;
         const symbol = new vscode.SymbolInformation(
             name,
             kind,
             context.getContainerName(),
-            new vscode.Location(document.uri, new vscode.Range(line.range.start, blockEnd))
+            new vscode.Location(document.uri, new vscode.Range(blockStart, blockEnd))
         );
         context.addSymbol(symbol);
         context.lastTopDefBlock = symbol;
@@ -303,14 +304,18 @@ function isCommentStart(str: string): boolean {
  * Finds and returns the last line of the definition block, started at the given line.
  * Definition block expands till the next non-empty line with no leading spaces.
  */
-function findBlockDefinitionEnd(document: vscode.TextDocument, startLine: vscode.TextLine): vscode.TextLine {
+function findBlockDefinitionEnd(
+    document: vscode.TextDocument,
+    startLine: vscode.TextLine,
+    indent: number
+): vscode.TextLine {
     let lastLine = startLine;
     for (let i = startLine.lineNumber + 1; i < document.lineCount; i++) {
         const line = document.lineAt(i);
         if (line.isEmptyOrWhitespace) {
             continue;
         }
-        if (line.firstNonWhitespaceCharacterIndex === 0) {      // New block started
+        if (line.firstNonWhitespaceCharacterIndex <= indent) {      // New block started
             break;
         }
         lastLine = line;

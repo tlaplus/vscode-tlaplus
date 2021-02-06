@@ -83,7 +83,7 @@ suite('TLA Declarations Provider Test Suite', () => {
             'end algorithm; *)',
             '===='
         ], [
-            loc(doc.uri, range(4, 0, 4, 13))
+            loc(doc.uri, range(4, 2, 4, 13))
         ]);
     });
 
