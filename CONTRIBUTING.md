@@ -94,13 +94,13 @@ Names of files and subdirectories are usually self-descriptive. Here're the most
 - `src/parsers/` &mdash; Set of classes that parse output of the various TLA+ tools.
 - `src/symbols/` &mdash; The classes that extract symbol information from files (constants, variables, operators etc.)
 
-The files `resources/check-result-view.*` implement the Check Result View panel using [Webview API](https://code.visualstudio.com/api/extension-guides/webview).
+Files `resources/check-result-view.*` implement the Check Result View panel using [Webview API](https://code.visualstudio.com/api/extension-guides/webview).
 
 ## Tests
 
 Tests are good!
 
-They are placed in the `tests` directory. The files `runTest.ts` and `suite/index.ts` are used to setup the [Mocha testing framework](https://mochajs.org). And the other files and subdirectories use the same layout as the main source code.
+They are placed in the `tests` directory. Files `runTest.ts` and `suite/index.ts` are used to setup the [Mocha testing framework](https://mochajs.org). And other files and subdirectories use the same layout as the main source code.
 
 ## Other
 
