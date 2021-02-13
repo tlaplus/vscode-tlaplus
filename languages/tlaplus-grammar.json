@@ -63,6 +63,9 @@
         },
         {
             "include": "#primed_operators"
+        },
+        {
+            "include": "#except_vars"
         }
     ],
     "repository": {
@@ -218,6 +221,10 @@
         },
         "primed_operators": {
             "match": "\\b(\\w+')",
+            "name": "variable.name"
+        },
+        "except_vars": {
+            "match": "(?<=EXCEPT.*[^@])(@|!)(?!@)",
             "name": "variable.name"
         }
     }
