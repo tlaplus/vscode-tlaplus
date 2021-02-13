@@ -26,6 +26,7 @@ This extension adds support for the [TLA<sup>+</sup> formal specification langua
 * [Getting Started](https://github.com/alygin/vscode-tlaplus/wiki/Getting-Started)
 * [Settings](https://github.com/alygin/vscode-tlaplus/wiki/Settings)
 * [Commands](https://github.com/alygin/vscode-tlaplus/wiki/Commands)
+* [Setting up Environment](https://github.com/alygin/vscode-tlaplus/wiki/Setting-up-Environment)
 * [Caveats](https://github.com/alygin/vscode-tlaplus/wiki/Caveats)
 * [Troubleshooting](https://github.com/alygin/vscode-tlaplus/wiki/Troubleshooting)
 
