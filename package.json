@@ -9,7 +9,7 @@
         "name": "Andrew Lygin"
     },
     "engines": {
-        "vscode": "^1.38.0"
+        "vscode": "^1.44.0"
     },
     "categories": [
         "Programming Languages",
@@ -336,7 +336,7 @@
         "@types/glob": "^7.1.1",
         "@types/mocha": "^5.2.7",
         "@types/node": "^12.12.8",
-        "@types/vscode": "^1.38.0",
+        "@types/vscode": "^1.44.0",
         "@typescript-eslint/eslint-plugin": "^3.2.0",
         "@typescript-eslint/parser": "^3.2.0",
         "eslint": "^7.2.0",
@@ -348,6 +348,8 @@
         "vscode-test": "^1.3.0"
     },
     "dependencies": {
-        "moment": "^2.24.0"
+        "await-notify": "^1.0.1",
+        "moment": "^2.24.0",
+        "vscode-debugadapter-testsupport": "^1.42.0"
     }
 }
