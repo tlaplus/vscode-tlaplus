@@ -6,7 +6,8 @@ function symbolLocations(document: vscode.TextDocument, docInfo: TlaDocumentInfo
     if (!range) {
         return undefined;
     }
-    const word = document.lineAt(position.line).text.substring(range.start.character, range.end.character);
+    const rawWord = document.lineAt(position.line).text.substring(range.start.character, range.end.character);
+    const word = trimTicks(rawWord);
     const symbols = docInfo.isPlusCalAt(position)
         ? docInfo.symbols.concat(docInfo.plusCalSymbols)
         : docInfo.symbols;
@@ -47,4 +48,9 @@ export class TlaDefinitionsProvider implements vscode.DefinitionProvider {
         const docInfo = this.docInfos.get(document.uri);
         return docInfo ? symbolLocations(document, docInfo, position) : undefined;
     }
+}
+
+function trimTicks(str: string): string {
+    const tickIdx = str.indexOf("'");
+    return tickIdx < 0 ? str : str.substring(0, tickIdx);
 }
