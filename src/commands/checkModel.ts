@@ -159,7 +159,7 @@ export async function doCheckModel(
     extContext: vscode.ExtensionContext,
     diagnostic: vscode.DiagnosticCollection,
     showOptionsPrompt: boolean,
-    extraOpts:  string[]=[]
+    extraOpts: string[] = [],
 ): Promise<ModelCheckResult | undefined> {
     try {
         lastCheckFiles = specFiles;

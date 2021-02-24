@@ -10,7 +10,7 @@ export class TLADebugAdapterServerDescriptorFactory implements vscode.DebugAdapt
 
     createDebugAdapterDescriptor(session: vscode.DebugSession, executable: vscode.DebugAdapterExecutable | undefined):
         vscode.ProviderResult<vscode.DebugAdapterDescriptor> {
-            return new vscode.DebugAdapterServer(session.configuration['port']);
+        return new vscode.DebugAdapterServer(session.configuration['port']);
     }
 }
 

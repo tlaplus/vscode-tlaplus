@@ -95,7 +95,7 @@ export async function runTlc(
     tlaFilePath: string,
     cfgFilePath: string,
     showOptionsPrompt: boolean,
-    extraOpts: string[]=[],
+    extraOpts: string[] = [],
 ): Promise<ToolProcessInfo | undefined> {
     const promptedOptions = await getTlcOptions(showOptionsPrompt);
     if (promptedOptions === undefined) {
