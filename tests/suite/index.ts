@@ -4,9 +4,9 @@ import * as glob from 'glob';
 
 export function run(): Promise<void> {
     const mocha = new Mocha({
-        ui: 'tdd'
+        ui: 'tdd',
+        color: true
     });
-    mocha.useColors(true);
     const testsRoot = path.resolve(__dirname, '..');
     return new Promise((resolve, reject) => {
         glob('**/**.test.js', { cwd: testsRoot }, (err, files) => {
