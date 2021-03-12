@@ -130,7 +130,7 @@ export function activate(context: vscode.ExtensionContext): void {
                     const wordRange = document.getWordRangeAtPosition(position);
                     return wordRange ? new vscode.EvaluatableExpression(wordRange,
                         encodeURI(
-                            'tlaplus://' + document.fileName + '?' + document.getText(wordRange) + '#' +
+                            'tlaplus://' + document.uri + '?' + document.getText(wordRange) + '#' +
                             (wordRange.start.line + 1) + ' ' +
                             (wordRange.start.character + 1) + ' ' +
                             (wordRange.end.line + 1) + ' ' +
