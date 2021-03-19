@@ -18,6 +18,7 @@ const ZERO_LOCATION_INFO = new LocationInfo(new vscode.Position(0, 0), 0);
 export class TranspilerStdoutParser extends ProcessOutputHandler<DCollection> {
     private readonly filePath: string;
     private errMessage: string | null = null;
+    private nextLineIsError = false;
 
     constructor(source: Readable | string[] | null, filePath: string) {
         super(source, new DCollection());
@@ -35,7 +36,7 @@ export class TranspilerStdoutParser extends ProcessOutputHandler<DCollection> {
         if (line === '') {
             return;
         }
-        if (!this.errMessage) {
+        if (!this.errMessage || this.nextLineIsError) {
             if (this.tryParseUnrecoverableError(line)) {
                 return;
             }
@@ -48,15 +49,30 @@ export class TranspilerStdoutParser extends ProcessOutputHandler<DCollection> {
     }
 
     private tryParseUnrecoverableError(line: string): boolean {
-        const matchers = /^\s+--\s+(.+)$/g.exec(line);
-        if (!matchers) {
+        const matchers = /^\s+--\s+(.*)$/g.exec(line);
+        if (!matchers && !this.nextLineIsError) {
             return false;
         }
-        const message = matchers[1];
+        // matchers should never be null at this point if this.nextLineIsError is false, but the null check can't
+        // detect that. Instead, we use the matchers_message constant which ensures matchers is not indexed if null.
+        const matchers_message = matchers ? matchers[1] : '';
+        const message = this.nextLineIsError ? line : matchers_message;
+
+        // We only track if the next line will be an error, so we need to reset nextLineIsError after we use it
+        this.nextLineIsError = false;
+
         if (message.startsWith('Beginning of algorithm string --algorithm not found')) {
             // This error means that there's no PlusCal code in file. Just ignore it.
             return true;
         }
+
+        // Assume that an empty string message means that the next line is an error. This can happen when the error
+        // string looks like: "Unrecoverable error:\n -- \nProcess proc redefined at line 10, column 1\n".
+        if (message === '') {
+            this.nextLineIsError = true;
+            return true;
+        }
+
         const locInfo = this.parseLocation(line);
         if (locInfo) {
             this.addError(locInfo.location, message.substring(0, message.length - locInfo.strLength));
