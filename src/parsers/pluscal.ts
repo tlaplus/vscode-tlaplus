@@ -12,6 +12,10 @@ class LocationInfo {
 
 const ZERO_LOCATION_INFO = new LocationInfo(new vscode.Position(0, 0), 0);
 
+// Error message postfix as defined in PcalDebug.java in the tla toolbox. Excludes the trailing newline since we
+// parse one line at a time
+const ERROR_POSTFIX = '.';
+
 /**
  * Parses stdout of PlusCal transpiler.
  */
@@ -36,6 +40,7 @@ export class TranspilerStdoutParser extends ProcessOutputHandler<DCollection> {
         if (line === '') {
             return;
         }
+        // If nextLineIsError is set, we expect the next line to contain a full error message, not just a location
         if (!this.errMessage || this.nextLineIsError) {
             if (this.tryParseUnrecoverableError(line)) {
                 return;
@@ -58,12 +63,14 @@ export class TranspilerStdoutParser extends ProcessOutputHandler<DCollection> {
         const matchers_message = matchers ? matchers[1] : '';
         const message = this.nextLineIsError ? line : matchers_message;
 
-        // We only track if the next line will be an error, so we need to reset nextLineIsError after we use it
-        this.nextLineIsError = false;
-
         if (message.startsWith('Beginning of algorithm string --algorithm not found')) {
             // This error means that there's no PlusCal code in file. Just ignore it.
             return true;
+        }
+
+        // If we see the error postfix, we can assume that we have read all error messages
+        if (this.nextLineIsError && line.endsWith(ERROR_POSTFIX)) {
+            this.nextLineIsError = false;
         }
 
         // Assume that an empty string message means that the next line is an error. This can happen when the error
