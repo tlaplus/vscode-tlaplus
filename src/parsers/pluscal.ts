@@ -59,9 +59,9 @@ export class TranspilerStdoutParser extends ProcessOutputHandler<DCollection> {
             return false;
         }
         // matchers should never be null at this point if this.nextLineIsError is false, but the null check can't
-        // detect that. Instead, we use the matchers_message constant which ensures matchers is not indexed if null.
-        const matchers_message = matchers ? matchers[1] : '';
-        const message = this.nextLineIsError ? line : matchers_message;
+        // detect that. Instead, we use the matchersMessage constant which ensures matchers is not indexed if null.
+        const matchersMessage = matchers ? matchers[1] : '';
+        const message = this.nextLineIsError ? line : matchersMessage;
 
         if (message.startsWith('Beginning of algorithm string --algorithm not found')) {
             // This error means that there's no PlusCal code in file. Just ignore it.
