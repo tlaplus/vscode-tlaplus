@@ -13,7 +13,7 @@ export const CMD_EXPORT_TLA_TO_PDF = 'tlaplus.exportToPdf';
 const CFG_PDF_CONVERT_COMMAND = 'tlaplus.pdf.convertCommand';
 const NO_ERROR = 0;
 const PDF_VIEWER_EXTENSION = 'tomoki1207.pdf';
-const PDF_VIEWER_COMMAND = 'extension.pdf-preview';
+const PDF_VIEWER_VIEW_ID = 'pdf.preview';
 
 const texOutChannel = new ToolOutputChannel('TLA+ to LaTeX');
 const pdfOutChannel = new ToolOutputChannel('TLA+ to PDF');
@@ -153,7 +153,7 @@ async function notifyPdfIsReady(filePath: string) {
     }
     const option = await vscode.window.showInformationMessage(`${fileName} generated.`, ...pdfOptions);
     if (option === showPdfOption) {
-        vscode.commands.executeCommand(PDF_VIEWER_COMMAND, pathToUri(filePath))
+        vscode.commands.executeCommand('vscode.openWith', pathToUri(filePath), PDF_VIEWER_VIEW_ID)
             .then(
                 emptyFunc,
                 (reason) => vscode.window.showErrorMessage(`Cannot display PDF: ${reason}`)

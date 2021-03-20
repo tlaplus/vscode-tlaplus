@@ -9,7 +9,7 @@
         "name": "Andrew Lygin"
     },
     "engines": {
-        "vscode": "^1.44.0"
+        "vscode": "^1.45.0"
     },
     "categories": [
         "Programming Languages",
