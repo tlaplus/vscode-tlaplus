@@ -73,9 +73,10 @@ export class TranspilerStdoutParser extends ProcessOutputHandler<DCollection> {
             this.nextLineIsError = false;
         }
 
-        // Assume that an empty string message means that the next line is an error. This can happen when the error
-        // string looks like: "Unrecoverable error:\n -- \nProcess proc redefined at line 10, column 1\n".
-        if (message === '') {
+        // Assume that an empty string message that matches the regex means that the next line is an error. This can
+        // happen when the error string looks like:
+        // "Unrecoverable error:\n -- \nProcess proc redefined at line 10, column 1\n".
+        if (message === '' && matchers) {
             this.nextLineIsError = true;
             return true;
         }
