@@ -68,6 +68,46 @@ suite('PlusCal Transpiler Output Parser Test Suite', () => {
         ].join('\n');
         assertOutput(stdout, '/Users/bob/TLA/err.tla', []);
     });
+
+    test('Captures errors with blank message', () => {
+        const stdout = [
+            'pcal.trans Version 1.11 of 31 December 2020',
+            'Parsing completed.',
+            '',
+            'Unrecoverable error:',
+            ' -- ',
+            'Process proc redefined at line 10, column 1.',
+        ].join('\n');
+        assertOutput(stdout, '/Users/bob/TLA/err.tla', [
+            new vscode.Diagnostic(
+                new vscode.Range(9, 1, 9, 1),
+                'Process proc redefined',
+                vscode.DiagnosticSeverity.Error)
+        ]);
+    });
+
+    test('Captures multiple errors after blank message', () => {
+        const stdout = [
+            'pcal.trans Version 1.11 of 31 December 2020',
+            'Parsing completed.',
+            '',
+            'Unrecoverable error:',
+            ' -- ',
+            'Process proc redefined at line 10, column 1',
+            'Process variable x redefined at line 11, column 11.',
+            'THIS IS NOT CAPTURED at line 10, column 1.',
+        ].join('\n');
+        assertOutput(stdout, '/Users/bob/TLA/err.tla', [
+            new vscode.Diagnostic(
+                new vscode.Range(9, 1, 9, 1),
+                'Process proc redefined',
+                vscode.DiagnosticSeverity.Error),
+            new vscode.Diagnostic(
+                new vscode.Range(10, 11, 10, 11),
+                'Process variable x redefined',
+                vscode.DiagnosticSeverity.Error)
+        ]);
+    });
 });
 
 function assertOutput(out: string, filePath: string, expected: vscode.Diagnostic[]) {
