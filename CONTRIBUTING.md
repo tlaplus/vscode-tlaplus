@@ -85,7 +85,7 @@ Most of the extension main code is located in the `src` directory. The only exce
 Names of files and subdirectories are usually self-descriptive. Here're the most interesting ones:
 
 - `src/main.ts` &mdash; This is the starting point of the extension. It sets things up when the extension is loaded.
-- `src/tla2tools.ts` &mdash; All the calls to `tla2tools.jar` go through methods from this file.
+- `src/tla2tools.ts` &mdash; All calls to `tla2tools.jar` go through methods from this file.
 - `src/checkResultView.ts` &mdash; The main functions that are responsible for interaction between the main extension code and the Check Result View panel.
 - `src/commands/` &mdash; This directory contains implementation of all the [VS Code commands](https://code.visualstudio.com/api/extension-guides/command) that the extension provides.
 - `src/completions/` &mdash; The [code completion providers](https://code.visualstudio.com/api/references/vscode-api#CompletionItemProvider).
@@ -93,14 +93,13 @@ Names of files and subdirectories are usually self-descriptive. Here're the most
 - `src/model/` &mdash; The classes that describe model check results. Objects of these classes are used by the Check Result View panel.
 - `src/parsers/` &mdash; Set of classes that parse output of the various TLA+ tools.
 - `src/symbols/` &mdash; The classes that extract symbol information from files (constants, variables, operators etc.)
-
-Files `resources/check-result-view.*` implement the Check Result View panel using [Webview API](https://code.visualstudio.com/api/extension-guides/webview).
+- Files `resources/check-result-view.*` implement the Check Result View panel using [Webview API](https://code.visualstudio.com/api/extension-guides/webview).
 
 ## Tests
 
 Tests are good!
 
-They are placed in the `tests` directory. Files `runTest.ts` and `suite/index.ts` are used to setup the [Mocha testing framework](https://mochajs.org). And other files and subdirectories use the same layout as the main source code.
+They are placed in the `tests` directory. Files `runTest.ts` and `suite/index.ts` are used to setup the [Mocha testing framework](https://mochajs.org). Other files and subdirectories use the same layout as the main source code.
 
 ## Other
 
