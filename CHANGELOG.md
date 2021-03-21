@@ -1,5 +1,16 @@
 # Change Log
 
+## 1.5.4 &ndash; 21st March, 2021
+
+### Enhancements
+
+* Highlight special symbols in EXCEPT expressions.
+
+### Bug fixes
+
+* Fix PlusCal errors parsing.
+* Fix integration with vscode-pdf.
+
 ## 1.5.3 &ndash; 6th February, 2021
 
 ### Enhancements
