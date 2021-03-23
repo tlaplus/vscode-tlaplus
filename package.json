@@ -402,7 +402,6 @@
     "dependencies": {
         "await-notify": "1.0.1",
         "moment": "^2.24.0",
-        "vscode-debugadapter": "^1.42.1",
-        "vscode-debugadapter-testsupport": "^1.42.0"
+        "vscode-debugadapter": "^1.42.1"
     }
 }
