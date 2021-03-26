@@ -25,6 +25,7 @@ const TEMPLATE_CFG_PATH = path.resolve(__dirname, '../../../tools/template.cfg')
 
 let checkProcess: ChildProcess | undefined;
 let lastCheckFiles: SpecFiles | undefined;
+let lastCheckOptions: string | undefined;
 const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);
 const outChannel = new ToolOutputChannel('TLC', mapTlcOutputLine);
 
@@ -160,10 +161,26 @@ export async function doCheckModel(
     diagnostic: vscode.DiagnosticCollection
 ): Promise<ModelCheckResult | undefined> {
     try {
+        // -config is not shown as an option by default so the same options can be used without modification across
+        // multiple modules.
+        const customOptions = await vscode.window.showInputBox({
+            value: lastCheckOptions || `-coverage 1`,
+            prompt: 'Additional options to pass to TLC.',
+            // Ignoring focus changes allows users to click out to a different window to check potential TLC options
+            // without getting rid of what they've typed so far.
+            ignoreFocusOut: true,
+        });
+        if (customOptions === undefined) {
+            // Command cancelled by user
+            return undefined;
+        } else {
+            lastCheckOptions = customOptions;
+        }
+
         lastCheckFiles = specFiles;
         vscode.commands.executeCommand('setContext', CTX_TLC_CAN_RUN_AGAIN, true);
         updateStatusBarItem(true);
-        const procInfo = await runTlc(specFiles.tlaFilePath, path.basename(specFiles.cfgFilePath));
+        const procInfo = await runTlc(specFiles.tlaFilePath, path.basename(specFiles.cfgFilePath), customOptions);
         outChannel.bindTo(procInfo);
         checkProcess = procInfo.process;
         checkProcess.on('close', () => {

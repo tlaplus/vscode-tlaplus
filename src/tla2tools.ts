@@ -90,8 +90,8 @@ export async function runTex(tlaFilePath: string): Promise<ToolProcessInfo> {
     );
 }
 
-export async function runTlc(tlaFilePath: string, cfgFilePath: string): Promise<ToolProcessInfo> {
-    const customOptions = getConfigOptions(CFG_TLC_OPTIONS);
+export async function runTlc(tlaFilePath: string, cfgFilePath: string, customOptions: string): Promise<ToolProcessInfo> {
+    const splitCustomOptions = splitArguments(customOptions);
     const javaOptions = [];
     const shareStats = vscode.workspace.getConfiguration().get<ShareOption>(CFG_TLC_STATISTICS_TYPE);
     if (shareStats !== ShareOption.DoNotShare) {
@@ -100,7 +100,7 @@ export async function runTlc(tlaFilePath: string, cfgFilePath: string): Promise<
     return runTool(
         TlaTool.TLC,
         tlaFilePath,
-        buildTlcOptions(tlaFilePath, cfgFilePath, customOptions),
+        buildTlcOptions(tlaFilePath, cfgFilePath, splitCustomOptions),
         javaOptions
     );
 }
@@ -178,7 +178,6 @@ export function buildTlcOptions(tlaFilePath: string, cfgFilePath: string, custom
             .replace(VAR_TLC_MODEL_NAME, path.basename(cfgFilePath, '.cfg'));
     });
     const opts = [path.basename(tlaFilePath), '-tool', '-modelcheck'];
-    addValueOrDefault('-coverage', '1', custOpts, opts);
     addValueOrDefault('-config', cfgFilePath, custOpts, opts);
     return opts.concat(custOpts);
 }
