@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { copyFile } from 'fs';
-import { runTlc, stopProcess } from '../tla2tools';
+import { runTlc, stopProcess, getTlcOptions, updateTlcOptions } from '../tla2tools';
 import { TlcModelCheckerStdoutParser } from '../parsers/tlc';
 import { updateCheckResultView, revealEmptyCheckResultView, revealLastCheckResultView } from '../checkResultView';
 import { applyDCollection } from '../diagnostic';
@@ -25,7 +25,6 @@ const TEMPLATE_CFG_PATH = path.resolve(__dirname, '../../../tools/template.cfg')
 
 let checkProcess: ChildProcess | undefined;
 let lastCheckFiles: SpecFiles | undefined;
-let lastCheckOptions: string | undefined;
 const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);
 const outChannel = new ToolOutputChannel('TLC', mapTlcOutputLine);
 
@@ -164,7 +163,7 @@ export async function doCheckModel(
         // -config is not shown as an option by default so the same options can be used without modification across
         // multiple modules.
         const customOptions = await vscode.window.showInputBox({
-            value: lastCheckOptions || `-coverage 1`,
+            value: getTlcOptions(),
             prompt: 'Additional options to pass to TLC.',
             // Ignoring focus changes allows users to click out to a different window to check potential TLC options
             // without getting rid of what they've typed so far.
@@ -174,7 +173,10 @@ export async function doCheckModel(
             // Command cancelled by user
             return undefined;
         } else {
-            lastCheckOptions = customOptions;
+            // Save user-enterred options as new configuration to persist between sessions. The configuration is saved
+            // at the workspace, rather than global, level so user-enterred options will not be persisted across
+            // workspaces.
+            updateTlcOptions(customOptions);
         }
 
         lastCheckFiles = specFiles;

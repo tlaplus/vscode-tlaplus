@@ -90,7 +90,11 @@ export async function runTex(tlaFilePath: string): Promise<ToolProcessInfo> {
     );
 }
 
-export async function runTlc(tlaFilePath: string, cfgFilePath: string, customOptions: string): Promise<ToolProcessInfo> {
+export async function runTlc(
+    tlaFilePath: string,
+    cfgFilePath: string,
+    customOptions: string
+): Promise<ToolProcessInfo> {
     const splitCustomOptions = splitArguments(customOptions);
     const javaOptions = [];
     const shareStats = vscode.workspace.getConfiguration().get<ShareOption>(CFG_TLC_STATISTICS_TYPE);
@@ -257,6 +261,20 @@ function addReturnCodeHandler(proc: ChildProcess, toolName?: string) {
 function getConfigOptions(cfgName: string): string[] {
     const optsString = vscode.workspace.getConfiguration().get<string>(cfgName) || '';
     return splitArguments(optsString);
+}
+
+export function getTlcOptions(): string {
+    return vscode.workspace.getConfiguration().get<string>(CFG_TLC_OPTIONS) || '-coverage 1';
+}
+
+/**
+ * Updates the TLC configuration value. By default this changes the configuration for the workspace.
+ */
+export function updateTlcOptions(
+    newValue: string,
+    configurationTarget = vscode.ConfigurationTarget.Workspace
+): Thenable<void> {
+    return vscode.workspace.getConfiguration().update(CFG_TLC_OPTIONS, newValue, configurationTarget);
 }
 
 function buildCommandLine(programName: string, args: string[]): string {
