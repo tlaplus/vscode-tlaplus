@@ -281,7 +281,9 @@ export async function getTlcOptions(): Promise<string[] | undefined> {
         // Save user-enterred options as new configuration to persist between sessions. If a workspace is open, the
         // configuration is saved at the workspace level. Otherwise it is saved at the global level.
         const workspaceOpen = vscode.workspace.name !== undefined;
-        const configurationTarget = workspaceOpen ? vscode.ConfigurationTarget.Workspace : vscode.ConfigurationTarget.Global;
+        const configurationTarget = workspaceOpen ?
+            vscode.ConfigurationTarget.Workspace :
+            vscode.ConfigurationTarget.Global;
         vscode.workspace.getConfiguration().update(CFG_TLC_OPTIONS, customOptions, configurationTarget);
     }
     return splitArguments(customOptions);
