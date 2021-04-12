@@ -90,12 +90,12 @@ export async function runTex(tlaFilePath: string): Promise<ToolProcessInfo> {
     );
 }
 
-export async function runTlc(
-    tlaFilePath: string,
-    cfgFilePath: string,
-    customOptions: string
-): Promise<ToolProcessInfo> {
-    const splitCustomOptions = splitArguments(customOptions);
+export async function runTlc(tlaFilePath: string, cfgFilePath: string): Promise<ToolProcessInfo | undefined> {
+    const customOptions = await getTlcOptions();
+    if (customOptions === undefined) {
+        // Command cancelled by user
+        return undefined;
+    }
     const javaOptions = [];
     const shareStats = vscode.workspace.getConfiguration().get<ShareOption>(CFG_TLC_STATISTICS_TYPE);
     if (shareStats !== ShareOption.DoNotShare) {
@@ -104,7 +104,7 @@ export async function runTlc(
     return runTool(
         TlaTool.TLC,
         tlaFilePath,
-        buildTlcOptions(tlaFilePath, cfgFilePath, splitCustomOptions),
+        buildTlcOptions(tlaFilePath, cfgFilePath, customOptions),
         javaOptions
     );
 }
@@ -263,18 +263,28 @@ function getConfigOptions(cfgName: string): string[] {
     return splitArguments(optsString);
 }
 
-export function getTlcOptions(): string {
-    return vscode.workspace.getConfiguration().get<string>(CFG_TLC_OPTIONS) || '-coverage 1';
-}
-
-/**
- * Updates the TLC configuration value. By default this changes the configuration for the workspace.
- */
-export function updateTlcOptions(
-    newValue: string,
-    configurationTarget = vscode.ConfigurationTarget.Workspace
-): Thenable<void> {
-    return vscode.workspace.getConfiguration().update(CFG_TLC_OPTIONS, newValue, configurationTarget);
+export async function getTlcOptions(): Promise<string[] | undefined> {
+    const defaultOptions = '-coverage 1';
+    // -config is not shown as an option by default so the same options can be used without modification across
+    // multiple modules.
+    const customOptions = await vscode.window.showInputBox({
+        value: vscode.workspace.getConfiguration().get<string>(CFG_TLC_OPTIONS) || defaultOptions,
+        prompt: 'Additional options to pass to TLC.',
+        // Ignoring focus changes allows users to click out to a different window to check potential TLC options
+        // without getting rid of what they've typed so far.
+        ignoreFocusOut: true,
+    });
+    if (customOptions === undefined) {
+        // Command cancelled by user
+        return undefined;
+    } else {
+        // Save user-enterred options as new configuration to persist between sessions. The configuration is saved
+        // at the workspace, rather than global, level so user-enterred options will not be persisted across
+        // workspaces.
+        vscode.workspace.getConfiguration().update(
+            CFG_TLC_OPTIONS, customOptions, vscode.ConfigurationTarget.Workspace);
+    }
+    return splitArguments(customOptions);
 }
 
 function buildCommandLine(programName: string, args: string[]): string {
