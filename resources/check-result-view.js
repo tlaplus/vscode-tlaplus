@@ -191,6 +191,12 @@ function displayStatesStat(stat) {
 }
 
 function displayCoverage(stat) {
+    const elCoverage = document.getElementById('coverage');
+    if (stat.length === 0) {
+        elCoverage.classList.add('hidden');
+        return;
+    }
+    elCoverage.classList.remove('hidden');
     const elCoverageStat = document.getElementById('coverage-stat');
     removeAllChildren(elCoverageStat);
     stat.forEach((item) => {
