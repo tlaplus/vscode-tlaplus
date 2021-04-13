@@ -271,6 +271,13 @@
                     "description": "Additional options to pass to PlusCal transpiler.",
                     "maxLength": 1000
                 },
+                "tlaplus.tlc.modelChecker.options": {
+                    "type": "string",
+                    "scope": "window",
+                    "default": "",
+                    "description": "Additional options to pass to TLC.",
+                    "maxLength": 1000
+                },
                 "tlaplus.tlc.modelChecker.createOutFiles": {
                     "type": "boolean",
                     "scope": "window",

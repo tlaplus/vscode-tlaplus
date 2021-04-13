@@ -10,9 +10,8 @@ import { ToolOutputChannel } from './outputChannels';
 
 const CFG_JAVA_HOME = 'tlaplus.java.home';
 const CFG_JAVA_OPTIONS = 'tlaplus.java.options';
+const CFG_TLC_OPTIONS = 'tlaplus.tlc.modelChecker.options';
 const CFG_PLUSCAL_OPTIONS = 'tlaplus.pluscal.options';
-
-const STORAGE_TLC_OPTIONS = 'tlaplus.tlc.modelChecker.options';
 
 const VAR_TLC_SPEC_NAME = /\$\{specName\}/g;
 const VAR_TLC_MODEL_NAME = /\$\{modelName\}/g;
@@ -91,12 +90,8 @@ export async function runTex(tlaFilePath: string): Promise<ToolProcessInfo> {
     );
 }
 
-export async function runTlc(
-    tlaFilePath: string,
-    cfgFilePath: string,
-    storage: vscode.Memento
-): Promise<ToolProcessInfo | undefined> {
-    const customOptions = await getTlcOptions(storage);
+export async function runTlc(tlaFilePath: string, cfgFilePath: string): Promise<ToolProcessInfo | undefined> {
+    const customOptions = await getTlcOptions();
     if (customOptions === undefined) {
         // Command cancelled by user
         return undefined;
@@ -268,12 +263,12 @@ function getConfigOptions(cfgName: string): string[] {
     return splitArguments(optsString);
 }
 
-export async function getTlcOptions(storage: vscode.Memento): Promise<string[] | undefined> {
+export async function getTlcOptions(): Promise<string[] | undefined> {
     const defaultOptions = '-coverage 1';
     // -config is not shown as an option by default so the same options can be used without modification across
     // multiple modules.
     const customOptions = await vscode.window.showInputBox({
-        value: storage.get<string>(STORAGE_TLC_OPTIONS) || defaultOptions,
+        value: vscode.workspace.getConfiguration().get<string>(CFG_TLC_OPTIONS) || defaultOptions,
         prompt: 'Additional options to pass to TLC.',
         // Ignoring focus changes allows users to click out to a different window to check potential TLC options
         // without getting rid of what they've typed so far.
@@ -283,8 +278,13 @@ export async function getTlcOptions(storage: vscode.Memento): Promise<string[] |
         // Command cancelled by user
         return undefined;
     } else {
-        // Save user-enterred options to persist between sessions.
-        storage.update(STORAGE_TLC_OPTIONS, customOptions);
+        // Save user-enterred options as new configuration to persist between sessions. If a workspace is open, the
+        // configuration is saved at the workspace level. Otherwise it is saved at the global level.
+        const workspaceOpen = vscode.workspace.name !== undefined;
+        const configurationTarget = workspaceOpen ?
+            vscode.ConfigurationTarget.Workspace :
+            vscode.ConfigurationTarget.Global;
+        vscode.workspace.getConfiguration().update(CFG_TLC_OPTIONS, customOptions, configurationTarget);
     }
     return splitArguments(customOptions);
 }
