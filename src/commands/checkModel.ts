@@ -163,7 +163,11 @@ export async function doCheckModel(
         lastCheckFiles = specFiles;
         vscode.commands.executeCommand('setContext', CTX_TLC_CAN_RUN_AGAIN, true);
         updateStatusBarItem(true);
-        const procInfo = await runTlc(specFiles.tlaFilePath, path.basename(specFiles.cfgFilePath));
+        const procInfo = await runTlc(
+            specFiles.tlaFilePath,
+            path.basename(specFiles.cfgFilePath),
+            extContext.globalState
+        );
         if (procInfo === undefined) {
             // Command cancelled by user
             return undefined;
