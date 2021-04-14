@@ -278,6 +278,12 @@
                     "description": "Additional options to pass to TLC.",
                     "maxLength": 1000
                 },
+                "tlaplus.tlc.modelChecker.optionsPrompt": {
+                    "type": "boolean",
+                    "scope": "window",
+                    "default": true,
+                    "description": "Show prompt for TLC options each time model checking is run."
+                },
                 "tlaplus.tlc.modelChecker.createOutFiles": {
                     "type": "boolean",
                     "scope": "window",

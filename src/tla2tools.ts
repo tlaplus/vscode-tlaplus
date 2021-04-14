@@ -12,6 +12,7 @@ const CFG_JAVA_HOME = 'tlaplus.java.home';
 const CFG_JAVA_OPTIONS = 'tlaplus.java.options';
 const CFG_TLC_OPTIONS = 'tlaplus.tlc.modelChecker.options';
 const CFG_PLUSCAL_OPTIONS = 'tlaplus.pluscal.options';
+const CFG_TLC_OPTIONS_PROMPT = 'tlaplus.tlc.modelChecker.optionsPrompt';
 
 const VAR_TLC_SPEC_NAME = /\$\{specName\}/g;
 const VAR_TLC_MODEL_NAME = /\$\{modelName\}/g;
@@ -267,13 +268,23 @@ function getConfigOptions(cfgName: string): string[] {
     return splitArguments(optsString);
 }
 
+/**
+ * Gets the options for TLC. A prompt is shown to the user to confirm or modify the options iff both showPrompt and
+ * the tlaplus.tlc.modelChecker.optionsPrompt settings are true. The options are pre-populated from the settings when
+ * possible. User-enterred options are stored in the settings for future use.
+ *
+ * @param showPrompt Show a prompt to the user
+ * @returns Array of string options for TLC, or undefined if the user cancelled the prompt
+ */
 export async function getTlcOptions(showPrompt: boolean): Promise<string[] | undefined> {
     // -config is not shown as an option by default so the same options can be used without modification across
     // multiple modules.
     const defaultOptions = '-coverage 1';
     const prevConfig = vscode.workspace.getConfiguration().get<string>(CFG_TLC_OPTIONS) || defaultOptions;
 
-    const customOptions = showPrompt ?
+    const promptSetting = vscode.workspace.getConfiguration().get<boolean>(CFG_TLC_OPTIONS_PROMPT);
+
+    const customOptions = showPrompt && promptSetting ?
         await vscode.window.showInputBox({
             value: prevConfig,
             prompt: 'Additional options to pass to TLC.',
