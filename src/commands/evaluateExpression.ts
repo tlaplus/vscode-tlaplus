@@ -95,7 +95,7 @@ async function doEvaluateExpression(
     outChannel.clear();
     outChannel.appendLine(`Evaluating constant expression:\n${expr}\n`);
     outChannel.revealWindow();
-    const checkResult = await doCheckModel(specFiles, false, extContext, diagnostic);
+    const checkResult = await doCheckModel(specFiles, false, extContext, diagnostic, false);
     displayResult(checkResult);
     deleteDir(model.dirPath);
 }

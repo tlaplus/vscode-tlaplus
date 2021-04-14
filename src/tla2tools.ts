@@ -90,8 +90,12 @@ export async function runTex(tlaFilePath: string): Promise<ToolProcessInfo> {
     );
 }
 
-export async function runTlc(tlaFilePath: string, cfgFilePath: string): Promise<ToolProcessInfo | undefined> {
-    const customOptions = await getTlcOptions();
+export async function runTlc(
+    tlaFilePath: string,
+    cfgFilePath: string,
+    showOptionsPrompt: boolean,
+): Promise<ToolProcessInfo | undefined> {
+    const customOptions = await getTlcOptions(showOptionsPrompt);
     if (customOptions === undefined) {
         // Command cancelled by user
         return undefined;
@@ -263,21 +267,26 @@ function getConfigOptions(cfgName: string): string[] {
     return splitArguments(optsString);
 }
 
-export async function getTlcOptions(): Promise<string[] | undefined> {
-    const defaultOptions = '-coverage 1';
+export async function getTlcOptions(showPrompt: boolean): Promise<string[] | undefined> {
     // -config is not shown as an option by default so the same options can be used without modification across
     // multiple modules.
-    const customOptions = await vscode.window.showInputBox({
-        value: vscode.workspace.getConfiguration().get<string>(CFG_TLC_OPTIONS) || defaultOptions,
-        prompt: 'Additional options to pass to TLC.',
-        // Ignoring focus changes allows users to click out to a different window to check potential TLC options
-        // without getting rid of what they've typed so far.
-        ignoreFocusOut: true,
-    });
+    const defaultOptions = '-coverage 1';
+    const prevConfig = vscode.workspace.getConfiguration().get<string>(CFG_TLC_OPTIONS) || defaultOptions;
+
+    const customOptions = showPrompt ?
+        await vscode.window.showInputBox({
+            value: prevConfig,
+            prompt: 'Additional options to pass to TLC.',
+            // Ignoring focus changes allows users to click out to a different window to check potential TLC options
+            // without getting rid of what they've typed so far.
+            ignoreFocusOut: true,
+        }) :
+        prevConfig;
+
     if (customOptions === undefined) {
         // Command cancelled by user
         return undefined;
-    } else {
+    } else if (showPrompt) {
         // Save user-enterred options as new configuration to persist between sessions. If a workspace is open, the
         // configuration is saved at the workspace level. Otherwise it is saved at the global level.
         const workspaceOpen = vscode.workspace.name !== undefined;
