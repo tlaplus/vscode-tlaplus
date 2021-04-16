@@ -12,6 +12,7 @@ const CFG_JAVA_HOME = 'tlaplus.java.home';
 const CFG_JAVA_OPTIONS = 'tlaplus.java.options';
 const CFG_TLC_OPTIONS = 'tlaplus.tlc.modelChecker.options';
 const CFG_PLUSCAL_OPTIONS = 'tlaplus.pluscal.options';
+const CFG_TLC_OPTIONS_PROMPT = 'tlaplus.tlc.modelChecker.optionsPrompt';
 
 const VAR_TLC_SPEC_NAME = /\$\{specName\}/g;
 const VAR_TLC_MODEL_NAME = /\$\{modelName\}/g;
@@ -90,8 +91,16 @@ export async function runTex(tlaFilePath: string): Promise<ToolProcessInfo> {
     );
 }
 
-export async function runTlc(tlaFilePath: string, cfgFilePath: string): Promise<ToolProcessInfo> {
-    const customOptions = getConfigOptions(CFG_TLC_OPTIONS);
+export async function runTlc(
+    tlaFilePath: string,
+    cfgFilePath: string,
+    showOptionsPrompt: boolean,
+): Promise<ToolProcessInfo | undefined> {
+    const customOptions = await getTlcOptions(showOptionsPrompt);
+    if (customOptions === undefined) {
+        // Command cancelled by user
+        return undefined;
+    }
     const javaOptions = [];
     const shareStats = vscode.workspace.getConfiguration().get<ShareOption>(CFG_TLC_STATISTICS_TYPE);
     if (shareStats !== ShareOption.DoNotShare) {
@@ -178,7 +187,6 @@ export function buildTlcOptions(tlaFilePath: string, cfgFilePath: string, custom
             .replace(VAR_TLC_MODEL_NAME, path.basename(cfgFilePath, '.cfg'));
     });
     const opts = [path.basename(tlaFilePath), '-tool', '-modelcheck'];
-    addValueOrDefault('-coverage', '1', custOpts, opts);
     addValueOrDefault('-config', cfgFilePath, custOpts, opts);
     return opts.concat(custOpts);
 }
@@ -258,6 +266,47 @@ function addReturnCodeHandler(proc: ChildProcess, toolName?: string) {
 function getConfigOptions(cfgName: string): string[] {
     const optsString = vscode.workspace.getConfiguration().get<string>(cfgName) || '';
     return splitArguments(optsString);
+}
+
+/**
+ * Gets the options for TLC. A prompt is shown to the user to confirm or modify the options iff both showPrompt and
+ * the tlaplus.tlc.modelChecker.optionsPrompt settings are true. The options are pre-populated from the settings when
+ * possible. User-enterred options are stored in the settings for future use.
+ *
+ * @param showPrompt Show a prompt to the user
+ * @returns Array of string options for TLC, or undefined if the user cancelled the prompt
+ */
+export async function getTlcOptions(showPrompt: boolean): Promise<string[] | undefined> {
+    // -config is not shown as an option by default so the same options can be used without modification across
+    // multiple modules.
+    const defaultOptions = '-coverage 1';
+    const prevConfig = vscode.workspace.getConfiguration().get<string>(CFG_TLC_OPTIONS) || defaultOptions;
+
+    const promptSetting = vscode.workspace.getConfiguration().get<boolean>(CFG_TLC_OPTIONS_PROMPT);
+
+    const customOptions = showPrompt && promptSetting ?
+        await vscode.window.showInputBox({
+            value: prevConfig,
+            prompt: 'Additional options to pass to TLC.',
+            // Ignoring focus changes allows users to click out to a different window to check potential TLC options
+            // without getting rid of what they've typed so far.
+            ignoreFocusOut: true,
+        }) :
+        prevConfig;
+
+    if (customOptions === undefined) {
+        // Command cancelled by user
+        return undefined;
+    } else if (showPrompt) {
+        // Save user-enterred options as new configuration to persist between sessions. If a workspace is open, the
+        // configuration is saved at the workspace level. Otherwise it is saved at the global level.
+        const workspaceOpen = vscode.workspace.name !== undefined;
+        const configurationTarget = workspaceOpen ?
+            vscode.ConfigurationTarget.Workspace :
+            vscode.ConfigurationTarget.Global;
+        vscode.workspace.getConfiguration().update(CFG_TLC_OPTIONS, customOptions, configurationTarget);
+    }
+    return splitArguments(customOptions);
 }
 
 function buildCommandLine(programName: string, args: string[]): string {

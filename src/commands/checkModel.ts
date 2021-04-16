@@ -48,7 +48,7 @@ export async function checkModel(
     if (!specFiles) {
         return;
     }
-    doCheckModel(specFiles, true, extContext, diagnostic);
+    doCheckModel(specFiles, true, extContext, diagnostic, true);
 }
 
 export async function runLastCheckAgain(
@@ -62,7 +62,7 @@ export async function runLastCheckAgain(
     if (!canRunTlc(extContext)) {
         return;
     }
-    doCheckModel(lastCheckFiles, true, extContext, diagnostic);
+    doCheckModel(lastCheckFiles, true, extContext, diagnostic, false);
 }
 
 export async function checkModelCustom(
@@ -91,7 +91,7 @@ export async function checkModelCustom(
         doc.uri.fsPath,
         path.join(path.dirname(doc.uri.fsPath), cfgFileName)
     );
-    doCheckModel(specFiles, true, extContext, diagnostic);
+    doCheckModel(specFiles, true, extContext, diagnostic, true);
 }
 
 /**
@@ -157,13 +157,18 @@ export async function doCheckModel(
     specFiles: SpecFiles,
     showCheckResultView: boolean,
     extContext: vscode.ExtensionContext,
-    diagnostic: vscode.DiagnosticCollection
+    diagnostic: vscode.DiagnosticCollection,
+    showOptionsPrompt: boolean,
 ): Promise<ModelCheckResult | undefined> {
     try {
         lastCheckFiles = specFiles;
         vscode.commands.executeCommand('setContext', CTX_TLC_CAN_RUN_AGAIN, true);
         updateStatusBarItem(true);
-        const procInfo = await runTlc(specFiles.tlaFilePath, path.basename(specFiles.cfgFilePath));
+        const procInfo = await runTlc(specFiles.tlaFilePath, path.basename(specFiles.cfgFilePath), showOptionsPrompt);
+        if (procInfo === undefined) {
+            // Command cancelled by user
+            return undefined;
+        }
         outChannel.bindTo(procInfo);
         checkProcess = procInfo.process;
         checkProcess.on('close', () => {

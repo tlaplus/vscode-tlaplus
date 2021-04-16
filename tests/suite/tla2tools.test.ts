@@ -21,14 +21,14 @@ suite('TLA+ Tools Test Suite', () => {
     test('Provides default TLC options', () => {
         assert.deepEqual(
             buildTlcOptions('/path/to/module.tla', '/path/to/module.cfg', []),
-            ['module.tla', '-tool', '-modelcheck', '-coverage', '1', '-config', '/path/to/module.cfg']
+            ['module.tla', '-tool', '-modelcheck', '-config', '/path/to/module.cfg']
         );
     });
 
     test('Adds custom TLC options', () => {
         assert.deepEqual(
             buildTlcOptions('/path/to/module.tla', '/path/to/module.cfg', ['-deadlock', '-checkpoint', '5']),
-            ['module.tla', '-tool', '-modelcheck', '-coverage', '1', '-config', '/path/to/module.cfg',
+            ['module.tla', '-tool', '-modelcheck', '-config', '/path/to/module.cfg',
                 '-deadlock', '-checkpoint', '5']
         );
     });
@@ -40,7 +40,7 @@ suite('TLA+ Tools Test Suite', () => {
                 '/path/to/module.cfg',
                 ['-deadlock', '-config', '/path/to/another.cfg', '-nowarning']
             ), [
-                'module.tla', '-tool', '-modelcheck', '-coverage', '1', '-config', '/path/to/another.cfg',
+                'module.tla', '-tool', '-modelcheck', '-config', '/path/to/another.cfg',
                 '-deadlock', '-nowarning'
             ]
         );
@@ -53,8 +53,8 @@ suite('TLA+ Tools Test Suite', () => {
                 '/path/to/module.cfg',
                 ['-deadlock', '-coverage', '2', '-nowarning']
             ), [
-                'module.tla', '-tool', '-modelcheck', '-coverage', '2', '-config', '/path/to/module.cfg',
-                '-deadlock', '-nowarning'
+                'module.tla', '-tool', '-modelcheck', '-config', '/path/to/module.cfg',
+                '-deadlock', '-coverage', '2', '-nowarning'
             ]
         );
     });
@@ -66,7 +66,7 @@ suite('TLA+ Tools Test Suite', () => {
                 '/path/to/bar.cfg',
                 ['-dump', 'dot', '${specName}.dot']
             ), [
-                'foo.tla', '-tool', '-modelcheck', '-coverage', '1', '-config', '/path/to/bar.cfg',
+                'foo.tla', '-tool', '-modelcheck', '-config', '/path/to/bar.cfg',
                 '-dump', 'dot', 'foo.dot'
             ]
         );
@@ -79,7 +79,7 @@ suite('TLA+ Tools Test Suite', () => {
                 '/path/to/bar.cfg',
                 ['-dump', 'dot', '${modelName}.dot']
             ), [
-                'foo.tla', '-tool', '-modelcheck', '-coverage', '1', '-config', '/path/to/bar.cfg',
+                'foo.tla', '-tool', '-modelcheck', '-config', '/path/to/bar.cfg',
                 '-dump', 'dot', 'bar.dot'
             ]
         );
