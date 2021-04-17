@@ -310,12 +310,16 @@ export async function getTlcOptions(showPrompt: boolean): Promise<string[] | und
 
     if (!supressConfigWarnings && allConfigs?.workspaceValue && allConfigs?.globalValue) {
         vscode.window
-            .showWarningMessage("Both workspace and global configurations found for TLC options. Only the workspace configuration will be used.", "ok", "hide warnings")
+            .showWarningMessage(
+                'Both workspace and global configurations found for TLC options. Only the workspace configuration '
+                    + 'will be used.',
+                'ok',
+                'hide warnings')
             .then(selection => {
-                if (selection == "hide warnings") {
+                if (selection === 'hide warnings') {
                     supressConfigWarnings = true;
                 }
-            })
+            });
 
     }
 
