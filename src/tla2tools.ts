@@ -31,6 +31,8 @@ const javaVersionChannel = new ToolOutputChannel('TLA+ Java version');
 let lastUsedJavaHome: string | undefined;
 let cachedJavaPath: string | undefined;
 
+let supressConfigWarnings = false;
+
 export enum TlaTool {
     PLUS_CAL = 'pcal.trans',
     REPL = 'tlc2.REPL',
@@ -302,7 +304,20 @@ export async function getTlcOptions(showPrompt: boolean): Promise<string[] | und
     // -config is not shown as an option by default so the same options can be used without modification across
     // multiple modules.
     const defaultOptions = '-coverage 1';
-    const prevConfig = vscode.workspace.getConfiguration().get<string>(CFG_TLC_OPTIONS) || defaultOptions;
+
+    const allConfigs = vscode.workspace.getConfiguration().inspect<string>(CFG_TLC_OPTIONS);
+    const prevConfig = allConfigs?.workspaceValue || allConfigs?.globalValue || defaultOptions;
+
+    if (!supressConfigWarnings && allConfigs?.workspaceValue && allConfigs?.globalValue) {
+        vscode.window
+            .showWarningMessage("Both workspace and global configurations found for TLC options. Only the workspace configuration will be used.", "ok", "hide warnings")
+            .then(selection => {
+                if (selection == "hide warnings") {
+                    supressConfigWarnings = true;
+                }
+            })
+
+    }
 
     const promptSetting = vscode.workspace.getConfiguration().get<boolean>(CFG_TLC_OPTIONS_PROMPT);
 
@@ -326,7 +341,12 @@ export async function getTlcOptions(showPrompt: boolean): Promise<string[] | und
         const configurationTarget = workspaceOpen ?
             vscode.ConfigurationTarget.Workspace :
             vscode.ConfigurationTarget.Global;
-        vscode.workspace.getConfiguration().update(CFG_TLC_OPTIONS, customOptions, configurationTarget);
+        if (customOptions) {
+            vscode.workspace.getConfiguration().update(CFG_TLC_OPTIONS, customOptions, configurationTarget);
+        } else {
+            // Explicitly unset so global configurations are not always overwritten
+            vscode.workspace.getConfiguration().update(CFG_TLC_OPTIONS, undefined, configurationTarget);
+        }
     }
     return splitArguments(customOptions);
 }
