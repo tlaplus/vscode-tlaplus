@@ -68,7 +68,7 @@ export async function checkAndDebugSpec(
         const port = Math.floor(Math.random() * (64510 - 1025 + 1)) + 1025;
         // false => Don't open the result view, it's empty anyway (see above).
         // Don't await doCheckModel because it only returns after TLC terminates.
-        doCheckModel(specFiles, false, context, diagnostic, ['-debugger', `port=${port}`]);
+        doCheckModel(specFiles, false, context, diagnostic, false, ['-debugger', `port=${port}`]);
         setTimeout(function() {
             if (targetResource) {
                 vscode.debug.startDebugging(undefined, {
@@ -79,9 +79,9 @@ export async function checkAndDebugSpec(
                     port: port
                 });
             }
-        }, 2_000); // Wait two seconds hoping this is enough for TLC to listen on 4712.
+        }, 5_000); // Wait five seconds hoping this is enough for TLC to start listing.
         // In the future, we have to come up with a non-racy handshake.  What would be
-        // way more elegant is for VSCode to a) open a serversocker on a free port, b)
+        // way more elegant is for VSCode to a) open a serversocket on a free port, b)
         // launch the TLC process passing the port number, and c) for TLC to connect
         // to the given port.
     }
