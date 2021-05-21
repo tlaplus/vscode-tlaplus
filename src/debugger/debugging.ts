@@ -79,7 +79,7 @@ export async function checkAndDebugSpec(
                     port: port
                 });
             }
-        }, 5_000); // Wait five seconds hoping this is enough for TLC to start listing.
+        }, 5_000); // Wait five seconds hoping this is enough for TLC to start listening.
         // In the future, we have to come up with a non-racy handshake.  What would be
         // way more elegant is for VSCode to a) open a serversocket on a free port, b)
         // launch the TLC process passing the port number, and c) for TLC to connect
