@@ -2,7 +2,8 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { CMD_CHECK_MODEL_RUN, CMD_CHECK_MODEL_STOP, CMD_CHECK_MODEL_DISPLAY, CMD_SHOW_TLC_OUTPUT,
     CMD_CHECK_MODEL_CUSTOM_RUN, checkModel, displayModelChecking, stopModelChecking,
-    showTlcOutput, checkModelCustom, CMD_CHECK_MODEL_RUN_AGAIN, runLastCheckAgain} from './commands/checkModel';
+    showTlcOutput, checkModelCustom, CMD_CHECK_MODEL_RUN_AGAIN, CMD_CHECK_MODEL_RUN_AGAIN_WITH_OPTIONS,
+    runLastCheckAgain} from './commands/checkModel';
 import { CMD_EVALUATE_SELECTION, evaluateSelection, CMD_EVALUATE_EXPRESSION,
     evaluateExpression } from './commands/evaluateExpression';
 import { parseModule, CMD_PARSE_MODULE } from './commands/parseModule';
@@ -50,6 +51,9 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.commands.registerCommand(
             CMD_CHECK_MODEL_RUN_AGAIN,
             () => runLastCheckAgain(diagnostic, context)),
+        vscode.commands.registerCommand(
+            CMD_CHECK_MODEL_RUN_AGAIN_WITH_OPTIONS,
+            () => runLastCheckAgain(diagnostic, context, true)),
         vscode.commands.registerCommand(
             CMD_CHECK_MODEL_CUSTOM_RUN,
             () => checkModelCustom(diagnostic, context)),

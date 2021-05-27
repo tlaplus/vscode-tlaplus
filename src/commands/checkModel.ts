@@ -13,6 +13,7 @@ import { ToolOutputChannel } from '../outputChannels';
 
 export const CMD_CHECK_MODEL_RUN = 'tlaplus.model.check.run';
 export const CMD_CHECK_MODEL_RUN_AGAIN = 'tlaplus.model.check.runAgain';
+export const CMD_CHECK_MODEL_RUN_AGAIN_WITH_OPTIONS = 'tlaplus.model.check.runAgainWithOptions';
 export const CMD_CHECK_MODEL_CUSTOM_RUN = 'tlaplus.model.check.customRun';
 export const CMD_CHECK_MODEL_STOP = 'tlaplus.model.check.stop';
 export const CMD_CHECK_MODEL_DISPLAY = 'tlaplus.model.check.display';
@@ -53,7 +54,8 @@ export async function checkModel(
 
 export async function runLastCheckAgain(
     diagnostic: vscode.DiagnosticCollection,
-    extContext: vscode.ExtensionContext
+    extContext: vscode.ExtensionContext,
+    withOptions = false,
 ): Promise<void> {
     if (!lastCheckFiles) {
         vscode.window.showWarningMessage('No last check to run');
@@ -62,7 +64,7 @@ export async function runLastCheckAgain(
     if (!canRunTlc(extContext)) {
         return;
     }
-    doCheckModel(lastCheckFiles, true, extContext, diagnostic, false);
+    doCheckModel(lastCheckFiles, true, extContext, diagnostic, withOptions);
 }
 
 export async function checkModelCustom(
