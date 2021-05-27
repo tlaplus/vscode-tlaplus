@@ -55,7 +55,7 @@ export async function checkModel(
 export async function runLastCheckAgain(
     diagnostic: vscode.DiagnosticCollection,
     extContext: vscode.ExtensionContext,
-    withOptions = false,
+    withNewOptions = false,
 ): Promise<void> {
     if (!lastCheckFiles) {
         vscode.window.showWarningMessage('No last check to run');
@@ -64,7 +64,7 @@ export async function runLastCheckAgain(
     if (!canRunTlc(extContext)) {
         return;
     }
-    doCheckModel(lastCheckFiles, true, extContext, diagnostic, withOptions);
+    doCheckModel(lastCheckFiles, true, extContext, diagnostic, withNewOptions);
 }
 
 export async function checkModelCustom(
