@@ -6,6 +6,10 @@ import {
 export const TLAPLUS_DEBUG_LAUNCH_CHECKNDEBUG = 'tlaplus.debug.checkAndDebugEditorContents';
 export const TLAPLUS_DEBUG_LAUNCH_DEBUG = 'tlaplus.debug.debugEditorContents';
 
+const DEFAULT_DEBUGGER_PORT = 4712;
+const DEBUGGER_MIN_PORT = 5001;         // BSD uses ports up to 5000 as ephemeral
+const DEBUGGER_MAX_PORT = 49151;        // Ports above 49152 are suggested as ephemeral by IANA
+
 export class TLADebugAdapterServerDescriptorFactory implements vscode.DebugAdapterDescriptorFactory {
 
     createDebugAdapterDescriptor(session: vscode.DebugSession, executable: vscode.DebugAdapterExecutable | undefined):
@@ -32,15 +36,14 @@ export async function debugSpec(
         // Attaching to a separately launched TLC leaves the result view (webview) empty.
         // However, TLC sends its output via the DAP Output event
         // (https://microsoft.github.io/debug-adapter-protocol/specification#Events_Output)
-        // to VSCode.  Somebody has to figure out how to wire this up. In the meantime,
-        // users have to manually "parse" the output on VSCode's DebugConsole. Unfortunately,
-        // it is TLC's '-tool' output containing "@!@!@" markers around each message.
+        // to VSCode. If needed, this output can be captured by a DebugAdapterTracker
+        // (see debug.registerDebugAdapterTrackerFactory()).
         vscode.debug.startDebugging(undefined, {
             type: 'tlaplus',
             name: 'Debug Spec',
             request: 'launch',
             program: targetResource.fsPath,
-            port: '4712'
+            port: DEFAULT_DEBUGGER_PORT
         });
     }
 }
@@ -65,24 +68,21 @@ export async function checkAndDebugSpec(
             return;
         }
         // Randomly select a port on which we request the debugger to listen
-        const port = Math.floor(Math.random() * (64510 - 1025 + 1)) + 1025;
-        // false => Don't open the result view, it's empty anyway (see above).
-        // Don't await doCheckModel because it only returns after TLC terminates.
-        doCheckModel(specFiles, false, context, diagnostic, false, ['-debugger', `port=${port}`]);
-        setTimeout(function() {
-            if (targetResource) {
-                vscode.debug.startDebugging(undefined, {
-                    type: 'tlaplus',
-                    name: 'Debug Spec',
-                    request: 'launch',
-                    program: targetResource.fsPath,
-                    port: port
-                });
+        const initPort = Math.floor(Math.random() * (DEBUGGER_MAX_PORT - DEBUGGER_MIN_PORT)) + DEBUGGER_MIN_PORT;
+        // This will be called as soon as TLC starts listening on a port or fails to start
+        const portOpenCallback = (port?: number) => {
+            if (!targetResource || !port) {
+                return;
             }
-        }, 5_000); // Wait five seconds hoping this is enough for TLC to start listening.
-        // In the future, we have to come up with a non-racy handshake.  What would be
-        // way more elegant is for VSCode to a) open a serversocket on a free port, b)
-        // launch the TLC process passing the port number, and c) for TLC to connect
-        // to the given port.
+            vscode.debug.startDebugging(undefined, {
+                type: 'tlaplus',
+                name: 'Debug Spec',
+                request: 'launch',
+                program: targetResource.fsPath,
+                port: port
+            });
+        };
+        // Don't await doCheckModel because it only returns after TLC terminates.
+        doCheckModel(specFiles, false, context, diagnostic, false, ['-debugger', `port=${initPort}`], portOpenCallback);
     }
 }

@@ -29,13 +29,15 @@ export class TlcModelCheckerStdoutParser extends ProcessOutputHandler<DCollectio
     checkResultBuilder: ModelCheckResultBuilder;
     timer: NodeJS.Timer | undefined = undefined;
     first = true;
+    debuggerPortFound = false;
 
     constructor(
         source: ModelCheckResultSource,
         stdout: Readable | string[] | null,
         specFiles: SpecFiles | undefined,
         showFullOutput: boolean,
-        private readonly handler: (checkResult: ModelCheckResult) => void
+        private readonly handler: (checkResult: ModelCheckResult) => void,
+        private readonly debuggerPortCallback?: (port?: number) => void
     ) {
         super(stdout, new DCollection());
         this.handler = handler;
@@ -47,18 +49,39 @@ export class TlcModelCheckerStdoutParser extends ProcessOutputHandler<DCollectio
 
     protected handleLine(line: string | null): void {
         if (line !== null) {
-            this.checkResultBuilder.addLine(line);
-            this.scheduleUpdate();
-        } else {
-            this.checkResultBuilder.handleStop();
-            // Copy SANY messages
-            const dCol = this.checkResultBuilder.getSanyMessages();
-            if (dCol) {
-                addDiagnostics(dCol, this.result);
-            }
-            // Issue the last update
-            this.issueUpdate();
+            this.processLine(line);
+            return;
         }
+        if (this.debuggerPortCallback && !this.debuggerPortFound) {
+            this.debuggerPortCallback(undefined);
+        }
+        this.checkResultBuilder.handleStop();
+        // Copy SANY messages
+        const dCol = this.checkResultBuilder.getSanyMessages();
+        if (dCol) {
+            addDiagnostics(dCol, this.result);
+        }
+        // Issue the last update
+        this.issueUpdate();
+    }
+
+    private processLine(line: string) {
+        this.tryParseDebuggerPort(line);
+        this.checkResultBuilder.addLine(line);
+        this.scheduleUpdate();
+    }
+
+    private tryParseDebuggerPort(line: string) {
+        if (this.debuggerPortFound || !this.debuggerPortCallback) {
+            return;
+        }
+        const matches = /^Debugger is listening on [\d:\\./]+:(\d+)$/g.exec(line);
+        if (!matches) {
+            return;
+        }
+        const port = parseInt(matches[1]);
+        this.debuggerPortFound = true;
+        this.debuggerPortCallback(port);
     }
 
     private scheduleUpdate() {

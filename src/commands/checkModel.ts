@@ -160,6 +160,7 @@ export async function doCheckModel(
     diagnostic: vscode.DiagnosticCollection,
     showOptionsPrompt: boolean,
     extraOpts: string[] = [],
+    debuggerPortCallback?: (port?: number) => void
 ): Promise<ModelCheckResult | undefined> {
     try {
         lastCheckFiles = specFiles;
@@ -182,17 +183,20 @@ export async function doCheckModel(
             revealEmptyCheckResultView(ModelCheckResultSource.Process, extContext);
         }
         const resultHolder = new CheckResultHolder();
+        const checkResultCallback = (checkResult: ModelCheckResult) => {
+            resultHolder.checkResult = checkResult;
+            if (showCheckResultView) {
+                updateCheckResultView(checkResult);
+            }
+        };
         const stdoutParser = new TlcModelCheckerStdoutParser(
             ModelCheckResultSource.Process,
             checkProcess.stdout,
             specFiles,
             true,
-            (checkResult) => {
-                resultHolder.checkResult = checkResult;
-                if (showCheckResultView) {
-                    updateCheckResultView(checkResult);
-                }
-            });
+            checkResultCallback,
+            debuggerPortCallback
+        );
         const dCol = await stdoutParser.readAll();
         applyDCollection(dCol, diagnostic);
         return resultHolder.checkResult;
