@@ -95,12 +95,14 @@ export async function runTlc(
     tlaFilePath: string,
     cfgFilePath: string,
     showOptionsPrompt: boolean,
+    extraOpts: string[] = [],
 ): Promise<ToolProcessInfo | undefined> {
-    const customOptions = await getTlcOptions(showOptionsPrompt);
-    if (customOptions === undefined) {
+    const promptedOptions = await getTlcOptions(showOptionsPrompt);
+    if (promptedOptions === undefined) {
         // Command cancelled by user
         return undefined;
     }
+    const customOptions = extraOpts.concat(promptedOptions);
     const javaOptions = [];
     const shareStats = vscode.workspace.getConfiguration().get<ShareOption>(CFG_TLC_STATISTICS_TYPE);
     if (shareStats !== ShareOption.DoNotShare) {

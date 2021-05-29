@@ -159,12 +159,14 @@ export async function doCheckModel(
     extContext: vscode.ExtensionContext,
     diagnostic: vscode.DiagnosticCollection,
     showOptionsPrompt: boolean,
+    extraOpts: string[] = [],
 ): Promise<ModelCheckResult | undefined> {
     try {
         lastCheckFiles = specFiles;
         vscode.commands.executeCommand('setContext', CTX_TLC_CAN_RUN_AGAIN, true);
         updateStatusBarItem(true);
-        const procInfo = await runTlc(specFiles.tlaFilePath, path.basename(specFiles.cfgFilePath), showOptionsPrompt);
+        const procInfo = await runTlc(
+            specFiles.tlaFilePath, path.basename(specFiles.cfgFilePath), showOptionsPrompt, extraOpts);
         if (procInfo === undefined) {
             // Command cancelled by user
             return undefined;
@@ -212,7 +214,7 @@ function attachFileSaver(tlaFilePath: string, proc: ChildProcess) {
 /**
  * Finds all files that needed to run model check.
  */
-async function getSpecFiles(fileUri: vscode.Uri): Promise<SpecFiles | undefined> {
+export async function getSpecFiles(fileUri: vscode.Uri): Promise<SpecFiles | undefined> {
     const filePath = fileUri.fsPath;
     let specFiles;
     let canRun = true;

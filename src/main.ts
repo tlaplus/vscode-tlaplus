@@ -1,8 +1,12 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { CMD_CHECK_MODEL_RUN, CMD_CHECK_MODEL_STOP, CMD_CHECK_MODEL_DISPLAY, CMD_SHOW_TLC_OUTPUT,
+import {
+    CMD_CHECK_MODEL_RUN, CMD_CHECK_MODEL_STOP, CMD_CHECK_MODEL_DISPLAY, CMD_SHOW_TLC_OUTPUT,
     CMD_CHECK_MODEL_CUSTOM_RUN, checkModel, displayModelChecking, stopModelChecking,
-    showTlcOutput, checkModelCustom, CMD_CHECK_MODEL_RUN_AGAIN, runLastCheckAgain} from './commands/checkModel';
+    showTlcOutput, checkModelCustom, CMD_CHECK_MODEL_RUN_AGAIN, runLastCheckAgain
+} from './commands/checkModel';
+import { TLAPLUS_DEBUG_LAUNCH_CHECKNDEBUG, TLAPLUS_DEBUG_LAUNCH_DEBUG,
+    TLADebugAdapterServerDescriptorFactory, checkAndDebugSpec, debugSpec } from './debugger/debugging';
 import { CMD_EVALUATE_SELECTION, evaluateSelection, CMD_EVALUATE_EXPRESSION,
     evaluateExpression } from './commands/evaluateExpression';
 import { parseModule, CMD_PARSE_MODULE } from './commands/parseModule';
@@ -75,6 +79,9 @@ export function activate(context: vscode.ExtensionContext): void {
             TLAPLUS_FILE_SELECTOR,
             new TlaCodeActionProvider(),
             { providedCodeActionKinds: [ vscode.CodeActionKind.Source ] }),
+        vscode.debug.registerDebugAdapterDescriptorFactory(
+            LANG_TLAPLUS,
+            new TLADebugAdapterServerDescriptorFactory()),
         vscode.languages.registerOnTypeFormattingEditProvider(
             TLAPLUS_FILE_SELECTOR,
             new TlaOnTypeFormattingEditProvider(),
@@ -100,7 +107,40 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.languages.registerDefinitionProvider(
             TLAPLUS_FILE_SELECTOR,
             new TlaDefinitionsProvider(tlaDocInfos)
-        )
+        ),
+        vscode.commands.registerCommand(
+            TLAPLUS_DEBUG_LAUNCH_CHECKNDEBUG,
+            (uri) => checkAndDebugSpec(uri, diagnostic, context)
+        ),
+        vscode.commands.registerCommand(
+            TLAPLUS_DEBUG_LAUNCH_DEBUG,
+            (uri) => debugSpec(uri, diagnostic, context)
+        ),
+        vscode.languages.registerEvaluatableExpressionProvider(
+            TLAPLUS_FILE_SELECTOR, {
+            // https://github.com/microsoft/vscode/issues/89084
+            // https://github.com/microsoft/vscode/issues/24520
+            // https://github.com/microsoft/vscode-mock-debug/blob/ (stupid linter!)
+            // 393ee2b2443e270bacd9f11fa219c39a88fc987d/src/extension.ts#L63-L84
+            // Also see wordPattern in tlaplus-lang-config.json that drops "@"
+            // and "'" compared to VSCode's standard wordPattern.
+            // https://github.com/alygin/vscode-tlaplus/issues/200
+                provideEvaluatableExpression(document: vscode.TextDocument, position: vscode.Position):
+                    vscode.ProviderResult<vscode.EvaluatableExpression> {
+                    const wordRange = document.getWordRangeAtPosition(position);
+                    return wordRange ? new vscode.EvaluatableExpression(wordRange,
+                        encodeURI(
+                            'tlaplus://' + document.uri + '?' + document.getText(wordRange) + '#' +
+                            (wordRange.start.line + 1) + ' ' +
+                            (wordRange.start.character + 1) + ' ' +
+                            (wordRange.end.line + 1) + ' ' +
+                            // For SANY, the location of the first character in a file is:
+                            //   1 1 1 1
+                            // whereas VSCode defines it to be:
+                            //   1 1 1 2
+                            (wordRange.end.character /** + 1 */))) : undefined;
+                }
+            })
     );
     syncTlcStatisticsSetting()
         .catch((err) => console.error(err))
