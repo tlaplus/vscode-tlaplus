@@ -538,7 +538,7 @@ class ModelCheckResultBuilder {
     }
 
     private tryParseSimpleErrorTraceItem(lines: string[]): ErrorTraceItem | undefined {
-        const regex = /^(\d+): <(\w+) line (\d+), col (\d+) to line (\d+), col (\d+) of module (\w+)>$/g;
+        const regex = /^(\d+): <([\w!]+) line (\d+), col (\d+) to line (\d+), col (\d+) of module (\w+)>$/g;
         const matches = this.tryMatchBufferLine(lines, regex);
         if (!matches) {
             return undefined;
