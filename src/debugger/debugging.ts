@@ -83,6 +83,6 @@ export async function checkAndDebugSpec(
             });
         };
         // Don't await doCheckModel because it only returns after TLC terminates.
-        doCheckModel(specFiles, false, context, diagnostic, false, ['-debugger', `port=${initPort}`], portOpenCallback);
+        doCheckModel(specFiles, false, context, diagnostic, true, ['-debugger', `port=${initPort}`], portOpenCallback);
     }
 }
