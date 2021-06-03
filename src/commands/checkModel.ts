@@ -7,10 +7,11 @@ import { updateCheckResultView, revealEmptyCheckResultView, revealLastCheckResul
 import { applyDCollection } from '../diagnostic';
 import { ChildProcess } from 'child_process';
 import { saveStreamToFile } from '../outputSaver';
-import { replaceExtension, LANG_TLAPLUS, LANG_TLAPLUS_CFG, listFiles, exists } from '../common';
+import { replaceExtension, LANG_TLAPLUS, LANG_TLAPLUS_CFG, listFiles, exists, ModelCheckingError } from '../common';
 import { ModelCheckResultSource, ModelCheckResult, SpecFiles } from '../model/check';
 import { ToolOutputChannel } from '../outputChannels';
 import { Utils } from 'vscode-uri';
+import { Result, ok, err } from 'neverthrow';
 
 export const CMD_CHECK_MODEL_RUN = 'tlaplus.model.check.run';
 export const CMD_CHECK_MODEL_RUN_AGAIN = 'tlaplus.model.check.runAgain';
@@ -41,16 +42,36 @@ export async function checkModel(
     diagnostic: vscode.DiagnosticCollection,
     extContext: vscode.ExtensionContext
 ): Promise<void> {
-    const uri = fileUri ? fileUri : getActiveEditorFileUri(extContext);
-    if (!uri) {
+    // We need to check canRunTlc separately from getActiveEditorFileUri() since checkModel could silently drop an
+    // error related to canRunTlc when checking using the previous spec.
+    if (!canRunTlc(extContext)) {
         return;
     }
 
-    const specFiles = await getSpecFiles(uri, false);
-    if (!specFiles) {
+    const uriResult = fileUri ? ok(fileUri) : getActiveEditorFileUri(extContext);
+
+    const specFilesResult = await uriResult.match(
+        async (uri: vscode.Uri): Promise<Result<SpecFiles, ModelCheckingError>> => {
+            const files = await getSpecFiles(uri, false);
+            if (!files) {
+                return err(new ModelCheckingError('Could not load spec files.'));
+            }
+            return ok(files);
+        },
+        // Use last checked spec if no active TLA+ files are found.
+        async (error: unknown): Promise<Result<SpecFiles, ModelCheckingError>> => lastCheckFiles ?
+            ok(lastCheckFiles) :
+            err(new ModelCheckingError(
+                'No active TLA+ file or previous spec found. Switch to the .tla or .cfg file to check.'
+            ))
+    );
+
+    if (specFilesResult.isErr()) {
+        vscode.window.showErrorMessage(specFilesResult.error.message);
         return;
     }
-    doCheckModel(specFiles, true, extContext, diagnostic, true);
+
+    doCheckModel(specFilesResult.value, true, extContext, diagnostic, true);
 }
 
 export async function runLastCheckAgain(
@@ -71,11 +92,12 @@ export async function checkModelCustom(
     diagnostic: vscode.DiagnosticCollection,
     extContext: vscode.ExtensionContext
 ): Promise<void> {
-    const editor = getEditorIfCanRunTlc(extContext);
-    if (!editor) {
+    const editorResult = getEditorIfCanRunTlc(extContext);
+    if (editorResult.isErr()) {
+        vscode.window.showErrorMessage(editorResult.error.message);
         return;
     }
-    const doc = editor.document;
+    const doc = editorResult.value.document;
     if (doc.languageId !== LANG_TLAPLUS) {
         vscode.window.showWarningMessage('File in the active editor is not a .tla, it cannot be checked as a model');
         return;
@@ -125,30 +147,33 @@ export function showTlcOutput(): void {
     outChannel.revealWindow();
 }
 
-function getActiveEditorFileUri(extContext: vscode.ExtensionContext): vscode.Uri | undefined {
-    const editor = getEditorIfCanRunTlc(extContext);
-    if (!editor) {
-        return undefined;
+function getActiveEditorFileUri(extContext: vscode.ExtensionContext): Result<vscode.Uri, ModelCheckingError> {
+    const editorResult = getEditorIfCanRunTlc(extContext);
+
+    if (editorResult.isErr()) {
+        return err(editorResult.error);
     }
-    const doc = editor.document;
+
+    const doc = editorResult.value.document;
     if (doc.languageId !== LANG_TLAPLUS && doc.languageId !== LANG_TLAPLUS_CFG) {
-        vscode.window.showWarningMessage(
-            'File in the active editor is not a .tla or .cfg file, it cannot be checked as a model');
-        return undefined;
+        return err(new ModelCheckingError(
+            'File in the active editor is not a .tla or .cfg file, it cannot be checked as a model'
+        ));
     }
-    return doc.uri;
+    return ok(doc.uri);
 }
 
-export function getEditorIfCanRunTlc(extContext: vscode.ExtensionContext): vscode.TextEditor | undefined {
+export function getEditorIfCanRunTlc(
+    extContext: vscode.ExtensionContext
+): Result<vscode.TextEditor, ModelCheckingError> {
     if (!canRunTlc(extContext)) {
-        return undefined;
+        return err(new ModelCheckingError('Cannot run TLC in the current context'));
     }
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
-        vscode.window.showWarningMessage('No editor is active, cannot find a TLA+ model to check');
-        return undefined;
+        return err(new ModelCheckingError('No editor is active, cannot find a TLA+ model to check'));
     }
-    return editor;
+    return ok(editor);
 }
 
 function canRunTlc(extContext: vscode.ExtensionContext): boolean {

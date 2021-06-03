@@ -22,10 +22,13 @@ export async function evaluateSelection(
     diagnostic: vscode.DiagnosticCollection,
     extContext: vscode.ExtensionContext
 ): Promise<void> {
-    const editor = getEditorIfCanRunTlc(extContext);
-    if (!editor) {
+    const editorResult = getEditorIfCanRunTlc(extContext);
+    if (editorResult.isErr()) {
+        vscode.window.showErrorMessage(editorResult.error.message);
         return;
     }
+    const editor = editorResult.value;
+
     const selRange = new vscode.Range(editor.selection.start, editor.selection.end);
     const selText = editor.document.getText(selRange);
     doEvaluateExpression(editor, selText, diagnostic, extContext);
@@ -38,8 +41,9 @@ export async function evaluateExpression(
     diagnostic: vscode.DiagnosticCollection,
     extContext: vscode.ExtensionContext
 ): Promise<void> {
-    const editor = getEditorIfCanRunTlc(extContext);
-    if (!editor) {
+    const editorResult = getEditorIfCanRunTlc(extContext);
+    if (editorResult.isErr()) {
+        vscode.window.showErrorMessage(editorResult.error.message);
         return;
     }
     vscode.window.showInputBox({
@@ -51,7 +55,7 @@ export async function evaluateExpression(
             return;
         }
         lastEvaluatedExpression = expr;
-        doEvaluateExpression(editor, expr, diagnostic, extContext);
+        doEvaluateExpression(editorResult.value, expr, diagnostic, extContext);
     });
 }
 
