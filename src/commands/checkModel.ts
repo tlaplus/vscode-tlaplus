@@ -42,13 +42,7 @@ export async function checkModel(
     diagnostic: vscode.DiagnosticCollection,
     extContext: vscode.ExtensionContext
 ): Promise<void> {
-    // We need to check canRunTlc separately from getActiveEditorFileUri() since checkModel could silently drop an
-    // error related to canRunTlc when checking using the previous spec.
-    if (!canRunTlc(extContext)) {
-        return;
-    }
-
-    const uriResult = fileUri ? ok(fileUri) : getActiveEditorFileUri(extContext);
+    const uriResult = fileUri ? ok(fileUri) : getActiveEditorFileUri();
 
     const specFilesResult = await uriResult.match(
         async (uri: vscode.Uri): Promise<Result<SpecFiles, ModelCheckingError>> => {
@@ -82,9 +76,6 @@ export async function runLastCheckAgain(
         vscode.window.showWarningMessage('No last check to run');
         return;
     }
-    if (!canRunTlc(extContext)) {
-        return;
-    }
     doCheckModel(lastCheckFiles, true, extContext, diagnostic, false);
 }
 
@@ -92,7 +83,7 @@ export async function checkModelCustom(
     diagnostic: vscode.DiagnosticCollection,
     extContext: vscode.ExtensionContext
 ): Promise<void> {
-    const editorResult = getEditorIfCanRunTlc(extContext);
+    const editorResult = getEditor();
     if (editorResult.isErr()) {
         vscode.window.showErrorMessage(editorResult.error.message);
         return;
@@ -147,8 +138,8 @@ export function showTlcOutput(): void {
     outChannel.revealWindow();
 }
 
-function getActiveEditorFileUri(extContext: vscode.ExtensionContext): Result<vscode.Uri, ModelCheckingError> {
-    const editorResult = getEditorIfCanRunTlc(extContext);
+function getActiveEditorFileUri(): Result<vscode.Uri, ModelCheckingError> {
+    const editorResult = getEditor();
 
     if (editorResult.isErr()) {
         return err(editorResult.error);
@@ -163,12 +154,7 @@ function getActiveEditorFileUri(extContext: vscode.ExtensionContext): Result<vsc
     return ok(doc.uri);
 }
 
-export function getEditorIfCanRunTlc(
-    extContext: vscode.ExtensionContext
-): Result<vscode.TextEditor, ModelCheckingError> {
-    if (!canRunTlc(extContext)) {
-        return err(new ModelCheckingError('Cannot run TLC in the current context'));
-    }
+export function getEditor(): Result<vscode.TextEditor, ModelCheckingError> {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
         return err(new ModelCheckingError('No editor is active, cannot find a TLA+ model to check'));
@@ -176,7 +162,7 @@ export function getEditorIfCanRunTlc(
     return ok(editor);
 }
 
-function canRunTlc(extContext: vscode.ExtensionContext): boolean {
+export function canRunTlc(extContext: vscode.ExtensionContext): boolean {
     if (checkProcess) {
         vscode.window.showWarningMessage(
             'Another model checking process is currently running',
@@ -196,6 +182,11 @@ export async function doCheckModel(
     extraOpts: string[] = [],
     debuggerPortCallback?: (port?: number) => void
 ): Promise<ModelCheckResult | undefined> {
+    // Note: canRunTlc prints a warning message if it returns false
+    if (!canRunTlc(extContext)) {
+        return;
+    }
+
     try {
         lastCheckFiles = specFiles;
         vscode.commands.executeCommand('setContext', CTX_TLC_CAN_RUN_AGAIN, true);
