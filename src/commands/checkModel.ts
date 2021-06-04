@@ -44,28 +44,25 @@ export async function checkModel(
 ): Promise<void> {
     const uriResult = fileUri ? ok(fileUri) : getActiveEditorFileUri();
 
-    const specFilesResult = await uriResult.match(
-        async (uri: vscode.Uri): Promise<Result<SpecFiles, ModelCheckingError>> => {
-            const files = await getSpecFiles(uri, false);
-            if (!files) {
-                return err(new ModelCheckingError('Could not load spec files.'));
-            }
-            return ok(files);
-        },
-        // Use last checked spec if no active TLA+ files are found.
-        async (error: unknown): Promise<Result<SpecFiles, ModelCheckingError>> => lastCheckFiles ?
-            ok(lastCheckFiles) :
-            err(new ModelCheckingError(
-                'No active TLA+ file or previous spec found. Switch to the .tla or .cfg file to check.'
-            ))
-    );
+    let specFiles;
 
-    if (specFilesResult.isErr()) {
-        vscode.window.showErrorMessage(specFilesResult.error.message);
-        return;
+    if (uriResult.isErr()) {
+        // Use last checked spec if no active TLA+ files are found.
+        if (!lastCheckFiles) {
+            vscode.window.showErrorMessage(
+                'No active TLA+ file or previous spec found. Switch to the .tla or .cfg file to check.');
+            return;
+        }
+        specFiles = lastCheckFiles;
+    } else {
+        specFiles = await getSpecFiles(uriResult.value, false);
+        if (!specFiles) {
+            vscode.window.showErrorMessage('Could not load spec files.');
+            return;
+        }
     }
 
-    doCheckModel(specFilesResult.value, true, extContext, diagnostic, true);
+    doCheckModel(specFiles, true, extContext, diagnostic, true);
 }
 
 export async function runLastCheckAgain(
