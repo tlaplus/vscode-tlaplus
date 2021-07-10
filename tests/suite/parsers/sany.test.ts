@@ -23,7 +23,7 @@ suite('SANY Output Parser Test Suite', () => {
             '****** SANY2 Version 2.1 created 24 February 2014',
             '',
             `Parsing file ${ROOT_PATH}`,
-            'Parsing file /private/var/dependencies/TLC.tla',
+            'Parsing file /private/var/dependencies/TLC.tla (jar:file:/bob/tla2tools.jar!/tla2sany/StdModules/TLC.tla)',
             'Semantic processing of module TLC',
             `Semantic processing of module ${ROOT_NAME}`,
         ].join('\n');
@@ -70,7 +70,7 @@ suite('SANY Output Parser Test Suite', () => {
             '****** SANY2 Version 2.1 created 24 February 2014',
             '',
             `Parsing file ${ROOT_PATH}`,
-            'Parsing file /private/var/dependencies/TLC.tla',
+            'Parsing file /private/var/dependencies/TLC.tla (jar:file:/bob/tla2tools.jar!/tla2sany/StdModules/TLC.tla)',
             'Parsing file /Users/alice/TLA/bar.tla',
             'Semantic processing of module TLC',
             'Semantic processing of module bar',

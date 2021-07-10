@@ -47,8 +47,7 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
             return;
         }
         if (line.startsWith('Parsing file ')) {
-            const modPath = line.substring(13);
-            this.rememberParsedModule(modPath);
+            this.tryParseModulePath(line.substring(13));
             return;
         }
         if (line.startsWith('Semantic processing of module ')) {
@@ -246,6 +245,13 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
         const message = this.errMessage ? this.errMessage + '\n' + line : line;
         this.result.dCollection.addMessage(this.rootModulePath, new vscode.Range(0, 0, 0, 0), message);
         this.resetErrData();
+    }
+
+    private tryParseModulePath(line: string) {
+        const rxJarPath = /^(.*)(?: \(jar:file:.*\))$/g;
+        const jarPathMatches = rxJarPath.exec(line);
+        const modPath = jarPathMatches ? jarPathMatches[1] : line;
+        this.rememberParsedModule(modPath);
     }
 
     private appendErrMessage(line: string) {

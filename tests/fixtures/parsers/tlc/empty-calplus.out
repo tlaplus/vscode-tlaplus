@@ -8,10 +8,10 @@ Running breadth-first search Model-Checking with fp 22 and seed -575532017200308
 Starting SANY...
 @!@!@ENDMSG 2220 @!@!@
 Parsing file /Users/bob/example.tla
-Parsing file /private/var/folders/tla/T/TLC.tla
-Parsing file /private/var/folders/tla/T/Naturals.tla
-Parsing file /private/var/folders/tla/T/Sequences.tla
-Parsing file /private/var/folders/tla/T/FiniteSets.tla
+Parsing file /private/var/folders/tla/T/TLC.tla (jar:file:/Users/bob/tla2tools.jar!/tla2sany/StandardModules/TLC.tla)
+Parsing file /private/var/folders/tla/T/Naturals.tla (jar:file:/Users/bob/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Parsing file /private/var/folders/tla/T/Sequences.tla (jar:file:/Users/bob/tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
+Parsing file /private/var/folders/tla/T/FiniteSets.tla (jar:file:/Users/bob/tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
 Semantic processing of module Naturals
 Semantic processing of module Sequences
 Semantic processing of module FiniteSets
