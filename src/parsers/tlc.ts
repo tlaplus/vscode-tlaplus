@@ -487,7 +487,8 @@ class ModelCheckResultBuilder {
     }
 
     private parseCoverage(lines: string[]) {
-        const regex = /^<(\w+) line (\d+), col (\d+) to line (\d+), col (\d+) of module (\w+)>: (\d+):(\d+)/g;
+        // eslint-disable-next-line max-len
+        const regex = /^<(\w+) line (\d+), col (\d+) to line (\d+), col (\d+) of module (\w+)(?: \(\d+ \d+ \d+ \d+\))?>: (\d+):(\d+)/g;
         const matches = this.tryMatchBufferLine(lines, regex);
         if (matches) {
             const moduleName = matches[6];

@@ -410,6 +410,22 @@ suite('TLC Output Parser Test Suite', () => {
                 .build()
         );
     });
+
+    test('Handles coverage info that contains location', () => {
+        return assertOutput('coverage-with-location.out', TEST_SPEC_FILES,
+            new CheckResultBuilder('coverage-with-location.out', CheckState.Success, CheckStatus.Finished)
+                .addDColFilePath('/Users/alice/issue_209.tla')
+                .addDColFilePath('/private/var/folders/tla/T/TLC.tla')
+                .setStartDateTime('2021-07-10 11:49:12')
+                .setEndDateTime('2021-07-10 11:49:13')
+                .setDuration(1166)
+                .setProcessInfo('Running breadth-first search Model-Checking with fp 22 and seed -5755320172003082571.')
+                .addInitState('00:00:00', 2, 7, 3, 0)
+                .addCoverage('issue_209', 'Init', '/Users/alice/issue_209.tla', range(4, 0, 4, 4), 1, 1)
+                .addCoverage('issue_209', 'Next', '/Users/alice/issue_209.tla', range(5, 0, 5, 4), 6, 2)
+                .build()
+        );
+    });
 });
 
 class CheckResultHolder {
