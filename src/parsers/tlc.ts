@@ -467,15 +467,15 @@ class ModelCheckResultBuilder {
 
     private parseProgressStats(lines: string[]) {
         // eslint-disable-next-line max-len
-        const regex = /^Progress\(([\d,]+)\) at (\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}): ([\d,]+) states generated.*, ([\d,]+) distinct states found.*, ([\d,]+) states left on queue.*/g;
+        const regex = /^Progress\(([\d,]+)\) at (\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}): (.+) states generated.*, (.+) distinct states found.*, (.+) states left on queue.*/g;
         const matches = this.tryMatchBufferLine(lines, regex);
         if (matches) {
             const item = new InitialStateStatItem(
                 this.calcTimestamp(matches[2]),
-                parseIntWithComma(matches[1]),
-                parseIntWithComma(matches[3]),
-                parseIntWithComma(matches[4]),
-                parseIntWithComma(matches[5])
+                parseLocalizedInt(matches[1]),
+                parseLocalizedInt(matches[3]),
+                parseLocalizedInt(matches[4]),
+                parseLocalizedInt(matches[5])
             );
             if (this.initialStatesStat.length > 0
                 && this.initialStatesStat[this.initialStatesStat.length - 1].timeStamp === item.timeStamp) {
@@ -708,9 +708,12 @@ class ModelCheckResultBuilder {
     }
 }
 
-function parseIntWithComma(str: string): number {
-    const c = str.split(',').join('');
-    return parseInt(c);
+/**
+ * Parses string with an integer value that was formatted in accordance with some locale.
+ */
+function parseLocalizedInt(str: string): number {
+    const numStr = str.replace(/[^\d]/g, '');
+    return parseInt(numStr);
 }
 
 function leftPadTimeUnit(n: number): string {

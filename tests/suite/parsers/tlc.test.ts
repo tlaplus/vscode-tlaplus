@@ -426,6 +426,22 @@ suite('TLC Output Parser Test Suite', () => {
                 .build()
         );
     });
+
+    test('Parses localized integers', () => {
+        return assertOutput('localized-ints.out', TEST_SPEC_FILES,
+            new CheckResultBuilder('localized-ints.out', CheckState.Stopped, CheckStatus.CheckingLiveness)
+                .addDColFilePath('/Users/charlie/issue_229.tla')
+                .setStartDateTime('2021-07-06 16:22:05')
+                .setProcessInfo('Running breadth-first search Model-Checking with fp 22 and seed -5755320172003082571.')
+                .addInitState('00:00:00', 0, 16, 16, 16)
+                .addInitState('00:00:03', 6, 65577, 11342, 6463)
+                .addInitState('00:01:11', 14, 3191033, 346966, 92794)
+                .addInitState('00:02:31', 16, 6349139, 683798, 186242)
+                .addCoverage('issue_229', 'Init', '/Users/charlie/issue_229.tla', range(36, 0, 36, 4), 16, 16)
+                .addCoverage('issue_229', 'Next', '/Users/charlie/issue_229.tla', range(117, 0, 117, 4), 951429, 101618)
+                .build()
+        );
+    });
 });
 
 class CheckResultHolder {
@@ -433,18 +449,18 @@ class CheckResultHolder {
 }
 
 function assertEquals(actual: ModelCheckResult, expected: ModelCheckResult) {
-    assert.equal(actual.state, expected.state);
-    assert.equal(actual.status, expected.status);
-    assert.equal(actual.processInfo, expected.processInfo);
-    assert.equal(actual.startDateTimeStr, expected.startDateTimeStr);
-    assert.equal(actual.endDateTimeStr, expected.endDateTimeStr);
-    assert.equal(actual.duration, expected.duration);
-    assert.deepEqual(actual.outputLines, expected.outputLines);
-    assert.deepEqual(actual.initialStatesStat, expected.initialStatesStat);
-    assert.deepEqual(actual.coverageStat, expected.coverageStat);
-    assert.deepEqual(actual.sanyMessages, expected.sanyMessages);
-    assert.deepEqual(actual.warnings, expected.warnings);
-    assert.deepEqual(actual.errors, expected.errors);
+    assert.equal(actual.state, expected.state, "State doesn't match");
+    assert.equal(actual.status, expected.status, "Status doesn't match");
+    assert.equal(actual.processInfo, expected.processInfo, "Process info doesn't match");
+    assert.equal(actual.startDateTimeStr, expected.startDateTimeStr, "Start date/time doesn't match");
+    assert.equal(actual.endDateTimeStr, expected.endDateTimeStr, "End date/time doesn't match");
+    assert.equal(actual.duration, expected.duration, "Duration doesn't match");
+    assert.deepEqual(actual.outputLines, expected.outputLines, "Output lines don't match");
+    assert.deepEqual(actual.initialStatesStat, expected.initialStatesStat, "Initial states statistics doesn't match");
+    assert.deepEqual(actual.coverageStat, expected.coverageStat, "Coverage statistics doesn't match");
+    assert.deepEqual(actual.sanyMessages, expected.sanyMessages, "SANY messages don't match");
+    assert.deepEqual(actual.warnings, expected.warnings, "Warnings don't match");
+    assert.deepEqual(actual.errors, expected.errors, "Erros don't match");
 }
 
 async function assertOutput(fileName: string, specFiles: SpecFiles, expected: ModelCheckResult): Promise<void> {
