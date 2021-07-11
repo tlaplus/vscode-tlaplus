@@ -178,14 +178,14 @@
                 "category": "TLA+"
             },
             {
-                "command": "tlaplus.debug.checkAndDebugEditorContents",
+                "command": "tlaplus.debugger.run",
                 "title": "Check and debug model with TLC",
                 "enablement": "!inDebugMode",
                 "icon": "$(debug-alt)",
                 "category": "TLA+"
             },
             {
-                "command": "tlaplus.debug.debugEditorContents",
+                "command": "tlaplus.debugger.attach",
                 "title": "Debug a running model",
                 "enablement": "!inDebugMode",
                 "category": "TLA+"
@@ -246,12 +246,11 @@
                     "when": "editorLangId == tlaplus"
                 },
                 {
-                    "command": "tlaplus.debug.debugEditorContents",
-                    "when": "editorLangId == tlaplus"
+                    "command": "tlaplus.debugger.run",
+                    "when": "editorLangId == tlaplus || editorLangId == tlaplus_cfg"
                 },
                 {
-                    "command": "tlaplus.debug.checkAndDebugEditorContents",
-                    "when": "editorLangId == tlaplus"
+                    "command": "tlaplus.debugger.attach"
                 }
             ],
             "explorer/context": [
@@ -265,7 +264,12 @@
                 {
                     "command": "tlaplus.model.check.run",
                     "when": "editorLangId == tlaplus || editorLangId == tlaplus_cfg",
-                    "group": "z_commands"
+                    "group": "z_commands@10"
+                },
+                {
+                    "command": "tlaplus.debugger.run",
+                    "when": "editorLangId == tlaplus || editorLangId == tlaplus_cfg",
+                    "group": "z_commands@20"
                 },
                 {
                     "command": "tlaplus.out.visualize",
@@ -276,17 +280,12 @@
                     "command": "tlaplus.evaluateSelection",
                     "when": "editorLangId == tlaplus",
                     "group": "z_commands"
-                },
-                {
-                    "command": "tlaplus.debug.checkAndDebugEditorContents",
-                    "when": "editorLangId == tlaplus",
-                    "group": "z_commands"
                 }
             ],
             "editor/title": [
                 {
-                    "command": "tlaplus.debug.checkAndDebugEditorContents",
-                    "when": "resourceLangId == tlaplus",
+                    "command": "tlaplus.debugger.run",
+                    "when": "resourceLangId == tlaplus || editorLangId == tlaplus_cfg",
                     "group": "1_run@20"
                 }
             ]

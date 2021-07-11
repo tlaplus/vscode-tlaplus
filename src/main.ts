@@ -6,7 +6,7 @@ import {
     showTlcOutput, checkModelCustom, CMD_CHECK_MODEL_RUN_AGAIN, runLastCheckAgain
 } from './commands/checkModel';
 import { TLAPLUS_DEBUG_LAUNCH_CHECKNDEBUG, TLAPLUS_DEBUG_LAUNCH_DEBUG,
-    TLADebugAdapterServerDescriptorFactory, checkAndDebugSpec, debugSpec } from './debugger/debugging';
+    TLADebugAdapterServerDescriptorFactory, checkAndDebugSpec, attachDebugger } from './debugger/debugging';
 import { CMD_EVALUATE_SELECTION, evaluateSelection, CMD_EVALUATE_EXPRESSION,
     evaluateExpression } from './commands/evaluateExpression';
 import { parseModule, CMD_PARSE_MODULE } from './commands/parseModule';
@@ -114,7 +114,7 @@ export function activate(context: vscode.ExtensionContext): void {
         ),
         vscode.commands.registerCommand(
             TLAPLUS_DEBUG_LAUNCH_DEBUG,
-            (uri) => debugSpec(uri, diagnostic, context)
+            (uri) => attachDebugger()
         ),
         vscode.languages.registerEvaluatableExpressionProvider(
             TLAPLUS_FILE_SELECTOR, {

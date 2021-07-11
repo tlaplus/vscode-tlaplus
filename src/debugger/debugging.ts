@@ -3,8 +3,8 @@ import {
     doCheckModel, getSpecFiles
 } from '../commands/checkModel';
 
-export const TLAPLUS_DEBUG_LAUNCH_CHECKNDEBUG = 'tlaplus.debug.checkAndDebugEditorContents';
-export const TLAPLUS_DEBUG_LAUNCH_DEBUG = 'tlaplus.debug.debugEditorContents';
+export const TLAPLUS_DEBUG_LAUNCH_CHECKNDEBUG = 'tlaplus.debugger.run';
+export const TLAPLUS_DEBUG_LAUNCH_DEBUG = 'tlaplus.debugger.attach';
 
 const DEFAULT_DEBUGGER_PORT = 4712;
 const DEBUGGER_MIN_PORT = 5001;         // BSD uses ports up to 5000 as ephemeral
@@ -21,31 +21,18 @@ export class TLADebugAdapterServerDescriptorFactory implements vscode.DebugAdapt
 /**
  * Attaches the DAP front-end to an already running TLC debugger.
  */
-export async function debugSpec(
-    resource: vscode.Uri | undefined,
-    diagnostic: vscode.DiagnosticCollection,
-    context: vscode.ExtensionContext
-): Promise<void> {
-    let targetResource = resource;
-    if (!targetResource && vscode.window.activeTextEditor) {
-        // Since this command is registered as a button on the editor menu, I don't
-        // think this branch is ever taken.  It's here because the DAP example has it.
-        targetResource = vscode.window.activeTextEditor.document.uri;
-    }
-    if (targetResource) {
-        // Attaching to a separately launched TLC leaves the result view (webview) empty.
-        // However, TLC sends its output via the DAP Output event
-        // (https://microsoft.github.io/debug-adapter-protocol/specification#Events_Output)
-        // to VSCode. If needed, this output can be captured by a DebugAdapterTracker
-        // (see debug.registerDebugAdapterTrackerFactory()).
-        vscode.debug.startDebugging(undefined, {
-            type: 'tlaplus',
-            name: 'Debug Spec',
-            request: 'launch',
-            program: targetResource.fsPath,
-            port: DEFAULT_DEBUGGER_PORT
-        });
-    }
+export async function attachDebugger(): Promise<void> {
+    // Attaching to a separately launched TLC leaves the result view (webview) empty.
+    // However, TLC sends its output via the DAP Output event
+    // (https://microsoft.github.io/debug-adapter-protocol/specification#Events_Output)
+    // to VSCode. If needed, this output can be captured by a DebugAdapterTracker
+    // (see debug.registerDebugAdapterTrackerFactory()).
+    vscode.debug.startDebugging(undefined, {
+        type: 'tlaplus',
+        name: 'Debug Spec',
+        request: 'launch',
+        port: DEFAULT_DEBUGGER_PORT
+    });
 }
 
 /**
@@ -78,7 +65,6 @@ export async function checkAndDebugSpec(
                 type: 'tlaplus',
                 name: 'Debug Spec',
                 request: 'launch',
-                program: targetResource.fsPath,
                 port: port
             });
         };
