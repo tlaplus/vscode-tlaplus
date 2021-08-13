@@ -33,6 +33,7 @@ let cachedJavaPath: string | undefined;
 
 enum TlaTool {
     PLUS_CAL = 'pcal.trans',
+    REPL = 'tlc2.REPL',
     SANY = 'tla2sany.SANY',
     TLC = 'tlc2.TLC',
     TEX = 'tla2tex.TLA'
@@ -89,6 +90,13 @@ export async function runTex(tlaFilePath: string): Promise<ToolProcessInfo> {
         [ path.basename(tlaFilePath) ],
         []
     );
+}
+
+export async function runReplTerminal(): Promise<void> {
+    const javaPath = await obtainJavaPath();
+    const args = buildJavaOptions([], toolsJarPath);
+    args.push(TlaTool.REPL);
+    vscode.window.createTerminal({shellPath: javaPath, shellArgs: args}).show();
 }
 
 export async function runTlc(

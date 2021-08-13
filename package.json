@@ -189,6 +189,11 @@
                 "title": "Debug a running model",
                 "enablement": "!inDebugMode",
                 "category": "TLA+"
+            },
+            {
+                "command": "tlaplus.repl.run",
+                "title": "Run REPL in Terminal",
+                "category": "TLA+"
             }
         ],
         "snippets": [
@@ -251,6 +256,10 @@
                 },
                 {
                     "command": "tlaplus.debugger.attach"
+                },
+                {
+                    "command": "tlaplus.repl.run",
+                    "when": "editorLangId == tlaplus"
                 }
             ],
             "explorer/context": [
