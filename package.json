@@ -258,8 +258,7 @@
                     "command": "tlaplus.debugger.attach"
                 },
                 {
-                    "command": "tlaplus.repl.run",
-                    "when": "editorLangId == tlaplus"
+                    "command": "tlaplus.repl.run"
                 }
             ],
             "explorer/context": [
