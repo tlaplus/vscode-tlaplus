@@ -1,4 +1,4 @@
-import { runReplTerminal } from "../tla2tools";
+import { runReplTerminal } from '../tla2tools';
 
 export const CMD_RUN_REPL = 'tlaplus.repl.run';
 
