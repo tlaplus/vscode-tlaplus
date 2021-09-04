@@ -34,7 +34,7 @@ jobs:
     - name: Publish to Marketplace
       run: vsce publish --pat "${{ secrets.VSCODE_MARKETPLACE_TOKEN }}"
     - name: Publish to Open VSX
-      run: npx ovsx publish "vscode-tlaplus-${{ steps.version.outputs.version }}.vsix" -p "${{ secrets.OPEN_VSX_TOKEN }}"
+      run: npx ovsx publish "vscode-tlaplus-nightly-${{ steps.version.outputs.version }}.vsix" -p "${{ secrets.OPEN_VSX_TOKEN }}"
     - name: Create Release
       id: create_release
       uses: actions/create-release@v1

@@ -1,5 +1,3 @@
-# Change Log
-
 ## 1.5.4 &ndash; 21st March, 2021
 
 ### Enhancements
