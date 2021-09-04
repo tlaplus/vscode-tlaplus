@@ -49,26 +49,27 @@ export async function checkAndDebugSpec(
         // think this branch is ever taken.  It's here because the DAP example has it.
         targetResource = vscode.window.activeTextEditor.document.uri;
     }
-    if (targetResource) {
-        const specFiles = await getSpecFiles(targetResource);
-        if (!specFiles) {
+    if (!targetResource) {
+        return;
+    }
+    const specFiles = await getSpecFiles(targetResource);
+    if (!specFiles) {
+        return;
+    }
+    // Randomly select a port on which we request the debugger to listen
+    const initPort = Math.floor(Math.random() * (DEBUGGER_MAX_PORT - DEBUGGER_MIN_PORT)) + DEBUGGER_MIN_PORT;
+    // This will be called as soon as TLC starts listening on a port or fails to start
+    const portOpenCallback = (port?: number) => {
+        if (!port) {
             return;
         }
-        // Randomly select a port on which we request the debugger to listen
-        const initPort = Math.floor(Math.random() * (DEBUGGER_MAX_PORT - DEBUGGER_MIN_PORT)) + DEBUGGER_MIN_PORT;
-        // This will be called as soon as TLC starts listening on a port or fails to start
-        const portOpenCallback = (port?: number) => {
-            if (!targetResource || !port) {
-                return;
-            }
-            vscode.debug.startDebugging(undefined, {
-                type: 'tlaplus',
-                name: 'Debug Spec',
-                request: 'launch',
-                port: port
-            });
-        };
-        // Don't await doCheckModel because it only returns after TLC terminates.
-        doCheckModel(specFiles, false, context, diagnostic, true, ['-debugger', `port=${initPort}`], portOpenCallback);
-    }
+        vscode.debug.startDebugging(undefined, {
+            type: 'tlaplus',
+            name: 'Debug Spec',
+            request: 'launch',
+            port: port
+        });
+    };
+    // Don't await doCheckModel because it only returns after TLC terminates.
+    doCheckModel(specFiles, false, context, diagnostic, true, ['-debugger', `port=${initPort}`], portOpenCallback);
 }

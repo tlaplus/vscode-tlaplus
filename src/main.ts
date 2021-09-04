@@ -5,7 +5,7 @@ import {
     CMD_CHECK_MODEL_CUSTOM_RUN, checkModel, displayModelChecking, stopModelChecking,
     showTlcOutput, checkModelCustom, CMD_CHECK_MODEL_RUN_AGAIN, runLastCheckAgain
 } from './commands/checkModel';
-import { CMD_RUN_REPL, launchRepl } from './commands/runREPL';
+import { CMD_RUN_REPL, launchRepl } from './commands/runRepl';
 import { TLAPLUS_DEBUG_LAUNCH_CHECKNDEBUG, TLAPLUS_DEBUG_LAUNCH_DEBUG,
     TLADebugAdapterServerDescriptorFactory, checkAndDebugSpec, attachDebugger } from './debugger/debugging';
 import { CMD_EVALUATE_SELECTION, evaluateSelection, CMD_EVALUATE_EXPRESSION,
