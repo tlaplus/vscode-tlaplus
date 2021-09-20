@@ -1,5 +1,5 @@
 import { TerminalProfile, ProviderResult, TerminalProfileProvider } from 'vscode';
-import { runReplTerminal, getJavaPath, buildJavaOptions, toolsJarPath, TlaTool } from '../tla2tools';
+import { runReplTerminal, getJavaPath, buildConfigJavaOptions, TlaTool } from '../tla2tools';
 
 export const CMD_RUN_REPL = 'tlaplus.repl.run';
 
@@ -10,7 +10,7 @@ export async function launchRepl(): Promise<void> {
 export class REPLTerminalProfileProvider implements TerminalProfileProvider {
     provideTerminalProfile(): ProviderResult<TerminalProfile> {
         const javaPath = getJavaPath();
-        const args = buildJavaOptions([], toolsJarPath);
+        const args = buildConfigJavaOptions();
         args.push(TlaTool.REPL);
         return {
             options: {

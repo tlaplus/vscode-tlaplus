@@ -24,7 +24,7 @@ const DEFAULT_GC_OPTION = '-XX:+UseParallelGC';
 const TLA_TOOLS_LIB_NAME = 'tla2tools.jar';
 const TLA_TOOLS_LIB_NAME_END_UNIX = '/' + TLA_TOOLS_LIB_NAME;
 const TLA_TOOLS_LIB_NAME_END_WIN = '\\' + TLA_TOOLS_LIB_NAME;
-export const toolsJarPath = path.resolve(__dirname, '../../tools/' + TLA_TOOLS_LIB_NAME);
+const toolsJarPath = path.resolve(__dirname, '../../tools/' + TLA_TOOLS_LIB_NAME);
 const javaCmd = 'java' + (process.platform === 'win32' ? '.exe' : '');
 const javaVersionChannel = new ToolOutputChannel('TLA+ Java version');
 
@@ -94,7 +94,7 @@ export async function runTex(tlaFilePath: string): Promise<ToolProcessInfo> {
 
 export async function runReplTerminal(): Promise<void> {
     const javaPath = await obtainJavaPath();
-    const args = buildJavaOptions([], toolsJarPath);
+    const args = buildJavaOptions(getConfigOptions(CFG_JAVA_OPTIONS), toolsJarPath);
     args.push(TlaTool.REPL);
     vscode.window.createTerminal({shellPath: javaPath, shellArgs: args}).show();
 }
@@ -188,6 +188,13 @@ function buildJavaPath(): string {
 export function buildJavaOptions(customOptions: string[], defaultClassPath: string): string[] {
     const opts = customOptions.slice(0);
     mergeClassPathOption(opts, defaultClassPath);
+    mergeGCOption(opts, DEFAULT_GC_OPTION);
+    return opts;
+}
+
+export function buildConfigJavaOptions(): string[] {
+    const opts = getConfigOptions(CFG_JAVA_OPTIONS).slice(0);
+    mergeClassPathOption(opts, toolsJarPath);
     mergeGCOption(opts, DEFAULT_GC_OPTION);
     return opts;
 }
