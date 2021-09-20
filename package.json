@@ -51,6 +51,14 @@
         "tools"
     ],
     "contributes": {
+        "terminal": {
+            "profiles": [
+                {
+                    "title": "TLA+ REPL",
+                    "id": "tlaplus.repl.run"
+                }
+            ]
+        },
         "debuggers": [
             {
                 "type": "tlaplus",

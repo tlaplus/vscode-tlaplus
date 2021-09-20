@@ -24,14 +24,14 @@ const DEFAULT_GC_OPTION = '-XX:+UseParallelGC';
 const TLA_TOOLS_LIB_NAME = 'tla2tools.jar';
 const TLA_TOOLS_LIB_NAME_END_UNIX = '/' + TLA_TOOLS_LIB_NAME;
 const TLA_TOOLS_LIB_NAME_END_WIN = '\\' + TLA_TOOLS_LIB_NAME;
-const toolsJarPath = path.resolve(__dirname, '../../tools/' + TLA_TOOLS_LIB_NAME);
+export const toolsJarPath = path.resolve(__dirname, '../../tools/' + TLA_TOOLS_LIB_NAME);
 const javaCmd = 'java' + (process.platform === 'win32' ? '.exe' : '');
 const javaVersionChannel = new ToolOutputChannel('TLA+ Java version');
 
 let lastUsedJavaHome: string | undefined;
 let cachedJavaPath: string | undefined;
 
-enum TlaTool {
+export enum TlaTool {
     PLUS_CAL = 'pcal.trans',
     REPL = 'tlc2.REPL',
     SANY = 'tla2sany.SANY',
@@ -149,7 +149,7 @@ export function stopProcess(p: cp.ChildProcess): void {
     }
 }
 
-async function obtainJavaPath(): Promise<string> {
+export function getJavaPath(): string {
     const javaHome = vscode.workspace.getConfiguration().get<string>(CFG_JAVA_HOME);
     if (cachedJavaPath && javaHome === lastUsedJavaHome) {
         return cachedJavaPath;
@@ -157,6 +157,11 @@ async function obtainJavaPath(): Promise<string> {
     const javaPath = buildJavaPath();
     cachedJavaPath = javaPath;
     lastUsedJavaHome = javaHome;
+    return javaPath;
+}
+
+async function obtainJavaPath(): Promise<string> {
+    const javaPath = getJavaPath();
     await checkJavaVersion(javaPath);
     return javaPath;
 }
