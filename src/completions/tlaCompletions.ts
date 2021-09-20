@@ -95,7 +95,7 @@ export class TlaCompletionItemProvider implements vscode.CompletionItemProvider 
                 item.insertText = item.label + ' ';
                 break;
             case vscode.CompletionItemKind.Operator:
-                item.insertText = item.label.substring(1) + ' ';
+                item.insertText = item.label.toString().substring(1) + ' ';
                 break;
         }
         return item;
