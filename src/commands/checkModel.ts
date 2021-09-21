@@ -10,6 +10,7 @@ import { saveStreamToFile } from '../outputSaver';
 import { replaceExtension, LANG_TLAPLUS, LANG_TLAPLUS_CFG, listFiles, exists } from '../common';
 import { ModelCheckResultSource, ModelCheckResult, SpecFiles } from '../model/check';
 import { ToolOutputChannel } from '../outputChannels';
+import { Utils } from 'vscode-uri';
 
 export const CMD_CHECK_MODEL_RUN = 'tlaplus.model.check.run';
 export const CMD_CHECK_MODEL_RUN_AGAIN = 'tlaplus.model.check.runAgain';
@@ -44,7 +45,8 @@ export async function checkModel(
     if (!uri) {
         return;
     }
-    const specFiles = await getSpecFiles(uri);
+
+    const specFiles = await getSpecFiles(uri, false);
     if (!specFiles) {
         return;
     }
@@ -218,32 +220,73 @@ function attachFileSaver(tlaFilePath: string, proc: ChildProcess) {
 /**
  * Finds all files that needed to run model check.
  */
-export async function getSpecFiles(fileUri: vscode.Uri): Promise<SpecFiles | undefined> {
+export async function getSpecFiles(fileUri: vscode.Uri, warn = true): Promise<SpecFiles | undefined> {
+    let specFiles;
+
+    // a) Check the given input if it exists.
+    specFiles = await checkSpecFiles(fileUri, false);
+    if (specFiles) {
+        return specFiles;
+    }
+    // b) Check alternatives:
+    // Unless the given filePath already starts with 'MC', prepend MC to the name
+    // and check if it exists. If yes, it becomes the spec file.  If not, fall back
+    // to the original file.  The assumptions is that a user usually has  Spec.tla
+    // open in the editor and doesn't want to switch to  MC.tla  before model-checking.
+    // TODO: Ideally, we wouldn't just check filenames here but check the parse result
+    // TODO: if the module in  MCSpec.tla  actually extends the module in  Spec.
+    const b = Utils.basename(fileUri);
+    if (!b.startsWith('MC') && !b.endsWith('.cfg')) {
+        const str = fileUri.toString();
+        const n = str.substr(0, str.lastIndexOf(b)) + 'MC' + b;
+        const filePath = vscode.Uri.parse(n).fsPath;
+        specFiles = new SpecFiles(filePath, replaceExtension(filePath, 'cfg'));
+        // Here, we make sure that the .cfg *and* the .tla exist.
+        let canRun = true;
+        canRun = await checkModelExists(specFiles.cfgFilePath, warn);
+        canRun = canRun && await checkModuleExists(specFiles.tlaFilePath, warn);
+        if (canRun) {
+            return specFiles;
+        }
+    }
+    // c) Deliberately trigger the warning dialog by checking the given input again
+    // knowing that it doesn't exist.
+    return await checkSpecFiles(fileUri, true);
+}
+
+async function checkSpecAndConfigFiles(specFiles: SpecFiles, warn = true): Promise<SpecFiles | undefined> {
+    let canRun = true;
+    canRun = await checkModelExists(specFiles.cfgFilePath, warn);
+    canRun = canRun && await checkModuleExists(specFiles.tlaFilePath, warn);
+    return canRun ? specFiles : undefined;
+}
+
+async function checkSpecFiles(fileUri: vscode.Uri, warn = true): Promise<SpecFiles | undefined> {
     const filePath = fileUri.fsPath;
     let specFiles;
     let canRun = true;
     if (filePath.endsWith('.cfg')) {
         specFiles = new SpecFiles(replaceExtension(filePath, 'tla'), filePath);
-        canRun = await checkModuleExists(specFiles.tlaFilePath);
+        canRun = await checkModuleExists(specFiles.tlaFilePath, warn);
     } else if (filePath.endsWith('.tla')) {
         specFiles = new SpecFiles(filePath, replaceExtension(filePath, 'cfg'));
-        canRun = await checkModelExists(specFiles.cfgFilePath);
+        canRun = await checkModelExists(specFiles.cfgFilePath, warn);
     }
     return canRun ? specFiles : undefined;
 }
 
-async function checkModuleExists(modulePath: string): Promise<boolean> {
+async function checkModuleExists(modulePath: string, warn = true): Promise<boolean> {
     const moduleExists = await exists(modulePath);
-    if (!moduleExists) {
+    if (!moduleExists && warn) {
         const moduleFile = path.basename(modulePath);
         vscode.window.showWarningMessage(`Corresponding TLA+ module file ${moduleFile} doesn't exist.`);
     }
     return moduleExists;
 }
 
-async function checkModelExists(cfgPath: string): Promise<boolean> {
+async function checkModelExists(cfgPath: string, warn = true): Promise<boolean> {
     const cfgExists = await exists(cfgPath);
-    if (!cfgExists) {
+    if (!cfgExists && warn) {
         showConfigAbsenceWarning(cfgPath);
     }
     return cfgExists;
