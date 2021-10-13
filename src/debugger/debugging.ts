@@ -59,7 +59,7 @@ export async function checkAndDebugSpec(
         return;
     }
     // Randomly select a port on which we request the debugger to listen
-    const initPort = Math.floor(Math.random() * (DEBUGGER_MAX_PORT - DEBUGGER_MIN_PORT)) + DEBUGGER_MIN_PORT;
+    const initPort = Math.floor(Math.random() * (DEBUGGER_MAX_PORT - DEBUGGER_MIN_PORT)) + DEBUGGER_MIN_PORT; //NOSONAR
     // This will be called as soon as TLC starts listening on a port or fails to start
     const portOpenCallback = (port?: number) => {
         if (!port) {
@@ -95,7 +95,7 @@ export async function smokeTestSpec(
         return;
     }
     // Randomly select a port on which we request the debugger to listen
-    const initPort = Math.floor(Math.random() * (DEBUGGER_MAX_PORT - DEBUGGER_MIN_PORT)) + DEBUGGER_MIN_PORT;
+    const initPort = Math.floor(Math.random() * (DEBUGGER_MAX_PORT - DEBUGGER_MIN_PORT)) + DEBUGGER_MIN_PORT; //NOSONAR
     // This will be called as soon as TLC starts listening on a port or fails to start
     const portOpenCallback = (port?: number) => {
         if (!port) {
