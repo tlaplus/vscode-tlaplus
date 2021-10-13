@@ -1,8 +1,10 @@
 import * as vscode from 'vscode';
 import {
-    doCheckModel, getSpecFiles
+    doCheckModel, getSpecFiles, stopModelChecking
 } from '../commands/checkModel';
+import { SpecFiles } from '../model/check';
 
+export const TLAPLUS_DEBUG_LAUNCH_SMOKE = 'tlaplus.debugger.smoke';
 export const TLAPLUS_DEBUG_LAUNCH_CHECKNDEBUG = 'tlaplus.debugger.run';
 export const TLAPLUS_DEBUG_LAUNCH_DEBUG = 'tlaplus.debugger.attach';
 
@@ -72,4 +74,52 @@ export async function checkAndDebugSpec(
     };
     // Don't await doCheckModel because it only returns after TLC terminates.
     doCheckModel(specFiles, false, context, diagnostic, true, ['-debugger', `port=${initPort}`], portOpenCallback);
+}
+
+export async function smokeTestSpec(
+    resource: vscode.Uri | undefined,
+    diagnostic: vscode.DiagnosticCollection,
+    context: vscode.ExtensionContext
+): Promise<void> {
+    let targetResource = resource;
+    if (!targetResource && vscode.window.activeTextEditor) {
+        // Since this command is registered as a button on the editor menu, I don't
+        // think this branch is ever taken.  It's here because the DAP example has it.
+        targetResource = vscode.window.activeTextEditor.document.uri;
+    }
+    if (!targetResource) {
+        return;
+    }
+    const specFiles = await getSpecFiles(targetResource, false, 'Smoke');
+    if (!specFiles) {
+        return;
+    }
+    // Randomly select a port on which we request the debugger to listen
+    const initPort = Math.floor(Math.random() * (DEBUGGER_MAX_PORT - DEBUGGER_MIN_PORT)) + DEBUGGER_MIN_PORT;
+    // This will be called as soon as TLC starts listening on a port or fails to start
+    const portOpenCallback = (port?: number) => {
+        if (!port) {
+            return;
+        }
+        vscode.debug.startDebugging(undefined, {
+            type: 'tlaplus',
+            name: 'Debug Spec',
+            request: 'launch',
+            port: port
+        });
+    };
+
+    // Terminate another model-checking run if any, but do *not* terminate a
+    // manually/explicitly started TLC process.
+    const terminateLastRun = (lastSpecFiles: SpecFiles | undefined): boolean => {
+        if (!lastSpecFiles) {
+            return false;
+        }
+        return lastSpecFiles.cfgFileName.startsWith('Smoke');
+    };
+    stopModelChecking(terminateLastRun, true);
+
+    // Don't await doCheckModel because it only returns after TLC terminates.
+    doCheckModel(specFiles, false, context, diagnostic, false,
+        ['-simulate', '-noTE', '-debugger', `nosuspend,port=${initPort}`], portOpenCallback);
 }

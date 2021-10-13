@@ -106,10 +106,14 @@ export function displayModelChecking(extContext: vscode.ExtensionContext): void 
 /**
  * Stops the current model checking process.
  */
-export function stopModelChecking(): void {
-    if (checkProcess) {
+export function stopModelChecking(
+    terminateLastRun: (lastSpecFiles: SpecFiles | undefined) => boolean =
+    (lastSpecFiles: SpecFiles | undefined): boolean => { return true; },
+    silent: boolean = false
+): void {
+    if (checkProcess && terminateLastRun(lastCheckFiles)) {
         stopProcess(checkProcess);
-    } else {
+    } else if (!silent) {
         vscode.window.showInformationMessage("There're no currently running model checking processes");
     }
 }
@@ -220,7 +224,7 @@ function attachFileSaver(tlaFilePath: string, proc: ChildProcess) {
 /**
  * Finds all files that needed to run model check.
  */
-export async function getSpecFiles(fileUri: vscode.Uri, warn = true): Promise<SpecFiles | undefined> {
+export async function getSpecFiles(fileUri: vscode.Uri, warn = true, prefix = 'MC'): Promise<SpecFiles | undefined> {
     let specFiles;
 
     // a) Check the given input if it exists.
@@ -236,9 +240,9 @@ export async function getSpecFiles(fileUri: vscode.Uri, warn = true): Promise<Sp
     // TODO: Ideally, we wouldn't just check filenames here but check the parse result
     // TODO: if the module in  MCSpec.tla  actually extends the module in  Spec.
     const b = Utils.basename(fileUri);
-    if (!b.startsWith('MC') && !b.endsWith('.cfg')) {
+    if (!b.startsWith(prefix) && !b.endsWith('.cfg')) {
         const str = fileUri.toString();
-        const n = str.substr(0, str.lastIndexOf(b)) + 'MC' + b;
+        const n = str.substr(0, str.lastIndexOf(b)) + prefix + b;
         const filePath = vscode.Uri.parse(n).fsPath;
         specFiles = new SpecFiles(filePath, replaceExtension(filePath, 'cfg'));
         // Here, we make sure that the .cfg *and* the .tla exist.
@@ -251,14 +255,7 @@ export async function getSpecFiles(fileUri: vscode.Uri, warn = true): Promise<Sp
     }
     // c) Deliberately trigger the warning dialog by checking the given input again
     // knowing that it doesn't exist.
-    return await checkSpecFiles(fileUri, true);
-}
-
-async function checkSpecAndConfigFiles(specFiles: SpecFiles, warn = true): Promise<SpecFiles | undefined> {
-    let canRun = true;
-    canRun = await checkModelExists(specFiles.cfgFilePath, warn);
-    canRun = canRun && await checkModuleExists(specFiles.tlaFilePath, warn);
-    return canRun ? specFiles : undefined;
+    return await checkSpecFiles(fileUri, warn);
 }
 
 async function checkSpecFiles(fileUri: vscode.Uri, warn = true): Promise<SpecFiles | undefined> {
