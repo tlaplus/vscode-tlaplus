@@ -57,6 +57,21 @@ To run unit tests from VS Code:
 
 Or just use a hotkey for the `Start Debugging` command if the "Run Extension Tests" configuration is already selected.
 
+### Test from Github Codespaces
+
+To run unit tests from within a Codespace:
+
+```
+## Install missing libraries and framebuffer x-server.
+sudo apt-get install libxshmfence1 xvfb -y
+## Launch framebuffer x-server and force tests to use
+## framebuffer x-server.
+Xvfb -ac :99 -screen 0 1280x1024x16 &
+export DISPLAY=:99
+## Run tests.
+npm test
+```
+
 # Overview
 
 The extension consists of the following components:
