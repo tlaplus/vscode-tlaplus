@@ -97,7 +97,7 @@
             }
         },
         "binary_operator_definitions": {
-            "match": "(\\w+\\s*(\\(?[-<:>=&@/%#!X\\$\\*\\+\\.\\|\\?\\^\\\\]+\\)?|\\\\[a-z]+\\s)\\s*\\w+)\\s*==",
+            "match": "(\\w+\\s*(\\(?[-<:>=&@/%#!X\\$\\*\\+\\.\\|\\?\\^\\\\]+\\)?|\\\\[a-z]+\\s)\\s*\\w+)\\s*",
             "captures": {
                 "1": {
                     "name": "variable.parameter"
@@ -163,7 +163,7 @@
                     "name": "comment.line"
                 }
             },
-            "end": "(^={4,}\\s*$)",
+            "end": "(={4,}\\s*$)",
             "endCaptures": {
                 "1": {
                     "name": "comment.line"
