@@ -78,7 +78,7 @@
             "match": "^\\s*-{4,}\\s*$"
         },
         "var_definitions": {
-            "match": "(\\w+)\\s*==(?!(\\s*INSTANCE|==))",
+            "match": "(\\w+)\\s*==(?!\\s*INSTANCE|==)",
             "captures": {
                 "1": {
                     "name": "support.type.primitive"
@@ -108,7 +108,7 @@
             }
         },
         "function_definitions": {
-            "match": "(\\w+)\\s*\\[(.*==)",
+            "match": "(\\w+)\\s*\\[(.*(?<!=)==(?!=))",
             "captures": {
                 "1": {
                     "name": "entity.name.function"
@@ -163,7 +163,7 @@
                     "name": "comment.line"
                 }
             },
-            "end": "(={4,}\\s*$)",
+            "end": "(={4,}\\s*)",
             "endCaptures": {
                 "1": {
                     "name": "comment.line"
