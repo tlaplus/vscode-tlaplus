@@ -78,7 +78,7 @@
             "match": "^\\s*-{4,}\\s*$"
         },
         "var_definitions": {
-            "match": "(\\w+)\\s*==(?!\\s*INSTANCE)",
+            "match": "(\\w+)\\s*==(?!(\\s*INSTANCE|==))",
             "captures": {
                 "1": {
                     "name": "support.type.primitive"
@@ -86,7 +86,7 @@
             }
         },
         "postfix_operator_definitions": {
-            "match": "(\\w+\\s*(\\^\\+|\\^\\*|\\^#))\\s*==",
+            "match": "(\\w+\\s*(\\^\\+|\\^\\*|\\^#))\\s*==(?!==)",
             "captures": {
                 "1": {
                     "name": "variable.parameter"
@@ -97,7 +97,7 @@
             }
         },
         "binary_operator_definitions": {
-            "match": "(\\w+\\s*(\\(?[-<:>=&@/%#!X\\$\\*\\+\\.\\|\\?\\^\\\\]+\\)?|\\\\[a-z]+\\s)\\s*\\w+)\\s*==",
+            "match": "(\\w+\\s*(\\(?[-<:>=&@/%#!X\\$\\*\\+\\.\\|\\?\\^\\\\]+\\)?|\\\\[a-z]+\\s)\\s*\\w+)\\s*==(?!==)",
             "captures": {
                 "1": {
                     "name": "variable.parameter"
