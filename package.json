@@ -396,7 +396,8 @@
         "lint": "eslint --ext .ts,.js src/ tests/ resources/",
         "watch": "tsc -watch -p ./",
         "pretest": "npm run compile",
-        "test": "node ./out/tests/runTest.js"
+        "test": "node ./out/tests/runTest.js",
+        "test:tlaplus-grammar": "vscode-tmgrammar-test -s source.tlaplus -t ./tests/suite/languages/tlaplus-grammar-test.tla -g ./languages/tlaplus-grammar.json -g ./languages/pluscal-grammar.json"
     },
     "devDependencies": {
         "@types/glob": "^7.1.1",
@@ -418,6 +419,7 @@
         "await-notify": "^1.0.1",
         "moment": "^2.24.0",
         "vscode-uri": "^3.0.2",
-        "vscode-debugadapter": "^1.42.1"
+        "vscode-debugadapter": "^1.42.1",
+        "vscode-tmgrammar-test": "0.0.11"
     }
 }

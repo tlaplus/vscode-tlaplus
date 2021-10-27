@@ -33,6 +33,7 @@ Build, check and test:
 npm run vscode:prepublish
 npm run lint
 npm test
+npm run test:tlaplus-grammar
 ```
 
 ## Run and Debug
@@ -56,6 +57,14 @@ To run unit tests from VS Code:
 4. Press "Start Debugging".
 
 Or just use a hotkey for the `Start Debugging` command if the "Run Extension Tests" configuration is already selected.
+
+### TLA+ Grammar Tests
+To run the [TLA+ grammar tests](./tests/suite/languages/GrammarTests.md) from VS Code:
+1. Open the project directory in VS Code.
+2. Switch to the [Debug and Run](https://code.visualstudio.com/docs/editor/debugging) panel.
+3. Select the "Run TLA+ Grammar Tests" config.
+
+The output of the tests will be who under the [DEBUG CONSOLE](https://code.visualstudio.com/docs/editor/debugging) in VS Code.
 
 ### Test from Github Codespaces
 
