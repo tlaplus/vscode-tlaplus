@@ -59,7 +59,7 @@ To run unit tests from VS Code:
 Or just use a hotkey for the `Start Debugging` command if the "Run Extension Tests" configuration is already selected.
 
 ### TlA Plus Grammar Tests
-To run the [TLA Plus grammar tests](./tests/GrammarTests.md) from VS Code:
+To run the [TLA Plus grammar tests](./tests/suite/languages/GrammarTests.md) from VS Code:
 1. Open the project directory in VS Code.
 2. Switch to the [Debug and Run](https://code.visualstudio.com/docs/editor/debugging) panel.
 3. Select the "Run TLA Plus Grammar Tests" config.
