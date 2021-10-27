@@ -63,6 +63,8 @@ To run unit tests from within a Codespace:
 
 ```
 ## Install missing libraries and framebuffer x-server.
+## (Runs automatically in Github Codepsaces because
+## of `.devcontainer/devcontainer.json`).
 sudo apt-get install libxshmfence1 xvfb -y
 ## Launch framebuffer x-server and force tests to use
 ## framebuffer x-server.

@@ -1,0 +1,5 @@
+{
+    "name": "TLA+ VSCode",
+  
+    "postCreateCommand": "sudo apt update && sudo apt install libxshmfence1 xvfb -y",
+}
