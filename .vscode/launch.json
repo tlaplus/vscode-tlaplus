@@ -28,6 +28,16 @@
             ],
             "outFiles": ["${workspaceFolder}/out/tests/**/*.js"],
             "preLaunchTask": "npm: watch"
+        },
+        {
+            "name": "Run TLA Plus Grammar Tests",
+            "type": "node",
+            "request": "launch",
+            "runtimeExecutable": "npm",
+            "args": [
+                "run",
+                "test:tlaplus-grammar"
+            ]
         }
     ]
 }
