@@ -6,7 +6,25 @@ on:
   workflow_dispatch:
 
 jobs:
+  checksecret:
+    name: check if VSCODE_MARKETPLACE_TOKEN is set in github secrets
+    runs-on: ubuntu-latest
+    outputs:
+      is_MY_SECRET_set: ${{ steps.checksecret_job.outputs.is_MY_SECRET_set }}
+    steps:
+      - name: Check secret present
+        id: checksecret_job
+        env:
+            MY_SECRET: ${{ secrets.VSCODE_MARKETPLACE_TOKEN }}
+        run: |
+            echo "is_MY_SECRET_set: ${{ env.MY_SECRET != '' }}"
+            echo "::set-output name=is_MY_SECRET_set::${{ env.MY_SECRET != '' }}"
+  
   build:
+    ## Do not run this action without the marketplace token present,
+    ## e.g., in a fork of this repo.
+    needs: [checksecret]
+    if: needs.checksecret.outputs.is_MY_SECRET_set == 'true'
     runs-on: macOS-latest
     steps:
     - uses: actions/checkout@v1
