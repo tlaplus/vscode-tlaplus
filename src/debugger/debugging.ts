@@ -91,7 +91,10 @@ export async function smokeTestSpec(
         return;
     }
     const specFiles = await getSpecFiles(targetResource, false, 'Smoke');
-    if (!specFiles) {
+    if (!specFiles || !specFiles.cfgFileName.startsWith('Smoke')) {
+        // Launch the debugger iff there is a Smoke model. specFiles
+        // might be an ordinary model, which we don't want to run in TLC
+        // automatically.
         return;
     }
     // Randomly select a port on which we request the debugger to listen
