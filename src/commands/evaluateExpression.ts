@@ -105,7 +105,7 @@ async function extractConstants(cfgFilePath: string): Promise<string[]> {
     const constants = [];
     let constLine = false;
     // eslint-disable-next-line max-len
-    const wordsRegex = /^\s*(SPECIFICATION|INVARIANT(S)?|PROPERT(Y|IES)|INIT|NEXT|SYMMETRY|CONSTRAINT(S)?|ACTION_CONSTRAINT(S)?|VIEW|CHECK_DEADLOCK|POSTCONDITION)\b/g;
+    const wordsRegex = /^\s*(SPECIFICATION|INVARIANT(S)?|PROPERT(Y|IES)|INIT|NEXT|SYMMETRY|CONSTRAINT(S)?|ACTION_CONSTRAINT(S)?|VIEW|CHECK_DEADLOCK|POSTCONDITION|ALIAS)\b/g;
     for (const line of lines) {
         if (/^\s*CONSTANT(S)?\b/g.test(line)) {
             constLine = true;

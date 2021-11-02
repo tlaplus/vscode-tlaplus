@@ -24,7 +24,7 @@ export class CfgOnTypeFormattingEditProvider implements vscode.OnTypeFormattingE
 
 function testBlockStart(line: vscode.TextLine): LineInfo | undefined {
     // eslint-disable-next-line max-len
-    const regex = /^(\s*)(?:SPECIFICATION|INVARIANT(S)?|PROPERT(Y|IES)|CONSTANT(S)?|INIT|NEXT|SYMMETRY|CONSTRAINT(S)?|ACTION_CONSTRAINT(S)?|VIEW|CHECK_DEADLOCK|POSTCONDITION)\s*$/g;
+    const regex = /^(\s*)(?:SPECIFICATION|INVARIANT(S)?|PROPERT(Y|IES)|CONSTANT(S)?|INIT|NEXT|SYMMETRY|CONSTRAINT(S)?|ACTION_CONSTRAINT(S)?|VIEW|CHECK_DEADLOCK|POSTCONDITION|ALIAS)\s*$/g;
     const gMatches = regex.exec(line.text);
     return gMatches ? new LineInfo(line, gMatches[1], IndentationType.Right) : undefined;
 }
