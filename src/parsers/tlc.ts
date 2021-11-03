@@ -609,7 +609,7 @@ class ModelCheckResultBuilder {
         const itemVars = this.parseErrorTraceVariables(lines);
         const actionName = matches[2];
         const moduleName = matches[7];
-        const num = parseInt(matches[1]) + 1;   // looks like a shift-by-one error in the Toolbox
+        const num = parseInt(matches[1]);
         return new ErrorTraceItem(
             num,
             'Back to state',

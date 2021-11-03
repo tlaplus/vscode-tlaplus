@@ -264,7 +264,7 @@ suite('TLC Output Parser Test Suite', () => {
                             '/Users/bob/back_to_state.tla', range(41, 9, 47, 30),
                             struct('', v('Foo', '2').setModified()).setModified()
                         ),
-                        traceItem(2, 'Back to state', 'back_to_state', 'Cycle',
+                        traceItem(1, 'Back to state', 'back_to_state', 'Cycle',
                             '/Users/bob/back_to_state.tla', range(41, 9, 47, 30),
                             struct('')
                         )
