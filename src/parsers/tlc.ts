@@ -348,6 +348,7 @@ class ModelCheckResultBuilder {
                 break;
             case msg.TLC_PROGRESS_STATS:
                 this.parseProgressStats(message.lines);
+                this.status = CheckStatus.SuccessorStatesComputing;
                 break;
             case msg.TLC_COVERAGE_INIT:
                 this.coverageStat.length = 0;

@@ -17,6 +17,7 @@ export enum CheckStatus {
     SanyParsing,
     SanyFinished,
     InitialStatesComputing,
+    SuccessorStatesComputing,
     Checkpointing,
     CheckingLiveness,
     CheckingLivenessFinal,
@@ -31,6 +32,7 @@ STATUS_NAMES.set(CheckStatus.Starting, 'Starting');
 STATUS_NAMES.set(CheckStatus.SanyParsing, 'SANY parsing');
 STATUS_NAMES.set(CheckStatus.SanyFinished, 'SANY finished');
 STATUS_NAMES.set(CheckStatus.InitialStatesComputing, 'Computing initial states');
+STATUS_NAMES.set(CheckStatus.SuccessorStatesComputing, 'Computing reachable states');
 STATUS_NAMES.set(CheckStatus.Checkpointing, 'Checkpointing');
 STATUS_NAMES.set(CheckStatus.CheckingLiveness, 'Checking liveness');
 STATUS_NAMES.set(CheckStatus.CheckingLivenessFinal, 'Checking final liveness');
