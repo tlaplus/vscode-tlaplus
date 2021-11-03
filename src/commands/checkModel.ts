@@ -80,7 +80,10 @@ export async function checkModelCustom(
         vscode.window.showWarningMessage('File in the active editor is not a .tla, it cannot be checked as a model');
         return;
     }
-    const configFiles = await listFiles(path.dirname(doc.uri.fsPath), (fName) => fName.endsWith('.cfg'));
+    // Accept .tla files here because TLC configs and TLA+ modules can share the same file:
+    // https://github.com/alygin/vscode-tlaplus/issues/220
+    const configFiles = await listFiles(path.dirname(doc.uri.fsPath),
+        (fName) => fName.endsWith('.cfg') || fName.endsWith('.tla'));
     configFiles.sort();
     const cfgFileName = await vscode.window.showQuickPick(
         configFiles,
