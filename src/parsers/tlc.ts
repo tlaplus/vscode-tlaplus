@@ -538,7 +538,10 @@ class ModelCheckResultBuilder {
             return;
         }
         let traceItem = this.tryParseSimpleErrorTraceItem(lines);
-        const checkChanges = traceItem instanceof ErrorTraceItem;
+        // In simulation mode, the first state (init) parses to ErrorTraceItem.
+        // However, findChanges below would fail due to the lack of a predecessor
+        // state.  Thus, check traceItem.num to be greater than one. 
+        const checkChanges = traceItem instanceof ErrorTraceItem && traceItem.num > 1;
         if (!traceItem) {
             traceItem = this.tryParseSpecialErrorTraceItem(lines);
         }
