@@ -264,7 +264,38 @@ suite('TLC Output Parser Test Suite', () => {
                             '/Users/bob/back_to_state.tla', range(41, 9, 47, 30),
                             struct('', v('Foo', '2').setModified()).setModified()
                         ),
-                        traceItem(1, 'Back to state', 'back_to_state', 'Cycle',
+                        traceItem(2, 'Back to state', 'back_to_state', 'Cycle',
+                            '/Users/bob/back_to_state.tla', range(41, 9, 47, 30),
+                            struct('')
+                        )
+                    ]
+                )
+                .build()
+        );
+    });
+
+    test('Parses error trace with back-to-previous-state-ext', () => {
+        const specFiles = new SpecFiles('/Users/bob/back_to_state.tla', '/Users/bob/back_to_state.cfg');
+        return assertOutput('error-trace-back-to-state-ext.out', specFiles,
+            new CheckResultBuilder('back_to_state.out', CheckState.Error, CheckStatus.Finished)
+                .addDColFilePath('/Users/bob/back_to_state.tla')
+                .setProcessInfo('Running breadth-first search Model-Checking with fp 6 and seed -9020681683977717109.')
+                .setStartDateTime('2019-08-17 02:37:50')
+                .setEndDateTime('2019-08-17 02:37:51')
+                .setDuration(1041)
+                .addInitState('00:00:00', 0, 1, 1, 1)
+                .addInitState('00:00:01', 3, 4, 4, 1)
+                .addError(
+                    [ message('Temporal properties were violated.')],
+                    [
+                        traceItem(1, 'Initial predicate', '', '', undefined, range(0, 0, 0, 0),
+                            struct('', v('Foo', '1'))
+                        ),
+                        traceItem(2, 'Cycle in back_to_state', 'back_to_state', 'Cycle',
+                            '/Users/bob/back_to_state.tla', range(41, 9, 47, 30),
+                            struct('', v('Foo', '2').setModified()).setModified()
+                        ),
+                        traceItem(1, 'Cycle in back_to_state (Back to state)', 'back_to_state', 'Cycle',
                             '/Users/bob/back_to_state.tla', range(41, 9, 47, 30),
                             struct('')
                         )

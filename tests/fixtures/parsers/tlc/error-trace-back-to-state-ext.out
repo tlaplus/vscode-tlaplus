@@ -40,7 +40,7 @@ The following behavior constitutes a counter-example:
 
 @!@!@ENDMSG 2217 @!@!@
 @!@!@STARTMSG 2122:4 @!@!@
-2: Back to state: <Cycle line 42, col 10 to line 48, col 30 of module back_to_state>
+1: Back to state: <Cycle line 42, col 10 to line 48, col 30 of module back_to_state>
 
 @!@!@ENDMSG 2122 @!@!@
 @!@!@STARTMSG 2267:0 @!@!@

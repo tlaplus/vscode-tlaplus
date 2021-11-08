@@ -540,7 +540,7 @@ class ModelCheckResultBuilder {
         let traceItem = this.tryParseSimpleErrorTraceItem(lines);
         // In simulation mode, the first state (init) parses to ErrorTraceItem.
         // However, findChanges below would fail due to the lack of a predecessor
-        // state.  Thus, check traceItem.num to be greater than one. 
+        // state.  Thus, check traceItem.num to be greater than one.
         const checkChanges = traceItem instanceof ErrorTraceItem && traceItem.num > 1;
         if (!traceItem) {
             traceItem = this.tryParseSpecialErrorTraceItem(lines);
@@ -614,9 +614,20 @@ class ModelCheckResultBuilder {
         const actionName = matches[2];
         const moduleName = matches[7];
         const num = parseInt(matches[1]);
+        // Iff there is a trace and the state to which the back-to-state
+        // points to is associated with an action that differs from the
+        // action of the back-to-state, show the name of the back-to-state
+        // action.
+        let backToState = 'Back to state';
+        if (this.errors.length > 0) {
+            const lastError = this.errors[this.errors.length - 1];
+            if (lastError.errorTrace[num-1].action !== actionName) {
+                backToState = `${actionName} in ${moduleName} (Back to state)`;
+            }
+        }
         return new ErrorTraceItem(
             num,
-            'Back to state',
+            backToState,
             moduleName,
             actionName,
             this.getModulePath(moduleName),
