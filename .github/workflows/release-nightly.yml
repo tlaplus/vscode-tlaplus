@@ -32,7 +32,9 @@ jobs:
       with:
         node-version: '12.12'
     - name: Prepare nightly
-      run: .github/workflows/nightly.sh
+      run: |
+        .github/workflows/nightly.sh
+        git diff package.json
     - name: Get current version
       id: version
       run: echo "::set-output name=version::$(jq -r .version package.json)"
