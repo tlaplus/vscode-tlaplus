@@ -9,7 +9,7 @@ jobs:
     - uses: actions/checkout@v1
     - uses: actions/setup-node@v1
       with:
-        node-version: '12.12'
+        node-version: '14.17'
     - name: Get current version
       id: version
       run: echo "::set-output name=version::$(jq -r .version package.json)"
@@ -17,7 +17,6 @@ jobs:
       run: |
         npm install
         npm install -g vsce
-        npm install -g npx
     - name: Build
       run: |
         npm run vscode:prepublish
