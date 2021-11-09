@@ -10,7 +10,7 @@ For those, who whant to write some code, here's a short guide.
 2. The extension requires [NodeJS](https://nodejs.org/en/) runtime (12.12 at the moment).
 3. It's written mostly in [TypeScript](https://www.typescriptlang.org), so you'll need to install it too.
 
-## Clone, Build, Test
+## Clone, Build, Test, Package
 
 Clone the repository:
 
@@ -81,6 +81,15 @@ Xvfb -ac :99 -screen 0 1280x1024x16 &
 export DISPLAY=:99
 ## Run tests.
 npm test
+```
+
+### Package
+
+To package the extension and create the .vsix file:
+
+```
+npm install -g vsce
+vsce package
 ```
 
 # Overview
