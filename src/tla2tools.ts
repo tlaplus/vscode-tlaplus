@@ -287,8 +287,25 @@ function addReturnCodeHandler(proc: ChildProcess, toolName?: string) {
     });
 }
 
-function getConfigOptions(cfgName: string): string[] {
-    const optsString = vscode.workspace.getConfiguration().get<string>(cfgName) || '';
+function getConfigOptions(cfgName: string, defaultValue: string = ''): string[] {
+    const allConfigs = vscode.workspace.getConfiguration().inspect<string>(cfgName);
+
+    if (!supressConfigWarnings && allConfigs?.workspaceValue && allConfigs?.globalValue) {
+        vscode.window
+            .showWarningMessage(
+                `Both workspace and global configurations found for ${cfgName}. Only the workspace configuration `
+                    + 'will be used.',
+                'ok',
+                'hide warnings')
+            .then(selection => {
+                if (selection === 'hide warnings') {
+                    supressConfigWarnings = true;
+                }
+            });
+    }
+
+    const optsString = allConfigs?.workspaceValue || allConfigs?.globalValue || defaultValue;
+
     return splitArguments(optsString);
 }
 
@@ -304,36 +321,20 @@ export async function getTlcOptions(showPrompt: boolean): Promise<string[] | und
     // -config is not shown as an option by default so the same options can be used without modification across
     // multiple modules.
     const defaultOptions = '-coverage 1';
-
-    const allConfigs = vscode.workspace.getConfiguration().inspect<string>(CFG_TLC_OPTIONS);
-    const prevConfig = allConfigs?.workspaceValue || allConfigs?.globalValue || defaultOptions;
-
-    if (!supressConfigWarnings && allConfigs?.workspaceValue && allConfigs?.globalValue) {
-        vscode.window
-            .showWarningMessage(
-                'Both workspace and global configurations found for TLC options. Only the workspace configuration '
-                    + 'will be used.',
-                'ok',
-                'hide warnings')
-            .then(selection => {
-                if (selection === 'hide warnings') {
-                    supressConfigWarnings = true;
-                }
-            });
-
-    }
+    const prevConfig = getConfigOptions(CFG_TLC_OPTIONS, defaultOptions);
+    const prevConfigString = prevConfig.join(' ');
 
     const promptSetting = vscode.workspace.getConfiguration().get<boolean>(CFG_TLC_OPTIONS_PROMPT);
 
     const customOptions = showPrompt && promptSetting ?
         await vscode.window.showInputBox({
-            value: prevConfig,
+            value: prevConfigString,
             prompt: 'Additional options to pass to TLC.',
             // Ignoring focus changes allows users to click out to a different window to check potential TLC options
             // without getting rid of what they've typed so far.
             ignoreFocusOut: true,
         }) :
-        prevConfig;
+        prevConfigString;
 
     if (customOptions === undefined) {
         // Command cancelled by user
