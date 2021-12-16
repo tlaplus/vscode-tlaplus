@@ -8,6 +8,9 @@ import { JavaVersionParser } from './parsers/javaVersion';
 import { ShareOption, CFG_TLC_STATISTICS_TYPE } from './commands/tlcStatisticsCfg';
 import { ToolOutputChannel } from './outputChannels';
 
+// CFG_EXTENSION can be used to fetch all the settings for this extension
+const CFG_EXTENSION = '@ext:alygin.vscode-tlaplus';
+
 const CFG_JAVA_HOME = 'tlaplus.java.home';
 const CFG_JAVA_OPTIONS = 'tlaplus.java.options';
 const CFG_TLC_OPTIONS = 'tlaplus.tlc.modelChecker.options';
@@ -296,10 +299,13 @@ function getConfigOptions(cfgName: string, defaultValue: string = ''): string[] 
                 `Both workspace and global configurations found for ${cfgName}. Only the workspace configuration `
                     + 'will be used.',
                 'ok',
-                'hide warnings')
+                'hide warnings',
+                'open settings')
             .then(selection => {
                 if (selection === 'hide warnings') {
                     supressConfigWarnings = true;
+                } else if (selection === 'open settings') {
+                    vscode.commands.executeCommand('workbench.action.openSettings', CFG_EXTENSION);
                 }
             });
     }
