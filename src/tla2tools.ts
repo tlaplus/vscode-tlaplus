@@ -8,6 +8,9 @@ import { JavaVersionParser } from './parsers/javaVersion';
 import { ShareOption, CFG_TLC_STATISTICS_TYPE } from './commands/tlcStatisticsCfg';
 import { ToolOutputChannel } from './outputChannels';
 
+// CFG_EXTENSION can be used to fetch all the settings for this extension
+const CFG_EXTENSION = '@ext:alygin.vscode-tlaplus';
+
 const CFG_JAVA_HOME = 'tlaplus.java.home';
 const CFG_JAVA_OPTIONS = 'tlaplus.java.options';
 const CFG_TLC_OPTIONS = 'tlaplus.tlc.modelChecker.options';
@@ -30,6 +33,8 @@ const javaVersionChannel = new ToolOutputChannel('TLA+ Java version');
 
 let lastUsedJavaHome: string | undefined;
 let cachedJavaPath: string | undefined;
+
+let supressConfigWarnings = false;
 
 export enum TlaTool {
     PLUS_CAL = 'pcal.trans',
@@ -285,8 +290,28 @@ function addReturnCodeHandler(proc: ChildProcess, toolName?: string) {
     });
 }
 
-function getConfigOptions(cfgName: string): string[] {
-    const optsString = vscode.workspace.getConfiguration().get<string>(cfgName) || '';
+function getConfigOptions(cfgName: string, defaultValue: string = ''): string[] {
+    const allConfigs = vscode.workspace.getConfiguration().inspect<string>(cfgName);
+
+    if (!supressConfigWarnings && allConfigs?.workspaceValue && allConfigs?.globalValue) {
+        vscode.window
+            .showWarningMessage(
+                `Both workspace and global configurations found for ${cfgName}. Only the workspace configuration `
+                    + 'will be used.',
+                'ok',
+                'hide warnings',
+                'open settings')
+            .then(selection => {
+                if (selection === 'hide warnings') {
+                    supressConfigWarnings = true;
+                } else if (selection === 'open settings') {
+                    vscode.commands.executeCommand('workbench.action.openSettings', CFG_EXTENSION);
+                }
+            });
+    }
+
+    const optsString = allConfigs?.workspaceValue || allConfigs?.globalValue || defaultValue;
+
     return splitArguments(optsString);
 }
 
@@ -302,19 +327,20 @@ export async function getTlcOptions(showPrompt: boolean): Promise<string[] | und
     // -config is not shown as an option by default so the same options can be used without modification across
     // multiple modules.
     const defaultOptions = '-coverage 1';
-    const prevConfig = vscode.workspace.getConfiguration().get<string>(CFG_TLC_OPTIONS) || defaultOptions;
+    const prevConfig = getConfigOptions(CFG_TLC_OPTIONS, defaultOptions);
+    const prevConfigString = prevConfig.join(' ');
 
     const promptSetting = vscode.workspace.getConfiguration().get<boolean>(CFG_TLC_OPTIONS_PROMPT);
 
     const customOptions = showPrompt && promptSetting ?
         await vscode.window.showInputBox({
-            value: prevConfig,
+            value: prevConfigString,
             prompt: 'Additional options to pass to TLC.',
             // Ignoring focus changes allows users to click out to a different window to check potential TLC options
             // without getting rid of what they've typed so far.
             ignoreFocusOut: true,
         }) :
-        prevConfig;
+        prevConfigString;
 
     if (customOptions === undefined) {
         // Command cancelled by user
@@ -326,7 +352,12 @@ export async function getTlcOptions(showPrompt: boolean): Promise<string[] | und
         const configurationTarget = workspaceOpen ?
             vscode.ConfigurationTarget.Workspace :
             vscode.ConfigurationTarget.Global;
-        vscode.workspace.getConfiguration().update(CFG_TLC_OPTIONS, customOptions, configurationTarget);
+        if (customOptions) {
+            vscode.workspace.getConfiguration().update(CFG_TLC_OPTIONS, customOptions, configurationTarget);
+        } else {
+            // Explicitly unset so global configurations are not always overwritten
+            vscode.workspace.getConfiguration().update(CFG_TLC_OPTIONS, undefined, configurationTarget);
+        }
     }
     return splitArguments(customOptions);
 }
