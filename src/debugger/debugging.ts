@@ -90,8 +90,11 @@ export async function smokeTestSpec(
     if (!targetResource) {
         return;
     }
-    const specFiles = await getSpecFiles(targetResource, false, 'Smoke');
-    if (!specFiles || !specFiles.cfgFileName.startsWith('Smoke')) {
+
+    const prefixPath = vscode.workspace.getConfiguration().get<string>('tlaplus.smoke.prefix.path', '');
+    const prefixName = vscode.workspace.getConfiguration().get<string>('tlaplus.smoke.prefix.name', 'Smoke');
+    const specFiles = await getSpecFiles(targetResource, false, prefixPath + prefixName);
+    if (!specFiles || !specFiles.cfgFileName.startsWith(prefixName)) {
         // Launch the debugger iff there is a Smoke model. specFiles
         // might be an ordinary model, which we don't want to run in TLC
         // automatically.
@@ -118,7 +121,7 @@ export async function smokeTestSpec(
         if (!lastSpecFiles) {
             return false;
         }
-        return lastSpecFiles.cfgFileName.startsWith('Smoke');
+        return lastSpecFiles.cfgFileName.startsWith(prefixName);
     };
     stopModelChecking(terminateLastRun, true);
 
