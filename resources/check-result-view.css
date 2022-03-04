@@ -95,10 +95,12 @@ th {
 }
 
 .states-stat {
+    font-family: sans-serif, monospace;
     min-width: 23em;
 }
 
 .coverage-stat {
+    font-family: sans-serif, monospace;
     min-width: 15em;
 }
 
