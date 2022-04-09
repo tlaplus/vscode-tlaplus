@@ -417,7 +417,7 @@
     },
     "dependencies": {
         "await-notify": "^1.0.1",
-        "moment": "^2.24.0",
+        "moment": "^2.29.2",
         "vscode-uri": "^3.0.2",
         "@vscode/debugadapter": "^1.51.0",
         "vscode-tmgrammar-test": "0.0.11"
