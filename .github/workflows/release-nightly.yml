@@ -37,6 +37,8 @@ jobs:
       run: wget https://github.com/tlaplus/CommunityModules/releases/latest/download/CommunityModules-deps.jar -O tools/CommunityModules-deps.jar
     - name: Prepare nightly
       run: |
+        git add tools/*.jar -f
+        git commit -m "Snapshot latest CommunityModules and TLA+ tools"
         .github/workflows/nightly.sh
         git diff package.json
     - name: Get current version
