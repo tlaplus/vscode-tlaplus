@@ -189,7 +189,7 @@ function setX(key: ValueKey, change: Change, ...items: Value[]) {
 }
 
 function structX(key: ValueKey, change: Change, ...items: Value[]) {
-    const value = new StructureValue(key, items, true);
+    const value = new StructureValue(key, items, '[', ']', ', ', ' |-> ', StructureValue.itemToString, true);
     value.changeType = change;
     return value;
 }

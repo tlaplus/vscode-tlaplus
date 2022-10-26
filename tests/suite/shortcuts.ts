@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 import moment = require('moment');
 import { Moment } from 'moment';
-import { Value, ValueKey, SetValue, SequenceValue, StructureValue, SimpleFunction,
+import { Value, ValueKey, SetValue, SequenceValue, StructureValue,
     InitialStateStatItem, CoverageItem, ModelCheckResult, CheckState, CheckStatus, MessageLine, MessageSpan,
-    ErrorTraceItem, OutputLine, ModelCheckResultSource, SimpleFunctionItem, ErrorInfo,
+    ErrorTraceItem, OutputLine, ModelCheckResultSource, ErrorInfo,
     WarningInfo } from '../../src/model/check';
 import { DCollection } from '../../src/diagnostic';
 import { ROOT_CONTAINER_NAME } from '../../src/symbols/tlaSymbols';
@@ -28,18 +28,6 @@ export function seq(key: ValueKey, ...items: Value[]): SequenceValue {
 
 export function struct(key: ValueKey, ...items: Value[]): StructureValue {
     return new StructureValue(key, items);
-}
-
-export function funcItem(key: ValueKey, from: Value, to: Value): SimpleFunctionItem {
-    return new SimpleFunctionItem(key, from, to);
-}
-
-export function func(key: ValueKey, from: Value, to: Value): SimpleFunction {
-    return new SimpleFunction(key, [ funcItem(1, from, to) ]);
-}
-
-export function funcMerge(key: ValueKey, ...items: SimpleFunctionItem[]): SimpleFunction {
-    return new SimpleFunction(key, items);
 }
 
 export function pos(line: number, char: number): vscode.Position {

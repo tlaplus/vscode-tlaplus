@@ -1,5 +1,5 @@
-import { Value, StructureValue, SetValue, SequenceValue, ValueKey, SimpleFunction,
-    NameValue, SimpleFunctionItem } from '../model/check';
+import { Value, StructureValue, SetValue, SequenceValue, ValueKey, 
+    NameValue } from '../model/check';
 import { ParsingError } from '../common';
 import { Position } from 'vscode';
 
@@ -214,7 +214,7 @@ function parseValue(key: ValueKey, token: Token, tokenizer: Tokenizer): Value {
     }
     if (token.type === TokenType.FunctionStart) {
         const items = parseCollectionItems(tokenizer, TokenType.FunctionEnd, TokenType.AtAt, parseFunctionItem);
-        return new SimpleFunction(key, items);
+        return new StructureValue(key, items, '(', ')', ' @@ ', ' :> ', StructureValue.funcItemToString);
     }
     throw new ParsingError(`Unexpected token at ${tokenizer.getPosition()}: ${token.str}`);
 }
@@ -263,22 +263,14 @@ function parseStructureItem(_: ValueKey, token: Token, tokenizer: Tokenizer): Va
     return parseValue(token.str, tokenizer.nextToken(), tokenizer);
 }
 
-function parseFunctionItem(key: ValueKey, tokenFrom: Token, tokenizer: Tokenizer): SimpleFunctionItem {
+function parseFunctionItem(key: ValueKey, tokenFrom: Token, tokenizer: Tokenizer): Value {
     if (tokenFrom === Token.END) {
-        console.log(`Unexpected function description end at ${tokenizer.getPosition()}`);
-        return new SimpleFunctionItem(key, UNKNOWN_FROM, UNKNOWN_TO);
+        throw new ParsingError(`Expected structure item at ${tokenizer.getPosition()}, found ${tokenFrom.str}`);
     }
     const from = parseValue('from', tokenFrom, tokenizer);
     const tokenColon = tokenizer.nextToken();
     if (tokenColon.type !== TokenType.ColonBracket) {
-        console.log(`Unexpected function description end at ${tokenizer.getPosition()}`);
-        return new SimpleFunctionItem(key, from, UNKNOWN_TO);
+        throw new ParsingError(`Expected function item separator at ${tokenizer.getPosition()}, found ${tokenColon.str}`);
     }
-    const tokenTo = tokenizer.nextToken();
-    if (tokenTo === Token.END) {
-        console.log(`Unexpected function description end at ${tokenizer.getPosition()}`);
-        return new SimpleFunctionItem(key, from, UNKNOWN_TO);
-    }
-    const to = parseValue('to', tokenTo, tokenizer);
-    return new SimpleFunctionItem(key, from, to);
+    return parseValue(from.str, tokenizer.nextToken(), tokenizer);
 }

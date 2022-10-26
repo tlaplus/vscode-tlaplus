@@ -201,9 +201,10 @@ export abstract class CollectionValue extends Value {
         readonly items: Value[],
         readonly prefix: string,
         readonly postfix: string,
+        readonly delim = ', ',
         toStr?: (v: Value) => string
     ) {
-        super(key, makeCollectionValueString(items, prefix, postfix, ', ', toStr || (v => v.str)));
+        super(key, makeCollectionValueString(items, prefix, postfix, delim, toStr || (v => v.str)));
     }
 
     addDeletedItems(items: Value[]): void {
@@ -248,7 +249,7 @@ export abstract class CollectionValue extends Value {
         }
         const subIndent = indent + '  ';
         const fmtFunc = (v: Value) => this.formatKey(subIndent, v) + '' + v.format(subIndent);
-        const body = makeCollectionValueString(this.items, '', '', ',\n', fmtFunc);
+        const body = makeCollectionValueString(this.items, '', '', this.delim + '\n', fmtFunc);
         return `${this.prefix}\n${body}\n${indent}${this.postfix}`;
     }
 
@@ -292,15 +293,27 @@ export class SequenceValue extends CollectionValue {
  * Represents a structure: [a |-> 'A', b |-> 34, c |-> <<TRUE, 2>>], [], etc.
  */
 export class StructureValue extends CollectionValue {
-    constructor(key: ValueKey, items: Value[], preserveOrder = false) {
-        if (!preserveOrder) {
-            items.sort(StructureValue.compareItems);
-        }
-        super(key, items, '[', ']', StructureValue.itemToString);
+    constructor(
+        key: ValueKey, 
+        items: Value[], 
+        prefix = '[', 
+        postfix = ']', 
+        delim = ', ', 
+        readonly itemSep = ' |-> ', 
+        toStr = StructureValue.itemToString, 
+        preserveOrder = false) {
+            super(key, items, prefix, postfix, delim, toStr);
+            if (!preserveOrder) {
+                items.sort(StructureValue.compareItems);
+            }
     }
 
     static itemToString(item: Value): string {
         return `${item.key} |-> ${item.str}`;
+    }
+
+    static funcItemToString(item: Value): string {
+        return `${item.key} :> ${item.str}`;
     }
 
     static compareItems(a: Value, b: Value): number {
@@ -318,50 +331,7 @@ export class StructureValue extends CollectionValue {
     }
 
     formatKey(indent: string, value: Value): string {
-        return `${indent}${value.key} |-> `;
-    }
-}
-
-/**
- * Represents a simple function: (10 :> TRUE), ("foo" :> "bar"), etc
- */
-export class SimpleFunctionItem extends Value {
-    constructor(
-        key: ValueKey,
-        readonly from: Value,
-        readonly to: Value
-    ) {
-        super(key, `${from.str} :> ${to.str}`);
-    }
-
-    format(indent: string): string {
-        if (this.str.length <= VALUE_FORMAT_LENGTH_THRESHOLD || !(this.to instanceof CollectionValue)) {
-            return `(${this.str})`;
-        }
-        const body = this.to.format(indent + '  ');
-        return `(${this.from.str} :> ${body}\n${indent})`;
-    }
-}
-
-/**
- * Represents a collection of merged simple functions: (10 :> TRUE),
- * ("foo" :> "bar" @@ "baz" => 31), etc
- */
-export class SimpleFunction extends Value {
-    readonly expandSingle = false;
-
-    constructor(
-        key: ValueKey,
-        readonly items: SimpleFunctionItem[]
-    ) {
-        super(key, makeCollectionValueString(items, '(', ')', ' @@ ', (v => v.str)));
-    }
-
-    format(indent: string): string {
-        if (this.items.length === 1) {
-            return this.items[0].format(indent);
-        }
-        return super.format(indent);
+        return `${indent}${value.key}` + this.itemSep;
     }
 }
 
