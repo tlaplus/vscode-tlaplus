@@ -58,5 +58,7 @@ jobs:
         npm test --silent
     - name: Publish to Marketplace
       run: vsce publish --pat "${{ secrets.VSCODE_MARKETPLACE_TOKEN }}"
+      ## Continue publishing to the ovsx marketplace even if publication to the VSCode marketplace fails.
+      continue-on-error: true
     - name: Publish to Open VSX
       run: npx ovsx publish "vscode-tlaplus-nightly-${{ steps.version.outputs.version }}.vsix" -p "${{ secrets.OPEN_VSX_TOKEN }}"
