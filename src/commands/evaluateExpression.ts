@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { replaceExtension, deleteDir, readFile, exists } from '../common';
-import { getEditorIfCanRunTlc, doCheckModel } from './checkModel';
+import { getEditor, canRunTlc, doCheckModel } from './checkModel';
 import { createCustomModel } from './customModel';
 import { ToolOutputChannel } from '../outputChannels';
 import { ModelCheckResult, CheckState, SequenceValue, Value, OutputLine, SpecFiles } from '../model/check';
@@ -22,10 +22,13 @@ export async function evaluateSelection(
     diagnostic: vscode.DiagnosticCollection,
     extContext: vscode.ExtensionContext
 ): Promise<void> {
-    const editor = getEditorIfCanRunTlc(extContext);
-    if (!editor) {
+    const editorResult = getEditor();
+    if (editorResult.isErr()) {
+        vscode.window.showErrorMessage(editorResult.error.message);
         return;
     }
+    const editor = editorResult.value;
+
     const selRange = new vscode.Range(editor.selection.start, editor.selection.end);
     const selText = editor.document.getText(selRange);
     doEvaluateExpression(editor, selText, diagnostic, extContext);
@@ -38,8 +41,9 @@ export async function evaluateExpression(
     diagnostic: vscode.DiagnosticCollection,
     extContext: vscode.ExtensionContext
 ): Promise<void> {
-    const editor = getEditorIfCanRunTlc(extContext);
-    if (!editor) {
+    const editorResult = getEditor();
+    if (editorResult.isErr()) {
+        vscode.window.showErrorMessage(editorResult.error.message);
         return;
     }
     vscode.window.showInputBox({
@@ -51,7 +55,7 @@ export async function evaluateExpression(
             return;
         }
         lastEvaluatedExpression = expr;
-        doEvaluateExpression(editor, expr, diagnostic, extContext);
+        doEvaluateExpression(editorResult.value, expr, diagnostic, extContext);
     });
 }
 
@@ -61,6 +65,11 @@ async function doEvaluateExpression(
     diagnostic: vscode.DiagnosticCollection,
     extContext: vscode.ExtensionContext
 ) {
+    // Note: canRunTlc prints a warning message if it returns false
+    if (!canRunTlc(extContext)) {
+        return;
+    }
+
     const eExpr = expr.trim();
     if (eExpr === '') {
         vscode.window.showWarningMessage('Nothing to evaluate.');

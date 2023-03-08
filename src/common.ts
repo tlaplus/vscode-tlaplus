@@ -21,6 +21,17 @@ export class ParsingError extends Error {
     }
 }
 
+/**
+ * Occurs when there's a model checking problem.
+ *
+ * For example, this error can occur if the checked file is not a TLA+ file and therefore cannot be model checked.
+ */
+export class ModelCheckingError extends Error {
+    constructor(message: string) {
+        super(message);
+    }
+}
+
 export function pathToUri(filePath: string): vscode.Uri {
     return vscode.Uri.file(filePath).with({ scheme: 'file' });
 }
