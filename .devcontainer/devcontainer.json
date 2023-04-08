@@ -1,5 +1,7 @@
 {
     "name": "TLA+ VSCode",
-  
-    "postCreateCommand": "sudo apt update && sudo apt install libxshmfence1 xvfb -y",
+    "build": { "dockerfile": "Dockerfile" },
+    "mounts": [
+        // add folder with test tla+ files, e.g. {"source": "path/to/folder", "target": "/workspaces/folder", "type": "bind"}
+    ]
 }
