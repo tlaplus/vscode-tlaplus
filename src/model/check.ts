@@ -294,18 +294,18 @@ export class SequenceValue extends CollectionValue {
  */
 export class StructureValue extends CollectionValue {
     constructor(
-        key: ValueKey, 
-        items: Value[], 
-        prefix = '[', 
-        postfix = ']', 
-        delim = ', ', 
-        readonly itemSep = ' |-> ', 
-        toStr = StructureValue.itemToString, 
+        key: ValueKey,
+        items: Value[],
+        prefix = '[',
+        postfix = ']',
+        delim = ', ',
+        readonly itemSep = ' |-> ',
+        toStr = StructureValue.itemToString,
         preserveOrder = false) {
-            super(key, items, prefix, postfix, delim, toStr);
-            if (!preserveOrder) {
-                items.sort(StructureValue.compareItems);
-            }
+        super(key, items, prefix, postfix, delim, toStr);
+        if (!preserveOrder) {
+            items.sort(StructureValue.compareItems);
+        }
     }
 
     static itemToString(item: Value): string {

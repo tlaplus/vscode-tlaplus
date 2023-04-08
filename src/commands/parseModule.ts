@@ -36,8 +36,8 @@ async function doParseFile(doc: vscode.TextDocument, diagnostic: vscode.Diagnost
         const specData = await parseSpec(doc.uri);
         messages.addAll(specData.dCollection);
         applyDCollection(messages, diagnostic);
-    } catch (e) {
-        vscode.window.showErrorMessage(e.message);
+    } catch (err) {
+        vscode.window.showErrorMessage(`Error parsing file: ${err}`);
     }
 }
 

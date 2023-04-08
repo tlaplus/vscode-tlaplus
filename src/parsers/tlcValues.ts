@@ -1,4 +1,4 @@
-import { Value, StructureValue, SetValue, SequenceValue, ValueKey, 
+import { Value, StructureValue, SetValue, SequenceValue, ValueKey,
     NameValue } from '../model/check';
 import { ParsingError } from '../common';
 import { Position } from 'vscode';

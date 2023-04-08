@@ -283,7 +283,7 @@ function addReturnCodeHandler(proc: ChildProcess, toolName?: string) {
         stderr.push(String(chunk));
     });
     proc.on('close', exitCode => {
-        if (exitCode !== NO_ERROR && exitCode < MIN_TLA_ERROR) {
+        if (exitCode !== null && exitCode !== NO_ERROR && exitCode < MIN_TLA_ERROR) {
             const details = stderr.join('\n');
             vscode.window.showErrorMessage(`Error running ${toolName} (exit code ${exitCode})\n${details}`);
         }
