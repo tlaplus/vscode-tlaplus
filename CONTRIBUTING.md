@@ -77,11 +77,21 @@ To run unit tests from within a Codespace:
 sudo apt-get install libxshmfence1 xvfb -y
 ## Launch framebuffer x-server and force tests to use
 ## framebuffer x-server.
-Xvfb -ac :99 -screen 0 1280x1024x16 &
+sudo Xvfb -ac :99 -screen 0 1280x1024x16 &
 export DISPLAY=:99
 ## Run tests.
 npm test
 ```
+
+### Test using Dev Container
+
+This project has a devcontainer (https://code.visualstudio.com/docs/devcontainers/containers) configuration with all the setup required to develop and test the extension.
+
+When running the extension in debug mode you only have access to the project folder. If you wish to mount more folders you can add them in the mounts section of the [devcontainer.json](.devcontainer/devcontainer.json) file.
+
+If you are running on an arm machine add "-bullseye" to the [Dockerfile](.devcontainer/Dockerfile): https://github.com/devcontainers/images/tree/main/src/typescript-node.
+
+To run the tests in the terminal run them with sudo, e.g. `sudo npm test`.
 
 ### Package
 
