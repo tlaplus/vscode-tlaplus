@@ -211,7 +211,7 @@ export async function doCheckModel(
         return resultHolder.checkResult;
     } catch (err) {
         statusBarItem.hide();
-        vscode.window.showErrorMessage(err.message);
+        vscode.window.showErrorMessage(`Error checking model: ${err}`);
     }
     return undefined;
 }

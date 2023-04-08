@@ -29,7 +29,7 @@ function writeToFile(sw: StreamWriter, chunk: Buffer | string) {
     if (!sw.fd) {
         return;
     }
-    fs.write(sw.fd, chunk, (err) => {
+    fs.write(sw.fd, Buffer.from(chunk), (err) => {
         if (err) {
             vscode.window.showWarningMessage(`Error writing .out file: ${err}`);
             closeFile(sw);
