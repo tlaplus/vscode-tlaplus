@@ -69,19 +69,9 @@ The output of the tests will be who under the [DEBUG CONSOLE](https://code.visua
 ### Test from Github Codespaces
 
 To run unit tests from within a Codespace:
-
-```
-## Install missing libraries and framebuffer x-server.
-## (Runs automatically in Github Codepsaces because
-## of `.devcontainer/devcontainer.json`).
-sudo apt-get install libxshmfence1 xvfb -y
-## Launch framebuffer x-server and force tests to use
-## framebuffer x-server.
-sudo Xvfb -ac :99 -screen 0 1280x1024x16 &
-export DISPLAY=:99
-## Run tests.
-npm test
-```
+1. Switch to the [Debug and Run](https://code.visualstudio.com/docs/editor/debugging) panel.
+2. Select the "Run Extension Tests" config.
+3. The output of the tests will be who under the [DEBUG CONSOLE](https://code.visualstudio.com/docs/editor/debugging) in VS Code.
 
 ### Test using Dev Container
 
@@ -91,7 +81,7 @@ When running the extension in debug mode you only have access to the project fol
 
 If you are running on an arm machine add "-bullseye" to the [Dockerfile](.devcontainer/Dockerfile): https://github.com/devcontainers/images/tree/main/src/typescript-node.
 
-To run the tests in the terminal run them with sudo, e.g. `sudo npm test`.
+To run the tests use the [Debug and Run](https://code.visualstudio.com/docs/editor/debugging) panel.
 
 ### Package
 
