@@ -47,6 +47,14 @@ To run the extension in debug mode:
 
 Or just use a hotkey for the `Start Debugging` command if the "Extension" configuration is already selected.
 
+## Using Dev Container
+
+This project has a devcontainer (https://code.visualstudio.com/docs/devcontainers/containers) configuration with all the setup required to develop and test the extension.
+
+When running the extension in debug mode you only have access to the project folder. If you wish to mount more folders you can add them in the mounts section of the [devcontainer.json](.devcontainer/devcontainer.json) file.
+
+If you are running on an arm machine add "-bullseye" to the [Dockerfile](.devcontainer/Dockerfile): https://github.com/devcontainers/images/tree/main/src/typescript-node.
+
 ## Test from VS Code
 
 To run unit tests from VS Code:
@@ -66,32 +74,17 @@ To run the [TLA+ grammar tests](./tests/suite/languages/GrammarTests.md) from VS
 
 The output of the tests will be who under the [DEBUG CONSOLE](https://code.visualstudio.com/docs/editor/debugging) in VS Code.
 
-### Test from Github Codespaces
+### Test from Github Codespaces / Dev Container
 
 To run unit tests from within a Codespace:
+1. Switch to the [Debug and Run](https://code.visualstudio.com/docs/editor/debugging) panel.
+2. Select the "Run Extension Tests" config.
+3. The output of the tests will be who under the [DEBUG CONSOLE](https://code.visualstudio.com/docs/editor/debugging) in VS Code.
 
+You can also run them directly from the terminal using a virtual display:
+```shell
+xvfb-run --auto-servernum npm test --silent
 ```
-## Install missing libraries and framebuffer x-server.
-## (Runs automatically in Github Codepsaces because
-## of `.devcontainer/devcontainer.json`).
-sudo apt-get install libxshmfence1 xvfb -y
-## Launch framebuffer x-server and force tests to use
-## framebuffer x-server.
-sudo Xvfb -ac :99 -screen 0 1280x1024x16 &
-export DISPLAY=:99
-## Run tests.
-npm test
-```
-
-### Test using Dev Container
-
-This project has a devcontainer (https://code.visualstudio.com/docs/devcontainers/containers) configuration with all the setup required to develop and test the extension.
-
-When running the extension in debug mode you only have access to the project folder. If you wish to mount more folders you can add them in the mounts section of the [devcontainer.json](.devcontainer/devcontainer.json) file.
-
-If you are running on an arm machine add "-bullseye" to the [Dockerfile](.devcontainer/Dockerfile): https://github.com/devcontainers/images/tree/main/src/typescript-node.
-
-To run the tests in the terminal run them with sudo, e.g. `sudo npm test`.
 
 ### Package
 
