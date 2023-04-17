@@ -10,6 +10,6 @@ RUN apt update \
     && apt install -y openjdk-11-jre \
     && rm -rf /var/lib/apt/lists/*
 
-# Add minimal latex instalation for tlaplus tools
+# Add minimal latex installation for tlaplus tools
 COPY --from=latex /opt/texlive /opt/texlive
 ENV PATH="${PATH}:/opt/texlive/texdir/bin/default"
