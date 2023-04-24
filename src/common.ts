@@ -1,8 +1,9 @@
-import * as vscode from 'vscode';
-import * as moment from 'moment';
-import * as path from 'path';
 import * as fs from 'fs';
 import { tmpdir } from 'os';
+import * as path from 'path';
+import * as vscode from 'vscode';
+
+import moment = require('moment');
 
 export const LANG_TLAPLUS = 'tlaplus';
 export const LANG_TLAPLUS_CFG = 'tlaplus_cfg';
