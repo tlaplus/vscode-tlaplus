@@ -1,16 +1,16 @@
-import * as vscode from 'vscode';
-import * as path from 'path';
-import { copyFile } from 'fs';
-import { runTlc, stopProcess } from '../tla2tools';
-import { TlcModelCheckerStdoutParser } from '../parsers/tlc';
-import { updateCheckResultView, revealEmptyCheckResultView, revealLastCheckResultView } from '../checkResultView';
-import { applyDCollection } from '../diagnostic';
 import { ChildProcess } from 'child_process';
-import { saveStreamToFile } from '../outputSaver';
-import { replaceExtension, LANG_TLAPLUS, LANG_TLAPLUS_CFG, listFiles, exists } from '../common';
-import { ModelCheckResultSource, ModelCheckResult, SpecFiles } from '../model/check';
-import { ToolOutputChannel } from '../outputChannels';
+import { copyFile } from 'fs';
+import * as path from 'path';
+import * as vscode from 'vscode';
 import { Utils } from 'vscode-uri';
+import { revealEmptyCheckResultView, revealLastCheckResultView, updateCheckResultView } from '../checkResultView';
+import { LANG_TLAPLUS, LANG_TLAPLUS_CFG, exists, listFiles, replaceExtension } from '../common';
+import { applyDCollection } from '../diagnostic';
+import { ModelCheckResult, ModelCheckResultSource, SpecFiles } from '../model/check';
+import { ToolOutputChannel } from '../outputChannels';
+import { saveStreamToFile } from '../outputSaver';
+import { TlcModelCheckerStdoutParser } from '../parsers/tlc';
+import { runTlc, stopProcess } from '../tla2tools';
 
 export const CMD_CHECK_MODEL_RUN = 'tlaplus.model.check.run';
 export const CMD_CHECK_MODEL_RUN_AGAIN = 'tlaplus.model.check.runAgain';
@@ -22,7 +22,7 @@ export const CTX_TLC_RUNNING = 'tlaplus.tlc.isRunning';
 export const CTX_TLC_CAN_RUN_AGAIN = 'tlaplus.tlc.canRunAgain';
 
 const CFG_CREATE_OUT_FILES = 'tlaplus.tlc.modelChecker.createOutFiles';
-const TEMPLATE_CFG_PATH = path.resolve(__dirname, '../../../tools/template.cfg');
+const TEMPLATE_CFG_PATH = path.resolve(__dirname, '../tools/template.cfg');
 
 let checkProcess: ChildProcess | undefined;
 let lastCheckFiles: SpecFiles | undefined;
@@ -111,7 +111,7 @@ export function displayModelChecking(extContext: vscode.ExtensionContext): void 
  */
 export function stopModelChecking(
     terminateLastRun: (lastSpecFiles: SpecFiles | undefined) => boolean =
-    (lastSpecFiles: SpecFiles | undefined): boolean => { return true; },
+    (): boolean => { return true; },
     silent: boolean = false
 ): void {
     if (checkProcess && terminateLastRun(lastCheckFiles)) {

@@ -91,8 +91,11 @@ xvfb-run --auto-servernum npm test --silent
 To package the extension and create the .vsix file:
 
 ```
-npm install -g vsce
+npm install -g @vscode/vsce
 vsce package
+
+# View files packaged in the vsix
+unzip -l *.vsix
 ```
 
 # Overview

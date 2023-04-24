@@ -1,12 +1,12 @@
-import * as vscode from 'vscode';
-import * as path from 'path';
 import * as cp from 'child_process';
-import * as fs from 'fs';
 import { ChildProcess, spawn } from 'child_process';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as vscode from 'vscode';
+import { CFG_TLC_STATISTICS_TYPE, ShareOption } from './commands/tlcStatisticsCfg';
 import { pathToUri } from './common';
-import { JavaVersionParser } from './parsers/javaVersion';
-import { ShareOption, CFG_TLC_STATISTICS_TYPE } from './commands/tlcStatisticsCfg';
 import { ToolOutputChannel } from './outputChannels';
+import { JavaVersionParser } from './parsers/javaVersion';
 
 // CFG_EXTENSION can be used to fetch all the settings for this extension
 const CFG_EXTENSION = '@ext:alygin.vscode-tlaplus';
@@ -27,7 +27,7 @@ const DEFAULT_GC_OPTION = '-XX:+UseParallelGC';
 const TLA_TOOLS_LIB_NAME = 'tla2tools.jar';
 const TLA_TOOLS_LIB_NAME_END_UNIX = '/' + TLA_TOOLS_LIB_NAME;
 const TLA_TOOLS_LIB_NAME_END_WIN = '\\' + TLA_TOOLS_LIB_NAME;
-const toolsJarPath = path.resolve(__dirname, '../../tools/' + TLA_TOOLS_LIB_NAME);
+const toolsJarPath = path.resolve(__dirname, '../tools/' + TLA_TOOLS_LIB_NAME);
 const javaCmd = 'java' + (process.platform === 'win32' ? '.exe' : '');
 const javaVersionChannel = new ToolOutputChannel('TLA+ Java version');
 

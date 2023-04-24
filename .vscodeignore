@@ -1,15 +1,27 @@
-src/**/*
+.devcontainer/
+.github/
+.vscode/
+.vscode-test/
+# include languages/
+node_modules/
+out/src/
 out/tests/
-tests/
-scripts/
-**/*.map
-**/tsconfig.json
-**/tslint.json
-**/*.code-workspace
+out/main.js.map
+# include out/main.js
 resources/images/screencast.gif
-version
+# include resources/
+src/
+tests/
+# include tools/
+.eslintignore
+.eslintrc.json
 .gitignore
 .sonarcloud.properties
-.travis.yml
-.github/**/*
-.vscode/**/*
+# include CHANGELOG.md
+CONTRIBUTING.md
+esbuild.js
+# include LICENSE.md
+# include package-lock.json package.json
+# include README.md
+tsconfig.json
+version

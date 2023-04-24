@@ -27,7 +27,7 @@
                 "--extensionTestsPath=${workspaceFolder}/out/tests/suite/index"
             ],
             "outFiles": ["${workspaceFolder}/out/tests/**/*.js"],
-            "preLaunchTask": "npm: watch"
+            "preLaunchTask": "npm: pretest"
         },
         {
             "name": "Run TLA Plus Grammar Tests",

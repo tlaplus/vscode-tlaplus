@@ -1,7 +1,13 @@
-import { Value, StructureValue, SetValue, SequenceValue, ValueKey,
-    NameValue } from '../model/check';
-import { ParsingError } from '../common';
 import { Position } from 'vscode';
+import { ParsingError } from '../common';
+import {
+    NameValue,
+    SequenceValue,
+    SetValue,
+    StructureValue,
+    Value,
+    ValueKey
+} from '../model/check';
 
 enum TokenType {
     Primitive,
@@ -51,9 +57,6 @@ const CONST_TOKENS = [
     new Token(TokenType.ColonBracket, ':>'),
     new Token(TokenType.AtAt, '@@')
 ];
-
-const UNKNOWN_FROM = new Value('from', '?');
-const UNKNOWN_TO = new Value('to', '?');
 
 /**
  * Breaks the given set of lines and allows to read them token-by-token.
@@ -263,14 +266,15 @@ function parseStructureItem(_: ValueKey, token: Token, tokenizer: Tokenizer): Va
     return parseValue(token.str, tokenizer.nextToken(), tokenizer);
 }
 
-function parseFunctionItem(key: ValueKey, tokenFrom: Token, tokenizer: Tokenizer): Value {
+function parseFunctionItem(_key: ValueKey, tokenFrom: Token, tokenizer: Tokenizer): Value {
     if (tokenFrom === Token.END) {
         throw new ParsingError(`Expected structure item at ${tokenizer.getPosition()}, found ${tokenFrom.str}`);
     }
     const from = parseValue('from', tokenFrom, tokenizer);
     const tokenColon = tokenizer.nextToken();
     if (tokenColon.type !== TokenType.ColonBracket) {
-        throw new ParsingError(`Expected function item separator at ${tokenizer.getPosition()}, found ${tokenColon.str}`);
+        throw new ParsingError(
+            `Expected function item separator at ${tokenizer.getPosition()}, found ${tokenColon.str}`);
     }
     return parseValue(from.str, tokenizer.nextToken(), tokenizer);
 }
