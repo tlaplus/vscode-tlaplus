@@ -45,7 +45,7 @@
         "onCommand:tlaplus.evaluateExpression",
         "workspaceContains:**/*.tla"
     ],
-    "main": "./out/src/main.js",
+    "main": "./out/main.js",
     "files": [
         "resources",
         "tools"
@@ -391,11 +391,11 @@
         }
     },
     "scripts": {
-        "vscode:prepublish": "npm run compile",
-        "compile": "tsc -p ./",
+        "vscode:prepublish": "npm run compile -- --production",
+        "compile": "node ./esbuild.js",
         "lint": "eslint --ext .ts,.js src/ tests/ resources/",
-        "watch": "tsc -watch -p ./",
-        "pretest": "npm run compile",
+        "watch": "npm run compile -- --watch",
+        "pretest": "tsc -p ./",
         "test": "node ./out/tests/runTest.js",
         "test:tlaplus-grammar": "vscode-tmgrammar-test ./tests/suite/languages/tlaplus-grammar-test.tla -g ./languages/tlaplus-grammar.json -g ./languages/pluscal-grammar.json"
     },

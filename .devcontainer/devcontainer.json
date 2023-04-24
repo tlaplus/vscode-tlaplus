@@ -1,5 +1,10 @@
 {
     "name": "TLA+ VSCode",
+    "customizations": {
+        "vscode": {
+            "extensions": ["connor4312.esbuild-problem-matchers"]
+        }
+    },
     "build": { "dockerfile": "Dockerfile" },
     "mounts": [
         // add folder with test tla+ files, e.g. {"source": "path/to/folder", "target": "/workspaces/folder", "type": "bind"}

@@ -27,7 +27,7 @@ const DEFAULT_GC_OPTION = '-XX:+UseParallelGC';
 const TLA_TOOLS_LIB_NAME = 'tla2tools.jar';
 const TLA_TOOLS_LIB_NAME_END_UNIX = '/' + TLA_TOOLS_LIB_NAME;
 const TLA_TOOLS_LIB_NAME_END_WIN = '\\' + TLA_TOOLS_LIB_NAME;
-const toolsJarPath = path.resolve(__dirname, '../../tools/' + TLA_TOOLS_LIB_NAME);
+const toolsJarPath = path.resolve(__dirname, '../tools/' + TLA_TOOLS_LIB_NAME);
 const javaCmd = 'java' + (process.platform === 'win32' ? '.exe' : '');
 const javaVersionChannel = new ToolOutputChannel('TLA+ Java version');
 

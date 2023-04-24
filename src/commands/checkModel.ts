@@ -22,7 +22,7 @@ export const CTX_TLC_RUNNING = 'tlaplus.tlc.isRunning';
 export const CTX_TLC_CAN_RUN_AGAIN = 'tlaplus.tlc.canRunAgain';
 
 const CFG_CREATE_OUT_FILES = 'tlaplus.tlc.modelChecker.createOutFiles';
-const TEMPLATE_CFG_PATH = path.resolve(__dirname, '../../../tools/template.cfg');
+const TEMPLATE_CFG_PATH = path.resolve(__dirname, '../tools/template.cfg');
 
 let checkProcess: ChildProcess | undefined;
 let lastCheckFiles: SpecFiles | undefined;
