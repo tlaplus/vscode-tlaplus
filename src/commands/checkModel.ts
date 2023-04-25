@@ -174,7 +174,7 @@ export async function doCheckModel(
     try {
         lastCheckFiles = specFiles;
         vscode.commands.executeCommand('setContext', CTX_TLC_CAN_RUN_AGAIN, true);
-        updateStatusBarItem(true);
+        updateStatusBarItem(true, specFiles);
         const procInfo = await runTlc(
             specFiles.tlaFilePath, path.basename(specFiles.cfgFilePath), showOptionsPrompt, extraOpts);
         if (procInfo === undefined) {
@@ -185,7 +185,7 @@ export async function doCheckModel(
         checkProcess = procInfo.process;
         checkProcess.on('close', () => {
             checkProcess = undefined;
-            updateStatusBarItem(false);
+            updateStatusBarItem(false, lastCheckFiles);
         });
         if (showCheckResultView) {
             attachFileSaver(specFiles.tlaFilePath, checkProcess);
@@ -292,9 +292,13 @@ async function checkModelExists(cfgPath: string, warn = true): Promise<boolean> 
     return cfgExists;
 }
 
-function updateStatusBarItem(active: boolean) {
-    statusBarItem.text = 'TLC' + (active ? ' $(gear~spin)' : '');
-    statusBarItem.tooltip = 'TLA+ model checking' + (active ? ' is running' : ' result');
+function updateStatusBarItem(active: boolean, specFiles: SpecFiles | undefined) {
+    statusBarItem.text = 'TLC' + (active ?
+        (specFiles === undefined ? '' : ' (' + specFiles.tlaFileName + '/' + specFiles.cfgFileName + ')')
+        + ' $(gear~spin)' : '');
+    statusBarItem.tooltip = 'TLA+ model checking' + (active ?
+        (specFiles === undefined ? '' : ' of ' + specFiles.tlaFileName + '/' + specFiles.cfgFileName)
+        + ' is running' : ' result');
     statusBarItem.command = CMD_CHECK_MODEL_DISPLAY;
     statusBarItem.show();
     vscode.commands.executeCommand('setContext', CTX_TLC_RUNNING, active);
