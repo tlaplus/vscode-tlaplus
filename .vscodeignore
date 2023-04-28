@@ -2,10 +2,13 @@
 .github/
 .vscode/
 .vscode-test/
+.vscode-test-web/
 # include languages/
 node_modules/
 out/src/
 out/tests/
+out/main.browser.js.map
+# include out/main.browser.js
 out/main.js.map
 # include out/main.js
 resources/images/screencast.gif
