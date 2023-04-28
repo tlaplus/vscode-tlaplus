@@ -1,6 +1,6 @@
 All forms of contribution are highly welcome! Feel free to file bugs, propose improvements, ask questions, send other feedback.
 
-For those, who whant to write some code, here's a short guide.
+For those, who want to write some code, here's a short guide.
 
 # Getting started
 
@@ -98,6 +98,55 @@ vsce package
 unzip -l *.vsix
 ```
 
+## Test extension in a web environment
+
+The extension has support for web environments such as [vscode.dev](https://code.visualstudio.com/docs/editor/vscode-web) but with only a limited set of features is enabled (different entrypoint from the main extension).
+
+Further read: https://code.visualstudio.com/api/extension-guides/web-extensions#test-your-web-extension
+
+#### Using @vscode/test-web
+
+This is the simplest method, however, at time of writing, it does not work in a Codespaces environment.
+
+To test the extension using [@vscode/test-web](https://github.com/microsoft/vscode-test-web) run:
+
+```shell
+# Optional: get some example files
+git clone https://github.com/tlaplus/Examples.git ~/Examples
+
+# Compile extension
+npm install
+npm run compile
+
+# Start a local vscode.dev with the tla+ extension
+npm install -g @vscode/test-web
+vscode-test-web  --extensionDevelopmentPath=. --headless=true ~/Examples
+# Open http://localhost:3000/ in a browser
+```
+
+#### Using vscode.dev
+
+For updated instructions see: https://code.visualstudio.com/api/extension-guides/web-extensions#test-your-web-extension-in-on-vscode.dev
+
+To run the extension in the actual vscode.dev environment run:
+
+```shell
+# From the extension root path, start a http server
+npx serve --cors -l 5000
+
+# In another terminal start a localtunnel to the previous http server
+npx localtunnel -p 5000
+
+# Open the generated url and click the "Click to Continue" button
+# Copy the generated url
+
+# Go to vscode.dev (suggestion to open in tlaplus examples folder: https://vscode.dev/github/tlaplus/Examples)
+# Ctrl+Shift+P > Developer: Install Extension from Location.. > Paste the generated url
+
+# Open devtools (F12) to check for errors
+# Ctrl+Shift+P > Developer: Show Running Extensions
+```
+
 # Overview
 
 The extension consists of the following components:
@@ -126,6 +175,7 @@ Most of the extension main code is located in the `src` directory. The only exce
 Names of files and subdirectories are usually self-descriptive. Here're the most interesting ones:
 
 - `src/main.ts` &mdash; This is the starting point of the extension. It sets things up when the extension is loaded.
+- `src/main.browser.ts` &mdash; Starting point for the extension in a browser environment.
 - `src/tla2tools.ts` &mdash; All calls to `tla2tools.jar` go through methods from this file.
 - `src/checkResultView.ts` &mdash; The main functions that are responsible for interaction between the main extension code and the Check Result View panel.
 - `src/commands/` &mdash; This directory contains implementation of all the [VS Code commands](https://code.visualstudio.com/api/extension-guides/command) that the extension provides.
@@ -148,7 +198,7 @@ There're some other useful stuff in the project:
 
 - `.vscode/` &mdash; VS Code configuration files that make working with the project easier.
 - `languages/` &mdash; Languages definition files.
-- `tools/` &mdash; Additional artefacts that are used by the extesion.
+- `tools/` &mdash; Additional artifacts that are used by the extension.
 
 # Source Code Style
 

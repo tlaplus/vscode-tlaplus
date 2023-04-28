@@ -46,6 +46,7 @@
         "workspaceContains:**/*.tla"
     ],
     "main": "./out/main.js",
+    "browser": "./out/main.browser.js",
     "files": [
         "resources",
         "tools"
@@ -362,7 +363,7 @@
                     ],
                     "enumDescriptions": [
                         "TLC statistics will be shared along with the installation ID.",
-                        "TLC statistics will be shared witout the installation ID.",
+                        "TLC statistics will be shared without the installation ID.",
                         "No TLC statistics will be shared."
                     ]
                 },
