@@ -99,7 +99,7 @@ export async function runTex(tlaFilePath: string): Promise<ToolProcessInfo> {
 
 export async function runReplTerminal(): Promise<void> {
     const javaPath = await obtainJavaPath();
-    const args = buildJavaOptions(getConfigOptions(CFG_JAVA_OPTIONS), toolsJarPath);
+    const args = buildJavaOptions(await getConfigOptionsParseCommands(CFG_JAVA_OPTIONS), toolsJarPath);
     args.push(TlaTool.REPL);
     vscode.window.createTerminal({shellPath: javaPath, shellArgs: args}).show();
 }
@@ -136,7 +136,7 @@ async function runTool(
     javaOptions: string[]
 ): Promise<ToolProcessInfo> {
     const javaPath = await obtainJavaPath();
-    const cfgOptions = getConfigOptions(CFG_JAVA_OPTIONS);
+    const cfgOptions = await getConfigOptionsParseCommands(CFG_JAVA_OPTIONS);
     const args = buildJavaOptions(cfgOptions, toolsJarPath).concat(javaOptions);
     args.push(toolName);
     toolOptions.forEach(opt => args.push(opt));
@@ -290,7 +290,60 @@ function addReturnCodeHandler(proc: ChildProcess, toolName?: string) {
     });
 }
 
-function getConfigOptions(cfgName: string, defaultValue: string = ''): string[] {
+async function replaceAsync(str: string, regex: RegExp, asyncFn: (match: string) => Promise<string>) {
+    const promises: Promise<string>[] = [];
+    str.replace(regex, (match: string, ...args) => {
+        const promise = asyncFn(match);
+        promises.push(promise);
+        return '';
+    });
+    const data = await Promise.all(promises);
+    return str.replace(regex, () => {
+        const result = data.shift();
+        if (result === undefined) {
+            return '';
+        } else {
+            return result;
+        }
+    });
+}
+
+/**
+ * Find for `$(.....)` forms, parse them as CLI commands and replace them with their results.
+ */
+async function parseOptionCommands(optsString: string): Promise<string> {
+    const rePattern = /\$\(.*?\)/gm;
+
+    const replacedString = await replaceAsync(optsString, rePattern, async function(match: string) {
+        // Remove `$(` and `)`.
+        const command = splitArguments(match.substring(2, match.length - 1));
+        const commandProcess = spawn(command[0], command.slice(1));
+
+        let data = '';
+        for await (const chunk of commandProcess.stdout) {
+            data += chunk;
+        }
+
+        let error = '';
+        for await (const chunk of commandProcess.stderr) {
+            error += chunk;
+        }
+
+        const exitCode = await new Promise((resolve, reject) => {
+            commandProcess.on('close', resolve);
+        });
+
+        if (exitCode) {
+            vscode.window.showWarningMessage(`Config command error exit ${exitCode}, ${error}`);
+        }
+
+        return data;
+    });
+
+    return replacedString;
+}
+
+function getConfigOptionsBase(cfgName: string, defaultValue: string = ''): string {
     const allConfigs = vscode.workspace.getConfiguration().inspect<string>(cfgName);
 
     if (!supressConfigWarnings && allConfigs?.workspaceValue && allConfigs?.globalValue) {
@@ -311,8 +364,18 @@ function getConfigOptions(cfgName: string, defaultValue: string = ''): string[] 
     }
 
     const optsString = allConfigs?.workspaceValue || allConfigs?.globalValue || defaultValue;
+    return optsString;
+}
 
+function getConfigOptions(cfgName: string, defaultValue: string = ''): string[] {
+    const optsString = getConfigOptionsBase(cfgName, defaultValue);
     return splitArguments(optsString);
+}
+
+async function getConfigOptionsParseCommands(cfgName: string, defaultValue: string = ''): Promise<string[]> {
+    const optsString = getConfigOptionsBase(cfgName, defaultValue);
+    const replacedString = await parseOptionCommands(optsString);
+    return splitArguments(replacedString);
 }
 
 /**
