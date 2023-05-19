@@ -14,9 +14,13 @@ jobs:
       with:
         node-version: '14.17'
     - name: Install dependencies
-      run: npm install
+      run: |
+        npm install
+        npm install -g vsce
     - name: Build
-      run: npm run vscode:prepublish
+      run: |
+        npm run vscode:prepublish
+        vsce package
     - name: Check
       run: npm run lint
     - name: Test Non-Linux
@@ -25,3 +29,9 @@ jobs:
     - name: Test Linux
       if: matrix.os == 'ubuntu-20.04'
       run: xvfb-run --auto-servernum npm test --silent
+    - name: Upload artifact
+      if: matrix.os == 'ubuntu-20.04'
+      uses: actions/upload-artifact@v2
+      with:
+        name: vscode-tlaplus-ci.vsix
+        path: ${{ github.workspace }}/vscode-tlaplus-*.vsix
