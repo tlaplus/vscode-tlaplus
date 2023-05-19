@@ -7,9 +7,10 @@
 node_modules/
 out/src/
 out/tests/
-out/main.browser.js.map
+out/*.map
+# include out/check-result-view.css
+# include out/check-result-view.js
 # include out/main.browser.js
-out/main.js.map
 # include out/main.js
 resources/images/screencast.gif
 # include resources/
