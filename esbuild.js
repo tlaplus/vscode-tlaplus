@@ -36,6 +36,20 @@ const extensionBrowserConfig = {
     external: ['vscode'],
 };
 
+// Config for webview source code (to be run in a web-based context)
+/** @type BuildOptions */
+const webviewConfig = {
+    ...baseConfig,
+    target: 'es2020',
+    format: 'esm',
+    tsconfig: 'tsconfig.webview.json',
+    entryPoints: ['./src/webview/check-result-view.tsx'],
+    outfile: './out/check-result-view.js',
+    loader: {
+        '.ttf': 'copy', // use the file loader to handle .ttf files
+    }
+};
+
 const watchPlugin = (name) => [{
     name: 'watch-plugin',
     setup(build) {
@@ -51,10 +65,12 @@ const watchPlugin = (name) => [{
             // Build and watch extension
             (await context({...extensionConfig, plugins: watchPlugin('extensionConfig')})).watch();
             (await context({...extensionBrowserConfig, plugins: watchPlugin('extensionBrowserConfig')})).watch();
+            (await context({...webviewConfig, plugins: watchPlugin('webviewConfig')})).watch();
         } else {
             // Build extension
             await build(extensionConfig);
             await build(extensionBrowserConfig);
+            await build(webviewConfig);
             console.log('build complete');
         }
     } catch (err) {
