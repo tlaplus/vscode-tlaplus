@@ -1,6 +1,6 @@
 # TLA<sup>+</sup> for Visual Studio Code
 
-[![Build Status](https://img.shields.io/github/actions/workflow/status/alygin/vscode-tlaplus/ci.yml?branch=master)](https://github.com/alygin/vscode-tlaplus/actions?query=workflow%3ACI) [![Quality Gate](https://img.shields.io/sonar/quality_gate/alygin_vscode-tlaplus?server=https%3A%2F%2Fsonarcloud.io&style=flat-square)](https://sonarcloud.io/dashboard?id=alygin_vscode-tlaplus) [![VS Code extension version](https://img.shields.io/visual-studio-marketplace/i/alygin.vscode-tlaplus?color=blue&label=Stable%20Release&style=flat-square)](https://marketplace.visualstudio.com/items?itemName=alygin.vscode-tlaplus) [![VS Code extension version nightly](https://img.shields.io/visual-studio-marketplace/i/alygin.vscode-tlaplus-nightly?color=blue&label=Nightly%20Build&style=flat-square)](https://marketplace.visualstudio.com/items?itemName=alygin.vscode-tlaplus-nightly)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/tlaplus/vscode-tlaplus/ci.yml?branch=master)](https://github.com/tlaplus/vscode-tlaplus/actions?query=workflow%3ACI) [![Quality Gate](https://img.shields.io/sonar/quality_gate/alygin_vscode-tlaplus?server=https%3A%2F%2Fsonarcloud.io&style=flat-square)](https://sonarcloud.io/dashboard?id=alygin_vscode-tlaplus) [![VS Code extension version](https://img.shields.io/visual-studio-marketplace/i/alygin.vscode-tlaplus?color=blue&label=Stable%20Release&style=flat-square)](https://marketplace.visualstudio.com/items?itemName=alygin.vscode-tlaplus) [![VS Code extension version nightly](https://img.shields.io/visual-studio-marketplace/i/alygin.vscode-tlaplus-nightly?color=blue&label=Nightly%20Build&style=flat-square)](https://marketplace.visualstudio.com/items?itemName=alygin.vscode-tlaplus-nightly)
 
 This extension adds support for the [TLA<sup>+</sup> formal specification language](http://research.microsoft.com/en-us/um/people/lamport/tla/tla.html) to VS Code. It also supports running the TLC model checker on TLA<sup>+</sup> specifications.
 
@@ -16,19 +16,19 @@ This extension adds support for the [TLA<sup>+</sup> formal specification langua
 - Code on-type formatting.
 - Powered by the [official TLA<sup>+</sup> tools](https://github.com/tlaplus/tlaplus).
 
-<img src="https://raw.githubusercontent.com/alygin/vscode-tlaplus/master/resources/images/screencast.gif" width="800" height="auto">
+<img src="https://raw.githubusercontent.com/tlaplus/vscode-tlaplus/master/resources/images/screencast.gif" width="800" height="auto">
 
 ## Documentation
 
-[The project's Wiki](https://github.com/alygin/vscode-tlaplus/wiki) provides information on how to install, configure and use the extension.
+[The project's Wiki](https://github.com/tlaplus/vscode-tlaplus/wiki) provides information on how to install, configure and use the extension.
 
-* [How to Install](https://github.com/alygin/vscode-tlaplus/wiki/How-to-Install)
-* [Getting Started](https://github.com/alygin/vscode-tlaplus/wiki/Getting-Started)
-* [Settings](https://github.com/alygin/vscode-tlaplus/wiki/Settings)
-* [Commands](https://github.com/alygin/vscode-tlaplus/wiki/Commands)
-* [Setting up Environment](https://github.com/alygin/vscode-tlaplus/wiki/Setting-up-Environment)
-* [Caveats](https://github.com/alygin/vscode-tlaplus/wiki/Caveats)
-* [Troubleshooting](https://github.com/alygin/vscode-tlaplus/wiki/Troubleshooting)
+* [How to Install](https://github.com/tlaplus/vscode-tlaplus/wiki/How-to-Install)
+* [Getting Started](https://github.com/tlaplus/vscode-tlaplus/wiki/Getting-Started)
+* [Settings](https://github.com/tlaplus/vscode-tlaplus/wiki/Settings)
+* [Commands](https://github.com/tlaplus/vscode-tlaplus/wiki/Commands)
+* [Setting up Environment](https://github.com/tlaplus/vscode-tlaplus/wiki/Setting-up-Environment)
+* [Caveats](https://github.com/tlaplus/vscode-tlaplus/wiki/Caveats)
+* [Troubleshooting](https://github.com/tlaplus/vscode-tlaplus/wiki/Troubleshooting)
 
 ## Contributing
 
