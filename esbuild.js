@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 /* eslint-disable no-undef */
-const { build } = require('esbuild');
+const { build, context } = require('esbuild');
 
 //@ts-check
 /** @typedef {import('esbuild').BuildOptions} BuildOptions **/
@@ -27,7 +27,7 @@ const extensionConfig = {
 
 // Config for extension source code (to be run in a Web-based context)
 /** @type BuildOptions */
-const extensionWebConfig = {
+const extensionBrowserConfig = {
     ...baseConfig,
     platform: 'browser',
     format: 'cjs',
@@ -36,45 +36,41 @@ const extensionWebConfig = {
     external: ['vscode'],
 };
 
-// This watch config adheres to the conventions of the esbuild-problem-matchers
-// extension (https://github.com/connor4312/esbuild-problem-matchers#esbuild-via-js)
+// Config for webview source code (to be run in a web-based context)
 /** @type BuildOptions */
-const watchConfig = {
-    watch: {
-        onRebuild(error) {
-            console.log('[watch] build started');
-            if (error) {
-                error.errors.forEach((error) =>
-                    console.error(
-                        `> ${error.location.file}:${error.location.line}:${error.location.column}: error: ${error.text}`
-                    )
-                );
-            } else {
-                console.log('[watch] build finished');
-            }
-        },
-    },
+const webviewConfig = {
+    ...baseConfig,
+    target: 'es2020',
+    format: 'esm',
+    tsconfig: 'tsconfig.webview.json',
+    entryPoints: ['./src/webview/check-result-view.tsx'],
+    outfile: './out/check-result-view.js',
+    loader: {
+        '.ttf': 'copy', // use the file loader to handle .ttf files
+    }
 };
+
+const watchPlugin = (name) => [{
+    name: 'watch-plugin',
+    setup(build) {
+        build.onStart(() => console.log(`[watch] build started - ${name}`));
+        build.onEnd(() => console.log(`[watch] build finished - ${name}`));
+    },
+}];
 
 // Build script
 (async () => {
     try {
         if (args.includes('--watch')) {
             // Build and watch extension
-            console.log('[watch] build started');
-            await build({
-                ...extensionConfig,
-                ...watchConfig,
-            });
-            await build({
-                ...extensionWebConfig,
-                ...watchConfig,
-            });
-            console.log('[watch] build finished');
+            (await context({...extensionConfig, plugins: watchPlugin('extensionConfig')})).watch();
+            (await context({...extensionBrowserConfig, plugins: watchPlugin('extensionBrowserConfig')})).watch();
+            (await context({...webviewConfig, plugins: watchPlugin('webviewConfig')})).watch();
         } else {
             // Build extension
             await build(extensionConfig);
-            await build(extensionWebConfig);
+            await build(extensionBrowserConfig);
+            await build(webviewConfig);
             console.log('build complete');
         }
     } catch (err) {

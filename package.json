@@ -394,7 +394,7 @@
     "scripts": {
         "vscode:prepublish": "npm run compile -- --production",
         "compile": "node ./esbuild.js",
-        "lint": "eslint --ext .ts,.js src/ tests/ resources/",
+        "lint": "eslint --ext .ts,.tsx src/ tests/",
         "watch": "npm run compile -- --watch",
         "pretest": "tsc -p ./",
         "test": "node ./out/tests/runTest.js",
@@ -404,25 +404,32 @@
         "@types/glob": "^8.1.0",
         "@types/mocha": "^10.0.1",
         "@types/node": "^18.15.0",
+        "@types/react": "^18.2.6",
+        "@types/react-dom": "^18.2.4",
         "@types/vscode": "^1.57.0",
-        "@typescript-eslint/eslint-plugin": "^5.56.0",
-        "@typescript-eslint/parser": "^5.56.0",
-        "esbuild": "^0.16.17",
-        "esbuild-plugin-copy": "^2.1.1",
-        "eslint": "^8.36.0",
+        "@typescript-eslint/eslint-plugin": "^5.59.5",
+        "@typescript-eslint/parser": "^5.59.5",
+        "@vscode/debugadapter-testsupport": "^1.59.0",
+        "@vscode/test-electron": "^2.3.2",
+        "esbuild": "^0.17.19",
+        "eslint": "^8.40.0",
         "glob": "^8.1.0",
         "mocha": "^10.2.0",
         "node": "^18.15.0",
         "source-map-support": "^0.5.19",
-        "typescript": "^4.9.5",
-        "@vscode/test-electron": "^2.3.0",
-        "@vscode/debugadapter-testsupport": "^1.59.0"
+        "typescript": "^5.0.4",
+        "vscode-tmgrammar-test": "^0.1.1"
     },
     "dependencies": {
+        "@microsoft/fast-components": "^2.30.6",
+        "@microsoft/fast-react-wrapper": "^0.3.18",
+        "@vscode/codicons": "^0.0.33",
+        "@vscode/debugadapter": "^1.59.0",
+        "@vscode/webview-ui-toolkit": "^1.2.2",
         "await-notify": "^1.0.1",
         "moment": "^2.29.4",
-        "vscode-uri": "^3.0.7",
-        "@vscode/debugadapter": "^1.59.0",
-        "vscode-tmgrammar-test": "0.1.1"
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+        "vscode-uri": "^3.0.7"
     }
 }

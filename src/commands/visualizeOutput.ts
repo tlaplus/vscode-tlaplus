@@ -1,9 +1,9 @@
-import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { PassThrough } from 'stream';
-import { TlcModelCheckerStdoutParser } from '../parsers/tlc';
-import { revealEmptyCheckResultView, updateCheckResultView } from '../checkResultView';
+import * as vscode from 'vscode';
 import { ModelCheckResultSource } from '../model/check';
+import { revealEmptyCheckResultView, updateCheckResultView } from '../panels/checkResultView';
+import { TlcModelCheckerStdoutParser } from '../parsers/tlc';
 
 export const CMD_VISUALIZE_TLC_OUTPUT = 'tlaplus.out.visualize';
 

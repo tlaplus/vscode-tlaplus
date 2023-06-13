@@ -1,0 +1,102 @@
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.option-button {
+    margin-left: 0.5em;
+    width: 20px;
+    height: 20px;
+}
+
+.option-button:hover {
+    background-color: var(--vscode-list-hoverBackground);
+}
+
+.flex-direction-column {
+    flex-direction: column;
+}
+
+.error-trace-options {
+    display: flex;
+    align-items: center;
+}
+
+.margin-left-auto {
+    margin-left: auto;
+}
+
+.error-trace-title {
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+}
+
+.error-trace-title span{
+    font-weight: bold;
+    padding-bottom: 0.1em;
+    margin-bottom: 0.1em;
+}
+
+.var-block {
+    line-height: 1.4em;
+    display: grid;
+    grid-template-columns: 30% 70%;
+}
+
+.var-name {
+    display: inline-block;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.var-size {
+    display: inline-block;
+    margin-left: 0.3em;
+    opacity: 0.5;
+}
+
+.var-value {
+    display: inline-block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.var-menu {
+    position: absolute;
+    right: 0;
+    top: 0;
+    display: none;
+}
+
+.var-button {
+    display: inline-block;
+    width: 1.5em;
+    text-align: center;
+    cursor: pointer;
+}
+
+.var-block:hover .var-menu {
+    display: block;
+}
+
+.change-marker {
+    margin-left: 0.3em;
+}
+
+.change-marker-A {
+    color: var(--vscode-gitDecoration-addedResourceForeground);
+}
+
+.change-marker-M {
+    color: var(--vscode-gitDecoration-modifiedResourceForeground);
+}
+
+.change-marker-D {
+    color: var(--vscode-gitDecoration-deletedResourceForeground);
+}
+
+.value-deleted {
+    opacity: 0.6;
+    text-decoration: line-through;
+}

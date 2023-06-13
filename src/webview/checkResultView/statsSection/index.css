@@ -1,0 +1,17 @@
+.text-align-right {
+    text-align: right;
+}
+
+.hidden-overflow-ellipsis {
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+}
+
+.max-width-fit-content {
+    max-width: fit-content;
+}
+
+.coverage-zero {
+    background: var(--vscode-inputValidation-warningBackground);
+}

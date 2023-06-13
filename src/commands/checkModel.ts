@@ -3,12 +3,16 @@ import { copyFile } from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { Utils } from 'vscode-uri';
-import { revealEmptyCheckResultView, revealLastCheckResultView, updateCheckResultView } from '../checkResultView';
 import { LANG_TLAPLUS, LANG_TLAPLUS_CFG, exists, listFiles, replaceExtension } from '../common';
 import { applyDCollection } from '../diagnostic';
 import { ModelCheckResult, ModelCheckResultSource, SpecFiles } from '../model/check';
 import { ToolOutputChannel } from '../outputChannels';
 import { saveStreamToFile } from '../outputSaver';
+import {
+    revealEmptyCheckResultView,
+    revealLastCheckResultView,
+    updateCheckResultView
+} from '../panels/checkResultView';
 import { TlcModelCheckerStdoutParser } from '../parsers/tlc';
 import { runTlc, stopProcess } from '../tla2tools';
 
