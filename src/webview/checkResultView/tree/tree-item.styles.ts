@@ -19,12 +19,16 @@ export const treeItemStyles: FoundationElementTemplate<ElementStyles, TreeItemOp
         css`
             ${fastTreeItemStyles(context, definition)}
 
-            :host, .positioning-region, .expand-collapse-button {
+            :host,
+            .positioning-region,
+            .expand-collapse-button {
                 background: transparent;
                 color: var(--vscode-foreground);
             }
 
-            :host([selected]) .positioning-region, :host([selected])::after {
+            :host(:not([disabled])) .positioning-region,
+            :host([selected]) .positioning-region,
+            :host([selected])::after {
                 background: transparent;
                 color: var(--vscode-foreground);
             }
