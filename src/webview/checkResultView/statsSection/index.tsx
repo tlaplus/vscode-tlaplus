@@ -13,7 +13,7 @@ export const StatsSection = React.memo(({checkResult}: StatsSectionI) => {
         <section>
             <VSCodePanels>
                 <StatesStats stats={checkResult.initialStatesStat}/>
-                <CoverageStats stats={checkResult.coverageStat}/>
+                {checkResult.coverageStat.length > 0 && <CoverageStats stats={checkResult.coverageStat}/>}
             </VSCodePanels>
             <EmptyLine/>
             <VSCodeDivider/>
