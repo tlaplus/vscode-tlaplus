@@ -19,8 +19,7 @@ const CheckResultViewApp = React.memo(({state}: CheckResultViewAppI) =>
     </React.StrictMode>
 );
 
-const root = createRoot(document.getElementById('root') as HTMLElement);
-const main = () => render(vscode.getState() as ModelCheckResult);
+let root = createRoot(document.getElementById('root') as HTMLElement);
 
 function render(checkResult: ModelCheckResult) {
     root.render(<CheckResultViewApp state={checkResult}/>);
@@ -28,10 +27,21 @@ function render(checkResult: ModelCheckResult) {
 
 window.addEventListener('message',
     (event) => {
-        if (JSON.stringify(vscode.getState()) !== JSON.stringify(event.data.checkResult)) {
-            vscode.setState(event.data.checkResult);
-            render(event.data.checkResult);
+        if (JSON.stringify(vscode.getState()) === JSON.stringify(event.data.checkResult)) {
+            return;
         }
+
+        // If it is data from a new run cleanup window to avoid visual bugs
+        const prevState = vscode.getState() as ModelCheckResult;
+        if (prevState
+            && event.data.checkResult
+            && prevState.startDateTimeStr !== event.data.checkResult.startDateTimeStr) {
+            root.unmount();
+            root = createRoot(document.getElementById('root') as HTMLElement);
+        }
+
+        vscode.setState(event.data.checkResult);
+        render(event.data.checkResult);
     });
 
-window.addEventListener('load', main);
+window.addEventListener('load', () => render(vscode.getState() as ModelCheckResult));

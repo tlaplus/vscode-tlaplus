@@ -5,10 +5,6 @@ import { CodeRangeLink, DataGridCellDefault, DataGridCellHeader } from '../commo
 
 interface CoverageStatsI {stats: CoverageItem[]}
 export const CoverageStats = React.memo(({stats}: CoverageStatsI) => {
-    if (stats.length === 0) {
-        return (null);
-    }
-
     const tooltip = (stat: CoverageItem) =>
         stat.total !== 0 ? '' : 'This action has never been used to compute successor states';
 

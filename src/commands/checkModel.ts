@@ -9,7 +9,6 @@ import { ModelCheckResult, ModelCheckResultSource, SpecFiles } from '../model/ch
 import { ToolOutputChannel } from '../outputChannels';
 import { saveStreamToFile } from '../outputSaver';
 import {
-    revealEmptyCheckResultView,
     revealLastCheckResultView,
     updateCheckResultView
 } from '../panels/checkResultView';
@@ -193,7 +192,7 @@ export async function doCheckModel(
         });
         if (showCheckResultView) {
             attachFileSaver(specFiles.tlaFilePath, checkProcess);
-            revealEmptyCheckResultView(ModelCheckResultSource.Process, extContext);
+            revealLastCheckResultView(extContext);
         }
         const resultHolder = new CheckResultHolder();
         const checkResultCallback = (checkResult: ModelCheckResult) => {

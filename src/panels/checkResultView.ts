@@ -9,7 +9,7 @@ export function updateCheckResultView(checkResult: ModelCheckResult): void {
     CheckResultViewPanel.updateCheckResult(checkResult);
 }
 
-export function revealEmptyCheckResultView(_source: ModelCheckResultSource, extContext: vscode.ExtensionContext): void {
+export function revealEmptyCheckResultView(extContext: vscode.ExtensionContext): void {
     CheckResultViewPanel.renderEmpty(extContext.extensionUri);
 }
 
