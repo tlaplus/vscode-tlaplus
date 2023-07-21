@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import { PassThrough } from 'stream';
 import * as vscode from 'vscode';
 import { ModelCheckResultSource } from '../model/check';
-import { revealLastCheckResultView, updateCheckResultView } from '../panels/checkResultView';
+import { revealEmptyCheckResultView, updateCheckResultView } from '../panels/checkResultView';
 import { TlcModelCheckerStdoutParser } from '../parsers/tlc';
 
 export const CMD_VISUALIZE_TLC_OUTPUT = 'tlaplus.out.visualize';
@@ -34,7 +34,7 @@ export function visualizeTlcOutput(extContext: vscode.ExtensionContext): void {
 function showOutput(buffer: Buffer, extContext: vscode.ExtensionContext) {
     const stream = new PassThrough();
     stream.end(buffer);
-    revealLastCheckResultView(extContext);
+    revealEmptyCheckResultView(extContext);
     const parser = new TlcModelCheckerStdoutParser(
         ModelCheckResultSource.OutFile, stream, undefined, false, updateCheckResultView);
     parser.readAll();
