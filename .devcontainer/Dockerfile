@@ -1,6 +1,6 @@
 FROM registry.hub.docker.com/pandoc/latex:3-ubuntu AS latex
 
-FROM mcr.microsoft.com/devcontainers/typescript-node:18
+FROM mcr.microsoft.com/devcontainers/typescript-node:18-bullseye
 
 RUN apt update \
     && export DEBIAN_FRONTEND=noninteractive \
