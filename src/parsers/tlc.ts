@@ -566,14 +566,14 @@ class ModelCheckResultBuilder {
     }
 
     private tryParseSimpleErrorTraceItem(lines: string[]): ErrorTraceItem | undefined {
-        const regex = /^(\d+): <([\w!]+) line (\d+), col (\d+) to line (\d+), col (\d+) of module (\w+)>$/g;
+        const regex = /^(\d+): <([\w!]+(\(.*\)){0,1}) line (\d+), col (\d+) to line (\d+), col (\d+) of module (\w+)>$/g;
         const matches = this.tryMatchBufferLine(lines, regex);
         if (!matches) {
             return undefined;
         }
         const itemVars = this.parseErrorTraceVariables(lines);
         const actionName = matches[2];
-        const moduleName = matches[7];
+        const moduleName = matches[8];
         return new ErrorTraceItem(
             parseInt(matches[1]),
             `${actionName} in ${moduleName}`,
@@ -581,10 +581,10 @@ class ModelCheckResultBuilder {
             actionName,
             this.getModulePath(moduleName),
             new Range(
-                parseInt(matches[3]) - 1,
                 parseInt(matches[4]) - 1,
                 parseInt(matches[5]) - 1,
-                parseInt(matches[6])),
+                parseInt(matches[6]) - 1,
+                parseInt(matches[7])),
             itemVars
         );
     }
