@@ -53,8 +53,6 @@ This project has a devcontainer (https://code.visualstudio.com/docs/devcontainer
 
 When running the extension in debug mode you only have access to the project folder. If you wish to mount more folders you can add them in the mounts section of the [devcontainer.json](.devcontainer/devcontainer.json) file.
 
-If you are running on an arm machine add "-bullseye" to the [Dockerfile](.devcontainer/Dockerfile): https://github.com/devcontainers/images/tree/main/src/typescript-node.
-
 ## Test from VS Code
 
 To run unit tests from VS Code:
