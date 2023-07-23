@@ -37,6 +37,7 @@ class CheckResultViewPanel {
             vscode.ViewColumn.Beside,
             {
                 enableScripts: true,
+                retainContextWhenHidden: true,
                 localResourceRoots: [vscode.Uri.joinPath(extensionUri, 'out')]
             }
         );
@@ -64,23 +65,25 @@ class CheckResultViewPanel {
     }
 
     public static renderEmpty(extensionUri: vscode.Uri) {
-        if (CheckResultViewPanel.currentPanel) {
-            CheckResultViewPanel.currentPanel.dispose();
+        if (!CheckResultViewPanel.currentPanel) {
+            CheckResultViewPanel.currentPanel = new CheckResultViewPanel(extensionUri);
         }
 
-        CheckResultViewPanel.currentPanel = new CheckResultViewPanel(extensionUri);
+        this.updateCheckResult(ModelCheckResult.createEmpty(ModelCheckResultSource.Process));
+        CheckResultViewPanel.currentPanel.panel.reveal();
     }
 
     public static renderLastResult(extensionUri: vscode.Uri) {
-        if (CheckResultViewPanel.currentPanel) {
-            CheckResultViewPanel.currentPanel.panel.reveal();
-            return;
+        if (!CheckResultViewPanel.currentPanel) {
+            CheckResultViewPanel.currentPanel = new CheckResultViewPanel(extensionUri);
         }
 
-        CheckResultViewPanel.currentPanel = new CheckResultViewPanel(extensionUri);
-        if (CheckResultViewPanel.lastCheckResult) {
-            CheckResultViewPanel.currentPanel.updateView(CheckResultViewPanel.lastCheckResult);
-        }
+        const lastModelResult = CheckResultViewPanel.lastCheckResult
+            ? CheckResultViewPanel.lastCheckResult
+            : ModelCheckResult.createEmpty(ModelCheckResultSource.Process);
+
+        this.updateCheckResult(lastModelResult);
+        CheckResultViewPanel.currentPanel.panel.reveal();
     }
 
     private updateView(checkResult: ModelCheckResult) {
