@@ -605,14 +605,14 @@ class ModelCheckResultBuilder {
 
     private tryParseBackToStateErrorTraceItem(lines: string[]): ErrorTraceItem | undefined {
         // Try special cases "Back to state: <...>"
-        const regex = /^(\d+): Back to state: <(\w+) line (\d+), col (\d+) to line (\d+), col (\d+) of module (\w+)>?/g;
+        const regex = /^(\d+): Back to state: <(\w+(\(.*\)){0,1}) line (\d+), col (\d+) to line (\d+), col (\d+) of module (\w+)>?/g;
         const matches = this.tryMatchBufferLine(lines, regex);
         if (!matches) {
             return undefined;
         }
         const itemVars = this.parseErrorTraceVariables(lines);
         const actionName = matches[2];
-        const moduleName = matches[7];
+        const moduleName = matches[8];
         const num = parseInt(matches[1]);
         // Iff there is a trace and the state to which the back-to-state
         // points to is associated with an action that differs from the
@@ -632,10 +632,10 @@ class ModelCheckResultBuilder {
             actionName,
             this.getModulePath(moduleName),
             new Range(
-                parseInt(matches[3]) - 1,
                 parseInt(matches[4]) - 1,
                 parseInt(matches[5]) - 1,
-                parseInt(matches[6])),
+                parseInt(matches[6]) - 1,
+                parseInt(matches[7])),
             itemVars
         );
     }
