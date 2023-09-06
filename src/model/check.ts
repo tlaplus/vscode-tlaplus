@@ -207,9 +207,9 @@ export abstract class CollectionValue extends Value {
         super(key, makeCollectionValueString(items, prefix, postfix, delim, toStr || (v => v.str)));
     }
 
-    addDeletedItems(items: Value[]): void {
+    addDeletedItems(items: Value[]): CollectionValue {
         if (!items || items.length === 0) {
-            return;
+            return this;
         }
         if (!this.deletedItems) {
             this.deletedItems = [];
@@ -220,6 +220,7 @@ export abstract class CollectionValue extends Value {
             newValue.changeType = Change.DELETED;
             delItems.push(newValue);
         });
+        return this;
     }
 
     findItem(id: number): Value | undefined {
@@ -273,6 +274,53 @@ export class SetValue extends CollectionValue {
 
     formatKey(indent: string, _: Value): string {
         return indent;
+    }
+
+    diff(other: Value): boolean {
+        if (!(other instanceof SetValue)) {
+            return false;
+        }
+
+        const o = (other as SetValue);
+
+        let modified = false;
+        const deletedItems = [];
+
+        let i = 0;
+        for (; i < this.items.length; i++) {
+            let notfound = true;
+            let j = 0;
+            while (notfound && j < o.items.length) {
+                if (this.items[i].str === o.items[j].str) {
+                    notfound = false;
+                }
+                j++;
+            }
+            if (notfound) {
+                deletedItems.push(this.items[i]);
+                modified = true;
+            }
+        }
+        if (deletedItems.length > 0) {
+            o.addDeletedItems(deletedItems);
+            o.setModified();
+        }
+
+        for (i = 0; i < o.items.length; i++) {
+            let notfound = true;
+            let j = 0;
+            while (notfound && j < this.items.length) {
+                if (this.items[j].str === o.items[i].str) {
+                    notfound = false;
+                }
+                j++;
+            }
+            if (notfound) {
+                o.items[i].setAdded();
+                o.setModified();
+            }
+        }
+        return modified;
     }
 }
 
@@ -506,7 +554,9 @@ export function findChanges(prev: CollectionValue, state: CollectionValue): bool
             deletedItems.push(prevValue);
             pi += 1;
         } else {
-            if (prevValue instanceof CollectionValue && stateValue instanceof CollectionValue) {
+            if (prevValue instanceof SetValue && stateValue instanceof SetValue) {
+                modified = prevValue.diff(stateValue) || modified;
+            } else if (prevValue instanceof CollectionValue && stateValue instanceof CollectionValue) {
                 modified = findChanges(prevValue, stateValue) || modified;
             } else if (prevValue.str !== stateValue.str) {
                 stateValue.changeType = Change.MODIFIED;

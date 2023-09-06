@@ -116,6 +116,28 @@ suite('Check Model Test Suite', () => {
         );
     });
 
+    test('Detects set primitive item deletion', () => {
+        const p = set(ROOT, v(1, 'foo'), v(2, 'bar'), v(3, 'baz'));
+        const s = set(ROOT, v(1, 'foo'), v(2, 'bar'));
+        const e = setX(ROOT, Change.MODIFIED,
+            vX(1, Change.NOT_CHANGED, 'foo'),
+            vX(2, Change.NOT_CHANGED, 'bar')
+        );
+        e.addDeletedItems([v(3, 'baz')]);
+        assertChanges(p, s, e);
+    });
+
+    test('Detects set primitive item deletion 2', () => {
+        const p = set(ROOT, v(1, 'foo'), v(2, 'bar'), v(3, 'baz'));
+        const s = set(ROOT, v(2, 'bar'), v(3, 'baz'));
+        const e = setX(ROOT, Change.MODIFIED,
+            vX(2, Change.NOT_CHANGED, 'bar'),
+            vX(3, Change.NOT_CHANGED, 'baz')
+        );
+        e.addDeletedItems([v(1, 'foo')]);
+        assertChanges(p, s, e);
+    });
+
     test('Propagates modification flag to the top', () => {
         assertChanges(
             struct(ROOT,
