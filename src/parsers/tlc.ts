@@ -614,16 +614,9 @@ class ModelCheckResultBuilder {
         const actionName = matches[2];
         const moduleName = matches[8];
         const num = parseInt(matches[1]);
-        // Iff there is a trace and the state to which the back-to-state
-        // points to is associated with an action that differs from the
-        // action of the back-to-state, show the name of the back-to-state
-        // action.
         let backToState = 'Back to state';
         if (this.errors.length > 0) {
-            const lastError = this.errors[this.errors.length - 1];
-            if (lastError.errorTrace[num-1].action !== actionName) {
-                backToState = `${actionName} in ${moduleName} (Back to state)`;
-            }
+            backToState = `${actionName} in ${moduleName} (Back to state)`;
         }
         return new ErrorTraceItem(
             num,
