@@ -206,8 +206,8 @@ suite('TLC Output Parser Test Suite', () => {
                             '/Users/bob/error_trace.tla', range(12, 8, 14, 24),
                             struct('',
                                 set('FooVar',
-                                    v(1, '4').setModified(),
-                                    v(2, 'TRUE').setAdded()).setModified(),
+                                    v(1, '4').setAdded(),
+                                    v(2, 'TRUE').setAdded()).setModified().addDeletedItems([v(1, '1')]),
                                 v('BarVar', '40').setModified()
                             ).setModified()
                         )
