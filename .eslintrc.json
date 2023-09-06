@@ -9,7 +9,7 @@
     "plugin:@typescript-eslint/recommended"
   ],
   "rules": {
-    "max-len": [ "warn", { "code": 120 } ],
+    "max-len": [ "warn", { "code": 120, "ignoreRegExpLiterals": true } ],
     "curly": "error",
     "quotes": [ "warn", "single", { "avoidEscape": true } ],
     "semi": [ "error", "always" ],
