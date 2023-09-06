@@ -24,11 +24,13 @@ export const ErrorTraceVariable = React.memo(({value, stateId, settings}: ErrorT
         vscode.showInfoMessage('Value has been copied to clipboard');
     };
 
+    const varDeletedClass = value.changeType === 'D' ? 'value-deleted' : '';
+
     return (
         <VSCodeTreeItem expanded={expanded} onExpandedChanged={handleExpanded}>
             <div className="var-block">
                 <div className="var-name">
-                    <span className={value.changeType === 'D' ? 'value-deleted' : ''}> {value.key} </span>
+                    <span className={varDeletedClass}> {value.key} </span>
 
                     {value.items &&
                         <span className="var-size" title="Size of the collection"> ({value.items.length}) </span>}
@@ -41,7 +43,7 @@ export const ErrorTraceVariable = React.memo(({value, stateId, settings}: ErrorT
                         </span>}
                 </div>
 
-                <div className="var-value"> {value.str} </div>
+                <div className={'var-value ' + varDeletedClass}> {value.str} </div>
 
                 <div className="var-menu">
                     <span
@@ -61,6 +63,16 @@ export const ErrorTraceVariable = React.memo(({value, stateId, settings}: ErrorT
             {hasVariableChildrenToDisplay(value) &&
                 (!expanded ? <VSCodeTreeItem/> :
                     (value as CollectionValue).items.map(
+                        (childValue) =>
+                            <ErrorTraceVariable
+                                key={childValue.id}
+                                value={childValue as CollectionValue}
+                                stateId={stateId}
+                                settings={settings}/>))}
+
+            {value.deletedItems &&
+                (!expanded ? <VSCodeTreeItem/> :
+                    value.deletedItems.map(
                         (childValue) =>
                             <ErrorTraceVariable
                                 key={childValue.id}
