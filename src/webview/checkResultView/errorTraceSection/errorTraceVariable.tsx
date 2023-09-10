@@ -24,26 +24,26 @@ export const ErrorTraceVariable = React.memo(({value, stateId, settings}: ErrorT
         vscode.showInfoMessage('Value has been copied to clipboard');
     };
 
-    const varDeletedClass = value.changeType === 'D' ? 'value-deleted' : '';
+    const changeTypeClass = 'value-'+value.changeType;
 
     return (
         <VSCodeTreeItem expanded={expanded} onExpandedChanged={handleExpanded}>
             <div className="var-block">
-                <div className="var-name">
-                    <span className={varDeletedClass}> {value.key} </span>
+                <div className="var-name" title={changeHints[value.changeType]}>
+                    <span className={changeTypeClass}> {value.key} </span>
 
                     {value.items &&
                         <span className="var-size" title="Size of the collection"> ({value.items.length}) </span>}
 
                     {value.changeType !== 'N' &&
-                        <span
-                            title={changeHints[value.changeType]}
-                            className={`change-marker change-marker-${value.changeType}`}>
+                        <span className={`change-marker change-marker-${value.changeType}`}>
                             {value.changeType}
                         </span>}
                 </div>
 
-                <div className={'var-value ' + varDeletedClass}> {value.str} </div>
+                <div className={'var-value ' + changeTypeClass} title={changeHints[value.changeType]}>
+                    {value.str}
+                </div>
 
                 <div className="var-menu">
                     <span
