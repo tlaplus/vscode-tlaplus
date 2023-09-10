@@ -96,7 +96,15 @@
     color: var(--vscode-gitDecoration-deletedResourceForeground);
 }
 
-.value-deleted {
+.value-D {
     opacity: 0.6;
     text-decoration: line-through;
+}
+
+.value-A {
+    text-decoration: underline var(--vscode-gitDecoration-addedResourceForeground);
+}
+
+.value-M {
+    text-decoration: underline dotted var(--vscode-gitDecoration-modifiedResourceForeground);
 }
