@@ -27,7 +27,7 @@ const SEVERITY_WARNING = 3;
  */
 export class TlcModelCheckerStdoutParser extends ProcessOutputHandler<DCollection> {
     checkResultBuilder: ModelCheckResultBuilder;
-    timer: NodeJS.Timer | undefined = undefined;
+    timer: NodeJS.Timeout | undefined = undefined;
     first = true;
     debuggerPortFound = false;
 
