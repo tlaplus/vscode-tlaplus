@@ -25,6 +25,7 @@ import { CfgCompletionItemProvider } from './completions/cfgCompletions';
 import { TlaDeclarationsProvider, TlaDefinitionsProvider } from './declarations/tlaDeclarations';
 import { TlaDocumentInfos } from './model/documentInfo';
 import { syncTlcStatisticsSetting, listenTlcStatConfigurationChanges } from './commands/tlcStatisticsCfg';
+import { TlapsClient } from './tlaps';
 
 const TLAPLUS_FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file', language: LANG_TLAPLUS };
 const TLAPLUS_CFG_FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file', language: LANG_TLAPLUS_CFG };
@@ -34,6 +35,8 @@ const tlaDocInfos = new TlaDocumentInfos();
 
 // Holds all the error messages
 let diagnostic: vscode.DiagnosticCollection;
+
+let tlapsClient: TlapsClient | undefined;
 
 /**
  * Extension entry point.
@@ -154,11 +157,19 @@ export function activate(context: vscode.ExtensionContext): void {
                 }
             })
     );
+    tlapsClient = new TlapsClient(context);
     syncTlcStatisticsSetting()
         .catch((err) => console.error(err))
         .then(() => listenTlcStatConfigurationChanges(context.subscriptions));
     showChangeLog(context.extensionPath)
         .catch((err) => console.error(err));
+}
+
+export function deactivate() {
+    if (tlapsClient) {
+        tlapsClient.deactivate();
+    }
+    tlapsClient = undefined;
 }
 
 async function showChangeLog(extPath: string) {

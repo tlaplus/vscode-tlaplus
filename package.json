@@ -9,7 +9,7 @@
         "name": "Andrew Lygin"
     },
     "engines": {
-        "vscode": "^1.57.0"
+        "vscode": "^1.82.0"
     },
     "categories": [
         "Programming Languages",
@@ -203,6 +203,17 @@
                 "command": "tlaplus.repl.run",
                 "title": "Run REPL in Terminal",
                 "category": "TLA+"
+            },
+            {
+                "command": "tlaplus.tlaps.check-step",
+                "title": "Check proof step in TLAPS",
+                "category": "TLA+"
+            }
+        ],
+        "keybindings": [
+            {
+                "command": "tlaplus.tlaps.check-step",
+                "key": "ctrl+g ctrl+g"
             }
         ],
         "snippets": [
@@ -373,6 +384,17 @@
                     "scope": "application",
                     "maxLength": 1000,
                     "description": "Command to produce PDFs from .tex files."
+                },
+                "tlaplus.tlaps.enabled": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Enable TLAPS integration."
+                },
+                "tlaplus.tlaps.lspServerCommand": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Command and arguments to start a TLAPS LSP server.",
+                    "default": ["opam", "exec", "--", "tlapm_lsp", "--log-io", "--log-to=/tmp/tlapm_lsp.log"]
                 }
             }
         },
@@ -406,7 +428,7 @@
         "@types/node": "^18.15.0",
         "@types/react": "^18.2.6",
         "@types/react-dom": "^18.2.4",
-        "@types/vscode": "^1.57.0",
+        "@types/vscode": "^1.82.0",
         "@typescript-eslint/eslint-plugin": "^5.59.5",
         "@typescript-eslint/parser": "^5.59.5",
         "@vscode/debugadapter-testsupport": "^1.59.0",
@@ -426,6 +448,7 @@
         "@vscode/codicons": "^0.0.33",
         "@vscode/debugadapter": "^1.59.0",
         "@vscode/webview-ui-toolkit": "^1.2.2",
+        "vscode-languageclient": "^9.0.0",
         "await-notify": "^1.0.1",
         "moment": "^2.29.4",
         "react": "^18.2.0",
