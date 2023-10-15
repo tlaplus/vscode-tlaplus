@@ -411,7 +411,63 @@
                 "editor.formatOnType": true,
                 "editor.detectIndentation": false
             }
-        }
+        },
+        "colors": [
+            {
+                "id": "tlaplus.tlaps.proofState.proved",
+                "description": "Background for a proved sequent.",
+                "defaults": {
+                    "dark": "#00ff0020",
+                    "light": "#00ff0020",
+                    "highContrast": "#00ff0050"
+                }
+            },
+            {
+                "id": "tlaplus.tlaps.proofState.failed",
+                "description": "Background for a failed to prove sequent.",
+                "defaults": {
+                    "dark": "#ff000030",
+                    "light": "#ff000030",
+                    "highContrast": "#ff000060"
+                }
+            },
+            {
+                "id": "tlaplus.tlaps.proofState.omitted",
+                "description": "Background for a sequent with omitted proof.",
+                "defaults": {
+                    "dark": "#c8ff0020",
+                    "light": "#c8ff0020",
+                    "highContrast": "#c8ff0050"
+                }
+            },
+            {
+                "id": "tlaplus.tlaps.proofState.missing",
+                "description": "Background for a sequent with no proof.",
+                "defaults": {
+                    "dark": "#c8ff0020",
+                    "light": "#c8ff0020",
+                    "highContrast": "#c8ff0050"
+                }
+            },
+            {
+                "id": "tlaplus.tlaps.proofState.pending",
+                "description": "Background for a sequent whose proof was not checked yet.",
+                "defaults": {
+                    "dark": "#c8c8c820",
+                    "light": "#c8c8c820",
+                    "highContrast": "#c8c8c850"
+                }
+            },
+            {
+                "id": "tlaplus.tlaps.proofState.progress",
+                "description": "Background for a sequent which is currently being checked.",
+                "defaults": {
+                    "dark": "#d8d8d820",
+                    "light": "#d8d8d820",
+                    "highContrast": "#d8d8d850"
+                }
+            }
+        ]
     },
     "scripts": {
         "vscode:prepublish": "npm run compile -- --production",
