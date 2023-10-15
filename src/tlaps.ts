@@ -18,6 +18,7 @@ export class TlapsClient {
     private client: LanguageClient | undefined;
     private configEnabled = false;
     private configCommand = [] as string[];
+    private configWholeLine = true;
     private proofStateNames = [
         'proved',
         'failed',
@@ -26,20 +27,7 @@ export class TlapsClient {
         'pending',
         'progress',
     ];
-    private proofStateDecorationTypes = new Map<string, vscode.TextEditorDecorationType>(
-        this.proofStateNames.map(name => {
-            const color = { 'id': 'tlaplus.tlaps.proofState.' + name };
-            const decType = vscode.window.createTextEditorDecorationType({
-                overviewRulerColor: color,
-                overviewRulerLane: vscode.OverviewRulerLane.Right,
-                light: { backgroundColor: color },
-                dark: { backgroundColor: color },
-                isWholeLine: true,
-                rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed,
-            });
-            return [name, decType];
-        })
-    );
+    private proofStateDecorationTypes = new Map<string, vscode.TextEditorDecorationType>();
 
     constructor(private context: vscode.ExtensionContext) {
         context.subscriptions.push(vscode.commands.registerTextEditorCommand(
@@ -63,11 +51,29 @@ export class TlapsClient {
         context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(event => {
             if (this.readConfig()) {
                 this.tryStop();
+                this.makeDecoratorTypes();
                 this.tryStart();
             }
         }));
         this.readConfig();
+        this.makeDecoratorTypes();
         this.tryStart();
+    }
+
+    private makeDecoratorTypes() {
+        this.proofStateDecorationTypes.clear();
+        this.proofStateNames.forEach(name => {
+            const color = { 'id': 'tlaplus.tlaps.proofState.' + name };
+            const decType = vscode.window.createTextEditorDecorationType({
+                overviewRulerColor: color,
+                overviewRulerLane: vscode.OverviewRulerLane.Right,
+                light: { backgroundColor: color },
+                dark: { backgroundColor: color },
+                isWholeLine: this.configWholeLine,
+                rangeBehavior: vscode.DecorationRangeBehavior.ClosedOpen,
+            });
+            this.proofStateDecorationTypes.set(name, decType);
+        });
     }
 
     public deactivate() {
@@ -78,11 +84,14 @@ export class TlapsClient {
         const config = vscode.workspace.getConfiguration();
         const configEnabled = config.get<boolean>('tlaplus.tlaps.enabled');
         const configCommand = config.get<string[]>('tlaplus.tlaps.lspServerCommand');
-        const configChanged =
-            configEnabled !== this.configEnabled ||
-            JSON.stringify(configCommand) !== JSON.stringify(this.configCommand);
+        const configWholeLine = config.get<boolean>('tlaplus.tlaps.wholeLine');
+        const configChanged = false
+            || configEnabled !== this.configEnabled
+            || JSON.stringify(configCommand) !== JSON.stringify(this.configCommand)
+            || configWholeLine !== this.configWholeLine;
         this.configEnabled = !!configEnabled;
         this.configCommand = configCommand ? configCommand : [];
+        this.configWholeLine = !!configWholeLine;
         return configChanged;
     }
 

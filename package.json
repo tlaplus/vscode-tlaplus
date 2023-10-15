@@ -395,6 +395,11 @@
                     "items": {"type": "string"},
                     "description": "Command and arguments to start a TLAPS LSP server.",
                     "default": ["opam", "exec", "--", "tlapm_lsp", "--log-io", "--log-to=/tmp/tlapm_lsp.log"]
+                },
+                "tlaplus.tlaps.wholeLine": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Mark proof step states using whole line."
                 }
             }
         },
@@ -435,18 +440,18 @@
                 "id": "tlaplus.tlaps.proofState.omitted",
                 "description": "Background for a sequent with omitted proof.",
                 "defaults": {
-                    "dark": "#c8ff0020",
-                    "light": "#c8ff0020",
-                    "highContrast": "#c8ff0050"
+                    "dark": "#ff660020",
+                    "light": "#ff660020",
+                    "highContrast": "#ff660050"
                 }
             },
             {
                 "id": "tlaplus.tlaps.proofState.missing",
                 "description": "Background for a sequent with no proof.",
                 "defaults": {
-                    "dark": "#c8ff0020",
-                    "light": "#c8ff0020",
-                    "highContrast": "#c8ff0050"
+                    "dark": "#ff660020",
+                    "light": "#ff660020",
+                    "highContrast": "#ff660050"
                 }
             },
             {
