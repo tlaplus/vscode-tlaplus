@@ -210,12 +210,6 @@
                 "category": "TLA+"
             }
         ],
-        "keybindings": [
-            {
-                "command": "tlaplus.tlaps.check-step",
-                "key": "ctrl+g ctrl+g"
-            }
-        ],
         "snippets": [
             {
                 "language": "tlaplus",
