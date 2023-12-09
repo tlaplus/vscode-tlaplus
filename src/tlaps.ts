@@ -64,13 +64,16 @@ export class TlapsClient {
         this.proofStateDecorationTypes.clear();
         this.proofStateNames.forEach(name => {
             const color = { 'id': 'tlaplus.tlaps.proofState.' + name };
+            const bgColor = name === 'failed' ? { backgroundColor: color } : undefined;
             const decType = vscode.window.createTextEditorDecorationType({
                 overviewRulerColor: color,
                 overviewRulerLane: vscode.OverviewRulerLane.Right,
-                light: { backgroundColor: color },
-                dark: { backgroundColor: color },
+                light: bgColor,
+                dark: bgColor,
                 isWholeLine: this.configWholeLine,
                 rangeBehavior: vscode.DecorationRangeBehavior.ClosedOpen,
+                gutterIconPath: this.context.asAbsolutePath(`resources/images/tlaps-proof-state-${name}.svg`),
+                gutterIconSize: '85%'
             });
             this.proofStateDecorationTypes.set(name, decType);
         });
