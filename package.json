@@ -194,6 +194,13 @@
                 "category": "TLA+"
             },
             {
+                "command": "tlaplus.debugger.customRun",
+                "title": "Check and debug model with TLC using non-default config...",
+                "enablement": "!inDebugMode",
+                "icon": "$(debug-alt)",
+                "category": "TLA+"
+            },
+            {
                 "command": "tlaplus.debugger.attach",
                 "title": "Debug a running model",
                 "enablement": "!inDebugMode",
