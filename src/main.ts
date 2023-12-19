@@ -6,8 +6,8 @@ import {
     showTlcOutput, checkModelCustom, CMD_CHECK_MODEL_RUN_AGAIN, runLastCheckAgain
 } from './commands/checkModel';
 import { CMD_RUN_REPL, launchRepl, REPLTerminalProfileProvider } from './commands/runRepl';
-import { TLAPLUS_DEBUG_LAUNCH_CHECKNDEBUG, TLAPLUS_DEBUG_LAUNCH_DEBUG,TLAPLUS_DEBUG_LAUNCH_SMOKE,
-    TLADebugAdapterServerDescriptorFactory, checkAndDebugSpec, attachDebugger, smokeTestSpec
+import { TLAPLUS_DEBUG_LAUNCH_CHECKNDEBUG, TLAPLUS_DEBUG_LAUNCH_CUSTOMCHECKNDEBUG, TLAPLUS_DEBUG_LAUNCH_DEBUG,TLAPLUS_DEBUG_LAUNCH_SMOKE,
+    TLADebugAdapterServerDescriptorFactory, checkAndDebugSpec, checkAndDebugSpecCustom, attachDebugger, smokeTestSpec
 } from './debugger/debugging';
 import { CMD_EVALUATE_SELECTION, evaluateSelection, CMD_EVALUATE_EXPRESSION,
     evaluateExpression } from './commands/evaluateExpression';
@@ -122,6 +122,10 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.commands.registerCommand(
             TLAPLUS_DEBUG_LAUNCH_CHECKNDEBUG,
             (uri) => checkAndDebugSpec(uri, diagnostic, context)
+        ),
+        vscode.commands.registerCommand(
+            TLAPLUS_DEBUG_LAUNCH_CUSTOMCHECKNDEBUG, 
+            (uri) => checkAndDebugSpecCustom(uri, diagnostic, context)
         ),
         vscode.commands.registerCommand(
             TLAPLUS_DEBUG_LAUNCH_SMOKE,

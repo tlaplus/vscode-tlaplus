@@ -1,4 +1,6 @@
+import * as path from 'path';
 import * as vscode from 'vscode';
+import { listFiles } from '../common';
 import {
     doCheckModel, getSpecFiles, stopModelChecking
 } from '../commands/checkModel';
@@ -6,6 +8,7 @@ import { SpecFiles } from '../model/check';
 
 export const TLAPLUS_DEBUG_LAUNCH_SMOKE = 'tlaplus.debugger.smoke';
 export const TLAPLUS_DEBUG_LAUNCH_CHECKNDEBUG = 'tlaplus.debugger.run';
+export const TLAPLUS_DEBUG_LAUNCH_CUSTOMCHECKNDEBUG = 'tlaplus.debugger.customRun';
 export const TLAPLUS_DEBUG_LAUNCH_DEBUG = 'tlaplus.debugger.attach';
 
 const DEFAULT_DEBUGGER_PORT = 4712;
@@ -58,6 +61,54 @@ export async function checkAndDebugSpec(
     if (!specFiles) {
         return;
     }
+    // Randomly select a port on which we request the debugger to listen
+    const initPort = Math.floor(Math.random() * (DEBUGGER_MAX_PORT - DEBUGGER_MIN_PORT)) + DEBUGGER_MIN_PORT; //NOSONAR
+    // This will be called as soon as TLC starts listening on a port or fails to start
+    const portOpenCallback = (port?: number) => {
+        if (!port) {
+            return;
+        }
+        vscode.debug.startDebugging(undefined, {
+            type: 'tlaplus',
+            name: 'Debug Spec',
+            request: 'launch',
+            port: port
+        });
+    };
+    // Don't await doCheckModel because it only returns after TLC terminates.
+    doCheckModel(specFiles, false, context, diagnostic, true, ['-debugger', `port=${initPort}`], portOpenCallback);
+}
+
+export async function checkAndDebugSpecCustom(
+    resource: vscode.Uri | undefined,
+    diagnostic: vscode.DiagnosticCollection,
+    context: vscode.ExtensionContext
+): Promise<void> {
+    let targetResource = resource;
+    if (!targetResource && vscode.window.activeTextEditor) {
+        // Since this command is registered as a button on the editor menu, I don't
+        // think this branch is ever taken.  It's here because the DAP example has it.
+        targetResource = vscode.window.activeTextEditor.document.uri;
+    }
+    if (!targetResource) {
+        return;
+    }
+    // Accept .tla files here because TLC configs and TLA+ modules can share the same file:
+    // https://github.com/alygin/vscode-tlaplus/issues/220
+    const configFiles = await listFiles(path.dirname(targetResource.fsPath),
+        (fName) => fName.endsWith('.cfg') || fName.endsWith('.tla'));
+    configFiles.sort();
+    const cfgFileName = await vscode.window.showQuickPick(
+        configFiles,
+        { canPickMany: false, placeHolder: 'Select a model config file', matchOnDetail: true }
+    );
+    if (!cfgFileName || cfgFileName.length === 0) {
+        return;
+    }
+    const specFiles = new SpecFiles(
+        targetResource.fsPath,
+        path.join(path.dirname(targetResource.fsPath), cfgFileName)
+    );
     // Randomly select a port on which we request the debugger to listen
     const initPort = Math.floor(Math.random() * (DEBUGGER_MAX_PORT - DEBUGGER_MIN_PORT)) + DEBUGGER_MIN_PORT; //NOSONAR
     // This will be called as soon as TLC starts listening on a port or fails to start
