@@ -1,3 +1,12 @@
+// TODO: Click on the proof gutter icons.
+//  - https://github.com/microsoft/vscode/issues/5455
+//  - https://github.com/microsoft/vscode/issues/175945#issuecomment-1466438453
+//
+// TODO: Tree View to show the proof.
+//  https://code.visualstudio.com/api/extension-guides/tree-view
+//  https://github.com/microsoft/vscode/issues/103403
+//  Also show WebviewView to show a custom content in a sidebar.
+//
 import * as vscode from 'vscode';
 import {
     DocumentUri,
@@ -7,6 +16,8 @@ import {
     TransportKind,
     VersionedTextDocumentIdentifier
 } from 'vscode-languageclient/node';
+import { TlapsProofObligationView } from './webview/tlapsCurrentProofObligationView';
+import { TlapsProofObligationState } from './model/tlaps';
 
 interface ProofStateMarker {
     range: vscode.Range;
@@ -29,7 +40,10 @@ export class TlapsClient {
     ];
     private proofStateDecorationTypes = new Map<string, vscode.TextEditorDecorationType>();
 
-    constructor(private context: vscode.ExtensionContext) {
+    constructor(
+        private context: vscode.ExtensionContext,
+        private tlapsProofObligationView: TlapsProofObligationView,
+    ) {
         context.subscriptions.push(vscode.commands.registerTextEditorCommand(
             'tlaplus.tlaps.check-step',
             (te, ed, args) => {
@@ -129,6 +143,12 @@ export class TlapsClient {
         this.context.subscriptions.push(this.client.onNotification(
             'tlaplus/tlaps/proofStates',
             this.proofStateNotifHandler.bind(this)
+        ));
+        this.context.subscriptions.push(this.client.onNotification(
+            'tlaplus/tlaps/currentProofObligation',
+            (oblState: TlapsProofObligationState) => {
+                this.tlapsProofObligationView.showProofObligation(oblState);
+            }
         ));
         this.client.start();
     }

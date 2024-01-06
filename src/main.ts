@@ -6,8 +6,11 @@ import {
     showTlcOutput, checkModelCustom, CMD_CHECK_MODEL_RUN_AGAIN, runLastCheckAgain
 } from './commands/checkModel';
 import { CMD_RUN_REPL, launchRepl, REPLTerminalProfileProvider } from './commands/runRepl';
-import { TLAPLUS_DEBUG_LAUNCH_CHECKNDEBUG, TLAPLUS_DEBUG_LAUNCH_CUSTOMCHECKNDEBUG, TLAPLUS_DEBUG_LAUNCH_DEBUG,TLAPLUS_DEBUG_LAUNCH_SMOKE,
-    TLADebugAdapterServerDescriptorFactory, checkAndDebugSpec, checkAndDebugSpecCustom, attachDebugger, smokeTestSpec
+import {
+    TLAPLUS_DEBUG_LAUNCH_CHECKNDEBUG, TLAPLUS_DEBUG_LAUNCH_CUSTOMCHECKNDEBUG,
+    TLAPLUS_DEBUG_LAUNCH_DEBUG,TLAPLUS_DEBUG_LAUNCH_SMOKE,
+    TLADebugAdapterServerDescriptorFactory, checkAndDebugSpec, checkAndDebugSpecCustom,
+    attachDebugger, smokeTestSpec
 } from './debugger/debugging';
 import { CMD_EVALUATE_SELECTION, evaluateSelection, CMD_EVALUATE_EXPRESSION,
     evaluateExpression } from './commands/evaluateExpression';
@@ -26,6 +29,7 @@ import { TlaDeclarationsProvider, TlaDefinitionsProvider } from './declarations/
 import { TlaDocumentInfos } from './model/documentInfo';
 import { syncTlcStatisticsSetting, listenTlcStatConfigurationChanges } from './commands/tlcStatisticsCfg';
 import { TlapsClient } from './tlaps';
+import { TlapsProofObligationView } from './webview/tlapsCurrentProofObligationView';
 
 const TLAPLUS_FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file', language: LANG_TLAPLUS };
 const TLAPLUS_CFG_FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file', language: LANG_TLAPLUS_CFG };
@@ -42,6 +46,7 @@ let tlapsClient: TlapsClient | undefined;
  * Extension entry point.
  */
 export function activate(context: vscode.ExtensionContext): void {
+    const tlapsProofObligationView = new TlapsProofObligationView();
     diagnostic = vscode.languages.createDiagnosticCollection(LANG_TLAPLUS);
     context.subscriptions.push(
         vscode.commands.registerCommand(
@@ -124,7 +129,7 @@ export function activate(context: vscode.ExtensionContext): void {
             (uri) => checkAndDebugSpec(uri, diagnostic, context)
         ),
         vscode.commands.registerCommand(
-            TLAPLUS_DEBUG_LAUNCH_CUSTOMCHECKNDEBUG, 
+            TLAPLUS_DEBUG_LAUNCH_CUSTOMCHECKNDEBUG,
             (uri) => checkAndDebugSpecCustom(uri, diagnostic, context)
         ),
         vscode.commands.registerCommand(
@@ -159,9 +164,14 @@ export function activate(context: vscode.ExtensionContext): void {
                             //   1 1 1 2
                             (wordRange.end.character /** + 1 */))) : undefined;
                 }
-            })
+            }
+        ),
+        vscode.window.registerWebviewViewProvider(
+            TlapsProofObligationView.viewType,
+            tlapsProofObligationView,
+        )
     );
-    tlapsClient = new TlapsClient(context);
+    tlapsClient = new TlapsClient(context, tlapsProofObligationView);
     syncTlcStatisticsSetting()
         .catch((err) => console.error(err))
         .then(() => listenTlcStatConfigurationChanges(context.subscriptions));
