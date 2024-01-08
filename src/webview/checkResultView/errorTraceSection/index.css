@@ -108,3 +108,8 @@
 .value-M {
     text-decoration: underline dotted var(--vscode-gitDecoration-modifiedResourceForeground);
 }
+
+code {
+    color: inherit; /* Reset the text color */
+    background: inherit; /* Remove the gray-ish background */
+}
