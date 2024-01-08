@@ -4,7 +4,7 @@ export interface TlapsProofObligationResult {
     prover: string;
     meth: string;
     status: string;
-    duration: number;
+    reason: string | null;
     obligation: string | null; // Non-null, if prover failed.
 }
 

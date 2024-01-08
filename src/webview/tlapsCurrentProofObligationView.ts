@@ -53,7 +53,9 @@ export class TlapsProofObligationView implements vscode.WebviewViewProvider {
             if (this.oblState.results) {
                 content += '<ul>';
                 this.oblState.results.forEach(r => {
-                    content += `<li>${r.prover}: ${r.status}</li>`;
+                    const reason = r.reason ? ` <span style='opacity: 0.7'>(${r.reason})</span>` : '';
+                    const meth = r.meth ? ` <span style='opacity: 0.7'>[${r.meth}]</span>` : '';
+                    content += `<li>${r.prover}${meth}: ${r.status}${reason}</li>`;
                 });
                 content += '</ul>';
             } else {
