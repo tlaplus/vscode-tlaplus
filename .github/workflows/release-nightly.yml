@@ -31,7 +31,7 @@ jobs:
     - uses: actions/checkout@v1
     - uses: actions/setup-node@v1
       with:
-        node-version: '14.17'
+        node-version: '18.19'
     - name: Get (nightly) TLC
       run: wget https://nightly.tlapl.us/dist/tla2tools.jar -O tools/tla2tools.jar
     - name: Get (nightly) CommunityModules
