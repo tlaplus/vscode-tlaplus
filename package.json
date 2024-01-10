@@ -473,7 +473,25 @@
                     "highContrast": "#d8d8d850"
                 }
             }
-        ]
+        ],
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "tlaplus",
+                    "title": "TLA+",
+                    "icon": "resources/images/tlaplus.svg"
+                }
+            ]
+        },
+        "views": {
+            "tlaplus": [
+                {
+                    "id": "tlaplus.tlaps-current-proof-obligation",
+                    "name": "Current Proof Obligation",
+                    "type": "webview"
+                }
+            ]
+        }
     },
     "scripts": {
         "vscode:prepublish": "npm run compile -- --production",
