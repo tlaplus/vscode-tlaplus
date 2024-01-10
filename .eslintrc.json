@@ -9,6 +9,7 @@
     "plugin:@typescript-eslint/recommended"
   ],
   "rules": {
+    "no-control-regex": 0,
     "max-len": [ "warn", { "code": 120, "ignoreRegExpLiterals": true } ],
     "curly": "error",
     "quotes": [ "warn", "single", { "avoidEscape": true } ],
