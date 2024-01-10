@@ -4,6 +4,7 @@ import { CollectionValue } from '../../../model/check';
 import { VSCodeTreeItem } from '../tree';
 import { vscode } from '../vscode';
 import { ErrorTraceSettings } from './errorTrace';
+import Ansi from '@cocalc/ansi-to-react';
 
 interface ErrorTraceVariableI {value: CollectionValue, stateId: number, settings: ErrorTraceSettings}
 export const ErrorTraceVariable = React.memo(({value, stateId, settings}: ErrorTraceVariableI) => {
@@ -42,7 +43,7 @@ export const ErrorTraceVariable = React.memo(({value, stateId, settings}: ErrorT
                 </div>
 
                 <div className={'var-value ' + changeTypeClass} title={changeHints[value.changeType]}>
-                    {value.str}
+                    <Ansi>{value.str}</Ansi>
                 </div>
 
                 <div className="var-menu">

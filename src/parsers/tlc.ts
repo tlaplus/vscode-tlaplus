@@ -637,7 +637,8 @@ class ModelCheckResultBuilder {
         const variables = [];
         for (let i = 1; i < lines.length; i++) {
             const line = lines[i];
-            const matches = /^(?:\/\\ )?(\w+) = (.+)$/g.exec(line);
+            // Tolerate/ignore ASNI escape sequences around the conjunct symbol.
+            const matches = /^(?:\u001b\[[0-9;]*m)*(?:\/\\(?:\u001b\[[0-9;]*m)* )?(\w+) = (.+)$/g.exec(line);
             if (matches) {
                 const name = matches[1];
                 const valueLines = [matches[2]];
@@ -651,8 +652,10 @@ class ModelCheckResultBuilder {
     }
 
     private readValueLines(startIdx: number, lines: string[], valueLines: string[]) {
+        const ansiEscapeRegex = /\u001b\[[0-9;]*m/g;
         for (let i = startIdx; i < lines.length; i++) {
-            const line = lines[i];
+            // Replace the ANSI escape sequences with an empty string
+            const line = lines[i].replace(ansiEscapeRegex, '');
             if (line.startsWith('/\\ ')) {
                 return;
             }
