@@ -7,6 +7,17 @@
 //  https://github.com/microsoft/vscode/issues/103403
 //  Also show WebviewView to show a custom content in a sidebar.
 //
+// TODO: Auto re-read proof state for the visible range:
+//  - Visible range: https://stackoverflow.com/questions/40339229/vscode-extension-api-how-to-get-only-visible-lines-of-editor
+//  - Cursor change event: https://stackoverflow.com/questions/44782075/vscode-extension-ondidchangecursorposition
+//
+// TODO: Try getting the expanded proof obligations from the parser instead of the prover.
+//
+// TODO: Icons: https://code.visualstudio.com/api/references/icons-in-labels
+//  - testing-passed-icon
+//  - testing-failed-icon
+//  - settings-sync-view-icon   $(sync~spin)
+//  - testing-run-icon
 import * as vscode from 'vscode';
 import {
     DocumentUri,
@@ -17,7 +28,7 @@ import {
     VersionedTextDocumentIdentifier
 } from 'vscode-languageclient/node';
 import { TlapsProofObligationView } from './webview/tlapsCurrentProofObligationView';
-import { TlapsProofObligationState } from './model/tlaps';
+import { TlapsProofObligationState, TlapsProofStepDetails } from './model/tlaps';
 
 interface ProofStateMarker {
     range: vscode.Range;
@@ -44,6 +55,10 @@ export class TlapsClient {
         private context: vscode.ExtensionContext,
         private tlapsProofObligationView: TlapsProofObligationView,
     ) {
+        // TODO: Here.
+        // context.subscriptions.push(vscode.window.onDidChangeTextEditorSelection(function(e) {
+        //     console.log(e);
+        // }, this));
         context.subscriptions.push(vscode.commands.registerTextEditorCommand(
             'tlaplus.tlaps.check-step',
             (te, ed, args) => {
@@ -145,9 +160,9 @@ export class TlapsClient {
             this.proofStateNotifHandler.bind(this)
         ));
         this.context.subscriptions.push(this.client.onNotification(
-            'tlaplus/tlaps/currentProofObligation',
-            (oblState: TlapsProofObligationState) => {
-                this.tlapsProofObligationView.showProofObligation(oblState);
+            'tlaplus/tlaps/currentProofStep',
+            (tlapsProofStep: TlapsProofStepDetails) => {
+                this.tlapsProofObligationView.showProofObligation(tlapsProofStep);
             }
         ));
         this.client.start();

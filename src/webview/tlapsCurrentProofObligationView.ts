@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
-import { TlapsProofObligationState } from '../model/tlaps';
+import { TlapsProofStepDetails } from '../model/tlaps';
 import { URI } from 'vscode-uri';
 
 export class TlapsProofObligationView implements vscode.WebviewViewProvider {
     public static readonly viewType = 'tlaplus.tlaps-current-proof-obligation';
     private view?: vscode.WebviewView;
-    private oblState: TlapsProofObligationState | null = null;
+    private tlapsProofStepDetails: TlapsProofStepDetails | null = null;
 
     public resolveWebviewView(
         webviewView: vscode.WebviewView,
@@ -16,8 +16,8 @@ export class TlapsProofObligationView implements vscode.WebviewViewProvider {
         this.show();
     }
 
-    public showProofObligation(oblState: TlapsProofObligationState | null) {
-        this.oblState = oblState;
+    public showProofObligation(tlapsProofStepDetails: TlapsProofStepDetails | null) {
+        this.tlapsProofStepDetails = tlapsProofStepDetails;
         this.show();
     }
 
@@ -41,27 +41,32 @@ export class TlapsProofObligationView implements vscode.WebviewViewProvider {
             `</body>
             </html>`;
         let content = '<p>No obligation selected.</p>';
-        if (this.oblState) {
-            const loc = this.oblState.location;
+        if (this.tlapsProofStepDetails) {
+            const loc = this.tlapsProofStepDetails.location;
             const uri = URI.parse(loc.uri);
             content = `<p>${uri.path.split(/\/|\\/).pop()}</p>`;
             if (loc.range.start.line === loc.range.end.line) {
-                content += `<p>Line: ${loc.range.start.line}</p>`;
+                content += `<p>Line: ${loc.range.start.line + 1}</p>`;
             } else {
-                content += `<p>Lines: ${loc.range.start.line}-${loc.range.end.line}</p>`;
+                content += `<p>Lines: ${loc.range.start.line + 1}-${loc.range.end.line + 1}</p>`;
             }
-            if (this.oblState.results) {
-                content += '<ul>';
-                this.oblState.results.forEach(r => {
-                    const reason = r.reason ? ` <span style='opacity: 0.7'>(${r.reason})</span>` : '';
-                    const meth = r.meth ? ` <span style='opacity: 0.7'>[${r.meth}]</span>` : '';
-                    content += `<li>${r.prover}${meth}: ${r.status}${reason}</li>`;
-                });
-                content += '</ul>';
-            } else {
-                content += '<p>Not checked yet.</p>';
-            }
-            content += `<pre>${this.oblState.obligation}</pre>`;
+            this.tlapsProofStepDetails.obligations.forEach(obl => {
+                content += `<div> Obligation on ${obl.range.start.line + 1}:${obl.range.start.character + 1}--${obl.range.end.line + 1}:${obl.range.end.character + 1}`;
+                if (obl.results) {
+                    content += '<ul>';
+                    obl.results.forEach(r => {
+                        const reason = r.reason ? ` <span style='opacity: 0.7'>(${r.reason})</span>` : '';
+                        const meth = r.meth ? ` <span style='opacity: 0.7'>[${r.meth}]</span>` : '';
+                        content += `<li>${r.prover}${meth}: ${r.status}${reason}</li>`;
+                    });
+                    content += '</ul>';
+                } else {
+                    content += '<p>Not checked yet.</p>';
+                }
+                content += `<pre>${obl.normalized}</pre>`;
+                content += '</div>';
+            });
+
         }
         return header + content + footer;
     }

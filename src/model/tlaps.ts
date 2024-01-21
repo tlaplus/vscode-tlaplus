@@ -1,4 +1,4 @@
-import { Location } from 'vscode-languageclient/node';
+import { Location, Range } from 'vscode-languageclient/node';
 
 export interface TlapsProofObligationResult {
     prover: string;
@@ -9,7 +9,13 @@ export interface TlapsProofObligationResult {
 }
 
 export interface TlapsProofObligationState {
-    location: Location;
-    obligation: string;
+    range: Range;
+    normalized: string;
     results: TlapsProofObligationResult[];
+}
+
+export interface TlapsProofStepDetails {
+    kind: string;
+    location: Location;
+    obligations: TlapsProofObligationState[];
 }
