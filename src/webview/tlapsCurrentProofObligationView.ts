@@ -50,6 +50,7 @@ export class TlapsProofObligationView implements vscode.WebviewViewProvider {
             } else {
                 content += `<p>Lines: ${loc.range.start.line + 1}-${loc.range.end.line + 1}</p>`;
             }
+            content += `<p>Status: ${this.tlapsProofStepDetails.kind} / ${this.tlapsProofStepDetails.status}</p>`;
             this.tlapsProofStepDetails.obligations.forEach(obl => {
                 content += `<div> Obligation on ${obl.range.start.line + 1}:${obl.range.start.character + 1}--${obl.range.end.line + 1}:${obl.range.end.character + 1}`;
                 if (obl.results) {

@@ -16,6 +16,7 @@ export interface TlapsProofObligationState {
 
 export interface TlapsProofStepDetails {
     kind: string;
+    status: string;
     location: Location;
     obligations: TlapsProofObligationState[];
 }
