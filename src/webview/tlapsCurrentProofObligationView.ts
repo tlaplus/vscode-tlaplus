@@ -44,14 +44,17 @@ export class TlapsProofObligationView implements vscode.WebviewViewProvider {
         if (this.tlapsProofStepDetails) {
             const loc = this.tlapsProofStepDetails.location;
             const uri = URI.parse(loc.uri);
+            const details = this.tlapsProofStepDetails;
+            const sub_count = details.sub_count;
             content = `<p>${uri.path.split(/\/|\\/).pop()}</p>`;
             if (loc.range.start.line === loc.range.end.line) {
                 content += `<p>Line: ${loc.range.start.line + 1}</p>`;
             } else {
                 content += `<p>Lines: ${loc.range.start.line + 1}-${loc.range.end.line + 1}</p>`;
             }
-            content += `<p>Status: ${this.tlapsProofStepDetails.kind} / ${this.tlapsProofStepDetails.status}</p>`;
-            this.tlapsProofStepDetails.obligations.forEach(obl => {
+            content += `<p>Status: ${details.kind} / ${details.status}</p>`;
+            content += `<p>Sub: ${sub_count.proved}/${sub_count.failed}/${sub_count.omitted}/${sub_count.missing}/${sub_count.pending}/${sub_count.progress}</p>`;
+            details.obligations.forEach(obl => {
                 content += `<div> Obligation on ${obl.range.start.line + 1}:${obl.range.start.character + 1}--${obl.range.end.line + 1}:${obl.range.end.character + 1}`;
                 if (obl.results) {
                     content += '<ul>';

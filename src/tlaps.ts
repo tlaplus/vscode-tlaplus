@@ -11,12 +11,6 @@
 //  - Visible range: https://stackoverflow.com/questions/40339229/vscode-extension-api-how-to-get-only-visible-lines-of-editor
 //  - Cursor change event: https://stackoverflow.com/questions/44782075/vscode-extension-ondidchangecursorposition
 //
-// TODO: Icons: https://code.visualstudio.com/api/references/icons-in-labels
-//  - testing-passed-icon
-//  - testing-failed-icon
-//  - settings-sync-view-icon   $(sync~spin)
-//  - testing-run-icon
-//
 // TODO: Links to the proof steps: DocumentLinkProvider<T>
 //
 // TODO: Links from the side pane: TextEditor.revealRange(range: Range, revealType?: TextEditorRevealType): void
@@ -27,6 +21,7 @@ import {
     Executable,
     LanguageClient,
     LanguageClientOptions,
+    TextDocumentIdentifier,
     TransportKind,
     VersionedTextDocumentIdentifier
 } from 'vscode-languageclient/node';
@@ -79,6 +74,18 @@ export class TlapsClient {
         // context.subscriptions.push(vscode.window.onDidChangeTextEditorSelection(function(e) {
         //     console.log(e);
         // }, this));
+        context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(textEditor => {
+            // A document clears all its decorators when it becomes invisible (e.g. user opens another
+            // document in other tab). Here we notify the LSP server to resend the markers.
+            if (!this.client || !textEditor) {
+                return;
+            }
+            vscode.commands.executeCommand('tlaplus.tlaps.proofStepMarkers.fetch.lsp',
+                {
+                    uri: textEditor.document.uri.toString()
+                } as TextDocumentIdentifier
+            );
+        }));
         context.subscriptions.push(vscode.commands.registerTextEditorCommand(
             'tlaplus.tlaps.check-step',
             (te, ed, args) => {
