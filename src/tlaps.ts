@@ -27,6 +27,7 @@ import {
 } from 'vscode-languageclient/node';
 import { TlapsProofObligationView } from './webview/tlapsCurrentProofObligationView';
 import { TlapsProofStepDetails } from './model/tlaps';
+import { DelayedFn } from './common';
 
 interface ProofStepMarker {
     status: string;
@@ -70,10 +71,22 @@ export class TlapsClient {
         private context: vscode.ExtensionContext,
         private tlapsProofObligationView: TlapsProofObligationView,
     ) {
-        // TODO: Here.
-        // context.subscriptions.push(vscode.window.onDidChangeTextEditorSelection(function(e) {
-        //     console.log(e);
-        // }, this));
+        const delayedCurrentProofStepSet = new DelayedFn(500);
+        context.subscriptions.push(vscode.window.onDidChangeTextEditorSelection(event => {
+            // We track the cursor here to show the current proof step based on the
+            // cursor position.
+            delayedCurrentProofStepSet.do(() => {
+                vscode.commands.executeCommand('tlaplus.tlaps.currentProofStep.set.lsp',
+                    {
+                        uri: event.textEditor.document.uri.toString()
+                    } as TextDocumentIdentifier,
+                    {
+                        start: event.textEditor.selection.start,
+                        end: event.textEditor.selection.end
+                    } as vscode.Range,
+                );
+            });
+        }));
         context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(textEditor => {
             // A document clears all its decorators when it becomes invisible (e.g. user opens another
             // document in other tab). Here we notify the LSP server to resend the markers.
