@@ -7,10 +7,6 @@
 //  https://github.com/microsoft/vscode/issues/103403
 //  Also show WebviewView to show a custom content in a sidebar.
 //
-// TODO: Auto re-read proof state for the visible range:
-//  - Visible range: https://stackoverflow.com/questions/40339229/vscode-extension-api-how-to-get-only-visible-lines-of-editor
-//  - Cursor change event: https://stackoverflow.com/questions/44782075/vscode-extension-ondidchangecursorposition
-//
 // TODO: Links to the proof steps: DocumentLinkProvider<T>
 //
 // TODO: Links from the side pane: TextEditor.revealRange(range: Range, revealType?: TextEditorRevealType): void
@@ -25,7 +21,6 @@ import {
     TransportKind,
     VersionedTextDocumentIdentifier
 } from 'vscode-languageclient/node';
-import { TlapsProofObligationView } from './webview/tlapsCurrentProofObligationView';
 import { TlapsProofStepDetails } from './model/tlaps';
 import { DelayedFn } from './common';
 
@@ -69,7 +64,7 @@ export class TlapsClient {
 
     constructor(
         private context: vscode.ExtensionContext,
-        private tlapsProofObligationView: TlapsProofObligationView,
+        private currentProofStepDetailsListener: ((details: TlapsProofStepDetails) => void),
     ) {
         const delayedCurrentProofStepSet = new DelayedFn(500);
         context.subscriptions.push(vscode.window.onDidChangeTextEditorSelection(event => {
@@ -210,9 +205,7 @@ export class TlapsClient {
         ));
         this.context.subscriptions.push(this.client.onNotification(
             'tlaplus/tlaps/currentProofStep',
-            (tlapsProofStep: TlapsProofStepDetails) => {
-                this.tlapsProofObligationView.showProofObligation(tlapsProofStep);
-            }
+            this.currentProofStepDetailsListener
         ));
         this.client.start();
     }

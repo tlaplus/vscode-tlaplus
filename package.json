@@ -486,8 +486,8 @@
         "views": {
             "tlaplus": [
                 {
-                    "id": "tlaplus.tlaps-current-proof-obligation",
-                    "name": "Current Proof Obligation",
+                    "id": "tlaplus.current-proof-step",
+                    "name": "Current Proof Step",
                     "type": "webview"
                 }
             ]

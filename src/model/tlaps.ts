@@ -18,6 +18,7 @@ export interface TlapsProofObligationResult {
 }
 
 export interface TlapsProofObligationState {
+    role: string;
     range: Range;
     normalized: string;
     results: TlapsProofObligationResult[];
