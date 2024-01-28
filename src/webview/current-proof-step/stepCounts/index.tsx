@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { CountByStepStatus } from '../../../model/tlaps';
+import { ProofStatusIcon } from '../proofStatusIcon';
 import './index.css';
 
 interface StepCountsI { label: string; counts: CountByStepStatus }
@@ -20,7 +21,7 @@ export const StepCounts = React.memo(({ label, counts }: StepCountsI) => {
         if (value === 0) {
             return null;
         }
-        return (<span>{name}: {value} </span>);
+        return (<span><ProofStatusIcon proofStatus={name}></ProofStatusIcon> {value} </span>);
     };
     return (
         <span>

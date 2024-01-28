@@ -5,6 +5,7 @@ import { Obligation } from './obligation/index.tsx';
 import { StepCounts } from './stepCounts/index.tsx';
 import { VSCodeLink } from '@vscode/webview-ui-toolkit/react/index';
 import { vscodeClient } from './vscode_client.ts';
+import { ProofStatusIcon } from './proofStatusIcon/index.tsx';
 import '@vscode/codicons/dist/codicon.css';
 
 interface CurrentProofStepViewAppI { details: TlapsProofStepDetails | null }
@@ -26,13 +27,14 @@ const CurrentProofStepViewApp = React.memo(({ details }: CurrentProofStepViewApp
             <React.StrictMode>
                 <section>
                     <div>
-                        <b>{stepKind(details.kind)}</b>&nbsp;at&nbsp;
+                        <b>{stepKind(details.kind)}</b>&nbsp;
+                        <ProofStatusIcon proofStatus={details.status}></ProofStatusIcon>
+                        &nbsp;at&nbsp;
                         <VSCodeLink onClick={() => vscodeClient.showLocation(details.location)}>
                             {details.location.uri.split(/\/|\\/).pop()}&nbsp;
                             {details.location.range.start.line + 1}:
                             {details.location.range.start.character + 1}
                         </VSCodeLink>
-                        &nbsp;-&nbsp;<b>{details.status}</b>
                     </div>
                     <StepCounts label={subLabel} counts={details.sub_count}></StepCounts>
                 </section>

@@ -3,13 +3,10 @@
 //  - https://github.com/microsoft/vscode/issues/175945#issuecomment-1466438453
 //
 // TODO: Tree View to show the proof.
-//  https://code.visualstudio.com/api/extension-guides/tree-view
-//  https://github.com/microsoft/vscode/issues/103403
-//  Also show WebviewView to show a custom content in a sidebar.
+//  - https://code.visualstudio.com/api/extension-guides/tree-view
+//  - https://github.com/microsoft/vscode/issues/103403
 //
 // TODO: Links to the proof steps: DocumentLinkProvider<T>
-//
-// TODO: Links from the side pane: TextEditor.revealRange(range: Range, revealType?: TextEditorRevealType): void
 //
 import * as vscode from 'vscode';
 import {
@@ -24,6 +21,28 @@ import {
 import { TlapsProofStepDetails } from './model/tlaps';
 import { DelayedFn } from './common';
 
+export enum proofStateNames {
+    proved = 'proved',
+    failed = 'failed',
+    omitted = 'omitted',
+    missing = 'missing',
+    pending = 'pending',
+    progress = 'progress',
+}
+
+export type ProofStateIcons = {
+    [key : string]: string;
+}
+
+export const proofStateIcons = {
+    proved: 'resources/images/icons-material/check_circle_FILL0_wght400_GRAD0_opsz24-color.svg',
+    failed: 'resources/images/icons-material/close_FILL0_wght400_GRAD0_opsz24-color.svg',
+    omitted: 'resources/images/icons-material/editor_choice_FILL0_wght400_GRAD0_opsz24-color.svg',
+    missing: 'resources/images/icons-material/check_box_outline_blank_FILL0_wght400_GRAD0_opsz24-color.svg',
+    pending: 'resources/images/icons-material/help_FILL0_wght400_GRAD0_opsz24-color.svg',
+    progress: 'resources/images/icons-material/more_horiz_FILL0_wght400_GRAD0_opsz24-color.svg',
+} as ProofStateIcons;
+
 interface ProofStepMarker {
     status: string;
     range: vscode.Range;
@@ -35,32 +54,7 @@ export class TlapsClient {
     private configEnabled = false;
     private configCommand = [] as string[];
     private configWholeLine = true;
-    private proofStateNames = [
-        'proved',
-        'failed',
-        'omitted',
-        'missing',
-        'pending',
-        'progress',
-    ];
     private proofStateDecorationTypes = new Map<string, vscode.TextEditorDecorationType>();
-    private iconsAdhoc = new Map<string, string>(Object.entries({
-        proved: 'icons-adhoc/tlaps-proof-state-proved.svg',
-        failed: 'icons-adhoc/tlaps-proof-state-failed.svg',
-        omitted: 'icons-adhoc/tlaps-proof-state-omitted.svg',
-        missing: 'icons-adhoc/tlaps-proof-state-missing.svg',
-        pending: 'icons-adhoc/tlaps-proof-state-pending.svg',
-        progress: 'icons-adhoc/tlaps-proof-state-progress.svg',
-    }));
-    private iconsMaterial = new Map<string, string>(Object.entries({
-        proved: 'icons-material/check_circle_FILL0_wght400_GRAD0_opsz24-color.svg',
-        failed: 'icons-material/close_FILL0_wght400_GRAD0_opsz24-color.svg',
-        omitted: 'icons-material/editor_choice_FILL0_wght400_GRAD0_opsz24-color.svg',
-        missing: 'icons-material/check_box_outline_blank_FILL0_wght400_GRAD0_opsz24-color.svg',
-        pending: 'icons-material/help_FILL0_wght400_GRAD0_opsz24-color.svg',
-        progress: 'icons-material/more_horiz_FILL0_wght400_GRAD0_opsz24-color.svg',
-    }));
-    private icons = this.iconsMaterial;
 
     constructor(
         private context: vscode.ExtensionContext,
@@ -126,7 +120,7 @@ export class TlapsClient {
 
     private makeDecoratorTypes() {
         this.proofStateDecorationTypes.clear();
-        this.proofStateNames.forEach(name => {
+        Object.values(proofStateNames).forEach(name => {
             const color = { 'id': 'tlaplus.tlaps.proofState.' + name };
             const bgColor = name === 'failed' ? { backgroundColor: color } : undefined;
             const decTypeFirst = vscode.window.createTextEditorDecorationType({
@@ -136,7 +130,7 @@ export class TlapsClient {
                 dark: bgColor,
                 isWholeLine: this.configWholeLine,
                 rangeBehavior: vscode.DecorationRangeBehavior.ClosedOpen,
-                gutterIconPath: this.context.asAbsolutePath(`resources/images/${this.icons.get(name)}`),
+                gutterIconPath: this.context.asAbsolutePath(proofStateIcons[name]),
                 gutterIconSize: '100%',
             });
             const decTypeNext = vscode.window.createTextEditorDecorationType({
