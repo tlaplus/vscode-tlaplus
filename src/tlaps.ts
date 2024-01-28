@@ -14,6 +14,7 @@ import {
     Executable,
     LanguageClient,
     LanguageClientOptions,
+    Range,
     TextDocumentIdentifier,
     TransportKind,
     VersionedTextDocumentIdentifier
@@ -31,7 +32,7 @@ export enum proofStateNames {
 }
 
 export type ProofStateIcons = {
-    [key : string]: string;
+    [key: string]: string;
 }
 
 export const proofStateIcons = {
@@ -45,7 +46,7 @@ export const proofStateIcons = {
 
 interface ProofStepMarker {
     status: string;
-    range: vscode.Range;
+    range: Range;
     hover: string;
 }
 
@@ -72,7 +73,7 @@ export class TlapsClient {
                     {
                         start: event.textEditor.selection.start,
                         end: event.textEditor.selection.end
-                    } as vscode.Range,
+                    } as Range,
                 );
             });
         }));
@@ -102,7 +103,7 @@ export class TlapsClient {
                     {
                         start: te.selection.start,
                         end: te.selection.end
-                    } as vscode.Range,
+                    } as Range,
                 );
             }
         ));
@@ -215,45 +216,41 @@ export class TlapsClient {
 
     private proofStepMarkersNotifHandler(uri: DocumentUri, markers: ProofStepMarker[]) {
         vscode.window.visibleTextEditors.forEach(editor => {
-            if (editor.document.uri.toString() === uri) {
-                const decorations = new Map<string, vscode.DecorationOptions[]>();
-                this.proofStateDecorationTypes.forEach((_, decTypeName) => {
-                    decorations.set(decTypeName, [] as vscode.DecorationOptions[]);
-                });
-                markers.forEach(marker => {
-                    if (marker.range.isSingleLine) {
-                        decorations.get(marker.status + '.first')?.push(
-                            {
-                                range: marker.range,
-                                hoverMessage: marker.hover,
-                            }
-                        );
-                    } else {
-                        const start = marker.range.start;
-                        const midA = new vscode.Position(start.line, 1024);
-                        const midB = new vscode.Position(start.line + 1, 0);
-                        const end = marker.range.end;
-                        const rangeFirst = new vscode.Range(start, midA);
-                        const rangeNext = new vscode.Range(midB, end);
-                        decorations.get(marker.status + '.first')?.push(
-                            {
-                                range: rangeFirst,
-                                hoverMessage: marker.hover,
-                            }
-                        );
-                        decorations.get(marker.status + '.next')?.push(
-                            {
-                                range: rangeNext,
-                                hoverMessage: marker.hover,
-                            }
-                        );
-                    }
-                });
-                this.proofStateDecorationTypes.forEach((decoratorType, decTypeName) => {
-                    const decs = decorations.get(decTypeName);
-                    editor.setDecorations(decoratorType, decs ? decs : []);
-                });
+            if (editor.document.uri.toString() !== uri) {
+                return;
             }
+            const decorations = new Map<string, vscode.DecorationOptions[]>();
+            this.proofStateDecorationTypes.forEach((_, decTypeName) => {
+                decorations.set(decTypeName, [] as vscode.DecorationOptions[]);
+            });
+            markers.forEach(marker => {
+                const start = new vscode.Position(marker.range.start.line, marker.range.start.character);
+                const end = new vscode.Position(marker.range.start.line, marker.range.end.character);
+                const range = new vscode.Range(start, end);
+                if (marker.range.start.line === marker.range.end.line) {
+                    decorations.get(marker.status + '.first')?.push({
+                        range: range,
+                        hoverMessage: marker.hover,
+                    });
+                } else {
+                    const midA = new vscode.Position(start.line, 1024);
+                    const midB = new vscode.Position(start.line + 1, 0);
+                    const rangeFirst = new vscode.Range(start, midA);
+                    const rangeNext = new vscode.Range(midB, end);
+                    decorations.get(marker.status + '.first')?.push({
+                        range: rangeFirst,
+                        hoverMessage: marker.hover,
+                    });
+                    decorations.get(marker.status + '.next')?.push({
+                        range: rangeNext,
+                        hoverMessage: marker.hover,
+                    });
+                }
+            });
+            this.proofStateDecorationTypes.forEach((decoratorType, decTypeName) => {
+                const decs = decorations.get(decTypeName);
+                editor.setDecorations(decoratorType, decs ? decs : []);
+            });
         });
     }
 }
