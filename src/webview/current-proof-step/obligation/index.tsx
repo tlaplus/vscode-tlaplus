@@ -8,6 +8,10 @@ import './index.css';
 
 interface ObligationI { details: TlapsProofStepDetails; obligation: TlapsProofObligationState }
 export const Obligation = React.memo(({ details, obligation }: ObligationI) => {
+    if (obligation.role === 'aux' && obligation.status !== 'failed') {
+        // Do not show the auxiliary obligations, unless they are failed.
+        return null;
+    }
     const location = { uri: details.location.uri, range: obligation.range } as Location;
     const showLocation = () => vscodeClient.showLocation(location);
     const results = obligation.results && obligation.results.length > 0

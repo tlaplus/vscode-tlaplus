@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { createRoot } from 'react-dom/client';
-import { TlapsProofStepDetails } from '../../model/tlaps.ts';
+import { TlapsProofObligationState, TlapsProofStepDetails } from '../../model/tlaps.ts';
 import { Obligation } from './obligation/index.tsx';
 import { StepCounts } from './stepCounts/index.tsx';
 import { VSCodeLink } from '@vscode/webview-ui-toolkit/react/index';
@@ -23,6 +23,16 @@ const CurrentProofStepViewApp = React.memo(({ details }: CurrentProofStepViewApp
                 default: return kind;
             }
         };
+        const obsMain: TlapsProofObligationState[] = [];
+        const obsOthers: TlapsProofObligationState[] = [];
+        details.obligations.forEach(obl => {
+            // We will show the main obligations before the other.
+            if (obl.role === 'main') {
+                obsMain.push(obl);
+            } else {
+                obsOthers.push(obl);
+            }
+        });
         return (
             <React.StrictMode>
                 <section>
@@ -39,9 +49,8 @@ const CurrentProofStepViewApp = React.memo(({ details }: CurrentProofStepViewApp
                     <StepCounts label={subLabel} counts={details.sub_count}></StepCounts>
                 </section>
                 <section>
-                    {details.obligations.map((obl, index) =>
-                        <Obligation key={index} details={details} obligation={obl} />
-                    )}
+                    {obsMain.map((obl, index) => <Obligation key={index} details={details} obligation={obl} />)}
+                    {obsOthers.map((obl, index) => <Obligation key={index} details={details} obligation={obl} />)}
                 </section>
             </React.StrictMode>
         );
