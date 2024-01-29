@@ -147,22 +147,22 @@ export function activate(context: vscode.ExtensionContext): void {
             // Also see wordPattern in tlaplus-lang-config.json that drops "@"
             // and "'" compared to VSCode's standard wordPattern.
             // https://github.com/alygin/vscode-tlaplus/issues/200
-            provideEvaluatableExpression(document: vscode.TextDocument, position: vscode.Position):
-                vscode.ProviderResult<vscode.EvaluatableExpression> {
-                const wordRange = document.getWordRangeAtPosition(position);
-                return wordRange ? new vscode.EvaluatableExpression(wordRange,
-                    encodeURI(
-                        'tlaplus://' + document.uri + '?' + document.getText(wordRange) + '#' +
-                        (wordRange.start.line + 1) + ' ' +
-                        (wordRange.start.character + 1) + ' ' +
-                        (wordRange.end.line + 1) + ' ' +
-                        // For SANY, the location of the first character in a file is:
-                        //   1 1 1 1
-                        // whereas VSCode defines it to be:
-                        //   1 1 1 2
-                        (wordRange.end.character /** + 1 */))) : undefined;
+                provideEvaluatableExpression(document: vscode.TextDocument, position: vscode.Position):
+                    vscode.ProviderResult<vscode.EvaluatableExpression> {
+                    const wordRange = document.getWordRangeAtPosition(position);
+                    return wordRange ? new vscode.EvaluatableExpression(wordRange,
+                        encodeURI(
+                            'tlaplus://' + document.uri + '?' + document.getText(wordRange) + '#' +
+                            (wordRange.start.line + 1) + ' ' +
+                            (wordRange.start.character + 1) + ' ' +
+                            (wordRange.end.line + 1) + ' ' +
+                            // For SANY, the location of the first character in a file is:
+                            //   1 1 1 1
+                            // whereas VSCode defines it to be:
+                            //   1 1 1 2
+                            (wordRange.end.character /** + 1 */))) : undefined;
+                }
             }
-        }
         ),
         vscode.window.registerWebviewViewProvider(
             CurrentProofStepWebviewViewProvider.viewType,
