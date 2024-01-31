@@ -50,6 +50,19 @@ const webviewConfig = {
     }
 };
 
+/** @type BuildOptions */
+const webviewCurrentProofStepConfig = {
+    ...baseConfig,
+    target: 'es2020',
+    format: 'esm',
+    tsconfig: 'tsconfig.webview.json',
+    entryPoints: ['./src/webview/current-proof-step/main.tsx'],
+    outfile: './out/current-proof-step.js',
+    loader: {
+        '.ttf': 'copy', // use the file loader to handle .ttf files
+    }
+};
+
 const watchPlugin = (name) => [{
     name: 'watch-plugin',
     setup(build) {
@@ -66,11 +79,16 @@ const watchPlugin = (name) => [{
             (await context({...extensionConfig, plugins: watchPlugin('extensionConfig')})).watch();
             (await context({...extensionBrowserConfig, plugins: watchPlugin('extensionBrowserConfig')})).watch();
             (await context({...webviewConfig, plugins: watchPlugin('webviewConfig')})).watch();
+            (await context({
+                ...webviewCurrentProofStepConfig,
+                plugins: watchPlugin('webviewCurrentProofStepConfig')
+            })).watch();
         } else {
             // Build extension
             await build(extensionConfig);
             await build(extensionBrowserConfig);
             await build(webviewConfig);
+            await build(webviewCurrentProofStepConfig);
             console.log('build complete');
         }
     } catch (err) {

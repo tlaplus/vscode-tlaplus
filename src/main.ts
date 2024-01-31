@@ -27,7 +27,7 @@ import { TlaDeclarationsProvider, TlaDefinitionsProvider } from './declarations/
 import { TlaDocumentInfos } from './model/documentInfo';
 import { syncTlcStatisticsSetting, listenTlcStatConfigurationChanges } from './commands/tlcStatisticsCfg';
 import { TlapsClient } from './tlaps';
-import { TlapsProofObligationView } from './webview/tlapsCurrentProofObligationView';
+import { CurrentProofStepWebviewViewProvider } from './panels/currentProofStepWebviewViewProvider';
 
 const TLAPLUS_FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file', language: LANG_TLAPLUS };
 const TLAPLUS_CFG_FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file', language: LANG_TLAPLUS_CFG };
@@ -44,7 +44,7 @@ let tlapsClient: TlapsClient | undefined;
  * Extension entry point.
  */
 export function activate(context: vscode.ExtensionContext): void {
-    const tlapsProofObligationView = new TlapsProofObligationView();
+    const currentProofStepWebviewViewProvider = new CurrentProofStepWebviewViewProvider(context.extensionUri);
     diagnostic = vscode.languages.createDiagnosticCollection(LANG_TLAPLUS);
     context.subscriptions.push(
         vscode.commands.registerCommand(
@@ -92,7 +92,7 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.languages.registerCodeActionsProvider(
             TLAPLUS_FILE_SELECTOR,
             new TlaCodeActionProvider(),
-            { providedCodeActionKinds: [ vscode.CodeActionKind.Source ] }),
+            { providedCodeActionKinds: [vscode.CodeActionKind.Source] }),
         vscode.debug.registerDebugAdapterDescriptorFactory(
             LANG_TLAPLUS,
             new TLADebugAdapterServerDescriptorFactory()),
@@ -165,11 +165,13 @@ export function activate(context: vscode.ExtensionContext): void {
             }
         ),
         vscode.window.registerWebviewViewProvider(
-            TlapsProofObligationView.viewType,
-            tlapsProofObligationView,
+            CurrentProofStepWebviewViewProvider.viewType,
+            currentProofStepWebviewViewProvider,
         )
     );
-    tlapsClient = new TlapsClient(context, tlapsProofObligationView);
+    tlapsClient = new TlapsClient(context, details => {
+        currentProofStepWebviewViewProvider.showProofStepDetails(details);
+    });
     syncTlcStatisticsSetting()
         .catch((err) => console.error(err))
         .then(() => listenTlcStatConfigurationChanges(context.subscriptions));

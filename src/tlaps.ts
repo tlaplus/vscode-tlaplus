@@ -3,9 +3,10 @@
 //  - https://github.com/microsoft/vscode/issues/175945#issuecomment-1466438453
 //
 // TODO: Tree View to show the proof.
-//  https://code.visualstudio.com/api/extension-guides/tree-view
-//  https://github.com/microsoft/vscode/issues/103403
-//  Also show WebviewView to show a custom content in a sidebar.
+//  - https://code.visualstudio.com/api/extension-guides/tree-view
+//  - https://github.com/microsoft/vscode/issues/103403
+//
+// TODO: Links to the proof steps: DocumentLinkProvider<T>
 //
 import * as vscode from 'vscode';
 import {
@@ -13,15 +14,39 @@ import {
     Executable,
     LanguageClient,
     LanguageClientOptions,
+    Range,
+    TextDocumentIdentifier,
     TransportKind,
     VersionedTextDocumentIdentifier
 } from 'vscode-languageclient/node';
-import { TlapsProofObligationView } from './webview/tlapsCurrentProofObligationView';
-import { TlapsProofObligationState } from './model/tlaps';
+import { TlapsProofStepDetails } from './model/tlaps';
+import { DelayedFn } from './common';
 
-interface ProofStateMarker {
-    range: vscode.Range;
-    state: string;
+export enum proofStateNames {
+    proved = 'proved',
+    failed = 'failed',
+    omitted = 'omitted',
+    missing = 'missing',
+    pending = 'pending',
+    progress = 'progress',
+}
+
+export type ProofStateIcons = {
+    [key: string]: string;
+}
+
+export const proofStateIcons = {
+    proved: 'resources/images/icons-material/check_circle_FILL0_wght400_GRAD0_opsz24-color.svg',
+    failed: 'resources/images/icons-material/close_FILL0_wght400_GRAD0_opsz24-color.svg',
+    omitted: 'resources/images/icons-material/editor_choice_FILL0_wght400_GRAD0_opsz24-color.svg',
+    missing: 'resources/images/icons-material/check_box_outline_blank_FILL0_wght400_GRAD0_opsz24-color.svg',
+    pending: 'resources/images/icons-material/help_FILL0_wght400_GRAD0_opsz24-color.svg',
+    progress: 'resources/images/icons-material/more_horiz_FILL0_wght400_GRAD0_opsz24-color.svg',
+} as ProofStateIcons;
+
+interface ProofStepMarker {
+    status: string;
+    range: Range;
     hover: string;
 }
 
@@ -30,20 +55,40 @@ export class TlapsClient {
     private configEnabled = false;
     private configCommand = [] as string[];
     private configWholeLine = true;
-    private proofStateNames = [
-        'proved',
-        'failed',
-        'omitted',
-        'missing',
-        'pending',
-        'progress',
-    ];
     private proofStateDecorationTypes = new Map<string, vscode.TextEditorDecorationType>();
 
     constructor(
         private context: vscode.ExtensionContext,
-        private tlapsProofObligationView: TlapsProofObligationView,
+        private currentProofStepDetailsListener: ((details: TlapsProofStepDetails) => void),
     ) {
+        const delayedCurrentProofStepSet = new DelayedFn(500);
+        context.subscriptions.push(vscode.window.onDidChangeTextEditorSelection(event => {
+            // We track the cursor here to show the current proof step based on the
+            // cursor position.
+            delayedCurrentProofStepSet.do(() => {
+                vscode.commands.executeCommand('tlaplus.tlaps.currentProofStep.set.lsp',
+                    {
+                        uri: event.textEditor.document.uri.toString()
+                    } as TextDocumentIdentifier,
+                    {
+                        start: event.textEditor.selection.start,
+                        end: event.textEditor.selection.end
+                    } as Range,
+                );
+            });
+        }));
+        context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(textEditor => {
+            // A document clears all its decorators when it becomes invisible (e.g. user opens another
+            // document in other tab). Here we notify the LSP server to resend the markers.
+            if (!this.client || !textEditor) {
+                return;
+            }
+            vscode.commands.executeCommand('tlaplus.tlaps.proofStepMarkers.fetch.lsp',
+                {
+                    uri: textEditor.document.uri.toString()
+                } as TextDocumentIdentifier
+            );
+        }));
         context.subscriptions.push(vscode.commands.registerTextEditorCommand(
             'tlaplus.tlaps.check-step',
             (te, ed, args) => {
@@ -58,7 +103,7 @@ export class TlapsClient {
                     {
                         start: te.selection.start,
                         end: te.selection.end
-                    } as vscode.Range,
+                    } as Range,
                 );
             }
         ));
@@ -76,20 +121,29 @@ export class TlapsClient {
 
     private makeDecoratorTypes() {
         this.proofStateDecorationTypes.clear();
-        this.proofStateNames.forEach(name => {
+        Object.values(proofStateNames).forEach(name => {
             const color = { 'id': 'tlaplus.tlaps.proofState.' + name };
             const bgColor = name === 'failed' ? { backgroundColor: color } : undefined;
-            const decType = vscode.window.createTextEditorDecorationType({
+            const decTypeFirst = vscode.window.createTextEditorDecorationType({
                 overviewRulerColor: color,
                 overviewRulerLane: vscode.OverviewRulerLane.Right,
                 light: bgColor,
                 dark: bgColor,
                 isWholeLine: this.configWholeLine,
                 rangeBehavior: vscode.DecorationRangeBehavior.ClosedOpen,
-                gutterIconPath: this.context.asAbsolutePath(`resources/images/tlaps-proof-state-${name}.svg`),
-                gutterIconSize: '85%'
+                gutterIconPath: this.context.asAbsolutePath(proofStateIcons[name]),
+                gutterIconSize: '100%',
             });
-            this.proofStateDecorationTypes.set(name, decType);
+            const decTypeNext = vscode.window.createTextEditorDecorationType({
+                overviewRulerColor: color,
+                overviewRulerLane: vscode.OverviewRulerLane.Right,
+                light: bgColor,
+                dark: bgColor,
+                isWholeLine: this.configWholeLine,
+                rangeBehavior: vscode.DecorationRangeBehavior.ClosedOpen,
+            });
+            this.proofStateDecorationTypes.set(name + '.first', decTypeFirst);
+            this.proofStateDecorationTypes.set(name + '.next', decTypeNext);
         });
     }
 
@@ -141,14 +195,12 @@ export class TlapsClient {
             true,
         );
         this.context.subscriptions.push(this.client.onNotification(
-            'tlaplus/tlaps/proofStates',
-            this.proofStateNotifHandler.bind(this)
+            'tlaplus/tlaps/proofStepMarkers',
+            this.proofStepMarkersNotifHandler.bind(this)
         ));
         this.context.subscriptions.push(this.client.onNotification(
-            'tlaplus/tlaps/currentProofObligation',
-            (oblState: TlapsProofObligationState) => {
-                this.tlapsProofObligationView.showProofObligation(oblState);
-            }
+            'tlaplus/tlaps/currentProofStep',
+            this.currentProofStepDetailsListener
         ));
         this.client.start();
     }
@@ -162,23 +214,43 @@ export class TlapsClient {
         return client.stop();
     }
 
-    private proofStateNotifHandler(uri: DocumentUri, markers: ProofStateMarker[]) {
+    private proofStepMarkersNotifHandler(uri: DocumentUri, markers: ProofStepMarker[]) {
         vscode.window.visibleTextEditors.forEach(editor => {
-            if (editor.document.uri.toString() === uri) {
-                const decorations = new Map(this.proofStateNames.map(name => [name, [] as vscode.DecorationOptions[]]));
-                markers.forEach(marker => {
-                    decorations.get(marker.state)?.push(
-                        {
-                            range: marker.range,
-                            hoverMessage: marker.hover,
-                        }
-                    );
-                });
-                this.proofStateDecorationTypes.forEach((decoratorType, proofStateName) => {
-                    const decs = decorations.get(proofStateName);
-                    editor.setDecorations(decoratorType, decs ? decs : []);
-                });
+            if (editor.document.uri.toString() !== uri) {
+                return;
             }
+            const decorations = new Map<string, vscode.DecorationOptions[]>();
+            this.proofStateDecorationTypes.forEach((_, decTypeName) => {
+                decorations.set(decTypeName, [] as vscode.DecorationOptions[]);
+            });
+            markers.forEach(marker => {
+                const start = new vscode.Position(marker.range.start.line, marker.range.start.character);
+                const end = new vscode.Position(marker.range.start.line, marker.range.end.character);
+                const range = new vscode.Range(start, end);
+                if (marker.range.start.line === marker.range.end.line) {
+                    decorations.get(marker.status + '.first')?.push({
+                        range: range,
+                        hoverMessage: marker.hover,
+                    });
+                } else {
+                    const midA = new vscode.Position(start.line, 1024);
+                    const midB = new vscode.Position(start.line + 1, 0);
+                    const rangeFirst = new vscode.Range(start, midA);
+                    const rangeNext = new vscode.Range(midB, end);
+                    decorations.get(marker.status + '.first')?.push({
+                        range: rangeFirst,
+                        hoverMessage: marker.hover,
+                    });
+                    decorations.get(marker.status + '.next')?.push({
+                        range: rangeNext,
+                        hoverMessage: marker.hover,
+                    });
+                }
+            });
+            this.proofStateDecorationTypes.forEach((decoratorType, decTypeName) => {
+                const decs = decorations.get(decTypeName);
+                editor.setDecorations(decoratorType, decs ? decs : []);
+            });
         });
     }
 }

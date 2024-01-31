@@ -1,4 +1,13 @@
-import { Location } from 'vscode-languageclient/node';
+import { Location, Range } from 'vscode-languageclient/node';
+
+export interface CountByStepStatus {
+    proved: number;
+    failed: number;
+    omitted: number;
+    missing: number;
+    pending: number;
+    progress: number;
+}
 
 export interface TlapsProofObligationResult {
     prover: string;
@@ -9,7 +18,17 @@ export interface TlapsProofObligationResult {
 }
 
 export interface TlapsProofObligationState {
-    location: Location;
-    obligation: string;
+    role: string;
+    range: Range;
+    status: string;
+    normalized: string;
     results: TlapsProofObligationResult[];
+}
+
+export interface TlapsProofStepDetails {
+    kind: string;
+    status: string;
+    location: Location;
+    obligations: TlapsProofObligationState[];
+    sub_count: CountByStepStatus;
 }

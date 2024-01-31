@@ -175,3 +175,24 @@ export async function exists(filePath: string): Promise<boolean> {
         fs.exists(filePath, (ex) => resolve(ex));
     });
 }
+
+// This calls only the latest of the supplied functions per specified period.
+// Used to avoid overloading the environment with too frequent events.
+export class DelayedFn {
+    private latest : (() => void) | null = null;
+    constructor(private period: number) {}
+
+    public do(f : () => void) {
+        const wasScheduled = !!this.latest;
+        this.latest = f;
+        if (!wasScheduled) {
+            setTimeout(() => {
+                const f = this.latest;
+                this.latest = null;
+                if (f) {
+                    f();
+                }
+            }, this.period);
+        }
+    }
+}
