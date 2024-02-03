@@ -2,6 +2,7 @@ import * as cp from 'child_process';
 import { ChildProcess, spawn } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as paths from './paths';
 import * as vscode from 'vscode';
 import { CFG_TLC_STATISTICS_TYPE, ShareOption } from './commands/tlcStatisticsCfg';
 import { pathToUri } from './common';
@@ -30,6 +31,7 @@ const TLA_TOOLS_LIB_NAME_END_WIN = '\\' + TLA_TOOLS_LIB_NAME;
 const toolsJarPath = path.resolve(__dirname, '../tools/' + TLA_TOOLS_LIB_NAME);
 const javaCmd = 'java' + (process.platform === 'win32' ? '.exe' : '');
 const javaVersionChannel = new ToolOutputChannel('TLA+ Java version');
+const TLA_TOOLS_STANDARD_MODULES = '/tla2sany/StandardModules';
 
 let lastUsedJavaHome: string | undefined;
 let cachedJavaPath: string | undefined;
@@ -69,6 +71,14 @@ export class JavaVersion {
     ) {}
 }
 
+function makeTlaLibraryJavaOpt(): string {
+    const libPaths = paths.moduleSearchPaths.
+        getOtherPaths(paths.TLC).
+        filter(p => !p.startsWith('jar:')). // TODO: Support archive paths as well.
+        join(path.delimiter);
+    return '-DTLA-Library=' + libPaths;
+}
+
 export async function runPlusCal(tlaFilePath: string): Promise<ToolProcessInfo> {
     const customOptions = getConfigOptions(CFG_PLUSCAL_OPTIONS);
     return runTool(
@@ -84,7 +94,7 @@ export async function runSany(tlaFilePath: string): Promise<ToolProcessInfo> {
         TlaTool.SANY,
         tlaFilePath,
         [ path.basename(tlaFilePath) ],
-        []
+        [ makeTlaLibraryJavaOpt() ]
     );
 }
 
@@ -116,7 +126,7 @@ export async function runTlc(
         return undefined;
     }
     const customOptions = extraOpts.concat(promptedOptions);
-    const javaOptions = [];
+    const javaOptions = [ makeTlaLibraryJavaOpt() ];
     const shareStats = vscode.workspace.getConfiguration().get<ShareOption>(CFG_TLC_STATISTICS_TYPE);
     if (shareStats !== ShareOption.DoNotShare) {
         javaOptions.push('-Dtlc2.TLC.ide=vscode');
@@ -136,6 +146,7 @@ async function runTool(
     javaOptions: string[]
 ): Promise<ToolProcessInfo> {
     const javaPath = await obtainJavaPath();
+    // TODO: Merge cfgOptions with javaOptions to avoid complete overrides.
     const cfgOptions = getConfigOptions(CFG_JAVA_OPTIONS);
     const args = buildJavaOptions(cfgOptions, toolsJarPath).concat(javaOptions);
     args.push(toolName);
@@ -143,6 +154,12 @@ async function runTool(
     const proc = spawn(javaPath, args, { cwd: path.dirname(filePath) });
     addReturnCodeHandler(proc, toolName);
     return new ToolProcessInfo(buildCommandLine(javaPath, args), proc);
+}
+
+export function moduleSearchPaths(): string[] {
+    return [
+        'jar:file:' + toolsJarPath + '!' + TLA_TOOLS_STANDARD_MODULES
+    ];
 }
 
 /**

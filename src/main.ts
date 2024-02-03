@@ -28,6 +28,8 @@ import { TlaDocumentInfos } from './model/documentInfo';
 import { syncTlcStatisticsSetting, listenTlcStatConfigurationChanges } from './commands/tlcStatisticsCfg';
 import { TlapsClient } from './tlaps';
 import { CurrentProofStepWebviewViewProvider } from './panels/currentProofStepWebviewViewProvider';
+import { moduleSearchPaths } from './paths';
+import { ModuleSearchPathsTreeDataProvider } from './panels/moduleSearchPathsTreeDataProvider';
 
 const TLAPLUS_FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file', language: LANG_TLAPLUS };
 const TLAPLUS_CFG_FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file', language: LANG_TLAPLUS_CFG };
@@ -44,6 +46,8 @@ let tlapsClient: TlapsClient | undefined;
  * Extension entry point.
  */
 export function activate(context: vscode.ExtensionContext): void {
+    moduleSearchPaths.setup(context);
+
     const currentProofStepWebviewViewProvider = new CurrentProofStepWebviewViewProvider(context.extensionUri);
     diagnostic = vscode.languages.createDiagnosticCollection(LANG_TLAPLUS);
     context.subscriptions.push(
@@ -167,6 +171,10 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.window.registerWebviewViewProvider(
             CurrentProofStepWebviewViewProvider.viewType,
             currentProofStepWebviewViewProvider,
+        ),
+        vscode.window.registerTreeDataProvider(
+            ModuleSearchPathsTreeDataProvider.viewType,
+            new ModuleSearchPathsTreeDataProvider(context)
         )
     );
     tlapsClient = new TlapsClient(context, details => {
