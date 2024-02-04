@@ -15,12 +15,19 @@ import {
     LanguageClient,
     LanguageClientOptions,
     Range,
+    State,
+    StateChangeEvent,
     TextDocumentIdentifier,
     TransportKind,
     VersionedTextDocumentIdentifier
 } from 'vscode-languageclient/node';
 import { TlapsProofStepDetails } from './model/tlaps';
 import { DelayedFn } from './common';
+import {
+    InitRequestInItializationOptions,
+    InitResponseCapabilitiesExperimental,
+} from './model/paths';
+import { moduleSearchPaths, TLAPS } from './paths';
 
 export enum proofStateNames {
     proved = 'proved',
@@ -186,6 +193,9 @@ export class TlapsClient {
         };
         const clientOptions: LanguageClientOptions = {
             documentSelector: [{ scheme: 'file', language: 'tlaplus' }],
+            initializationOptions: {
+                moduleSearchPaths: moduleSearchPaths.getOtherPaths(TLAPS)
+            } as InitRequestInItializationOptions
         };
         this.client = new LanguageClient(
             'tlaplus.tlaps.lsp',
@@ -202,6 +212,19 @@ export class TlapsClient {
             'tlaplus/tlaps/currentProofStep',
             this.currentProofStepDetailsListener
         ));
+        this.context.subscriptions.push(this.client.onDidChangeState((e: StateChangeEvent) => {
+            if (e.oldState !== State.Running && e.newState === State.Running && this.client) {
+                const initResult = this.client.initializeResult;
+                if (!initResult || !initResult.capabilities.experimental) {
+                    return;
+                }
+                const experimental = initResult.capabilities.experimental as InitResponseCapabilitiesExperimental;
+                if (!experimental.moduleSearchPaths) {
+                    return;
+                }
+                moduleSearchPaths.setSourcePaths(TLAPS, 'TLA Proof System', experimental.moduleSearchPaths);
+            }
+        }));
         this.client.start();
     }
 

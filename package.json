@@ -401,6 +401,12 @@
                     "type": "boolean",
                     "default": true,
                     "description": "Mark proof step states using whole line."
+                },
+                "tlaplus.moduleSearchPaths": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Paths to look for TLA+ modules.",
+                    "default": []
                 }
             }
         },
@@ -489,6 +495,11 @@
                     "id": "tlaplus.current-proof-step",
                     "name": "Current Proof Step",
                     "type": "webview"
+                },
+                {
+                    "id": "tlaplus.module-search-paths",
+                    "name": "Module Search Paths",
+                    "type": "tree"
                 }
             ]
         }
