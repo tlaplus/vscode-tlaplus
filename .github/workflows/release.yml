@@ -37,6 +37,8 @@ jobs:
       run: wget https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar -O tools/tla2tools.jar
     - name: Get (latest) CommunityModules
       run: wget https://github.com/tlaplus/CommunityModules/releases/latest/download/CommunityModules-deps.jar -O tools/CommunityModules-deps.jar
+    - name: Get (latest) TLA+ Formatter
+      run: wget https://github.com/FedericoPonzi/tlaplus-formatter/releases/latest/download/tlaplus-formatter.jar -O tools/tlaplus-formatter.jar
     - name: Prepare Release
       run: |
         ## Create a git commit to use its date as the extension's version number below.

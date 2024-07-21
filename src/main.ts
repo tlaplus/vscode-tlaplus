@@ -20,6 +20,7 @@ import { exportModuleToTex, exportModuleToPdf, CMD_EXPORT_TLA_TO_TEX,
     CMD_EXPORT_TLA_TO_PDF } from './commands/exportModule';
 import { TlaOnTypeFormattingEditProvider } from './formatters/tla';
 import { CfgOnTypeFormattingEditProvider } from './formatters/cfg';
+import { registerDocumentFormatter } from './formatters/tlaFormatter';
 import { TlaCodeActionProvider } from './actions';
 import { TlaDocumentSymbolsProvider } from './symbols/tlaSymbols';
 import { LANG_TLAPLUS, LANG_TLAPLUS_CFG } from './common';
@@ -280,6 +281,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     syncTlcStatisticsSetting()
         .catch((err) => console.error(err))
         .then(() => listenTlcStatConfigurationChanges(context.subscriptions));
+        
+    registerDocumentFormatter(context);
 }
 
 export function deactivate() {
