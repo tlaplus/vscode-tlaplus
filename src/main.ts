@@ -33,7 +33,7 @@ import { ModuleSearchPathsTreeDataProvider } from './panels/moduleSearchPathsTre
 
 const TLAPLUS_FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file', language: LANG_TLAPLUS };
 const TLAPLUS_CFG_FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file', language: LANG_TLAPLUS_CFG };
-const CHANGELOG_URL = vscode.Uri.parse('https://github.com/alygin/vscode-tlaplus/blob/master/CHANGELOG.md#change-log');
+const CHANGELOG_URL = vscode.Uri.parse('https://github.com/tlaplus/vscode-tlaplus/blob/master/CHANGELOG.md#change-log');
 
 const tlaDocInfos = new TlaDocumentInfos();
 
@@ -150,7 +150,7 @@ export function activate(context: vscode.ExtensionContext): void {
             // 393ee2b2443e270bacd9f11fa219c39a88fc987d/src/extension.ts#L63-L84
             // Also see wordPattern in tlaplus-lang-config.json that drops "@"
             // and "'" compared to VSCode's standard wordPattern.
-            // https://github.com/alygin/vscode-tlaplus/issues/200
+            // https://github.com/tlaplus/vscode-tlaplus/issues/200
                 provideEvaluatableExpression(document: vscode.TextDocument, position: vscode.Position):
                     vscode.ProviderResult<vscode.EvaluatableExpression> {
                     const wordRange = document.getWordRangeAtPosition(position);

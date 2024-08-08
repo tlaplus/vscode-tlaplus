@@ -85,7 +85,7 @@ export async function checkModelCustom(
         return;
     }
     // Accept .tla files here because TLC configs and TLA+ modules can share the same file:
-    // https://github.com/alygin/vscode-tlaplus/issues/220
+    // https://github.com/tlaplus/vscode-tlaplus/issues/220
     const configFiles = await listFiles(path.dirname(doc.uri.fsPath),
         (fName) => fName.endsWith('.cfg') || fName.endsWith('.tla'));
     configFiles.sort();

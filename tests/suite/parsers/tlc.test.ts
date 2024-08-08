@@ -405,7 +405,7 @@ suite('TLC Output Parser Test Suite', () => {
     });
 
     test('Handles no-line-break message switch', () => {
-        // https://github.com/alygin/vscode-tlaplus/issues/47
+        // https://github.com/tlaplus/vscode-tlaplus/issues/47
         return assertOutput('no-line-break-switch.out', TEST_SPEC_FILES,
             new CheckResultBuilder('no-line-break-switch.out', CheckState.Success, CheckStatus.Finished)
                 .addDColFilePath('/Users/bob/example.tla')

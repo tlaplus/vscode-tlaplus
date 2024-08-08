@@ -1,6 +1,6 @@
 # TLA<sup>+</sup> for Visual Studio Code
 
-[![Build Status](https://img.shields.io/github/actions/workflow/status/tlaplus/vscode-tlaplus/ci.yml?branch=master)](https://github.com/tlaplus/vscode-tlaplus/actions?query=workflow%3ACI) [![VS Code extension version](https://img.shields.io/visual-studio-marketplace/i/alygin.vscode-tlaplus?color=blue&label=Stable%20Release&style=flat-square)](https://marketplace.visualstudio.com/items?itemName=alygin.vscode-tlaplus) [![VS Code extension version nightly](https://img.shields.io/visual-studio-marketplace/i/alygin.vscode-tlaplus-nightly?color=blue&label=Nightly%20Build&style=flat-square)](https://marketplace.visualstudio.com/items?itemName=alygin.vscode-tlaplus-nightly)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/tlaplus/vscode-tlaplus/ci.yml?branch=master)](https://github.com/tlaplus/vscode-tlaplus/actions?query=workflow%3ACI) [![VS Code extension version](https://img.shields.io/visual-studio-marketplace/i/tlaplus-lang?color=blue&label=Stable%20Release&style=flat-square)](https://marketplace.visualstudio.com/items?itemName=tlaplus-lang.tlaplus-lang)
 
 This extension adds support for the [TLA<sup>+</sup> formal specification language](http://research.microsoft.com/en-us/um/people/lamport/tla/tla.html) to VS Code. It also supports running the TLC model checker on TLA<sup>+</sup> specifications.
 
@@ -40,10 +40,10 @@ If you decide to pitch in and write some code, this document will provide you wi
 
 If you're not familiar with TLA<sup>+</sup>, but want to get a grasp on it, the following list of resources is a good starting point:
 
-* [TLA<sup>+</sup> Home Page](http://research.microsoft.com/en-us/um/people/lamport/tla/tla.html) on Leslie Lamport's website.
+* [TLA<sup>+</sup> Home Page](http://www.tlapl.us) on Leslie Lamport's website.
+* [A collection of TLA<sup>+</sup> specification examples](https://github.com/tlaplus/Examples) in the TLA<sup>+</sup> repository.
 * [Introduction to TLA<sup>+</sup> and PlusCal](https://learntla.com) by Hillel Wayne.
 * [TLA<sup>+</sup> in Practice and Theory](https://pron.github.io/posts/tlaplus_part1) by Ron Pressler.
-* [A collection of TLA<sup>+</sup> specification examples](https://github.com/tlaplus/Examples) in the TLA<sup>+</sup> repository.
 
 ## License
 

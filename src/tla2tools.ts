@@ -10,7 +10,7 @@ import { ToolOutputChannel } from './outputChannels';
 import { JavaVersionParser } from './parsers/javaVersion';
 
 // CFG_EXTENSION can be used to fetch all the settings for this extension
-const CFG_EXTENSION = '@ext:alygin.vscode-tlaplus';
+const CFG_EXTENSION = '@ext:tlaplus-lang.tlaplus-lang';
 
 const CFG_JAVA_HOME = 'tlaplus.java.home';
 const CFG_JAVA_OPTIONS = 'tlaplus.java.options';

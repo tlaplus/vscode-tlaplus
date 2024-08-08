@@ -1,18 +1,50 @@
 name: Release
 
-on: workflow_dispatch
+on:
+  push:
+    branches:
+      - 'main'
+  repository_dispatch:
+  workflow_dispatch:
 
 jobs:
+  checksecret:
+    name: check if VSCODE_MARKETPLACE_TLAPLUS_TOKEN is set in github secrets
+    runs-on: ubuntu-latest
+    outputs:
+      is_MY_SECRET_set: ${{ steps.checksecret_job.outputs.is_MY_SECRET_set }}
+    steps:
+      - name: Check secret present
+        id: checksecret_job
+        env:
+            MY_SECRET: ${{ secrets.VSCODE_MARKETPLACE_TLAPLUS_TOKEN }}
+        run: |
+            echo "is_MY_SECRET_set: ${{ env.MY_SECRET != '' }}"
+            echo "::set-output name=is_MY_SECRET_set::${{ env.MY_SECRET != '' }}"
+  
   build:
+    ## Do not run this action without the marketplace token present,
+    ## e.g., in a fork of this repo.
+    needs: [checksecret]
+    if: needs.checksecret.outputs.is_MY_SECRET_set == 'true'
     runs-on: macOS-latest
     steps:
     - uses: actions/checkout@v1
     - uses: actions/setup-node@v1
       with:
         node-version: '18.19'
+    - name: Get (latest) TLC
+      run: wget https://nightly.tlapl.us/dist/tla2tools.jar -O tools/tla2tools.jar
+    - name: Get (latest) CommunityModules
+      run: wget https://github.com/tlaplus/CommunityModules/releases/latest/download/CommunityModules-deps.jar -O tools/CommunityModules-deps.jar
+    - name: Prepare Release
+      run: |
+        ## Create a git commit to use its date as the extension's version number below.
+        git add tools/*.jar -f
+        git commit -m "Latest CommunityModules and TLA+ tools"
     - name: Get current version
       id: version
-      run: echo "::set-output name=version::$(jq -r .version package.json)"
+      run: echo "::set-output name=version::$(git log -1 --format=%cd --date="format:%Y.%-m.%-d%H%M")"
     - name: Install dependencies
       run: |
         npm install
@@ -26,26 +58,5 @@ jobs:
         npm run lint
         npm test --silent
     - name: Publish to Marketplace
-      run: vsce publish --pat "${{ secrets.VSCODE_MARKETPLACE_TOKEN }}"
-    - name: Publish to Open VSX
-      run: npx ovsx publish "vscode-tlaplus-${{ steps.version.outputs.version }}.vsix" -p "${{ secrets.OPEN_VSX_TOKEN }}"
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: v${{ steps.version.outputs.version }}
-        release_name: v${{ steps.version.outputs.version }}
-        draft: false
-        prerelease: false
-    - name: Upload Release Asset
-      id: upload-release-asset 
-      uses: actions/upload-release-asset@v1.0.1
-      env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: vscode-tlaplus-${{ steps.version.outputs.version }}.vsix
-        asset_name: vscode-tlaplus-${{ steps.version.outputs.version }}.vsix
-        asset_content_type: application/zip
+      run: |
+        vsce publish $(git log -1 --format=%cd --date="format:%Y.%-m.%-d%H%M") --pat "${{ secrets.VSCODE_MARKETPLACE_TLAPLUS_TOKEN }}"

@@ -15,7 +15,7 @@ For those, who want to write some code, here's a short guide.
 Clone the repository:
 
 ```
-git clone https://github.com/alygin/vscode-tlaplus.git
+git clone https://github.com/tlaplus/vscode-tlaplus.git
 cd vscode-tlaplus
 ```
 
@@ -158,7 +158,7 @@ The extension consists of the following components:
 3. The implementation of the Check Result View panel that visualizes TLC output and allows to analyze it easily.
 4. The `tla2tools.jar` file from the [official TLA+ project](https://github.com/tlaplus/tlaplus). All the specification syntax verifications, PlusCal translations and TLC checks are actually performed by this Java library.
 
-The extension also requires a Java Virtual Machine (JVM) to be installed. [More information](https://github.com/alygin/vscode-tlaplus/wiki/Installing-Java).
+The extension also requires a Java Virtual Machine (JVM) to be installed. [More information](https://github.com/tlaplus/vscode-tlaplus/wiki/Installing-Java).
 
 # Project Layout
 

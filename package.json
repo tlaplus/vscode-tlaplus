@@ -1,12 +1,12 @@
 {
-    "name": "vscode-tlaplus",
-    "displayName": "TLA+",
-    "version": "1.6.0",
+    "name": "tlaplus-lang",
+    "displayName": "TLA+ (Temporal Logic of Actions)",
+    "version": "1.7.0",
     "description": "TLA+ language support",
-    "publisher": "alygin",
+    "publisher": "tlaplus-lang",
     "license": "MIT",
     "author": {
-        "name": "Andrew Lygin"
+        "name": "TLA+ Community"
     },
     "engines": {
         "vscode": "^1.82.0"
@@ -20,10 +20,10 @@
     ],
     "repository": {
         "type": "git",
-        "url": "https://github.com/alygin/vscode-tlaplus.git"
+        "url": "https://github.com/tlaplus/vscode-tlaplus.git"
     },
     "bugs": {
-        "url": "https://github.com/alygin/vscode-tlaplus/issues"
+        "url": "https://github.com/tlaplus/vscode-tlaplus/issues"
     },
     "icon": "resources/images/tlaplus.png",
     "keywords": [
@@ -334,7 +334,7 @@
                     "type": "string",
                     "scope": "window",
                     "default": "",
-                    "markdownDescription": "Java options to use when running TLA+ tools. [How it works.](https://github.com/alygin/vscode-tlaplus/wiki/Java-Options)",
+                    "markdownDescription": "Java options to use when running TLA+ tools. [How it works.](https://github.com/tlaplus/vscode-tlaplus/wiki/Java-Options)",
                     "maxLength": 1000
                 },
                 "tlaplus.pluscal.options": {
