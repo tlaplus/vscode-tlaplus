@@ -1,9 +1,9 @@
 {
-    "name": "tlaplus-lang",
+    "name": "vscode-ide",
     "displayName": "TLA+ (Temporal Logic of Actions)",
     "version": "1.7.0",
     "description": "TLA+ language support",
-    "publisher": "tlaplus-lang",
+    "publisher": "tlaplus",
     "license": "MIT",
     "author": {
         "name": "TLA+ Community"
