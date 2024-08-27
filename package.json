@@ -47,10 +47,6 @@
     ],
     "main": "./out/main.js",
     "browser": "./out/main.browser.js",
-    "files": [
-        "resources",
-        "tools"
-    ],
     "contributes": {
         "terminal": {
             "profiles": [
