@@ -7,13 +7,15 @@ export const EmptyLine = () => <div style={{marginTop: '1em'}}/>;
 
 interface CodeRangeLinkI {line: string, filepath: string | undefined, range: Range}
 export const CodeRangeLink = React.memo(({line, filepath, range}: CodeRangeLinkI) => (
-    (!filepath || !range) ? (null) : <CodePositionLink line={line} filepath={filepath} position={range[0]}/>
+    (!filepath || !range)
+        ? <>{line}</>
+        : <CodePositionLink line={line} filepath={filepath} position={range[0]}/>
 ));
 
 interface CodePositionLinkI {line: string, filepath: string | undefined, position: Position | undefined}
 export const CodePositionLink = React.memo(({line, filepath, position}: CodePositionLinkI) => {
     if (!filepath || !position) {
-        return (null);
+        return (<>{line}</>);
     }
 
     const location = {'line': position.line, 'character': position.character};
