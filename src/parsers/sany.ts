@@ -248,10 +248,10 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
     }
 
     private tryParseModulePath(line: string) {
-        const rxJarPath = /^(.*)(?: \(.*\))$/g;
-        const jarPathMatches = rxJarPath.exec(line);
-        const modPath = jarPathMatches ? jarPathMatches[1] : line;
-        this.rememberParsedModule(modPath);
+        const rxModulePath = /^(.*)(?: \(.*\))$/g;
+        const moldulePathMatches = rxModulePath.exec(line);
+        const modulePath = moldulePathMatches ? moldulePathMatches[1] : line;
+        this.rememberParsedModule(modulePath);
     }
 
     private appendErrMessage(line: string) {
