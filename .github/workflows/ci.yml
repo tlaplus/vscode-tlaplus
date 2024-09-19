@@ -31,7 +31,7 @@ jobs:
       run: xvfb-run --auto-servernum npm test --silent
     - name: Upload artifact
       if: matrix.os == 'ubuntu-20.04'
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: vscode-tlaplus-ci.vsix
         path: ${{ github.workspace }}/vscode-tlaplus-*.vsix
