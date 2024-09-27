@@ -144,7 +144,7 @@ export async function smokeTestSpec(
 
     const prefixPath = vscode.workspace.getConfiguration().get<string>('tlaplus.smoke.prefix.path', '');
     const prefixName = vscode.workspace.getConfiguration().get<string>('tlaplus.smoke.prefix.name', 'Smoke');
-    const specFiles = await getSpecFiles(targetResource, false, prefixPath + prefixName);
+    const specFiles = await getSpecFiles(targetResource, prefixPath + prefixName);
     if (!specFiles || !specFiles.cfgFileName.startsWith(prefixName)) {
         // Launch the debugger iff there is a Smoke model. specFiles
         // might be an ordinary model, which we don't want to run in TLC
