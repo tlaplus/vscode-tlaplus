@@ -223,7 +223,7 @@ export const TLC_COVERAGE_END = registerCode(2202, TlcCodeType.Ignore);
 export const TLC_CHECKPOINT_RECOVER_END_DFID = registerCode(2203, TlcCodeType.Ignore);
 export const TLC_PROGRESS_START_STATS_DFID = registerCode(2205, TlcCodeType.Ignore);
 export const TLC_PROGRESS_STATS_DFID = registerCode(2206, TlcCodeType.Ignore);
-export const TLC_PROGRESS_SIMU = registerCode(2209, TlcCodeType.Ignore);
+export const TLC_PROGRESS_SIMU = registerCode(2209, TlcCodeType.Info);
 export const TLC_FP_COMPLETED = registerCode(2211, TlcCodeType.Ignore);
 
 export const TLC_LIVE_IMPLIED = registerCode(2212, TlcCodeType.Ignore);
