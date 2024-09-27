@@ -34,6 +34,7 @@ const cmodsJarPath = path.resolve(__dirname, '../tools/' + TLA_CMODS_LIB_NAME);
 const javaCmd = 'java' + (process.platform === 'win32' ? '.exe' : '');
 const javaVersionChannel = new ToolOutputChannel('TLA+ Java version');
 const TLA_TOOLS_STANDARD_MODULES = '/tla2sany/StandardModules';
+const TLA_TOOLS_PLUSCAL_PARAM_SKIP_CFG_CREATION = "-nocfg";
 
 let lastUsedJavaHome: string | undefined;
 let cachedJavaPath: string | undefined;
@@ -243,6 +244,7 @@ export function buildTlcOptions(tlaFilePath: string, cfgFilePath: string, custom
  */
 export function buildPlusCalOptions(tlaFilePath: string, customOptions: string[]): string[] {
     const opts = customOptions.slice(0);
+    opts.push(TLA_TOOLS_PLUSCAL_PARAM_SKIP_CFG_CREATION);
     opts.push(path.basename(tlaFilePath));
     return opts;
 }
