@@ -347,6 +347,7 @@ class ModelCheckResultBuilder {
                 this.workersCount -= 1;
                 break;
             case msg.TLC_PROGRESS_STATS:
+            case msg.TLC_PROGRESS_SIMU:
                 this.parseProgressStats(message.lines);
                 this.status = CheckStatus.SuccessorStatesComputing;
                 break;
