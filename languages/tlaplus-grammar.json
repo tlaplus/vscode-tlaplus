@@ -171,6 +171,9 @@
             },
             "patterns": [
                 {
+                    "include" : "#module"
+                },
+                {
                     "include": "#pluscal"
                 },
                 {
