@@ -507,7 +507,7 @@
         "watch": "npm run compile -- --watch",
         "pretest": "tsc -p ./",
         "test": "node ./out/tests/runTest.js",
-        "test:tlaplus-grammar": "vscode-tmgrammar-test ./tests/suite/languages/tlaplus-grammar-test.tla -g ./languages/tlaplus-grammar.json -g ./languages/pluscal-grammar.json"
+        "test:tlaplus-grammar": "vscode-tmgrammar-test ./tests/suite/languages/tlaplus-grammar-test.tla ./tests/suite/languages/tlaplus-grammar-test-submodule.tla -g ./languages/tlaplus-grammar.json -g ./languages/pluscal-grammar.json"
     },
     "devDependencies": {
         "@types/glob": "^8.1.0",

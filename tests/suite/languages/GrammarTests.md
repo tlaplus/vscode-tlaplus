@@ -8,7 +8,7 @@ Grammar tests are defined under [tests/suite/languages](.)
 
 A grammar test is a test file that includes annotation of the expected assigned scopes. One example is the [tlaplus-grammar-test.tla](tlaplus-grammar-test.tla).
 
-For more information on how to write a test see [vscode-tmgrammar-test](thttps://github.com/PanAeon/vscode-tmgrammar-test).
+For more information on how to write a test see [vscode-tmgrammar-test](https://github.com/PanAeon/vscode-tmgrammar-test).
 
 ## Run the tests
 To run from the command line:
