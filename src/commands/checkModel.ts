@@ -50,7 +50,7 @@ export async function checkModel(
         return;
     }
 
-    const specFiles = await getSpecFiles(uri);
+    const specFiles = await getSpecFiles(uri, false);
     if (!specFiles) {
         return;
     }
@@ -231,11 +231,11 @@ function attachFileSaver(tlaFilePath: string, proc: ChildProcess) {
 /**
  * Finds all files that needed to run model check.
  */
-export async function getSpecFiles(fileUri: vscode.Uri, prefix = 'MC'): Promise<SpecFiles | undefined> {
+export async function getSpecFiles(fileUri: vscode.Uri, warn = true, prefix = 'MC'): Promise<SpecFiles | undefined> {
     let specFiles;
 
     // a) Check the given input if it exists.
-    specFiles = await checkSpecFiles(fileUri);
+    specFiles = await checkSpecFiles(fileUri, false);
     if (specFiles) {
         return specFiles;
     }
@@ -254,27 +254,27 @@ export async function getSpecFiles(fileUri: vscode.Uri, prefix = 'MC'): Promise<
         specFiles = new SpecFiles(filePath, replaceExtension(filePath, 'cfg'));
         // Here, we make sure that the .cfg *and* the .tla exist.
         let canRun = true;
-        canRun = await checkModelExists(specFiles.cfgFilePath);
-        canRun = canRun && await checkModuleExists(specFiles.tlaFilePath);
+        canRun = await checkModelExists(specFiles.cfgFilePath, warn);
+        canRun = canRun && await checkModuleExists(specFiles.tlaFilePath, warn);
         if (canRun) {
             return specFiles;
         }
     }
     // c) Deliberately trigger the warning dialog by checking the given input again
     // knowing that it doesn't exist.
-    return await checkSpecFiles(fileUri);
+    return await checkSpecFiles(fileUri, warn);
 }
 
-async function checkSpecFiles(fileUri: vscode.Uri): Promise<SpecFiles | undefined> {
+async function checkSpecFiles(fileUri: vscode.Uri, warn = true): Promise<SpecFiles | undefined> {
     const filePath = fileUri.fsPath;
     let specFiles;
     let canRun = true;
     if (filePath.endsWith('.cfg')) {
         specFiles = new SpecFiles(replaceExtension(filePath, 'tla'), filePath);
-        canRun = await checkModuleExists(specFiles.tlaFilePath);
+        canRun = await checkModuleExists(specFiles.tlaFilePath, warn);
     } else if (filePath.endsWith('.tla')) {
         specFiles = new SpecFiles(filePath, replaceExtension(filePath, 'cfg'));
-        canRun = await checkModelExists(specFiles.cfgFilePath);
+        canRun = await checkModelExists(specFiles.cfgFilePath, warn);
     }
     return canRun ? specFiles : undefined;
 }
@@ -288,9 +288,9 @@ async function checkModuleExists(modulePath: string, warn = true): Promise<boole
     return moduleExists;
 }
 
-async function checkModelExists(cfgPath: string): Promise<boolean> {
+async function checkModelExists(cfgPath: string, warn = true): Promise<boolean> {
     const cfgExists = await exists(cfgPath);
-    if (!cfgExists) {
+    if (!cfgExists && warn) {
         showConfigAbsenceWarning(cfgPath);
     }
     return cfgExists;
