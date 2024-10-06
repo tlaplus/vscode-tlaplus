@@ -50,7 +50,7 @@ export async function checkModel(
         return;
     }
 
-    const specFiles = await getSpecFiles(uri, false);
+    const specFiles = await getSpecFiles(uri, true);
     if (!specFiles) {
         return;
     }
