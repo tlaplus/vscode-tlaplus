@@ -60,8 +60,3 @@ jobs:
     - name: Publish to Marketplace
       run: |
         vsce publish $(git log -1 --format=%cd --date="format:%Y.%-m.%-d%H%M") --pat "${{ secrets.VSCODE_MARKETPLACE_TLAPLUS_TOKEN }}"
-    - name: Publish to Open VSX
-      run: |
-        mv vscode-ide-1.7.0.vsix vscode-tlaplus-$(git log -1 --format=%cd --date="format:%Y.%-m.%-d%H%M").vsix
-        ls -lah
-        npx ovsx publish "vscode-tlaplus-$(git log -1 --format=%cd --date="format:%Y.%-m.%-d%H%M").vsix" -p "${{ secrets.OPEN_VSX_TOKEN_TLAPLUS }}"
