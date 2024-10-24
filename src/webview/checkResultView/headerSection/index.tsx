@@ -34,7 +34,7 @@ export const HeaderSection = React.memo(({checkResult}: HeaderSectionI) => {
                 <span hidden={checkResult.state !== 'R'}>
                     (<VSCodeLink onClick={vscode.stopProcess} href="#"> stop </VSCodeLink>)
                 </span>
-                <span hidden={checkResult.statusDetails === null}> :{' ' + checkResult.statusDetails} </span>
+                <span hidden={ checkResult.statusDetails === undefined || checkResult.statusDetails === null}>: {' ' + checkResult.statusDetails} </span>
             </div>
 
             <div className="timeInfo"> Start: {checkResult.startDateTimeStr}, end: {checkResult.endDateTimeStr} </div>
