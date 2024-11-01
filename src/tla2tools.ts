@@ -17,6 +17,10 @@ const CFG_JAVA_OPTIONS = 'tlaplus.java.options';
 const CFG_TLC_OPTIONS = 'tlaplus.tlc.modelChecker.options';
 const CFG_PLUSCAL_OPTIONS = 'tlaplus.pluscal.options';
 const CFG_TLC_OPTIONS_PROMPT = 'tlaplus.tlc.modelChecker.optionsPrompt';
+const CFG_TLA_PDF_NUMBER_LINES = 'tlaplus.pdf.numberLines';
+const CFG_TLA_PDF_NO_PCAL_SHADE = 'tlaplus.pdf.noPcalShade';
+const CFG_TLA_PDF_COMMENTS_SHADE = 'tlaplus.pdf.commentsShade';
+const CFG_TLA_PDF_COMMENTS_SHADE_COLOR = 'tlaplus.pdf.commentsShadeColor';
 
 const VAR_TLC_SPEC_NAME = /\$\{specName\}/g;
 const VAR_TLC_MODEL_NAME = /\$\{modelName\}/g;
@@ -101,11 +105,38 @@ export async function runSany(tlaFilePath: string): Promise<ToolProcessInfo> {
     );
 }
 
+function buildTexOptions(tlaFilePath: string, shadeComments: boolean, commentColor: number, numberLines: boolean, noPcalShade: boolean): string[] {
+    const toolArgs = [path.basename(tlaFilePath)];
+
+    if (shadeComments) {
+        toolArgs.unshift('-nops',
+            '-shade',
+            '-grayLevel',
+            commentColor.toString());
+    }
+
+    if (numberLines) {
+        toolArgs.unshift('-number');
+    }
+
+    if (noPcalShade) {
+        toolArgs.unshift('-noPcalShade');
+    }
+    return toolArgs;
+}
+
 export async function runTex(tlaFilePath: string): Promise<ToolProcessInfo> {
+    const shadeComments = vscode.workspace.getConfiguration().get<boolean>(CFG_TLA_PDF_COMMENTS_SHADE, true);
+    const commentColor = vscode.workspace.getConfiguration().get<number>(CFG_TLA_PDF_COMMENTS_SHADE_COLOR, 0.85);
+    const numberLines = vscode.workspace.getConfiguration().get<boolean>(CFG_TLA_PDF_NUMBER_LINES, false);
+    const noPcalShade = vscode.workspace.getConfiguration().get<boolean>(CFG_TLA_PDF_NO_PCAL_SHADE, false);
+
+    const options = buildTexOptions(tlaFilePath, shadeComments, commentColor, numberLines, noPcalShade);
+
     return runTool(
         TlaTool.TEX,
         tlaFilePath,
-        [ path.basename(tlaFilePath) ],
+        options,
         []
     );
 }
@@ -148,6 +179,8 @@ async function runTool(
     toolOptions: string[],
     javaOptions: string[]
 ): Promise<ToolProcessInfo> {
+    // log the arugments:
+    //console.log(toolName + ': ' + filePath + ' ' + toolOptions.join(' ') + ' ' + javaOptions.join(' '));
     const javaPath = await obtainJavaPath();
     // TODO: Merge cfgOptions with javaOptions to avoid complete overrides.
     const cfgOptions = getConfigOptions(CFG_JAVA_OPTIONS);

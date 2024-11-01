@@ -1,3 +1,9 @@
+## 1.7.0 
+
+### Enhancements
+* Generate PDF feature matching the toolbox by adding missing settings.
+
+
 ## 1.5.4 &ndash; 21st March, 2021
 
 ### Enhancements

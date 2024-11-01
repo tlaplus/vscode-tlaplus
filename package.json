@@ -382,6 +382,31 @@
                     "maxLength": 1000,
                     "description": "Command to produce PDFs from .tex files."
                 },
+                "tlaplus.pdf.commentsShade": {
+                    "default": true,
+                    "type": "boolean",
+                    "scope": "application",
+                    "description": "If enabled, comments will have a gray background."
+                },
+                "tlaplus.pdf.commentsShadeColor": {
+                    "default": 0.85,
+                    "type": "number",
+                    "scope": "application",
+                    "maxLength": 10,
+                    "description": "If comments are shaded in gray, this config changes the darkness of the shading. This must be a number between 0.0 (completely black) and 1.0 (no shading)."
+                },
+                "tlaplus.pdf.numberLines": {
+                    "default": false,
+                    "type": "boolean",
+                    "scope": "application",
+                    "description": "Show line numbers in PDFs."
+                },
+                "tlaplus.pdf.noPcalShade": {
+                    "default": false,
+                    "type": "boolean",
+                    "scope": "application",
+                    "description": "Causes a PlusCal algorithm (which appear in a comment) not to be shaded.  (The algorithm's comments will be shaded.)"
+                },
                 "tlaplus.tlaps.enabled": {
                     "type": "boolean",
                     "default": false,
@@ -504,6 +529,7 @@
         "vscode:prepublish": "npm run compile -- --production",
         "compile": "node ./esbuild.js",
         "lint": "eslint --ext .ts,.tsx src/ tests/",
+        "lint:fix": "eslint --fix --ext .ts,.tsx src/ tests/",
         "watch": "npm run compile -- --watch",
         "pretest": "tsc -p ./",
         "test": "node ./out/tests/runTest.js",
