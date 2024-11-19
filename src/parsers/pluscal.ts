@@ -23,6 +23,7 @@ export class TranspilerStdoutParser extends ProcessOutputHandler<DCollection> {
     private readonly filePath: string;
     private errMessage: string | null = null;
     private nextLineIsError = false;
+    private nowParsingAddedLabels = false; //should probably be a state machine thing
 
     constructor(source: Readable | string[] | null, filePath: string) {
         super(source, new DCollection());
@@ -51,6 +52,8 @@ export class TranspilerStdoutParser extends ProcessOutputHandler<DCollection> {
             this.addError(locInfo.location, this.errMessage);
             this.errMessage = null;
         }
+
+        this.tryParseAddedLabels(line)
     }
 
     private tryParseUnrecoverableError(line: string): boolean {
@@ -91,9 +94,47 @@ export class TranspilerStdoutParser extends ProcessOutputHandler<DCollection> {
         return true;
     }
 
+    
     private addError(location: vscode.Position, message: string) {
         const locRange = new vscode.Range(location, location);
         this.result.addMessage(this.filePath, locRange, message);
+    }
+
+    /**
+     * Adds info on labels added by the pluscal translated.
+     * 
+     * Only takes effect if the `-reportLabels` was added to PlusCal options. Output looks like:
+     * 
+     *       The following labels were added: // 1
+     *           Lbl_1 at line 16, column 5
+     *           Lbl_2 at line 23, column 9
+     * 
+     * 
+     * So we can start looking for labels as soon as we see (1)
+     * and stop as soon as we stop seeing label strings.
+     */
+    private tryParseAddedLabels(line: string) {
+        if (line.startsWith("The following label")) { // could be `was added` or `were added`
+            this.nowParsingAddedLabels = true;
+            return true;
+        };
+        if (!this.nowParsingAddedLabels) {
+            return false
+        }
+
+        const matcher = /^\s\s([A-Za-z0-9_]+) at line (\d+), column (\d+)$/g.exec(line)
+        if (!matcher) { // done parsing 
+            this.nowParsingAddedLabels = false;
+            return false;
+        }
+
+        const labelname = matcher[1];
+        const message = `Missing label, translator inserted \`${labelname}\` here`;
+        const locInfo = this.parseLocation(line) || ZERO_LOCATION_INFO;
+        const locRange = new vscode.Range(locInfo.location, locInfo.location);
+        this.result.addMessage(this.filePath, locRange, message, vscode.DiagnosticSeverity.Information);
+
+        return true;
     }
 
     private parseLocation(line: string): LocationInfo | undefined {
