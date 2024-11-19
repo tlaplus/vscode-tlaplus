@@ -23,7 +23,7 @@ export class TranspilerStdoutParser extends ProcessOutputHandler<DCollection> {
     private readonly filePath: string;
     private errMessage: string | null = null;
     private nextLineIsError = false;
-    private nowParsingAddedLabels = false; //should probably be a state machine thing
+    private nowParsingAddedLabels = false; // TODO should the parser be a state machine?
 
     constructor(source: Readable | string[] | null, filePath: string) {
         super(source, new DCollection());
@@ -114,6 +114,7 @@ export class TranspilerStdoutParser extends ProcessOutputHandler<DCollection> {
      * and stop as soon as we stop seeing label strings.
      */
     private tryParseAddedLabels(line: string) {
+        // https://github.com/tlaplus/tlaplus/blob/21f92/tlatools/org.lamport.tlatools/src/pcal/ParseAlgorithm.java#L668
         if (line.startsWith('The following label')) { // could be `was added` or `were added`
             this.nowParsingAddedLabels = true;
             return true;
@@ -122,7 +123,7 @@ export class TranspilerStdoutParser extends ProcessOutputHandler<DCollection> {
             return false;
         }
 
-        const matcher = /^\s\s([A-Za-z0-9_]+) at line (\d+), column (\d+)$/g.exec(line);
+        const matcher = /^\s\s([A-Za-z0-9_]+) at line \d+, column \d+$/g.exec(line);
         if (!matcher) { // done parsing
             this.nowParsingAddedLabels = false;
             return false;

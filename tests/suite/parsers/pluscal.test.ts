@@ -103,6 +103,23 @@ suite('PlusCal Transpiler Output Parser Test Suite', () => {
         ]);
     });
 
+    test('Captures custom labels', () => {
+        const stdout = [
+            'pcal.trans Version 1.11 of 31 December 2020',
+            'The following label was added:',
+            '  AQX_Z1 at line 16, column 5',
+            'Parsing completed.',
+            'Translation completed.',
+            'New file saturation2.tla written.'
+        ].join('\n');
+        assertOutput(stdout, '/Users/bob/TLA/needs_labels.tla', [
+            new vscode.Diagnostic(
+                new vscode.Range(15, 5, 15, 5),
+                'Missing label, translator inserted `AQX_Z1` here',
+                vscode.DiagnosticSeverity.Information),
+        ]);
+    });
+
     test('Captures inserted multiple labels', () => {
         const stdout = [
             'pcal.trans Version 1.11 of 31 December 2020',
