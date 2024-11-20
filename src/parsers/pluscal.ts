@@ -115,7 +115,8 @@ export class TranspilerStdoutParser extends ProcessOutputHandler<DCollection> {
      */
     private tryParseAddedLabels(line: string) {
         // https://github.com/tlaplus/tlaplus/blob/21f92/tlatools/org.lamport.tlatools/src/pcal/ParseAlgorithm.java#L668
-        if (line.startsWith('The following label')) { // could be `was added` or `were added`
+        const addStartPrefixes = ['The following labels were added:', 'The following label was added:'];
+        if (addStartPrefixes.some(prefix => line.startsWith(prefix))) {
             this.nowParsingAddedLabels = true;
             return true;
         }
