@@ -16,7 +16,7 @@ export const ErrorTrace = React.memo(({errorInfo, traceId}: ErrorTraceI) => {
 
     return (
         <>
-            <VSCodePanelTab id={`error-trace-tab-${traceId}`}> Error Trace {traceId} </VSCodePanelTab>
+            <VSCodePanelTab id={`error-trace-tab-${traceId}`}> Counterexample {traceId} </VSCodePanelTab>
             <VSCodePanelView id={`error-trace-view-${traceId}`} className="flex-direction-column">
                 <div className="error-trace-options">
                     <VSCodeTextField onChange={(e) => setFilter(e.currentTarget.value)} placeholder="Filter">
