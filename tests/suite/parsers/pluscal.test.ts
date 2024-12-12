@@ -142,6 +142,33 @@ suite('PlusCal Transpiler Output Parser Test Suite', () => {
         ]);
     });
 
+    test('Captures inserted macro labels', () => {
+        const stdout = [
+            'pcal.trans Version 1.11 of 31 December 2020',
+            'The following labels were added:',
+            '  Lbl_1 at line 16, column 5',
+            '  Lbl_2 at line 1, column 5 of macro called at line 23, column 5',
+            '  Lbl_3 at line 46, column 5',
+            'Parsing completed.',
+            'Translation completed.',
+            'New file saturation2.tla written.'
+        ].join('\n');
+        assertOutput(stdout, '/Users/bob/TLA/needs_labels.tla', [
+            new vscode.Diagnostic(
+                new vscode.Range(15, 5, 15, 5),
+                'Missing label, translator inserted `Lbl_1` here',
+                vscode.DiagnosticSeverity.Information),
+            new vscode.Diagnostic(
+                new vscode.Range(22, 5, 22, 5),
+                'Missing label, translator inserted `Lbl_2` here',
+                vscode.DiagnosticSeverity.Information),
+            new vscode.Diagnostic(
+                new vscode.Range(45, 5, 45, 5),
+                'Missing label, translator inserted `Lbl_3` here',
+                vscode.DiagnosticSeverity.Information)
+        ]);
+    });
+
     test('Captures multiple errors after blank message', () => {
         const stdout = [
             'pcal.trans Version 1.11 of 31 December 2020',
