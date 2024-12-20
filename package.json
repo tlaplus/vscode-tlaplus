@@ -35,14 +35,6 @@
         "Modeling"
     ],
     "activationEvents": [
-        "onLanguage:tlaplus",
-        "onCommand:tlaplus.parse",
-        "onCommand:tlaplus.model.check.run",
-        "onCommand:tlaplus.model.check.customRun",
-        "onCommand:tlaplus.exportToTex",
-        "onCommand:tlaplus.exportToPdf",
-        "onCommand:tlaplus.evaluateSelection",
-        "onCommand:tlaplus.evaluateExpression",
         "workspaceContains:**/*.tla"
     ],
     "main": "./out/main.js",
