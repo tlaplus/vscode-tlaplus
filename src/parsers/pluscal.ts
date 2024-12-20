@@ -112,6 +112,7 @@ export class TranspilerStdoutParser extends ProcessOutputHandler<DCollection> {
      *
      * So we can start looking for labels as soon as we see (1)
      * and stop as soon as we stop seeing label strings.
+     *
      */
     private tryParseAddedLabels(line: string) {
         // https://github.com/tlaplus/tlaplus/blob/21f92/tlatools/org.lamport.tlatools/src/pcal/ParseAlgorithm.java#L668
@@ -124,7 +125,7 @@ export class TranspilerStdoutParser extends ProcessOutputHandler<DCollection> {
             return false;
         }
 
-        const matcher = /^\s\s([A-Za-z0-9_]+) at line \d+, column \d+$/g.exec(line);
+        const matcher = /^\s\s([A-Za-z0-9_]+) at line \d+, column \d+/g.exec(line); // no closing `$` to handle macro statements
         if (!matcher) { // done parsing
             this.nowParsingAddedLabels = false;
             return false;
@@ -132,13 +133,17 @@ export class TranspilerStdoutParser extends ProcessOutputHandler<DCollection> {
 
         const labelname = matcher[1];
         const message = `Missing label, translator inserted \`${labelname}\` here`;
-        const locInfo = this.parseLocation(line) || ZERO_LOCATION_INFO;
+        const locInfo = this.parseLabelLocation(line) || ZERO_LOCATION_INFO;
         const locRange = new vscode.Range(locInfo.location, locInfo.location);
         this.result.addMessage(this.filePath, locRange, message, vscode.DiagnosticSeverity.Information);
 
         return true;
     }
 
+    /**
+     * Extracts location info from PlusCal translation strings.
+     * Note: not robust for labels. Use parseLabelLocation instead.
+     */
     private parseLocation(line: string): LocationInfo | undefined {
         const rxLocation = /\s*(?:at )?line (\d+), column (\d+).?\s*$/g;
         const matches = rxLocation.exec(line);
@@ -147,6 +152,32 @@ export class TranspilerStdoutParser extends ProcessOutputHandler<DCollection> {
         }
         const posLine = parseInt(matches[1]) - 1;
         const posCol = parseInt(matches[2]);
+        return new LocationInfo(new vscode.Position(posLine, posCol), matches[0].length);
+    }
+
+    /**
+     * Extracts label location info from label added strings.
+     * Similar to `parseLocation`, EXCEPT it's also robust against insertions due to macros:
+     *
+     *         Lbl_2 at line 1, column 2 of macro called at line 23, column 5
+     *
+     * In this case, we want to capture "line 23, column 5" NOT "line 1".
+     */
+
+    private parseLabelLocation(line: string): LocationInfo | undefined {
+        const rxLocation = /\s*(?:at )?line (\d+), column (\d+)(?: of macro called at line (\d+), column (\d+))?.?\s*$/g;
+        const matches = rxLocation.exec(line);
+        if (!matches) {
+            return undefined;
+        }
+
+        // get macro match if it exists, otherwise get label match
+        const matchLine = matches[3] || matches[1];
+        const matchCol = matches[4] || matches[2];
+
+        const posLine = parseInt(matchLine) - 1;
+        const posCol = parseInt(matchCol);
+
         return new LocationInfo(new vscode.Position(posLine, posCol), matches[0].length);
     }
 }
