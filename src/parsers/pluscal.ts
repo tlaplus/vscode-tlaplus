@@ -112,7 +112,7 @@ export class TranspilerStdoutParser extends ProcessOutputHandler<DCollection> {
      *
      * So we can start looking for labels as soon as we see (1)
      * and stop as soon as we stop seeing label strings.
-     * 
+     *
      */
     private tryParseAddedLabels(line: string) {
         // https://github.com/tlaplus/tlaplus/blob/21f92/tlatools/org.lamport.tlatools/src/pcal/ParseAlgorithm.java#L668
@@ -125,7 +125,7 @@ export class TranspilerStdoutParser extends ProcessOutputHandler<DCollection> {
             return false;
         }
 
-        const matcher = /^\s\s([A-Za-z0-9_]+) at line \d+, column \d+/g.exec(line);
+        const matcher = /^\s\s([A-Za-z0-9_]+) at line \d+, column \d+/g.exec(line); // no closing `$` to handle macro statements
         if (!matcher) { // done parsing
             this.nowParsingAddedLabels = false;
             return false;
@@ -165,7 +165,7 @@ export class TranspilerStdoutParser extends ProcessOutputHandler<DCollection> {
      */
 
     private parseLabelLocation(line: string): LocationInfo | undefined {
-        const rxLocation = /\s*(?:at )?line (\d+), column (\d+)(?: of macro called at line (\d+), column (\d+))?.?\s*/g; // no closing `$`
+        const rxLocation = /\s*(?:at )?line (\d+), column (\d+)(?: of macro called at line (\d+), column (\d+))?.?\s*$/g;
         const matches = rxLocation.exec(line);
         if (!matches) {
             return undefined;
