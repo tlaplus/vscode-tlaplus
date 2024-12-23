@@ -105,7 +105,12 @@ export async function runSany(tlaFilePath: string): Promise<ToolProcessInfo> {
     );
 }
 
-function buildTexOptions(tlaFilePath: string, shadeComments: boolean, commentColor: number, numberLines: boolean, noPcalShade: boolean): string[] {
+function buildTexOptions(
+    tlaFilePath: string,
+    shadeComments: boolean,
+    commentColor: number,
+    numberLines: boolean,
+    noPcalShade: boolean): string[] {
     const toolArgs = [path.basename(tlaFilePath)];
 
     if (shadeComments) {
