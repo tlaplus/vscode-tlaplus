@@ -315,7 +315,7 @@
                     "type": "string",
                     "scope": "window",
                     "default": "",
-                    "description": "Path to Java (8 or higher, 11 is recommended) home directory that should be used to run TLA+ tools.",
+                    "markdownDescription": "Path to Java 11 (or higher) home directory that should be used to run TLA+ tools (akin to JAVA_HOME). [More info](https://docs.tlapl.us/using:vscode:installing_java#configure_the_extension)",
                     "maxLength": 1000
                 },
                 "tlaplus.java.options": {
@@ -336,7 +336,7 @@
                     "type": "string",
                     "scope": "window",
                     "default": "",
-                    "description": "Additional options to pass to TLC.",
+                    "markdownDescription": "Additional options to pass to TLC. Full list of available parameters is [here](https://github.com/tlaplus/tlaplus/blob/master/general/docs/current-tools.md).",
                     "maxLength": 1000
                 },
                 "tlaplus.tlc.modelChecker.optionsPrompt": {
