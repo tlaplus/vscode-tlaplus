@@ -32,7 +32,7 @@ jobs:
     - uses: actions/checkout@v1
     - uses: actions/setup-node@v1
       with:
-        node-version: '18.19'
+        node-version: '22.14.0'
     - name: Get (latest) TLC
       run: wget https://nightly.tlapl.us/dist/tla2tools.jar -O tools/tla2tools.jar
     - name: Get (latest) CommunityModules
@@ -60,3 +60,17 @@ jobs:
     - name: Publish to Marketplace
       run: |
         vsce publish $(git log -1 --format=%cd --date="format:%Y.%-m.%-d%H%M") --pat "${{ secrets.VSCODE_MARKETPLACE_TLAPLUS_TOKEN }}"
+        mv vscode-ide-1.7.0.vsix vscode-tlaplus-$(git log -1 --format=%cd --date="format:%Y.%-m.%-d%H%M").vsix
+        ls -lah
+    - name: Upload the file as an artifact
+      uses: actions/upload-artifact@v4
+      with:
+          name: vscode-ide-1.7.0.vsix
+          path: |
+            *.vsix
+    - name: Publish to Open VSX
+      run: |
+        which npx
+        node --version
+        npm install --global ovsx
+        npx ovsx publish --packagePath vscode-tlaplus-$(git log -1 --format=%cd --date="format:%Y.%-m.%-d%H%M").vsix --packageVersion $(git log -1 --format=%cd --date="format:%Y.%-m.%-d%H%M") -p "${{ secrets.OPEN_VSX_TOKEN_TLAPLUS }}"
