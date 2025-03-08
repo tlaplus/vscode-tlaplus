@@ -1,3 +1,7 @@
+# We have transitioned to a rolling release model. For the latest updates and changes, please visit: https://github.com/tlaplus/vscode-tlaplus/commits/master/.
+
+----
+
 ## 1.7.0 
 
 ### Enhancements
