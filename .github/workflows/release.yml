@@ -70,7 +70,6 @@ jobs:
             *.vsix
     - name: Publish to Open VSX
       run: |
-        which npx
-        node --version
         npm install --global ovsx
-        npx ovsx publish --packagePath vscode-tlaplus-$(git log -1 --format=%cd --date="format:%Y.%-m.%-d%H%M").vsix --packageVersion $(git log -1 --format=%cd --date="format:%Y.%-m.%-d%H%M") -p "${{ secrets.OPEN_VSX_TOKEN_TLAPLUS }}"
+        git log -1 --format=%cd --date="format:%Y.%-m.%-d%H%M" | xargs -I {} jq '.version = "{}"' package.json > tmp.json && mv tmp.json package.json
+        npx ovsx publish -p "${{ secrets.OPEN_VSX_TOKEN_TLAPLUS }}"
