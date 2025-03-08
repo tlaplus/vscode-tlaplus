@@ -34,7 +34,7 @@ jobs:
       with:
         node-version: '22.14.0'
     - name: Get (latest) TLC
-      run: wget https://nightly.tlapl.us/dist/tla2tools.jar -O tools/tla2tools.jar
+      run: wget https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar -O tools/tla2tools.jar
     - name: Get (latest) CommunityModules
       run: wget https://github.com/tlaplus/CommunityModules/releases/latest/download/CommunityModules-deps.jar -O tools/CommunityModules-deps.jar
     - name: Prepare Release
