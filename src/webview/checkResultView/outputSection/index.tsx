@@ -11,6 +11,7 @@ import { ErrorInfo, MessageLine, ModelCheckResult, OutputLine, WarningInfo } fro
 import { CodePositionLink } from '../common';
 
 import './index.css';
+import { DCollection } from '../../../diagnostic';
 
 interface OutputSectionI {checkResult: ModelCheckResult}
 export const OutputSection = React.memo(({checkResult}: OutputSectionI) => {
@@ -35,19 +36,22 @@ export const OutputSection = React.memo(({checkResult}: OutputSectionI) => {
                         <VSCodePanelView id="output-view-2" className="flex-direction-column">
                             {checkResult.warnings.map((warning: WarningInfo, warningId: number) => (
                                 <p key={warningId} className="margin-0">
-                                    {warning.lines.map((v, index) => <MessageLineSpan key={index} message={v}/>)}
+                                    {warning.lines.map((v, index) =>(
+                                        <MessageLineSpan sanyMessages={checkResult.sanyMessages}
+                                            key={index} message={v}/>))}
                                 </p>))
                             }
                         </VSCodePanelView>
                     </>}
-
                 {!emptyErrors(checkResult) &&
                     <>
                         <VSCodePanelTab id="output-tab-3"> Errors </VSCodePanelTab>
                         <VSCodePanelView id="output-view-3" className="flex-direction-column">
                             {checkResult.errors.map((error: ErrorInfo, errorId: number) => (
                                 <div key={errorId} className="margin-0">
-                                    {error.lines.map((v, index) => <MessageLineSpan key={index} message={v}/>)}
+                                    {error.lines.map((v, index) => (
+                                        <MessageLineSpan sanyMessages={checkResult.sanyMessages}
+                                            key={index} message={v}/>))}
                                     <ErrorLink error={error} index={errorId}/>
                                 </div>))
                             }
@@ -88,16 +92,19 @@ const ErrorLink = React.memo(({error, index}: ErrorLinkI) => {
     );
 });
 
-interface MessageLineSpanI {message: MessageLine}
-const MessageLineSpan = React.memo(({message}: MessageLineSpanI) => (
-    <p className="margin-0">
-        {message.spans.map((span, index) => (
-            span.type !== 'SL' ?
-                <span key={index}> {span.text} </span> :
-                <CodePositionLink key={index} line={span.text} filepath={span.filePath} position={span.location}/>
-        ))}
-    </p>
-));
+interface MessageLineSpanI { message: MessageLine, sanyMessages: DCollection | undefined }
+const MessageLineSpan = React.memo(({ message, sanyMessages }: MessageLineSpanI) =>
+    (<p className="margin-0">
+        {message.spans.map((span, index) => {
+            const dmsg = sanyMessages?.messages?.find((v) => v.diagnostic.message === span.text);
+            const position = span.location || dmsg?.position;
+            const filePath = span.filePath || dmsg?.filePath;
+            return (
+                <CodePositionLink key={index} line={span.text} filepath={filePath} position={position} />
+            );
+        }
+        )}
+    </p>));
 
 export function emptyOutputLines(checkResult: ModelCheckResult) {
     return !checkResult.outputLines || checkResult.outputLines.length === 0;
