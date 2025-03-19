@@ -6,7 +6,7 @@ import { pathToModuleName, pathToUri } from './common';
  */
 export class DCollection {
     private readonly modules: Map<string, string> = new Map();   // Map of checked modules names to file paths
-    private messages: DMessage[] = [];                  // Collection of diagnostic messages from the check run
+    messages: DMessage[] = [];                  // Collection of diagnostic messages from the check run
 
     public getModules(): ReadonlyMap<string, string> {
         return this.modules;
@@ -75,9 +75,10 @@ export function addDiagnostics(from: DCollection, to: DCollection): void {
 /**
  * A Diagnostic instance linked to the corresponding file.
  */
-class DMessage {
+export class DMessage {
     readonly filePath: string;
     readonly diagnostic: vscode.Diagnostic;
+    readonly position: vscode.Position;
 
     constructor(
         filePath: string,
@@ -87,5 +88,6 @@ class DMessage {
     ) {
         this.filePath = filePath;
         this.diagnostic = new vscode.Diagnostic(range, text, severity);
+        this.position = new vscode.Position(range.start.line, range.start.character);
     }
 }
