@@ -52,6 +52,84 @@ suite('TLA Symbols Provider Test Suite', () => {
         ]);
     });
 
+    test('Finds items in CONSTANT operators', () => {
+        const cases = [
+            {
+                input: [
+                    'CONSTANTS Baz(_)'
+                ],
+                expected: [
+                    symConst('Baz', ROOT_CONTAINER_NAME, loc(doc.uri, pos(0, 10)))
+                ]
+            },
+            {
+                input: [
+                    'CONSTANTS Baz( _ )'
+                ],
+                expected: [
+                    symConst('Baz', ROOT_CONTAINER_NAME, loc(doc.uri, pos(0, 10)))
+                ]
+            },
+            {
+                input: [
+                    'CONSTANTS Baz(_, _)'
+                ],
+                expected: [
+                    symConst('Baz', ROOT_CONTAINER_NAME, loc(doc.uri, pos(0, 10)))
+                ]
+            },
+            {
+                input: [
+                    'CONSTANTS Foo(_), Bar'
+                ],
+                expected: [
+                    symConst('Foo', ROOT_CONTAINER_NAME, loc(doc.uri, pos(0, 10))),
+                    symConst('Bar', ROOT_CONTAINER_NAME, loc(doc.uri, pos(0, 18)))
+                ]
+            },
+            {
+                input: [
+                    'CONSTANTS Bar, Foo(_)'
+                ],
+                expected: [
+                    symConst('Bar', ROOT_CONTAINER_NAME, loc(doc.uri, pos(0, 10))),
+                    symConst('Foo', ROOT_CONTAINER_NAME, loc(doc.uri, pos(0, 18)))
+                ]
+            },
+            {
+                input: [
+                    'CONSTANTS Foo(_, _), Bar'
+                ],
+                expected: [
+                    symConst('Foo', ROOT_CONTAINER_NAME, loc(doc.uri, pos(0, 10))),
+                    symConst('Bar', ROOT_CONTAINER_NAME, loc(doc.uri, pos(0, 20)))
+                ]
+            },
+            {
+                input: [
+                    'CONSTANTS Bar, Foo(_, _)'
+                ],
+                expected: [
+                    symConst('Bar', ROOT_CONTAINER_NAME, loc(doc.uri, pos(0, 10))),
+                    symConst('Foo', ROOT_CONTAINER_NAME, loc(doc.uri, pos(0, 18)))
+                ]
+            },
+            {
+                input: [
+                    'CONSTANTS Bar, Foo(_, _, _), Baz'
+                ],
+                expected: [
+                    symConst('Bar', ROOT_CONTAINER_NAME, loc(doc.uri, pos(0, 10))),
+                    symConst('Foo', ROOT_CONTAINER_NAME, loc(doc.uri, pos(0, 18))),
+                    symConst('Baz', ROOT_CONTAINER_NAME, loc(doc.uri, pos(0, 29))),
+                ]
+            }
+        ];
+        for (const {input, expected} of cases) {
+            return assertSymbols(doc, input, expected);
+        }
+    });
+
     test('Finds items in VARIABLE', () => {
         return assertSymbols(doc, [
             'VARIABLE Foo, Bar'
