@@ -306,7 +306,11 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
                 charIdx += COMMA_LEN;
                 continue;
             }
-            if (rest !== '' && !isCommentStart(rest)) {
+
+            // Given a constant operator like Foo(_, _, ...), match the parentheses and everything inside of it
+            const isConstantOperator = /^(\(((\s*_\s*,|\s*_\s*)\s*)+\))$/.test(rest);
+
+            if (rest !== '' && !isCommentStart(rest) &&!isConstantOperator) {
                 module.simpleListSymbolKind = undefined;
                 return false;
             }
@@ -317,7 +321,11 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
                 new vscode.Location(docUri, new vscode.Position(lineNum, charIdx))
             ));
             charIdx += name.length + spaces.length + COMMA_LEN;
-            if (rest !== '') {
+            if (isConstantOperator) {
+                // Skip '(...)' in constant operators e.g. Foo(_, _)
+                charIdx += rest.length;
+            }
+            if (rest !== '' && !isConstantOperator) {
                 module.simpleListSymbolKind = undefined;
                 break;      // There were no comma after the name
             }
