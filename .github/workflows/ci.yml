@@ -7,7 +7,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macOS-latest, ubuntu-20.04, windows-latest]
+        os: [macOS-latest, ubuntu-latest, windows-latest]
     steps:
     - uses: actions/checkout@v1
     - uses: actions/setup-node@v1
@@ -24,13 +24,13 @@ jobs:
     - name: Check
       run: npm run lint
     - name: Test Non-Linux
-      if: matrix.os != 'ubuntu-20.04'
+      if: matrix.os != 'ubuntu-latest'
       run: npm test --silent
     - name: Test Linux
-      if: matrix.os == 'ubuntu-20.04'
+      if: matrix.os == 'ubuntu-latest'
       run: xvfb-run --auto-servernum npm test --silent
     - name: Upload artifact
-      if: matrix.os == 'ubuntu-20.04'
+      if: matrix.os == 'ubuntu-latest'
       uses: actions/upload-artifact@v4
       with:
         name: vscode-tlaplus-ci.vsix
