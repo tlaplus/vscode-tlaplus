@@ -3,6 +3,7 @@ import * as path from 'path';
 
 async function main() {
     try {
+        process.env.VSCODE_TEST = 'true';
         const extensionDevelopmentPath = path.resolve(__dirname, '../../');
         const extensionTestsPath = path.resolve(__dirname, './suite/index');
         await runTests({

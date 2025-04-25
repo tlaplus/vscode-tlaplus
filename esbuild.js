@@ -33,7 +33,7 @@ const extensionBrowserConfig = {
     format: 'cjs',
     entryPoints: ['./src/main.browser.ts'],
     outfile: './out/main.browser.js',
-    external: ['vscode'],
+    external: ['vscode', 'path', 'fs', 'os', 'child_process', 'stream'],
 };
 
 // Config for webview source code (to be run in a web-based context)
