@@ -555,6 +555,7 @@
         "@vscode/webview-ui-toolkit": "^1.2.2",
         "vscode-languageclient": "^9.0.0",
         "await-notify": "^1.0.1",
+        "fast-xml-parser": "^5.2.1",
         "moment": "^2.29.4",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",

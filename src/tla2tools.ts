@@ -49,6 +49,7 @@ export enum TlaTool {
     PLUS_CAL = 'pcal.trans',
     REPL = 'tlc2.REPL',
     SANY = 'tla2sany.SANY',
+    XMLExporter = 'tla2sany.xml.XMLExporter',
     TLC = 'tlc2.TLC',
     TEX = 'tla2tex.TLA'
 }
@@ -102,6 +103,16 @@ export async function runSany(tlaFilePath: string): Promise<ToolProcessInfo> {
         tlaFilePath,
         [ path.basename(tlaFilePath) ],
         [ makeTlaLibraryJavaOpt() ]
+    );
+}
+
+export async function runXMLExporter(tlaFilePath: string, addRetCodeHandler: boolean = true): Promise<ToolProcessInfo> {
+    return runTool(
+        TlaTool.XMLExporter,
+        tlaFilePath,
+        [ '-o', path.basename(tlaFilePath) ], // -o turns XML schema validation off.
+        [ makeTlaLibraryJavaOpt() ],
+        addRetCodeHandler
     );
 }
 
@@ -182,7 +193,8 @@ async function runTool(
     toolName: string,
     filePath: string,
     toolOptions: string[],
-    javaOptions: string[]
+    javaOptions: string[],
+    addRetCodeHandler: boolean = true
 ): Promise<ToolProcessInfo> {
     // log the arugments:
     //console.log(toolName + ': ' + filePath + ' ' + toolOptions.join(' ') + ' ' + javaOptions.join(' '));
@@ -193,7 +205,9 @@ async function runTool(
     args.push(toolName);
     toolOptions.forEach(opt => args.push(opt));
     const proc = spawn(javaPath, args, { cwd: path.dirname(filePath) });
-    addReturnCodeHandler(proc, toolName);
+    if (addRetCodeHandler) {
+        addReturnCodeHandler(proc, toolName);
+    }
     return new ToolProcessInfo(buildCommandLine(javaPath, args), proc);
 }
 

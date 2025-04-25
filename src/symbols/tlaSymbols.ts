@@ -1,10 +1,38 @@
 import * as vscode from 'vscode';
 import { Module, TlaDocumentInfo, TlaDocumentInfos } from '../model/documentInfo';
+import { ToolOutputChannel } from '../outputChannels';
+import { runXMLExporter, ToolProcessInfo } from '../tla2tools';
+import * as path from 'path';
+import { XMLParser } from 'fast-xml-parser';
 
 const COMMA_LEN = 1;
 export const ROOT_SYMBOL_NAME = '*';
 export const ROOT_CONTAINER_NAME = '';
 export const PLUS_CAL_DEFAULT_NAME = 'PlusCal algorithm';
+
+/**
+ * Extended SymbolInformation that includes TLA+ specific properties like level
+ */
+export class TlaSymbolInformation extends vscode.SymbolInformation {
+    /**
+     * Creates a new TlaSymbolInformation instance.
+     *
+     * @param name The name of the symbol
+     * @param kind The kind of symbol
+     * @param containerName The name of the symbol containing this symbol
+     * @param location The location of this symbol
+     * @param level The TLA+ level of this symbol (0 = constant, 1 = state, 2 = action, 3 = temporal)
+     */
+    constructor(
+        name: string,
+        kind: vscode.SymbolKind,
+        containerName: string,
+        location: vscode.Location,
+        public readonly level?: number
+    ) {
+        super(name, kind, containerName, location);
+    }
+}
 
 enum SpecialSymbol {
     PlusCalEnd
@@ -91,17 +119,46 @@ class ParsingContext {
 }
 
 /**
+ * Provides TLA+ symbols from documents identified by URI.
+ * Converts fileUri into suitable parameters for the existing TlaDocumentSymbolsProvider
+ */
+export class TLADocumentSymbolProvider implements vscode.DocumentSymbolProvider {
+    private tlaDocSymbolsProvider: TlaDocumentSymbolsProvider;
+
+    constructor(
+        private readonly docInfos: TlaDocumentInfos
+    ) {
+        this.tlaDocSymbolsProvider = new TlaDocumentSymbolsProvider(docInfos);
+    }
+
+    async provideDocumentSymbols(
+        document: vscode.TextDocument,
+        token: vscode.CancellationToken
+    ): Promise<vscode.SymbolInformation[] | vscode.DocumentSymbol[]> {
+        return await this.tlaDocSymbolsProvider.provideDocumentSymbols(document, token);
+    }
+}
+
+const sanyOutChannel = new ToolOutputChannel('SANY XML Exporter');
+
+/**
  * Provides TLA+ symbols from the given document.
  */
 export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider {
     constructor(
         private readonly docInfos: TlaDocumentInfos
-    ) {}
+    ) { }
 
-    provideDocumentSymbols(
+    async provideDocumentSymbols(
         document: vscode.TextDocument,
         token: vscode.CancellationToken
-    ): vscode.ProviderResult<vscode.SymbolInformation[] | vscode.DocumentSymbol[]> {
+    ): Promise<vscode.SymbolInformation[] | vscode.DocumentSymbol[]> {
+        // Run the XML exporter in the background while regex parsing runs.
+        const xmlExporterPromise = this.runXmlExporter(document);
+
+        // Extract the symbols from the document line by line based on regex matching.
+        // This doesn't rise to the level of what SANY does, but it works even if the
+        // document has parse errors (SANY doesn't handle parse errors).
         const context = new ParsingContext(document);
         let lastLine = undefined;
         for (let i = 0; i < document.lineCount; i++) {
@@ -122,6 +179,21 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
         for (const modCtx of context.modules) {
             symbols = symbols.concat(modCtx.symbols);
         }
+
+        // Wait for XML exporter to finish successfully.  If it fails, use the regex-based parsing result.
+        // If it succeeds, use the XML-based parsing result. We merge instead of replacing the regex-based
+        // parsing result to not lose PlusCal symbols.
+        try {
+            const xmlSymbols = await xmlExporterPromise;
+            if (xmlSymbols) {
+                symbols = this.merge(symbols, xmlSymbols);
+            }
+        } catch (error: unknown) {
+            // If XML exporter fails, just use regex-based parsing result
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            sanyOutChannel.appendLine(`XML exporter encountered an error: ${errorMessage}`);
+        }
+
         this.docInfos.set(document.uri, new TlaDocumentInfo(
             context.rootModule.convert(),
             context.plusCal?.convert(),
@@ -132,6 +204,254 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
             symbols = symbols.concat(context.plusCal.symbols);
         }
         return symbols;
+    }
+
+    /**
+     * Runs the XML exporter on the document and returns a promise that resolves to the parsed symbols
+     */
+    private async runXmlExporter(document: vscode.TextDocument): Promise<vscode.SymbolInformation[] | undefined> {
+        // Skip XML exporter when running in test environment
+        if (process.env.VSCODE_TEST === 'true') {
+            return undefined;
+        }
+
+        try {
+            // Save the current document to ensure XML exporter sees latest version
+            if (document.isDirty) {
+                await document.save();
+            }
+
+            // Run XML exporter
+            const processInfo: ToolProcessInfo = await runXMLExporter(document.fileName, false);
+
+            // Create promises to collect stdout and stderr
+            let stdoutData = '';
+            let stderrData = '';
+
+            processInfo.process.stdout?.on('data', (data) => {
+                stdoutData += data.toString();
+            });
+
+            processInfo.process.stderr?.on('data', (data) => {
+                stderrData += data.toString();
+                sanyOutChannel.appendLine(data.toString());
+            });
+
+            // Wait for process to complete
+            const exitCode = await new Promise<number>((resolve) => {
+                processInfo.process.on('close', (code) => {
+                    resolve(code ?? 1);
+                });
+            });
+
+            if (exitCode !== 0) {
+                sanyOutChannel.appendLine(`XML exporter failed with exit code ${exitCode}`);
+                sanyOutChannel.appendLine(stderrData);
+                return undefined;
+            }
+
+            // Parse XML directly from stdout
+            if (!stdoutData) {
+                sanyOutChannel.appendLine('XML exporter did not produce any output');
+                return undefined;
+            }
+
+            return this.parseXmlSymbols(stdoutData, document.uri);
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            sanyOutChannel.appendLine(`Error running XML exporter: ${errorMessage}`);
+            return undefined;
+        }
+    }
+
+    /**
+     * Parse XML content produced by the XML exporter and convert it to vscode.SymbolInformation
+     */
+    private parseXmlSymbols(xmlContent: string, documentUri: vscode.Uri): vscode.SymbolInformation[] {
+        const symbols: vscode.SymbolInformation[] = [];
+
+        try {
+            // Parse XML using the fast-xml-parser library
+            const parser = new XMLParser({
+                ignoreAttributes: false,
+                attributeNamePrefix: '', // Keep attribute names as-is
+                isArray: (name) => ['entry', 'ModuleNodeRef', 'operands', 'params'].includes(name)
+            });
+
+            const xmlObj = parser.parse(xmlContent);
+            if (!xmlObj.modules) {
+                sanyOutChannel.appendLine('Invalid XML: missing modules element');
+                return symbols;
+            }
+
+            // Process all entries.
+            if (xmlObj.modules.context && xmlObj.modules.context.entry) {
+                const documentBasename = path.basename(documentUri.fsPath, path.extname(documentUri.fsPath));
+
+                // Process all entries and create symbols
+                for (const entry of xmlObj.modules.context.entry) {
+                    if (entry.UserDefinedOpKind) {
+                        // Process user-defined operators (functions)
+                        const opKind = entry.UserDefinedOpKind;
+                        // Skip entries that are not in documentUri.
+                        if (opKind.location.filename !== documentBasename) {
+                            continue;
+                        }
+                        const name = opKind.uniquename;
+
+                        if (name && opKind.location) {
+                            const location = opKind.location;
+                            const line = parseInt(location.line?.begin || '0') - 1;
+                            const col = parseInt(location.column?.begin || '0') - 1;
+                            const level = parseInt(opKind.level);
+                            symbols.push(new TlaSymbolInformation(
+                                name,
+                                this.determineSymbolKind(level, parseInt(opKind.arity)),
+                                opKind.location.filename,
+                                new vscode.Location(
+                                    documentUri,
+                                    new vscode.Position(line, col)
+                                ),
+                                level
+                            ));
+                        }
+                    } else if (entry.TheoremDefNode) {
+                        // Process theorem/axiom/lemma definitions
+                        const theoremNode = entry.TheoremDefNode;
+                        // Skip entries that are not in documentUri.
+                        if (theoremNode.location.filename !== documentBasename) {
+                            continue;
+                        }
+                        const name = theoremNode.uniquename;
+
+                        if (name && theoremNode.location) {
+                            const location = theoremNode.location;
+                            const line = parseInt(location.line?.begin || '0') - 1;
+                            const col = parseInt(location.column?.begin || '0') - 1;
+                            symbols.push(new TlaSymbolInformation(
+                                name,
+                                vscode.SymbolKind.Boolean,
+                                theoremNode.location.filename,
+                                new vscode.Location(
+                                    documentUri,
+                                    new vscode.Position(line, col)
+                                )
+                            ));
+                        }
+                    } else if (entry.AssumeDef) {
+                        // Process assume definitions
+                        const assumeNode = entry.AssumeDef;
+                        // Skip entries that are not in documentUri.
+                        if (assumeNode.location.filename !== documentBasename) {
+                            continue;
+                        }
+                        const name = assumeNode.uniquename;
+
+                        if (name && assumeNode.location) {
+                            const location = assumeNode.location;
+                            const line = parseInt(location.line?.begin || '0') - 1;
+                            const col = parseInt(location.column?.begin || '0') - 1;
+                            symbols.push(new TlaSymbolInformation(
+                                name,
+                                vscode.SymbolKind.Constructor,
+                                assumeNode.location.filename,
+                                new vscode.Location(
+                                    documentUri,
+                                    new vscode.Position(line, col)
+                                )
+                            ));
+                        }
+                    } else if (entry.OpDeclNode) {
+                        // Process variable/constant declarations
+                        const declNode = entry.OpDeclNode;
+                        // Skip entries that are not in documentUri.
+                        if (declNode.location.filename !== documentBasename) {
+                            continue;
+                        }
+                        const name = declNode.uniquename;
+
+                        if (name && declNode.location) {
+                            const location = declNode.location;
+                            const line = parseInt(location.line?.begin || '0') - 1;
+                            const col = parseInt(location.column?.begin || '0') - 1;
+                            const level = parseInt(declNode.level); // Parse level from declaration
+
+                            symbols.push(new TlaSymbolInformation(
+                                name,
+                                this.determineSymbolKind(level, parseInt(declNode.arity)),
+                                declNode.location.filename,
+                                new vscode.Location(
+                                    documentUri,
+                                    new vscode.Position(line, col)
+                                ),
+                                level
+                            ));
+                        }
+                    }
+                }
+            }
+            return symbols;
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            sanyOutChannel.appendLine(`Error parsing XML: ${errorMessage}`);
+            return [];
+        }
+    }
+
+    /**
+     * Determine the appropriate vscode symbol kind based on operator properties
+     */
+    private determineSymbolKind(level: number, arity: number): vscode.SymbolKind {
+        if (level === 0) {
+            if (arity === 0) {
+                return vscode.SymbolKind.Constant;
+            } else {
+                return vscode.SymbolKind.Operator;
+            }
+        } else if (level === 1) {
+            if (arity === 0) {
+                return vscode.SymbolKind.Variable;
+            } else {
+                return vscode.SymbolKind.Method;
+            }
+        } else if (level === 2) {
+            if (arity === 0) {
+                return vscode.SymbolKind.Event;
+            } else {
+                return vscode.SymbolKind.Function;
+            }
+        } else if (level === 3) {
+            return vscode.SymbolKind.Property;
+        }
+        // Default
+        return vscode.SymbolKind.Field;
+    }
+
+    /**
+     * Merges symbols from regex-based parsing with symbols from XML-based parsing.
+     * When duplicates exist (by name and container), the XML symbols take precedence.
+     */
+    private merge(
+        regexSymbols: vscode.SymbolInformation[],
+        xmlSymbols: vscode.SymbolInformation[]
+    ): vscode.SymbolInformation[] {
+        // Create a map of symbols by their unique key (name + containerName)
+        const symbolMap = new Map<string, vscode.SymbolInformation>();
+
+        // Add all regex-based symbols to the map
+        for (const symbol of regexSymbols) {
+            const key = `${symbol.name}:${symbol.containerName}`;
+            symbolMap.set(key, symbol);
+        }
+
+        // Add/override with XML-based symbols
+        for (const symbol of xmlSymbols) {
+            const key = `${symbol.name}:${symbol.containerName}`;
+            symbolMap.set(key, symbol);
+        }
+
+        // Convert the map back to an array
+        return Array.from(symbolMap.values());
     }
 
     tryExtractSymbol(
@@ -310,7 +630,7 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
             // Given a constant operator like Foo(_, _, ...), match the parentheses and everything inside of it
             const isConstantOperator = /^(\(((\s*_\s*,|\s*_\s*)\s*)+\))$/.test(rest);
 
-            if (rest !== '' && !isCommentStart(rest) &&!isConstantOperator) {
+            if (rest !== '' && !isCommentStart(rest) && !isConstantOperator) {
                 module.simpleListSymbolKind = undefined;
                 return false;
             }
