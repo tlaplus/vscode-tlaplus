@@ -22,7 +22,7 @@ export const OutputSection = React.memo(({checkResult}: OutputSectionI) => {
     return (
         <section>
             <VSCodePanels id="output-panels">
-            {!emptyErrors(checkResult) &&
+                {!emptyErrors(checkResult) &&
                     <>
                         <VSCodePanelTab id="output-tab-1"> Errors </VSCodePanelTab>
                         <VSCodePanelView id="output-view-1" className="flex-direction-column">
