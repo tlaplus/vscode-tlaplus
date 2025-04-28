@@ -169,6 +169,7 @@ export async function runTlc(
     cfgFilePath: string,
     showOptionsPrompt: boolean,
     extraOpts: string[] = [],
+    extraJavaOpts: string[] = []
 ): Promise<ToolProcessInfo | undefined> {
     const promptedOptions = await getTlcOptions(showOptionsPrompt);
     if (promptedOptions === undefined) {
@@ -185,7 +186,7 @@ export async function runTlc(
         TlaTool.TLC,
         tlaFilePath,
         buildTlcOptions(tlaFilePath, cfgFilePath, customOptions),
-        javaOptions
+        javaOptions.concat(extraJavaOpts)
     );
 }
 

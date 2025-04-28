@@ -31,7 +31,7 @@ const TEMPLATE_CFG_PATH = path.resolve(__dirname, '../tools/template.cfg');
 let checkProcess: ChildProcess | undefined;
 let lastCheckFiles: SpecFiles | undefined;
 const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);
-const outChannel = new ToolOutputChannel('TLC', mapTlcOutputLine);
+export const outChannel = new ToolOutputChannel('TLC', mapTlcOutputLine);
 
 class CheckResultHolder {
     checkResult: ModelCheckResult | undefined;
@@ -331,7 +331,7 @@ async function createModelFile(cfgPath: string) {
     });
 }
 
-function mapTlcOutputLine(line: string): string | undefined {
+export function mapTlcOutputLine(line: string): string | undefined {
     if (line === '') {
         return line;
     }

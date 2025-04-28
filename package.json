@@ -9,7 +9,7 @@
         "name": "TLA+ Community"
     },
     "engines": {
-        "vscode": "^1.82.0"
+        "vscode": "^1.95.0"
     },
     "categories": [
         "Programming Languages",
@@ -115,6 +115,108 @@
                 "language": "tlaplus_out",
                 "scopeName": "source.tlaplus.out",
                 "path": "./languages/out-grammar.json"
+            }
+        ],
+        "languageModelTools": [
+            {
+                "name": "chat-tools-tlaplus_sany_parse",
+                "canBeReferencedInPrompt": true,
+                "toolReferenceName": "tlaplus_parse",
+                "userDescription": "Parse the TLA+ module using SANY provided as an input file.",
+                "modelDescription": "Parse the TLA+ module provided as an input file with SANY from the TLA+ tools. Use this tool when you need to parse a TLA+ module and check for syntax and level-checking errors.",
+                "displayName": "TLA+: Parse module",
+                "tags": [
+                    "editors",
+                    "chat-tools-tlaplus"
+                ],
+                "icon": "$(files)",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "fileName": {
+                            "type": "string",
+                            "description": "The full path to the file containing the TLA+ module to parse."
+                        }
+                    },
+                    "required": [
+                        "fileName"
+                    ]
+                }
+            },
+            {
+                "name": "chat-tools-tlaplus_sany_symbol",
+                "canBeReferencedInPrompt": true,
+                "toolReferenceName": "tlaplus_symbol",
+                "userDescription": "TLA+: List all symbols in a TLA+ module.",
+                "modelDescription": "Extract all symbols from the given TLA+ module. Use this tool when you need to identify the symbols defined in a TLA+ spec—for example, when generating a TLC configuration file. It helps you determine the list of CONSTANTS, the initialization predicate, the next-state relation, the overall behavior specification (Spec), and any defined safety or liveness properties.",
+                "displayName": "TLA+: List all symbols",
+                "tags": [
+                    "editors",
+                    "chat-tools-tlaplus"
+                ],
+                "icon": "$(files)",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "fileName": {
+                            "type": "string",
+                            "description": "The full path to the file containing the TLA+ module."
+                        }
+                    },
+                    "required": [
+                        "fileName"
+                    ]
+                }
+            },
+            {
+                "name": "chat-tools-tlaplus_tlc_smoke",
+                "canBeReferencedInPrompt": true,
+                "toolReferenceName": "tlaplus_smoke",
+                "userDescription": "Smoke test the TLA+ module using TLC with the provided input file. ",
+                "modelDescription": "Smoke test the TLA+ module using TLC with the provided input file. Smoke testing is a lightweight verification method that runs TLC to randomly generate as many behaviors as possible within a specified time limit. Unlike exhaustive model checking, it does not explore the entire state space.  If no counterexample is found during smoke testing, this does not guarantee that the module is correct. However, if a counterexample is found, it proves that the module violates at least one of its properties. Note that, unlike in exhaustive model checking, any counterexample found may not be minimal. \"Smoke testing\" is defined to be running TLC's simulation under a tight time budget.",
+                "displayName": "TLA+: Smoke Test model",
+                "tags": [
+                    "editors",
+                    "chat-tools-tlaplus"
+                ],
+                "icon": "$(files)",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "fileName": {
+                            "type": "string",
+                            "description": "The full path to the file containing the TLA+ module to parse."
+                        }
+                    },
+                    "required": [
+                        "fileName"
+                    ]
+                }
+            },
+            {
+                "name": "chat-tools-tlaplus_tlc_check",
+                "canBeReferencedInPrompt": true,
+                "toolReferenceName": "tlaplus_check",
+                "userDescription": "Exhaustively model-check the TLA+ module provided as an input file with TLC.",
+                "modelDescription": "Exhaustively model-check the TLA+ module provided as an input file with TLC. Model checking is a formal verification technique that systematically explores the state space of a system to ensure its correctness. It can be used to check safety and liveness properties, as well as to find counterexamples. Due to state-space explostion, model checking may take a long time, and it may be impossible to check large models exhaustively.",
+                "displayName": "TLA+: Check model with TLC",
+                "tags": [
+                    "editors",
+                    "chat-tools-tlaplus"
+                ],
+                "icon": "$(files)",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "fileName": {
+                            "type": "string",
+                            "description": "The full path to the file containing the TLA+ module to parse."
+                        }
+                    },
+                    "required": [
+                        "fileName"
+                    ]
+                }
             }
         ],
         "commands": [
@@ -533,7 +635,7 @@
         "@types/node": "^18.15.0",
         "@types/react": "^18.2.6",
         "@types/react-dom": "^18.2.4",
-        "@types/vscode": "^1.82.0",
+        "@types/vscode": "^1.95.0",
         "@typescript-eslint/eslint-plugin": "^5.59.5",
         "@typescript-eslint/parser": "^5.59.5",
         "@vscode/debugadapter-testsupport": "^1.63.0",
