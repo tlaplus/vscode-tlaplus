@@ -44,7 +44,7 @@ async function doParseFile(doc: vscode.TextDocument, diagnostic: vscode.Diagnost
 /**
  * Transpiles PlusCal code in the current .tla file to TLA+ code in the same file.
  */
-async function transpilePlusCal(fileUri: vscode.Uri): Promise<DCollection> {
+export async function transpilePlusCal(fileUri: vscode.Uri): Promise<DCollection> {
     const procInfo = await runPlusCal(fileUri.fsPath);
     plusCalOutChannel.bindTo(procInfo);
     const stdoutParser = new TranspilerStdoutParser(procInfo.process.stdout, fileUri.fsPath);
@@ -54,7 +54,7 @@ async function transpilePlusCal(fileUri: vscode.Uri): Promise<DCollection> {
 /**
  * Parses the resulting TLA+ spec.
  */
-async function parseSpec(fileUri: vscode.Uri): Promise<SanyData> {
+export async function parseSpec(fileUri: vscode.Uri): Promise<SanyData> {
     const procInfo = await runSany(fileUri.fsPath);
     sanyOutChannel.bindTo(procInfo);
     const stdoutParser = new SanyStdoutParser(procInfo.process.stdout);

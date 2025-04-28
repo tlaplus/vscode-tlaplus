@@ -30,6 +30,8 @@ import { TlapsClient } from './tlaps';
 import { CurrentProofStepWebviewViewProvider } from './panels/currentProofStepWebviewViewProvider';
 import { moduleSearchPaths } from './paths';
 import { ModuleSearchPathsTreeDataProvider } from './panels/moduleSearchPathsTreeDataProvider';
+import { CheckModuleTool, SmokeModuleTool } from './lm/TLCTool';
+import { ParseModuleTool, SymbolProviderTool } from './lm/SANYTool';
 
 const TLAPLUS_FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file', language: LANG_TLAPLUS };
 const TLAPLUS_CFG_FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file', language: LANG_TLAPLUS_CFG };
@@ -175,6 +177,22 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.window.registerTreeDataProvider(
             ModuleSearchPathsTreeDataProvider.viewType,
             new ModuleSearchPathsTreeDataProvider(context)
+        ),
+        vscode.lm.registerTool(
+            'chat-tools-tlaplus_sany_parse',
+            new ParseModuleTool()
+        ),
+        vscode.lm.registerTool(
+            'chat-tools-tlaplus_sany_symbol',
+            new SymbolProviderTool()
+        ),
+        vscode.lm.registerTool(
+            'chat-tools-tlaplus_tlc_smoke',
+            new SmokeModuleTool()
+        ),
+        vscode.lm.registerTool(
+            'chat-tools-tlaplus_tlc_check',
+            new CheckModuleTool()
         )
     );
     tlapsClient = new TlapsClient(context, details => {
