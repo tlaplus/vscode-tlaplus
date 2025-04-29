@@ -216,9 +216,13 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
         }
 
         try {
-            // Save the current document to ensure XML exporter sees latest version
             if (document.isDirty) {
-                await document.save();
+                // Do not forcefully save the document if it is dirty because that may mess with
+                // other extensions or code actions that are triggered by saving.  However,
+                // there is no point in having SANY export XML if the document is not saved
+                // because the saved document might be completely different from the one in the
+                // editor.
+                return undefined;
             }
 
             // Run XML exporter
