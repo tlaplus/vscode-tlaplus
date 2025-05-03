@@ -17,11 +17,17 @@ export interface TlapsProofObligationResult {
     obligation: string | null; // Non-null, if prover failed.
 }
 
+export interface TlapsProofObligationNote {
+    level: 'info' | 'warning' | 'error';
+    text: string;
+}
+
 export interface TlapsProofObligationState {
     role: string;
     range: Range;
     status: string;
     normalized: string;
+    notes?: TlapsProofObligationNote[];
     results: TlapsProofObligationResult[];
 }
 
