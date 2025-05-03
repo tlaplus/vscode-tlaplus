@@ -11,6 +11,12 @@ export const proofStateIcons = webviewProofStateIcons;
 
 class VSCodeClient {
 
+    public reportInitialized() {
+        vsCodeApi.postMessage({
+            command: 'initialized'
+        });
+    }
+
     public showLocation(location: Location) {
         vsCodeApi.postMessage({
             command: 'showLocation',

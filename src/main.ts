@@ -195,9 +195,11 @@ export function activate(context: vscode.ExtensionContext): void {
             new CheckModuleTool()
         )
     );
-    tlapsClient = new TlapsClient(context, details => {
-        currentProofStepWebviewViewProvider.showProofStepDetails(details);
-    });
+    tlapsClient = new TlapsClient(
+        context,
+        details => currentProofStepWebviewViewProvider.showProofStepDetails(details),
+        configChanged => currentProofStepWebviewViewProvider.considerConfigChanged(configChanged)
+    );
     syncTlcStatisticsSetting()
         .catch((err) => console.error(err))
         .then(() => listenTlcStatConfigurationChanges(context.subscriptions));

@@ -32,3 +32,7 @@ export interface TlapsProofStepDetails {
     obligations: TlapsProofObligationState[];
     sub_count: CountByStepStatus;
 }
+
+export interface TlapsConfigChanged {
+    enabled: boolean;
+}

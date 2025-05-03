@@ -609,12 +609,14 @@
                 {
                     "id": "tlaplus.current-proof-step",
                     "name": "Current Proof Step",
-                    "type": "webview"
+                    "type": "webview",
+                    "icon": "resources/images/tlaplus.svg"
                 },
                 {
                     "id": "tlaplus.module-search-paths",
                     "name": "Module Search Paths",
-                    "type": "tree"
+                    "type": "tree",
+                    "icon": "resources/images/tlaplus.svg"
                 }
             ]
         }
