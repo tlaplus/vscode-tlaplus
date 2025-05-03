@@ -1,0 +1,13 @@
+.note-icon {
+    font-size: 14px !important;
+    vertical-align: -15%;
+}
+.note-icon-info {
+    color: var(--vscode-problemsInfoIcon-foreground)
+}
+.note-icon-warning {
+    color: var(--vscode-problemsWarningIcon-foreground)
+}
+.note-icon-error {
+    color: var(--vscode-problemsErrorIcon-foreground)
+}
