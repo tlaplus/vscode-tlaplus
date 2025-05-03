@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { TlapsProofStepDetails } from '../model/tlaps';
+import { TlapsConfigChanged, TlapsProofStepDetails } from '../model/tlaps';
 import { getNonce } from './utilities/getNonce';
 import { getUri } from './utilities/getUri';
 import { revealFile } from './utilities/workspace';
@@ -10,6 +10,9 @@ export class CurrentProofStepWebviewViewProvider implements vscode.WebviewViewPr
     public static readonly viewType = 'tlaplus.current-proof-step';
     private view: vscode.WebviewView | null = null;
     private context: vscode.WebviewViewResolveContext | null = null;
+
+    private latestTlapsConfigChanged: TlapsConfigChanged | null = null;
+    private latestTlapsProofStepDetails: TlapsProofStepDetails | null = null;
 
     constructor(
         private readonly extensionUri: vscode.Uri
@@ -29,21 +32,49 @@ export class CurrentProofStepWebviewViewProvider implements vscode.WebviewViewPr
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private onMessage(message: any) {
-        if (message.command === 'showLocation') {
-            const location = message.location as Location;
-            const uri = vscode.Uri.parse(location.uri);
-            revealFile(
-                uri.fsPath,
-                vscode.ViewColumn.One,
-                location.range.start.line,
-                location.range.start.character
-            );
-        } else {
-            console.log('unknown message from webview: ', message);
+        switch (message.command) {
+            case 'initialized': {
+                // Resend messages that were attempted before the view initialized.
+                if (this.latestTlapsConfigChanged) {
+                    this.tryPostTlapsConfigChanged(this.latestTlapsConfigChanged);
+                }
+                this.tryPostTlapsProofStepDetails(this.latestTlapsProofStepDetails);
+                return;
+            }
+            case 'showLocation': {
+                const location = message.location as Location;
+                const uri = vscode.Uri.parse(location.uri);
+                revealFile(
+                    uri.fsPath,
+                    vscode.ViewColumn.One,
+                    location.range.start.line,
+                    location.range.start.character
+                );
+                return;
+            }
+            default:
+                console.log('unknown message from webview: ', message);
         }
     }
 
+    public considerConfigChanged(tlapsConfigChanged: TlapsConfigChanged) {
+        this.latestTlapsConfigChanged = tlapsConfigChanged;
+        this.tryPostTlapsConfigChanged(tlapsConfigChanged);
+    }
+
+    private tryPostTlapsConfigChanged(tlapsConfigChanged: TlapsConfigChanged) {
+        this.view?.webview.postMessage({
+            command: 'tlapsConfigChanged',
+            details: tlapsConfigChanged
+        });
+    }
+
     public showProofStepDetails(tlapsProofStepDetails: TlapsProofStepDetails | null) {
+        this.latestTlapsProofStepDetails = tlapsProofStepDetails;
+        this.tryPostTlapsProofStepDetails(tlapsProofStepDetails);
+    }
+
+    private tryPostTlapsProofStepDetails(tlapsProofStepDetails: TlapsProofStepDetails | null) {
         this.view?.webview.postMessage({
             command: 'tlapsProofStepDetails',
             details: tlapsProofStepDetails

@@ -21,7 +21,7 @@ import {
     TransportKind,
     VersionedTextDocumentIdentifier
 } from 'vscode-languageclient/node';
-import { TlapsProofStepDetails } from './model/tlaps';
+import { TlapsConfigChanged, TlapsProofStepDetails } from './model/tlaps';
 import { DelayedFn } from './common';
 import {
     InitRequestInItializationOptions,
@@ -59,6 +59,7 @@ interface ProofStepMarker {
 
 export class TlapsClient {
     private client: LanguageClient | undefined;
+    private configInitialized = false;
     private configEnabled = false;
     private configCommand = [] as string[];
     private configWholeLine = true;
@@ -67,12 +68,16 @@ export class TlapsClient {
     constructor(
         private context: vscode.ExtensionContext,
         private currentProofStepDetailsListener: ((details: TlapsProofStepDetails) => void),
+        private configChangedListener: ((configChanged: TlapsConfigChanged) => void)
     ) {
         const delayedCurrentProofStepSet = new DelayedFn(500);
         context.subscriptions.push(vscode.window.onDidChangeTextEditorSelection(event => {
             // We track the cursor here to show the current proof step based on the
             // cursor position.
             delayedCurrentProofStepSet.do(() => {
+                if (!this.configEnabled) {
+                    return;
+                }
                 vscode.commands.executeCommand('tlaplus.tlaps.currentProofStep.set.lsp',
                     {
                         uri: event.textEditor.document.uri.toString()
@@ -87,7 +92,7 @@ export class TlapsClient {
         context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(textEditor => {
             // A document clears all its decorators when it becomes invisible (e.g. user opens another
             // document in other tab). Here we notify the LSP server to resend the markers.
-            if (!this.client || !textEditor) {
+            if (!this.configEnabled || !this.client || !textEditor) {
                 return;
             }
             vscode.commands.executeCommand('tlaplus.tlaps.proofStepMarkers.fetch.lsp',
@@ -99,6 +104,17 @@ export class TlapsClient {
         context.subscriptions.push(vscode.commands.registerTextEditorCommand(
             'tlaplus.tlaps.check-step',
             (te, ed, args) => {
+                if (!this.configEnabled) {
+                    vscode.window.showInformationMessage(
+                        'TLAPS support is disabled.',
+                        'Configure'
+                    ).then(action => {
+                        if (action === 'Configure') {
+                            vscode.commands.executeCommand('workbench.action.openSettings', 'tlaplus.tlaps.enabled');
+                        }
+                    });
+                    return;
+                }
                 if (!this.client) {
                     return;
                 }
@@ -164,12 +180,17 @@ export class TlapsClient {
         const configCommand = config.get<string[]>('tlaplus.tlaps.lspServerCommand');
         const configWholeLine = config.get<boolean>('tlaplus.tlaps.wholeLine');
         const configChanged = false
+            || !this.configInitialized
             || configEnabled !== this.configEnabled
             || JSON.stringify(configCommand) !== JSON.stringify(this.configCommand)
             || configWholeLine !== this.configWholeLine;
+        this.configInitialized = true;
         this.configEnabled = !!configEnabled;
         this.configCommand = configCommand ? configCommand : [];
         this.configWholeLine = !!configWholeLine;
+        if (configChanged) {
+            this.configChangedListener({enabled: this.configEnabled});
+        }
         return configChanged;
     }
 
