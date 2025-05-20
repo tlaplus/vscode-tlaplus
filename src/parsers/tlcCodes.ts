@@ -256,6 +256,7 @@ export const TLC_COVERAGE_INIT = registerCode(2773, TlcCodeType.Info);
 export const TLC_COVERAGE_PROPERTY = registerCode(2774, TlcCodeType.Ignore);
 export const TLC_COVERAGE_END_OVERHEAD = registerCode(2777, TlcCodeType.Ignore);
 export const TLC_COVERAGE_CONSTRAINT = registerCode(2778, TlcCodeType.Ignore);
+export const TLC_COVERAGE_VAR = registerCode(2779, TlcCodeType.Ignore);
 
 // config file errors
 export const TLC_CONFIG_VALUE_NOT_ASSIGNED_TO_CONSTANT_PARAM = registerCode(2222, TlcCodeType.Error);
