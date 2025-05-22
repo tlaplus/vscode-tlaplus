@@ -32,6 +32,7 @@ import { moduleSearchPaths } from './paths';
 import { ModuleSearchPathsTreeDataProvider } from './panels/moduleSearchPathsTreeDataProvider';
 import { CheckModuleTool, SmokeModuleTool } from './lm/TLCTool';
 import { ParseModuleTool, SymbolProviderTool } from './lm/SANYTool';
+import { MCPServer } from './lm/MCPServer';
 
 const TLAPLUS_FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file', language: LANG_TLAPLUS };
 const TLAPLUS_CFG_FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file', language: LANG_TLAPLUS_CFG };
@@ -200,6 +201,13 @@ export function activate(context: vscode.ExtensionContext): void {
         details => currentProofStepWebviewViewProvider.showProofStepDetails(details),
         configChanged => currentProofStepWebviewViewProvider.considerConfigChanged(configChanged)
     );
+
+    // Check if MCP server should be started based on port configuration
+    const mcpPort = vscode.workspace.getConfiguration().get<number>('tlaplus.mcp.port');
+    if (typeof mcpPort === 'number' && mcpPort >= 1024 && mcpPort <= 65535) {
+        const tlaMcpServer = new MCPServer(mcpPort);
+        context.subscriptions.push(tlaMcpServer);
+    }
     syncTlcStatisticsSetting()
         .catch((err) => console.error(err))
         .then(() => listenTlcStatConfigurationChanges(context.subscriptions));

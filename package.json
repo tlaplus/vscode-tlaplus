@@ -469,6 +469,12 @@
                         "No TLC statistics will be shared."
                     ]
                 },
+                "tlaplus.mcp.port": {
+                    "type": "number",
+                    "scope": "machine",
+                    "default": -1,
+                    "markdownDescription": "Listening port for TLA+ MCP server. If set to -1, MCP server will be disabled. Restart VSCode to apply changes."
+                },
                 "tlaplus.pdf.convertCommand": {
                     "default": "pdflatex",
                     "type": "string",
@@ -632,6 +638,7 @@
         "test:tlaplus-grammar": "vscode-tmgrammar-test ./tests/suite/languages/*.tla -g ./languages/tlaplus-grammar.json -g ./languages/pluscal-grammar.json"
     },
     "devDependencies": {
+        "@types/express": "^5.0.2",
         "@types/glob": "^8.1.0",
         "@types/mocha": "^10.0.1",
         "@types/node": "^18.15.0",
@@ -654,16 +661,19 @@
     "dependencies": {
         "@microsoft/fast-components": "^2.30.6",
         "@microsoft/fast-react-wrapper": "^0.3.18",
+        "@modelcontextprotocol/sdk": "^1.11.2",
         "@vscode/codicons": "^0.0.33",
         "@vscode/debugadapter": "^1.63.0",
         "@vscode/webview-ui-toolkit": "^1.2.2",
         "vscode-languageclient": "^9.0.0",
         "await-notify": "^1.0.1",
+        "express": "^5.1.0",
         "fast-xml-parser": "^5.2.1",
         "moment": "^2.29.4",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
         "@cocalc/ansi-to-react": "^7.0.0",
-        "vscode-uri": "^3.0.7"
+        "vscode-uri": "^3.0.7",
+        "zod": "^3.24.4"
     }
 }
