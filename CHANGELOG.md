@@ -6,6 +6,7 @@
 
 ### Enhancements
 * Generate PDF feature matching the toolbox by adding missing settings.
+* New setting `TLC Model Checker: Preserve Editor Focus` allows keeping focus on the editor after opening the TLC model checker window.
 
 
 ## 1.5.4 &ndash; 21st March, 2021

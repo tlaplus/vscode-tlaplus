@@ -453,6 +453,12 @@
                     "default": true,
                     "description": "Send TLC output to .out file."
                 },
+                "tlaplus.tlc.modelChecker.preserveEditorFocus": {
+                    "type": "boolean",
+                    "scope": "window",
+                    "default": true,
+                    "description": "When enabled, keeps focus on the editor after opening the TLC model checker window."
+                },
                 "tlaplus.tlc.statisticsSharing": {
                     "type": "string",
                     "scope": "machine",
