@@ -58,7 +58,11 @@ export class MCPServer implements vscode.Disposable {
                 vscode.window.showInformationMessage(`TLA+ MCP server listening at http://localhost:${port}/mcp`);
                 console.log(`TLA+ MCP server listening at http://localhost:${port}/mcp`);
             }).on('error', (err) => {
-                vscode.window.showErrorMessage(`Failed to start TLA+ MCP server: ${err instanceof Error ? err.message : String(err)}`);
+                vscode.window.showErrorMessage(
+                    `Failed to start TLA+ MCP server: ${
+                        err instanceof Error ? err.message : String(err)
+                    }`
+                );
                 console.error('Error starting TLA+ MCP server:', err);
             });
 
