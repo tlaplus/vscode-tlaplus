@@ -17,6 +17,10 @@ export function revealLastCheckResultView(extContext: vscode.ExtensionContext): 
     CheckResultViewPanel.renderLastResult(extContext.extensionUri);
 }
 
+export function isCheckResultViewPanelFocused(): boolean {
+    return CheckResultViewPanel.isPanelFocused();
+}
+
 class CheckResultViewPanel {
     private static readonly viewType = 'modelChecking';
     private static currentPanel: CheckResultViewPanel | undefined;
@@ -31,10 +35,13 @@ class CheckResultViewPanel {
         this.extensionUri = extensionUri;
         this.checkResult = ModelCheckResult.createEmpty(ModelCheckResultSource.Process);
 
+        const preserveFocus = vscode.workspace.getConfiguration()
+            .get<boolean>('tlaplus.tlc.modelChecker.preserveEditorFocus');
+
         this.panel = vscode.window.createWebviewPanel(
             CheckResultViewPanel.viewType,
             'TLA+ model checking',
-            vscode.ViewColumn.Beside,
+            { viewColumn: vscode.ViewColumn.Beside, preserveFocus: preserveFocus },
             {
                 enableScripts: true,
                 retainContextWhenHidden: true,
@@ -64,13 +71,19 @@ class CheckResultViewPanel {
         }
     }
 
+    public static isPanelFocused(): boolean {
+        return CheckResultViewPanel.currentPanel?.panel.active === true;
+    }
+
     public static renderEmpty(extensionUri: vscode.Uri) {
         if (!CheckResultViewPanel.currentPanel) {
             CheckResultViewPanel.currentPanel = new CheckResultViewPanel(extensionUri);
         }
 
         this.updateCheckResult(ModelCheckResult.createEmpty(ModelCheckResultSource.Process));
-        CheckResultViewPanel.currentPanel.panel.reveal();
+        const preserveFocus = vscode.workspace.getConfiguration()
+            .get<boolean>('tlaplus.tlc.modelChecker.preserveEditorFocus');
+        CheckResultViewPanel.currentPanel.panel.reveal(undefined, preserveFocus);
     }
 
     public static renderLastResult(extensionUri: vscode.Uri) {
@@ -83,7 +96,9 @@ class CheckResultViewPanel {
             : ModelCheckResult.createEmpty(ModelCheckResultSource.Process);
 
         this.updateCheckResult(lastModelResult);
-        CheckResultViewPanel.currentPanel.panel.reveal();
+        const preserveFocus = vscode.workspace.getConfiguration()
+            .get<boolean>('tlaplus.tlc.modelChecker.preserveEditorFocus');
+        CheckResultViewPanel.currentPanel.panel.reveal(undefined, preserveFocus);
     }
 
     private updateView(checkResult: ModelCheckResult) {
