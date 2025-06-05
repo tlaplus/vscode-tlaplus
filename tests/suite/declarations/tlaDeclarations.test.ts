@@ -224,6 +224,28 @@ suite('TLA Declarations Provider Test Suite', () => {
             loc(doc.uri, pos(1, 10))
         ]);
     });
+
+    test('Ignores record field names in multi-line record literals', () => {
+        return assertDefinitions(doc, [
+            '---- MODULE foo ----',
+            'VARIABLES bar',
+            'MyRecord ==',
+            ' [',
+            '   key |-> 42,',
+            '   ${b}ar |-> "abc"',
+            ' ]',
+            '===='
+        ], []);
+    });
+
+    test('Ignores nested record field names', () => {
+        return assertDefinitions(doc, [
+            '---- MODULE foo ----',
+            'VARIABLES bar',
+            'Nested == [outer |-> [${b}ar |-> 42]]',
+            '===='
+        ], []);
+    });
 });
 
 async function assertDeclarations(

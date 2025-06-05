@@ -21,17 +21,48 @@ function symbolLocations(document: vscode.TextDocument, docInfo: TlaDocumentInfo
     }
 
     // Check if this is a field name in a record definition (e.g., [bar |-> value])
-    // Look for the pattern: [<whitespace><field><whitespace>|->
-    const beforeWord = line.substring(0, range.start.character);
+    // First check if we have |-> after the word on the same line
     const afterWord = line.substring(range.end.character);
-    if (/\[\s*$/.test(beforeWord) && /^\s*\|->/.test(afterWord)) {
-        // This is a record field definition, not a symbol reference
-        return undefined;
-    }
-    // Also check for comma-separated fields (e.g., [foo |-> 1, bar |-> 2])
-    if (/,\s*$/.test(beforeWord) && /^\s*\|->/.test(afterWord)) {
-        // This is a record field definition after a comma
-        return undefined;
+    if (/^\s*\|->/.test(afterWord)) {
+        // Now check if we're inside a record definition by looking backwards
+        // for an unmatched opening bracket [
+        let bracketDepth = 0;
+        let foundRecordStart = false;
+
+        // Check current line before the word
+        const beforeWord = line.substring(0, range.start.character);
+        for (let i = beforeWord.length - 1; i >= 0; i--) {
+            if (beforeWord[i] === ']') {bracketDepth++;}
+            else if (beforeWord[i] === '[') {
+                bracketDepth--;
+                if (bracketDepth < 0) {
+                    foundRecordStart = true;
+                    break;
+                }
+            }
+        }
+
+        // If not found on current line, check previous lines
+        if (!foundRecordStart && position.line > 0) {
+            for (let lineNum = position.line - 1; lineNum >= 0 && !foundRecordStart; lineNum--) {
+                const prevLine = document.lineAt(lineNum).text;
+                for (let i = prevLine.length - 1; i >= 0; i--) {
+                    if (prevLine[i] === ']') {bracketDepth++;}
+                    else if (prevLine[i] === '[') {
+                        bracketDepth--;
+                        if (bracketDepth < 0) {
+                            foundRecordStart = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (foundRecordStart) {
+            // This is a record field definition, not a symbol reference
+            return undefined;
+        }
     }
 
     const rawWord = line.substring(range.start.character, range.end.character);
