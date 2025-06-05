@@ -53,7 +53,7 @@
             "match": "(?:\\b\\d+|\\\\(?:b|B)[01]+|\\\\(?:o|O)[0-7]+|\\\\(?:h|H)[0-9a-fA-F]+)\\b"
         },
         "strings": {
-            "name": "string.quoted.doublte.tlaplus",
+            "name": "string.quoted.double.tlaplus",
             "begin": "\"",
             "end": "\"",
             "patterns": [
@@ -229,12 +229,23 @@
                 },
                 {
                     "include": "#except_vars"
+                },
+                {
+                    "include": "#record_fields"
                 }
             ]
         },
         "except_vars": {
             "match": "(?<=EXCEPT.*[^@])(@|!)(?!@)",
             "name": "variable.name"
+        },
+        "record_fields": {
+            "match": "(?<=\\[|,)\\s*(\\w+)\\s*(?=\\|->)",
+            "captures": {
+                "1": {
+                    "name": "string.quoted.double.tlaplus"
+                }
+            }
         }
     }
 }
