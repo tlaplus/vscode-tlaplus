@@ -1,0 +1,52 @@
+.coverage-header {
+    border-bottom: 1px solid var(--vscode-panel-border);
+    padding: 16px;
+    background-color: var(--vscode-editor-background);
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.header-info h2 {
+    margin: 0 0 12px 0;
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--vscode-foreground);
+}
+
+.stats-summary {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 8px;
+}
+
+.stat-item {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.stat-label {
+    color: var(--vscode-descriptionForeground);
+    font-size: 13px;
+}
+
+.stat-value {
+    color: var(--vscode-foreground);
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.last-updated {
+    color: var(--vscode-descriptionForeground);
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+.header-actions {
+    display: flex;
+    gap: 8px;
+}
