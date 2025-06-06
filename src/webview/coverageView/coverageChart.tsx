@@ -1,6 +1,7 @@
 import * as React from 'react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import { CoverageData } from '../../model/coverage';
+import { formatDuration } from '../common/formatters';
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -34,23 +35,9 @@ interface CoverageChartProps {
 export const CoverageChart: React.FC<CoverageChartProps> = ({ data }) => {
     const chartRef = useRef<ChartJS<'line'>>(null);
 
-    // Format duration for x-axis labels
-    const formatDuration = (seconds: number): string => {
-        const hours = Math.floor(seconds / 3600);
-        const minutes = Math.floor((seconds % 3600) / 60);
-
-        if (hours > 0) {
-            return `${hours}h${minutes > 0 ? ` ${minutes}m` : ''}`;
-        } else if (minutes > 0) {
-            return `${minutes}m`;
-        } else {
-            return `${seconds}s`;
-        }
-    };
-
     // Prepare chart data
-    const chartData: ChartData<'line'> = {
-        labels: data.stats.map(stat => formatDuration(stat.duration)),
+    const chartData: ChartData<'line'> = useMemo(() => ({
+        labels: data.stats.map(stat => formatDuration(stat.duration, true)),
         datasets: [
             {
                 label: 'Generated States',
@@ -71,10 +58,10 @@ export const CoverageChart: React.FC<CoverageChartProps> = ({ data }) => {
                 pointHoverRadius: 5,
             }
         ]
-    };
+    }), [data.stats]);
 
     // Chart options
-    const options: ChartOptions<'line'> = {
+    const options: ChartOptions<'line'> = useMemo(() => ({
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
@@ -84,13 +71,9 @@ export const CoverageChart: React.FC<CoverageChartProps> = ({ data }) => {
                 font: {
                     size: 16,
                 },
-                color: getComputedStyle(document.documentElement).getPropertyValue('--vscode-foreground'),
             },
             legend: {
                 position: 'top' as const,
-                labels: {
-                    color: getComputedStyle(document.documentElement).getPropertyValue('--vscode-foreground'),
-                },
             },
             tooltip: {
                 mode: 'index',
@@ -110,31 +93,19 @@ export const CoverageChart: React.FC<CoverageChartProps> = ({ data }) => {
                 title: {
                     display: true,
                     text: 'Duration',
-                    color: getComputedStyle(document.documentElement).getPropertyValue('--vscode-foreground'),
                 },
-                ticks: {
-                    color: getComputedStyle(document.documentElement).getPropertyValue('--vscode-foreground'),
-                },
-                grid: {
-                    color: getComputedStyle(document.documentElement).getPropertyValue('--vscode-panel-border'),
-                }
             },
             y: {
                 display: true,
                 title: {
                     display: true,
                     text: 'Number of States',
-                    color: getComputedStyle(document.documentElement).getPropertyValue('--vscode-foreground'),
                 },
                 ticks: {
-                    color: getComputedStyle(document.documentElement).getPropertyValue('--vscode-foreground'),
                     callback: function(value) {
                         return value.toLocaleString();
                     }
                 },
-                grid: {
-                    color: getComputedStyle(document.documentElement).getPropertyValue('--vscode-panel-border'),
-                }
             }
         },
         interaction: {
@@ -142,7 +113,7 @@ export const CoverageChart: React.FC<CoverageChartProps> = ({ data }) => {
             axis: 'x',
             intersect: false
         }
-    };
+    }), []);
 
     // Update chart colors when theme changes
     useEffect(() => {
@@ -177,6 +148,9 @@ export const CoverageChart: React.FC<CoverageChartProps> = ({ data }) => {
                 chart.update();
             }
         };
+
+        // Set initial colors
+        updateChartColors();
 
         // Listen for theme changes
         const observer = new MutationObserver(updateChartColors);
