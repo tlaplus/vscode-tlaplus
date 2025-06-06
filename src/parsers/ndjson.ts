@@ -17,7 +17,7 @@ export function parseNDJSON(content: string): SimulationStats[] {
                     traces: data.traces || 0
                 };
             } catch (e) {
-                console.error('Failed to parse NDJSON line:', line, e);
+                // Invalid JSON line, skip it
                 return null;
             }
         })
