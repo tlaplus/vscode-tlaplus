@@ -11,10 +11,10 @@ export function parseNDJSON(content: string): SimulationStats[] {
             try {
                 const data = JSON.parse(line);
                 return {
-                    duration: data.duration || 0,
-                    generated: data.generated || 0,
-                    distinct: data.distinct || 0,
-                    traces: data.traces || 0
+                    duration: data.duration ?? 0,
+                    generated: data.generated ?? 0,
+                    distinct: data.distinct ?? 0,
+                    traces: data.traces ?? 0
                 };
             } catch (e) {
                 // Invalid JSON line, skip it
