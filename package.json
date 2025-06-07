@@ -316,6 +316,11 @@
                 "command": "tlaplus.tlaps.check-step",
                 "title": "Check proof step in TLAPS",
                 "category": "TLA+"
+            },
+            {
+                "command": "tlaplus.refactor.update_vars",
+                "title": "Update vars tuple",
+                "category": "TLA+"
             }
         ],
         "snippets": [
@@ -545,6 +550,11 @@
                     "items": {"type": "string"},
                     "description": "Paths to look for TLA+ modules.",
                     "default": []
+                },
+                "tlaplus.refactor.includePlusCalVariables": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Include PlusCal generated variables (pc, stack) in vars tuple when updating."
                 }
             }
         },
