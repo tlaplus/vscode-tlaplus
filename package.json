@@ -531,9 +531,18 @@
                 },
                 "tlaplus.tlaps.lspServerCommand": {
                     "type": "array",
-                    "items": {"type": "string"},
+                    "items": {
+                        "type": "string"
+                    },
                     "description": "Command and arguments to start a TLAPS LSP server.",
-                    "default": ["opam", "exec", "--", "tlapm_lsp", "--log-io", "--log-to=/tmp/tlapm_lsp.log"]
+                    "default": [
+                        "opam",
+                        "exec",
+                        "--",
+                        "tlapm_lsp",
+                        "--log-io",
+                        "--log-to=/tmp/tlapm_lsp.log"
+                    ]
                 },
                 "tlaplus.tlaps.wholeLine": {
                     "type": "boolean",
@@ -542,7 +551,9 @@
                 },
                 "tlaplus.moduleSearchPaths": {
                     "type": "array",
-                    "items": {"type": "string"},
+                    "items": {
+                        "type": "string"
+                    },
                     "description": "Paths to look for TLA+ modules.",
                     "default": []
                 }
@@ -668,6 +679,7 @@
         "@vscode/test-electron": "^2.3.8",
         "esbuild": "^0.17.19",
         "eslint": "^8.40.0",
+        "fast-check": "^4.1.1",
         "glob": "^8.1.0",
         "mocha": "^10.2.0",
         "node": "^18.15.0",
@@ -676,22 +688,22 @@
         "vscode-tmgrammar-test": "^0.1.1"
     },
     "dependencies": {
+        "@cocalc/ansi-to-react": "^7.0.0",
         "@microsoft/fast-components": "^2.30.6",
         "@microsoft/fast-react-wrapper": "^0.3.18",
         "@modelcontextprotocol/sdk": "^1.11.2",
         "@vscode/codicons": "^0.0.33",
         "@vscode/debugadapter": "^1.63.0",
         "@vscode/webview-ui-toolkit": "^1.2.2",
-        "chart.js": "^4.4.1",
-        "react-chartjs-2": "^5.2.0",
-        "vscode-languageclient": "^9.0.0",
         "await-notify": "^1.0.1",
+        "chart.js": "^4.4.1",
         "express": "^5.1.0",
         "fast-xml-parser": "^5.2.1",
         "moment": "^2.29.4",
         "react": "^18.2.0",
+        "react-chartjs-2": "^5.2.0",
         "react-dom": "^18.2.0",
-        "@cocalc/ansi-to-react": "^7.0.0",
+        "vscode-languageclient": "^9.0.0",
         "vscode-uri": "^3.0.7",
         "zod": "^3.24.4"
     }
