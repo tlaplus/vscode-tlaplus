@@ -56,6 +56,20 @@ class VSCodeApiWrapper {
             return newState;
         }
     }
+
+    /**
+     * Execute a command in VS Code.
+     *
+     * @param command The command identifier to execute
+     * @param args Optional arguments for the command
+     */
+    public executeCommand(command: string, ...args: unknown[]) {
+        this.postMessage({
+            type: 'command',
+            command,
+            args
+        });
+    }
 }
 
 // Export singleton to prevent multiple invocations of acquireVsCodeApi

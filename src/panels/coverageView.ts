@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
+import * as path from 'path';
 import { getNonce } from './utilities/getNonce';
 import { getUri } from './utilities/getUri';
 import { CoverageData } from '../model/coverage';
@@ -71,7 +72,12 @@ export class CoverageViewPanel {
         }
 
         // Create new watcher
-        this.fileWatcher = vscode.workspace.createFileSystemWatcher(this.fileUri.fsPath);
+        this.fileWatcher = vscode.workspace.createFileSystemWatcher(
+            new vscode.RelativePattern(
+                vscode.Uri.file(path.dirname(this.fileUri.fsPath)),
+                path.basename(this.fileUri.fsPath)
+            )
+        );
 
         this.fileWatcher.onDidChange(() => {
             this.loadAndSendData();
@@ -103,13 +109,18 @@ export class CoverageViewPanel {
         }
     }
 
-    private handleMessage(message: { type: string }): void {
+    private handleMessage(message: { type: string; command?: string; args?: unknown[] }): void {
         switch (message.type) {
             case 'ready':
                 this.loadAndSendData();
                 break;
             case 'refresh':
                 this.loadAndSendData();
+                break;
+            case 'command':
+                if (message.command) {
+                    vscode.commands.executeCommand(message.command, ...(message.args || []));
+                }
                 break;
         }
     }
@@ -125,7 +136,8 @@ export class CoverageViewPanel {
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <meta http-equiv="Content-Security-Policy"
-                    content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; font-src ${webview.cspSource};">
+                    content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; 
+                        script-src 'nonce-${nonce}'; font-src ${webview.cspSource};">
                 <link href="${styleUri}" rel="stylesheet">
                 <title>Coverage Visualization</title>
             </head>

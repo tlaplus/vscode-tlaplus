@@ -1,0 +1,97 @@
+.file-deleted-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    padding: 32px;
+    text-align: center;
+}
+
+.file-deleted-icon {
+    font-size: 48px;
+    color: var(--vscode-foreground);
+    opacity: 0.5;
+    margin-bottom: 16px;
+}
+
+.file-deleted-container h2 {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--vscode-foreground);
+    margin: 0 0 16px 0;
+}
+
+.file-deleted-message {
+    font-size: 14px;
+    color: var(--vscode-descriptionForeground);
+    margin-bottom: 32px;
+    max-width: 400px;
+}
+
+.file-deleted-instructions {
+    background-color: var(--vscode-textBlockQuote-background);
+    border-left: 3px solid var(--vscode-textBlockQuote-border);
+    border-radius: 3px;
+    padding: 16px 24px;
+    margin-bottom: 24px;
+    text-align: left;
+    max-width: 500px;
+}
+
+.file-deleted-instructions p {
+    margin: 0 0 8px 0;
+    font-weight: 500;
+}
+
+.file-deleted-instructions ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.file-deleted-instructions li {
+    margin: 4px 0;
+    color: var(--vscode-descriptionForeground);
+}
+
+.file-deleted-instructions kbd {
+    background-color: var(--vscode-keybindingLabel-background);
+    color: var(--vscode-keybindingLabel-foreground);
+    border: 1px solid var(--vscode-keybindingLabel-border);
+    border-radius: 3px;
+    padding: 2px 4px;
+    font-family: var(--vscode-editor-font-family);
+    font-size: 11px;
+}
+
+.file-deleted-action {
+    margin-top: 8px;
+}
+
+.vscode-button {
+    background-color: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border: 1px solid var(--vscode-button-border, transparent);
+    padding: 4px 14px;
+    font-size: 13px;
+    line-height: 18px;
+    border-radius: 2px;
+    cursor: pointer;
+    font-family: var(--vscode-font-family);
+    font-weight: 400;
+    outline: none;
+    transition: background-color 0.1s ease-in-out;
+}
+
+.vscode-button:hover {
+    background-color: var(--vscode-button-hoverBackground);
+}
+
+.vscode-button:focus {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
+}
+
+.vscode-button:active {
+    transform: scale(0.98);
+}
