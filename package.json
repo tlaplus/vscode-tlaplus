@@ -305,6 +305,11 @@
                 "command": "tlaplus.tlaps.check-step",
                 "title": "Check proof step in TLAPS",
                 "category": "TLA+"
+            },
+            {
+                "command": "tlaplus.refactor.update_vars",
+                "title": "Update vars tuple",
+                "category": "TLA+"
             }
         ],
         "snippets": [
