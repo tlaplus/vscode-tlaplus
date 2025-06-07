@@ -539,6 +539,11 @@
                     "items": {"type": "string"},
                     "description": "Paths to look for TLA+ modules.",
                     "default": []
+                },
+                "tlaplus.refactor.includePlusCalVariables": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Include PlusCal generated variables (pc, stack) in vars tuple when updating."
                 }
             }
         },

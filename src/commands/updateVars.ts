@@ -370,6 +370,15 @@ function detectItemsPerLine(varsContent: string): number {
 }
 
 /**
+ * Detects if document contains PlusCal algorithm
+ */
+function hasPlusCalAlgorithm(document: vscode.TextDocument): boolean {
+    const text = document.getText();
+    // PlusCal algorithms start with (*--algorithm or (*--fair algorithm
+    return /\(\*--(?:fair )?algorithm/m.test(text);
+}
+
+/**
  * Main command implementation
  */
 export async function updateVarsCommand(): Promise<void> {
@@ -400,22 +409,45 @@ export async function updateVarsCommand(): Promise<void> {
         return;
     }
 
-    // 4. Compare and update if needed
+    // 4. Check for PlusCal and handle pc/stack variables
+    const hasPlusCal = hasPlusCalAlgorithm(document);
+    let filteredVariables = [...allVariables];
+
+    if (hasPlusCal) {
+        // Check configuration for including PlusCal variables
+        const config = vscode.workspace.getConfiguration('tlaplus.refactor');
+        const includePlusCalVars = config.get<boolean>('includePlusCalVariables', true);
+
+        if (!includePlusCalVars) {
+            // Filter out pc and stack variables
+            filteredVariables = allVariables.filter(v => v !== 'pc' && v !== 'stack');
+
+            // Show info message about filtered variables
+            const excluded = allVariables.filter(v => v === 'pc' || v === 'stack');
+            if (excluded.length > 0) {
+                vscode.window.showInformationMessage(
+                    `PlusCal variables excluded: ${excluded.join(', ')}. Change setting to include them.`
+                );
+            }
+        }
+    }
+
+    // 5. Compare and update if needed
     const currentVarsSet = new Set(varsInfo.currentVars);
-    const allVarsSet = new Set(allVariables);
+    const filteredVarsSet = new Set(filteredVariables);
 
     // Check if update is needed
-    if (currentVarsSet.size === allVarsSet.size &&
-        [...currentVarsSet].every(v => allVarsSet.has(v))) {
+    if (currentVarsSet.size === filteredVarsSet.size &&
+        [...currentVarsSet].every(v => filteredVarsSet.has(v))) {
         vscode.window.showInformationMessage('vars already up to date');
         return;
     }
 
-    // 5. Apply edit with preview
-    const edit = createVarsUpdateEdit(document, varsInfo, allVariables);
+    // 6. Apply edit with preview
+    const edit = createVarsUpdateEdit(document, varsInfo, filteredVariables);
     const workspaceEdit = new vscode.WorkspaceEdit();
     workspaceEdit.set(document.uri, [edit]);
 
     await vscode.workspace.applyEdit(workspaceEdit);
-    vscode.window.showInformationMessage(`Updated vars with ${allVariables.length} variables`);
+    vscode.window.showInformationMessage(`Updated vars with ${filteredVariables.length} variables`);
 }

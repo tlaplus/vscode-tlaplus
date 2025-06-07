@@ -182,4 +182,94 @@ suite('Update vars Command Test Suite', () => {
             '>>'
         ].join('\n'));
     });
+
+    test('Detects PlusCal algorithm and includes pc/stack by default', async () => {
+        await replaceDocContents(doc, [
+            '(*--algorithm test',
+            'variables x = 0, y = 0;',
+            'begin',
+            '  skip;',
+            'end algorithm; *)',
+            '',
+            'VARIABLES x, y, pc, stack',
+            'vars == <<x, y>>'
+        ].join('\n'));
+
+        await vscode.commands.executeCommand('tlaplus.refactor.update_vars');
+
+        assert.strictEqual(doc.getText(), [
+            '(*--algorithm test',
+            'variables x = 0, y = 0;',
+            'begin',
+            '  skip;',
+            'end algorithm; *)',
+            '',
+            'VARIABLES x, y, pc, stack',
+            'vars == <<x, y, pc, stack>>'
+        ].join('\n'));
+    });
+
+    test('Excludes PlusCal variables when configured', async () => {
+        // Save original config
+        const config = vscode.workspace.getConfiguration('tlaplus.refactor');
+        const originalValue = config.get<boolean>('includePlusCalVariables');
+
+        try {
+            // Set config to exclude PlusCal vars
+            await config.update('includePlusCalVariables', false, vscode.ConfigurationTarget.Global);
+
+            await replaceDocContents(doc, [
+                '(*--algorithm test',
+                'variables x = 0, y = 0;',
+                'begin',
+                '  skip;',
+                'end algorithm; *)',
+                '',
+                'VARIABLES x, y, pc, stack',
+                'vars == <<x, y, pc, stack>>'
+            ].join('\n'));
+
+            await vscode.commands.executeCommand('tlaplus.refactor.update_vars');
+
+            assert.strictEqual(doc.getText(), [
+                '(*--algorithm test',
+                'variables x = 0, y = 0;',
+                'begin',
+                '  skip;',
+                'end algorithm; *)',
+                '',
+                'VARIABLES x, y, pc, stack',
+                'vars == <<x, y>>'
+            ].join('\n'));
+        } finally {
+            // Restore original config
+            await config.update('includePlusCalVariables', originalValue, vscode.ConfigurationTarget.Global);
+        }
+    });
+
+    test('Handles PlusCal with --fair algorithm', async () => {
+        await replaceDocContents(doc, [
+            '(*--fair algorithm fairtest',
+            'variables z = 0;',
+            'begin',
+            '  skip;',
+            'end algorithm; *)',
+            '',
+            'VARIABLES z, pc',
+            'vars == <<z>>'
+        ].join('\n'));
+
+        await vscode.commands.executeCommand('tlaplus.refactor.update_vars');
+
+        assert.strictEqual(doc.getText(), [
+            '(*--fair algorithm fairtest',
+            'variables z = 0;',
+            'begin',
+            '  skip;',
+            'end algorithm; *)',
+            '',
+            'VARIABLES z, pc',
+            'vars == <<z, pc>>'
+        ].join('\n'));
+    });
 });
