@@ -283,7 +283,7 @@ suite('Update vars Command Test Suite', () => {
         // Create a document with CRLF line endings
         const content = 'VARIABLES x, y, z\r\nvars == <<x, y>>';
         await replaceDocContents(doc, content);
-        
+
         // Ensure document uses CRLF
         if (doc.eol !== vscode.EndOfLine.CRLF) {
             await vscode.window.activeTextEditor?.edit(editBuilder => {

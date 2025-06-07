@@ -46,7 +46,7 @@ suite('TLA+ Code Actions Test Suite', () => {
         assert.ok(actions, 'Should provide actions');
         assert.ok(Array.isArray(actions), 'Actions should be an array');
 
-        const updateVarsAction = actions!.find(action =>
+        const updateVarsAction = actions.find(action =>
             'title' in action && action.title === 'Update vars tuple'
         ) as vscode.CodeAction | undefined;
 
@@ -81,7 +81,7 @@ suite('TLA+ Code Actions Test Suite', () => {
         assert.ok(actions, 'Should provide actions');
         assert.ok(Array.isArray(actions), 'Actions should be an array');
 
-        const updateVarsAction = actions!.find(action =>
+        const updateVarsAction = actions.find(action =>
             'title' in action && action.title === 'Update vars tuple'
         );
 
