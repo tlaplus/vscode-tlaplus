@@ -228,12 +228,15 @@ function createVarsUpdateEdit(
     const startPos = new vscode.Position(varsInfo.startLine, varsInfo.startChar);
     const endPos = new vscode.Position(varsInfo.endLine, varsInfo.endChar);
 
+    // Get the document's EOL sequence
+    const eol = document.eol === vscode.EndOfLine.CRLF ? '\r\n' : '\n';
+
     // Check if original was multi-line
     const isMultiLine = varsInfo.startLine !== varsInfo.endLine;
 
     if (isMultiLine) {
         // Preserve multi-line formatting
-        const lines = document.getText().split('\n');
+        const lines = document.getText().split(/\r?\n/);
         const firstLine = lines[varsInfo.startLine];
         const indentMatch = firstLine.match(/^(\s*)/);
         const baseIndent = indentMatch ? indentMatch[1] : '';
@@ -243,12 +246,12 @@ function createVarsUpdateEdit(
         const itemsPerLine = detectItemsPerLine(originalContent);
 
         // Build formatted multi-line tuple
-        let result = '<<\n';
+        let result = '<<' + eol;
         const innerIndent = baseIndent + '    ';
 
         for (let i = 0; i < newVars.length; i++) {
             if (i % itemsPerLine === 0 && i > 0) {
-                result = result.trimEnd() + '\n';
+                result = result.trimEnd() + eol;
             }
 
             if (i % itemsPerLine === 0) {
@@ -262,7 +265,7 @@ function createVarsUpdateEdit(
             }
         }
 
-        result += '\n' + baseIndent + '>>';
+        result += eol + baseIndent + '>>';
 
         return vscode.TextEdit.replace(new vscode.Range(startPos, endPos), result);
     } else {
@@ -276,7 +279,7 @@ function createVarsUpdateEdit(
             const indentMatch = linePrefix.match(/^(\s*)/);
             const baseIndent = indentMatch ? indentMatch[1] : '';
 
-            let result = '<<\n';
+            let result = '<<' + eol;
             const innerIndent = baseIndent + '    ';
 
             // Default to 4 items per line for long lists
@@ -284,7 +287,7 @@ function createVarsUpdateEdit(
 
             for (let i = 0; i < newVars.length; i++) {
                 if (i % itemsPerLine === 0) {
-                    if (i > 0) {result = result.trimEnd() + '\n';}
+                    if (i > 0) {result = result.trimEnd() + eol;}
                     result += innerIndent;
                 }
 
@@ -295,7 +298,7 @@ function createVarsUpdateEdit(
                 }
             }
 
-            result += '\n' + baseIndent + '>>';
+            result += eol + baseIndent + '>>';
 
             return vscode.TextEdit.replace(new vscode.Range(startPos, endPos), result);
         }
@@ -308,7 +311,8 @@ function createVarsUpdateEdit(
  * Extracts the original vars content for analysis
  */
 function extractOriginalVarsContent(document: vscode.TextDocument, varsInfo: VarsInfo): string {
-    const lines = document.getText().split('\n');
+    const eol = document.eol === vscode.EndOfLine.CRLF ? '\r\n' : '\n';
+    const lines = document.getText().split(/\r?\n/);
 
     if (varsInfo.startLine === varsInfo.endLine) {
         return lines[varsInfo.startLine].substring(varsInfo.startChar, varsInfo.endChar);
@@ -316,9 +320,9 @@ function extractOriginalVarsContent(document: vscode.TextDocument, varsInfo: Var
 
     let content = lines[varsInfo.startLine].substring(varsInfo.startChar);
     for (let i = varsInfo.startLine + 1; i < varsInfo.endLine; i++) {
-        content += '\n' + lines[i];
+        content += eol + lines[i];
     }
-    content += '\n' + lines[varsInfo.endLine].substring(0, varsInfo.endChar);
+    content += eol + lines[varsInfo.endLine].substring(0, varsInfo.endChar);
 
     return content;
 }
@@ -333,7 +337,7 @@ function detectItemsPerLine(varsContent: string): number {
         .replace(/\s*>>$/s, '')
         .trim();
 
-    const lines = innerContent.split('\n').filter(line => line.trim());
+    const lines = innerContent.split(/\r?\n/).filter(line => line.trim());
 
     if (lines.length === 0) {return 4;} // Default
     if (lines.length === 1) {
