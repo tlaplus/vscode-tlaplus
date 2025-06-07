@@ -281,45 +281,51 @@ export class SetValue extends CollectionValue {
             return false;
         }
 
-        const o = (other as SetValue);
-
+        const o = other as SetValue;
         let modified = false;
-        const deletedItems = [];
+        const deletedItems: Value[] = [];
 
-        let i = 0;
-        for (; i < this.items.length; i++) {
-            let notfound = true;
-            let j = 0;
-            while (notfound && j < o.items.length) {
-                if (this.items[i].str === o.items[j].str) {
-                    notfound = false;
+        // Build arrays to track which items we've matched
+        const thisMatched = new Array(this.items.length).fill(false);
+        const otherMatched = new Array(o.items.length).fill(false);
+
+        // First pass: find exact matches by string content
+        for (let i = 0; i < this.items.length; i++) {
+            for (let j = 0; j < o.items.length; j++) {
+                if (!thisMatched[i] && !otherMatched[j] && this.items[i].str === o.items[j].str) {
+                    thisMatched[i] = true;
+                    otherMatched[j] = true;
+                    // Item exists in both sets, remains NOT_CHANGED
+                    break;
                 }
-                j++;
             }
-            if (notfound) {
+        }
+
+        // Find deleted items (in this but not matched)
+        for (let i = 0; i < this.items.length; i++) {
+            if (!thisMatched[i]) {
                 deletedItems.push(this.items[i]);
                 modified = true;
             }
         }
-        if (deletedItems.length > 0) {
-            o.addDeletedItems(deletedItems);
-            o.setModified();
+
+        // Mark added items (in other but not matched)
+        for (let j = 0; j < o.items.length; j++) {
+            if (!otherMatched[j]) {
+                o.items[j].changeType = Change.ADDED;
+                modified = true;
+            }
         }
 
-        for (i = 0; i < o.items.length; i++) {
-            let notfound = true;
-            let j = 0;
-            while (notfound && j < this.items.length) {
-                if (this.items[j].str === o.items[i].str) {
-                    notfound = false;
-                }
-                j++;
-            }
-            if (notfound) {
-                o.items[i].setAdded();
-                o.setModified();
-            }
+        // Add deleted items to other
+        if (deletedItems.length > 0) {
+            o.addDeletedItems(deletedItems);
         }
+
+        if (modified) {
+            o.changeType = Change.MODIFIED;
+        }
+
         return modified;
     }
 }
@@ -536,9 +542,23 @@ export function getStatusName(status: CheckStatus): string {
 }
 
 /**
+ * Finds and marks changes between two sets using unordered comparison.
+ */
+function findSetChanges(prev: SetValue, state: SetValue): boolean {
+    // Sets are unordered collections - always use unordered comparison
+    return prev.diff(state);
+}
+
+/**
  * Recursively finds and marks all the changes between two collections.
  */
 export function findChanges(prev: CollectionValue, state: CollectionValue): boolean {
+    // Special handling for sets - they are unordered collections
+    if (prev instanceof SetValue && state instanceof SetValue) {
+        return findSetChanges(prev, state);
+    }
+
+    // For other collections (sequences, structures), use ordered comparison
     let pi = 0;
     let si = 0;
     let modified = false;
