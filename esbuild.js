@@ -63,6 +63,19 @@ const webviewCurrentProofStepConfig = {
     }
 };
 
+/** @type BuildOptions */
+const webviewCoverageConfig = {
+    ...baseConfig,
+    target: 'es2020',
+    format: 'esm',
+    tsconfig: 'tsconfig.webview.json',
+    entryPoints: ['./src/webview/coverage-view.tsx'],
+    outfile: './out/coverageView.js',
+    loader: {
+        '.ttf': 'copy', // use the file loader to handle .ttf files
+    }
+};
+
 const watchPlugin = (name) => [{
     name: 'watch-plugin',
     setup(build) {
@@ -83,12 +96,17 @@ const watchPlugin = (name) => [{
                 ...webviewCurrentProofStepConfig,
                 plugins: watchPlugin('webviewCurrentProofStepConfig')
             })).watch();
+            (await context({
+                ...webviewCoverageConfig,
+                plugins: watchPlugin('webviewCoverageConfig')
+            })).watch();
         } else {
             // Build extension
             await build(extensionConfig);
             await build(extensionBrowserConfig);
             await build(webviewConfig);
             await build(webviewCurrentProofStepConfig);
+            await build(webviewCoverageConfig);
             console.log('build complete');
         }
     } catch (err) {

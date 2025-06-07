@@ -184,6 +184,68 @@ suite('TLA Declarations Provider Test Suite', () => {
             '===='
         ], []);
     });
+
+    test('Ignores record field names in record literals', () => {
+        return assertDefinitions(doc, [
+            '---- MODULE foo ----',
+            'VARIABLES state',
+            'Init == state = [${x} |-> 0, y |-> 0]',
+            '===='
+        ], []);
+    });
+
+    test('Ignores record field names in record access', () => {
+        return assertDefinitions(doc, [
+            '---- MODULE foo ----',
+            'VARIABLES state',
+            'Init == state = [x |-> 0, y |-> 0]',
+            'Next == state.${x} > 0',
+            '===='
+        ], []);
+    });
+
+    test('Ignores record field names in EXCEPT expressions', () => {
+        return assertDefinitions(doc, [
+            '---- MODULE foo ----',
+            'VARIABLES state',
+            "Next == state' = [state EXCEPT !.${x} = 1]",
+            '===='
+        ], []);
+    });
+
+    test('Finds symbol before dot in record access', () => {
+        return assertDefinitions(doc, [
+            '---- MODULE foo ----',
+            'VARIABLES state',
+            'Init == state = [x |-> 0, y |-> 0]',
+            'Next == ${s}tate.x > 0',
+            '===='
+        ], [
+            loc(doc.uri, pos(1, 10))
+        ]);
+    });
+
+    test('Ignores record field names in multi-line record literals', () => {
+        return assertDefinitions(doc, [
+            '---- MODULE foo ----',
+            'VARIABLES bar',
+            'MyRecord ==',
+            ' [',
+            '   key |-> 42,',
+            '   ${b}ar |-> "abc"',
+            ' ]',
+            '===='
+        ], []);
+    });
+
+    test('Ignores nested record field names', () => {
+        return assertDefinitions(doc, [
+            '---- MODULE foo ----',
+            'VARIABLES bar',
+            'Nested == [outer |-> [${b}ar |-> 42]]',
+            '===='
+        ], []);
+    });
 });
 
 async function assertDeclarations(

@@ -240,12 +240,16 @@
             "name": "variable.name"
         },
         "record_fields": {
-            "match": "(?<=\\[|,)\\s*(\\w+)\\s*(?=\\|->)",
-            "captures": {
-                "1": {
-                    "name": "string.quoted.double.tlaplus"
+            "patterns": [
+                {
+                    "match": "(\\w+)\\s*(?=\\|->)",
+                    "captures": {
+                        "1": {
+                            "name": "string.quoted.double.tlaplus"
+                        }
+                    }
                 }
-            }
+            ]
         }
     }
 }

@@ -1,0 +1,56 @@
+.coverage-chart-container {
+    padding: 16px;
+    height: calc(100vh - 200px); /* Adjust based on header height */
+    display: flex;
+    flex-direction: column;
+}
+
+.chart-wrapper {
+    flex: 1;
+    position: relative;
+    min-height: 400px;
+}
+
+.chart-info {
+    margin-top: 16px;
+    padding: 12px;
+    background-color: var(--vscode-textBlockQuote-background);
+    border-left: 3px solid var(--vscode-textBlockQuote-border);
+    border-radius: 3px;
+}
+
+.info-text {
+    margin: 0;
+    color: var(--vscode-foreground);
+    font-size: 13px;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.info-text .codicon {
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+/* Loading state */
+.loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    gap: 16px;
+}
+
+.loading p {
+    color: var(--vscode-descriptionForeground);
+    font-size: 14px;
+}
+
+/* Container styles */
+.coverage-view-container {
+    height: 100vh;
+    overflow: auto;
+    background-color: var(--vscode-editor-background);
+}

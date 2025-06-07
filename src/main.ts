@@ -14,6 +14,7 @@ import { CMD_EVALUATE_SELECTION, evaluateSelection, CMD_EVALUATE_EXPRESSION,
     evaluateExpression } from './commands/evaluateExpression';
 import { parseModule, CMD_PARSE_MODULE } from './commands/parseModule';
 import { visualizeTlcOutput, CMD_VISUALIZE_TLC_OUTPUT } from './commands/visualizeOutput';
+import { visualizeCoverage, CMD_VISUALIZE_COVERAGE } from './commands/visualizeCoverage';
 import { exportModuleToTex, exportModuleToPdf, CMD_EXPORT_TLA_TO_TEX,
     CMD_EXPORT_TLA_TO_PDF } from './commands/exportModule';
 import { TlaOnTypeFormattingEditProvider } from './formatters/tla';
@@ -85,6 +86,9 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.commands.registerCommand(
             CMD_VISUALIZE_TLC_OUTPUT,
             () => visualizeTlcOutput(context)),
+        vscode.commands.registerCommand(
+            CMD_VISUALIZE_COVERAGE,
+            (uri: vscode.Uri) => visualizeCoverage(uri, context)),
         vscode.commands.registerCommand(
             CMD_EVALUATE_SELECTION,
             () => evaluateSelection(diagnostic, context)),
