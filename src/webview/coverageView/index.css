@@ -1,0 +1,31 @@
+.coverage-view-container {
+    height: 100vh;
+    overflow: auto;
+}
+
+.loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    font-size: 14px;
+    color: var(--vscode-descriptionForeground);
+}
+
+.error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    padding: 32px;
+    text-align: center;
+}
+
+.error p {
+    color: var(--vscode-errorForeground);
+    background-color: var(--vscode-inputValidation-errorBackground);
+    border: 1px solid var(--vscode-inputValidation-errorBorder);
+    padding: 12px 16px;
+    border-radius: 3px;
+    max-width: 500px;
+}

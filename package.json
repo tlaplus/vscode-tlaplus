@@ -93,6 +93,12 @@
                 "extensions": [
                     ".out"
                 ]
+            },
+            {
+                "id": "tlaplus_ndjson",
+                "extensions": [
+                    ".ndjson"
+                ]
             }
         ],
         "grammars": [
@@ -263,6 +269,11 @@
             {
                 "command": "tlaplus.out.visualize",
                 "title": "Visualize TLC output",
+                "category": "TLA+"
+            },
+            {
+                "command": "tlaplus.coverage.visualize",
+                "title": "Visualize simulation coverage",
                 "category": "TLA+"
             },
             {
@@ -671,6 +682,8 @@
         "@vscode/codicons": "^0.0.33",
         "@vscode/debugadapter": "^1.63.0",
         "@vscode/webview-ui-toolkit": "^1.2.2",
+        "chart.js": "^4.4.1",
+        "react-chartjs-2": "^5.2.0",
         "vscode-languageclient": "^9.0.0",
         "await-notify": "^1.0.1",
         "express": "^5.1.0",
