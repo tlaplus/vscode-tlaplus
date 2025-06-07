@@ -18,18 +18,24 @@ suite('Update vars Command Test Suite', () => {
         await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
     });
 
+    // Helper to join lines with the document's EOL sequence
+    function joinLines(lines: string[]): string {
+        const eol = doc.eol === vscode.EndOfLine.CRLF ? '\r\n' : '\n';
+        return lines.join(eol);
+    }
+
     test('Updates simple single-line vars', async () => {
-        await replaceDocContents(doc, [
+        await replaceDocContents(doc, joinLines([
             'VARIABLES x, y, z',
             'vars == <<x, y>>'
-        ].join('\n'));
+        ]));
 
         await vscode.commands.executeCommand('tlaplus.refactor.update_vars');
 
-        assert.strictEqual(doc.getText(), [
+        assert.strictEqual(doc.getText(), joinLines([
             'VARIABLES x, y, z',
             'vars == <<x, y, z>>'
-        ].join('\n'));
+        ]));
     });
 
     test('Handles no variables in document', async () => {
@@ -51,40 +57,40 @@ suite('Update vars Command Test Suite', () => {
     });
 
     test('Preserves order of variable declarations', async () => {
-        await replaceDocContents(doc, [
+        await replaceDocContents(doc, joinLines([
             'VARIABLES z, x, y',
             'vars == <<>>'
-        ].join('\n'));
+        ]));
 
         await vscode.commands.executeCommand('tlaplus.refactor.update_vars');
 
-        assert.strictEqual(doc.getText(), [
+        assert.strictEqual(doc.getText(), joinLines([
             'VARIABLES z, x, y',
             'vars == <<z, x, y>>'
-        ].join('\n'));
+        ]));
     });
 
     test('Handles multiple VARIABLES declarations', async () => {
-        await replaceDocContents(doc, [
+        await replaceDocContents(doc, joinLines([
             'VARIABLES x, y',
             'VARIABLES z',
             'vars == <<x>>'
-        ].join('\n'));
+        ]));
 
         await vscode.commands.executeCommand('tlaplus.refactor.update_vars');
 
-        assert.strictEqual(doc.getText(), [
+        assert.strictEqual(doc.getText(), joinLines([
             'VARIABLES x, y',
             'VARIABLES z',
             'vars == <<x, y, z>>'
-        ].join('\n'));
+        ]));
     });
 
     test('Does not update when vars is already correct', async () => {
-        const originalContent = [
+        const originalContent = joinLines([
             'VARIABLES x, y, z',
             'vars == <<x, y, z>>'
-        ].join('\n');
+        ]);
 
         await replaceDocContents(doc, originalContent);
 
@@ -95,44 +101,44 @@ suite('Update vars Command Test Suite', () => {
     });
 
     test('Handles removing variables', async () => {
-        await replaceDocContents(doc, [
+        await replaceDocContents(doc, joinLines([
             'VARIABLES x, z',
             'vars == <<x, y, z>>'
-        ].join('\n'));
+        ]));
 
         await vscode.commands.executeCommand('tlaplus.refactor.update_vars');
 
-        assert.strictEqual(doc.getText(), [
+        assert.strictEqual(doc.getText(), joinLines([
             'VARIABLES x, z',
             'vars == <<x, z>>'
-        ].join('\n'));
+        ]));
     });
 
     test('Handles VARIABLE (singular) keyword', async () => {
-        await replaceDocContents(doc, [
+        await replaceDocContents(doc, joinLines([
             'VARIABLE x',
             'VARIABLES y, z',
             'vars == <<>>'
-        ].join('\n'));
+        ]));
 
         await vscode.commands.executeCommand('tlaplus.refactor.update_vars');
 
-        assert.strictEqual(doc.getText(), [
+        assert.strictEqual(doc.getText(), joinLines([
             'VARIABLE x',
             'VARIABLES y, z',
             'vars == <<x, y, z>>'
-        ].join('\n'));
+        ]));
     });
 
     test('Converts long single-line vars to multi-line', async () => {
-        await replaceDocContents(doc, [
+        await replaceDocContents(doc, joinLines([
             'VARIABLES a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p',
             'vars == <<>>'
-        ].join('\n'));
+        ]));
 
         await vscode.commands.executeCommand('tlaplus.refactor.update_vars');
 
-        assert.strictEqual(doc.getText(), [
+        assert.strictEqual(doc.getText(), joinLines([
             'VARIABLES a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p',
             'vars == <<',
             '    a, b, c, d,',
@@ -140,51 +146,51 @@ suite('Update vars Command Test Suite', () => {
             '    i, j, k, l,',
             '    m, n, o, p',
             '>>'
-        ].join('\n'));
+        ]));
     });
 
     test('Preserves multi-line format with 2 items per line', async () => {
-        await replaceDocContents(doc, [
+        await replaceDocContents(doc, joinLines([
             'VARIABLES x, y, z, w',
             'vars == <<',
             '    x, y',
             '>>'
-        ].join('\n'));
+        ]));
 
         await vscode.commands.executeCommand('tlaplus.refactor.update_vars');
 
         // Should maintain 2 items per line pattern
-        assert.strictEqual(doc.getText(), [
+        assert.strictEqual(doc.getText(), joinLines([
             'VARIABLES x, y, z, w',
             'vars == <<',
             '    x, y,',
             '    z, w',
             '>>'
-        ].join('\n'));
+        ]));
     });
 
     test('Handles multi-line vars with different items per line', async () => {
-        await replaceDocContents(doc, [
+        await replaceDocContents(doc, joinLines([
             'VARIABLES a, b, c, d, e, f',
             'vars == <<',
             '    a, b, c,',
             '    d',
             '>>'
-        ].join('\n'));
+        ]));
 
         await vscode.commands.executeCommand('tlaplus.refactor.update_vars');
 
-        assert.strictEqual(doc.getText(), [
+        assert.strictEqual(doc.getText(), joinLines([
             'VARIABLES a, b, c, d, e, f',
             'vars == <<',
             '    a, b, c,',
             '    d, e, f',
             '>>'
-        ].join('\n'));
+        ]));
     });
 
     test('Detects PlusCal algorithm and includes pc/stack by default', async () => {
-        await replaceDocContents(doc, [
+        await replaceDocContents(doc, joinLines([
             '(*--algorithm test',
             'variables x = 0, y = 0;',
             'begin',
@@ -193,11 +199,11 @@ suite('Update vars Command Test Suite', () => {
             '',
             'VARIABLES x, y, pc, stack',
             'vars == <<x, y>>'
-        ].join('\n'));
+        ]));
 
         await vscode.commands.executeCommand('tlaplus.refactor.update_vars');
 
-        assert.strictEqual(doc.getText(), [
+        assert.strictEqual(doc.getText(), joinLines([
             '(*--algorithm test',
             'variables x = 0, y = 0;',
             'begin',
@@ -206,7 +212,7 @@ suite('Update vars Command Test Suite', () => {
             '',
             'VARIABLES x, y, pc, stack',
             'vars == <<x, y, pc, stack>>'
-        ].join('\n'));
+        ]));
     });
 
     test('Excludes PlusCal variables when configured', async () => {
@@ -218,7 +224,7 @@ suite('Update vars Command Test Suite', () => {
             // Set config to exclude PlusCal vars
             await config.update('includePlusCalVariables', false, vscode.ConfigurationTarget.Global);
 
-            await replaceDocContents(doc, [
+            await replaceDocContents(doc, joinLines([
                 '(*--algorithm test',
                 'variables x = 0, y = 0;',
                 'begin',
@@ -227,11 +233,11 @@ suite('Update vars Command Test Suite', () => {
                 '',
                 'VARIABLES x, y, pc, stack',
                 'vars == <<x, y, pc, stack>>'
-            ].join('\n'));
+            ]));
 
             await vscode.commands.executeCommand('tlaplus.refactor.update_vars');
 
-            assert.strictEqual(doc.getText(), [
+            assert.strictEqual(doc.getText(), joinLines([
                 '(*--algorithm test',
                 'variables x = 0, y = 0;',
                 'begin',
@@ -240,7 +246,7 @@ suite('Update vars Command Test Suite', () => {
                 '',
                 'VARIABLES x, y, pc, stack',
                 'vars == <<x, y>>'
-            ].join('\n'));
+            ]));
         } finally {
             // Restore original config
             await config.update('includePlusCalVariables', originalValue, vscode.ConfigurationTarget.Global);
@@ -248,7 +254,7 @@ suite('Update vars Command Test Suite', () => {
     });
 
     test('Handles PlusCal with --fair algorithm', async () => {
-        await replaceDocContents(doc, [
+        await replaceDocContents(doc, joinLines([
             '(*--fair algorithm fairtest',
             'variables z = 0;',
             'begin',
@@ -257,11 +263,11 @@ suite('Update vars Command Test Suite', () => {
             '',
             'VARIABLES z, pc',
             'vars == <<z>>'
-        ].join('\n'));
+        ]));
 
         await vscode.commands.executeCommand('tlaplus.refactor.update_vars');
 
-        assert.strictEqual(doc.getText(), [
+        assert.strictEqual(doc.getText(), joinLines([
             '(*--fair algorithm fairtest',
             'variables z = 0;',
             'begin',
@@ -270,6 +276,6 @@ suite('Update vars Command Test Suite', () => {
             '',
             'VARIABLES z, pc',
             'vars == <<z, pc>>'
-        ].join('\n'));
+        ]));
     });
 });
