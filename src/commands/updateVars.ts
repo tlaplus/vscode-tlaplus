@@ -15,7 +15,7 @@ interface VarsInfo {
  */
 async function extractAllVariables(document: vscode.TextDocument): Promise<string[]> {
     const text = document.getText();
-    const lines = text.split('\n');
+    const lines = text.split(/\r?\n/);
     const variables: string[] = [];
 
     // State for multi-line variable declarations
@@ -24,7 +24,7 @@ async function extractAllVariables(document: vscode.TextDocument): Promise<strin
 
     for (const line of lines) {
         // Check for VARIABLE or VARIABLES keyword
-        const varMatch = line.match(/^\s*(VARIABLE|VARIABLES)\s+(.*)$/);
+        const varMatch = line.match(/^\s*(VARIABLE|VARIABLES)\s+(.*)/);
         if (varMatch) {
             // If we were already in a variable declaration, process the previous one
             if (currentVarList) {
@@ -90,7 +90,7 @@ async function extractAllVariables(document: vscode.TextDocument): Promise<strin
  */
 function findVarsDefinition(document: vscode.TextDocument): VarsInfo | undefined {
     const text = document.getText();
-    const lines = text.split('\n');
+    const lines = text.split(/\r?\n/);
 
     // State machine states
     enum State {

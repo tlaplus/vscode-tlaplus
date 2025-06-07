@@ -278,4 +278,23 @@ suite('Update vars Command Test Suite', () => {
             'vars == <<z, pc>>'
         ]));
     });
+
+    test('Handles Windows line endings correctly', async () => {
+        // Create a document with CRLF line endings
+        const content = 'VARIABLES x, y, z\r\nvars == <<x, y>>';
+        await replaceDocContents(doc, content);
+        
+        // Ensure document uses CRLF
+        if (doc.eol !== vscode.EndOfLine.CRLF) {
+            await vscode.window.activeTextEditor?.edit(editBuilder => {
+                editBuilder.setEndOfLine(vscode.EndOfLine.CRLF);
+            });
+        }
+
+        await vscode.commands.executeCommand('tlaplus.refactor.update_vars');
+
+        // Check that the update works correctly
+        const expectedContent = 'VARIABLES x, y, z\r\nvars == <<x, y, z>>';
+        assert.strictEqual(doc.getText(), expectedContent);
+    });
 });
