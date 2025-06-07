@@ -118,7 +118,6 @@ export class CoverageViewPanel {
         const nonce = getNonce();
         const scriptUri = getUri(webview, this.extensionUri, ['out', 'coverageView.js']);
         const styleUri = getUri(webview, this.extensionUri, ['out', 'coverageView.css']);
-        const codiconsUri = getUri(webview, this.extensionUri, ['out', 'codicon.css']);
 
         return `<!DOCTYPE html>
             <html lang="en">
@@ -128,7 +127,6 @@ export class CoverageViewPanel {
                 <meta http-equiv="Content-Security-Policy"
                     content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; font-src ${webview.cspSource};">
                 <link href="${styleUri}" rel="stylesheet">
-                <link href="${codiconsUri}" rel="stylesheet">
                 <title>Coverage Visualization</title>
             </head>
             <body>

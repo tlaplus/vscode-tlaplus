@@ -19,7 +19,6 @@ const CoverageViewApp = React.memo(({ data }: CoverageViewAppProps) => {
                 {data && <CoverageChart data={data} />}
                 {!data && (
                     <div className="loading">
-                        <vscode-progress-ring></vscode-progress-ring>
                         <p>Loading coverage data...</p>
                     </div>
                 )}

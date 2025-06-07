@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { VSCodeButton } from '@vscode/webview-ui-toolkit/react';
 import { CoverageData } from '../../model/coverage';
 import { vscode } from './vscode';
 import { formatDuration } from '../common/formatters';
@@ -48,9 +47,9 @@ export const CoverageHeader: React.FC<CoverageHeaderProps> = ({ data }) => {
                     </div>
                 </div>
                 <div className="header-actions">
-                    <VSCodeButton appearance="icon" onClick={handleRefresh}>
+                    <button className="icon-button" onClick={handleRefresh} title="Refresh">
                         <span className="codicon codicon-refresh"></span>
-                    </VSCodeButton>
+                    </button>
                 </div>
             </div>
         </div>
