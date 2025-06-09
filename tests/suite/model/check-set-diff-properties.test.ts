@@ -121,8 +121,8 @@ suite('Set Diff Properties Test Suite', () => {
                 fc.uniqueArray(fc.string(), { minLength: 2, maxLength: 20 }),
                 (elements) => {
                     const oldSet = createTestSet(elements);
-                    // Create a shuffled version with same elements
-                    const shuffled = [...elements].sort(() => Math.random() - 0.5);
+                    // Create a shuffled version with the same elements using fast-check
+                    const shuffled = fc.sample(fc.shuffledSubarray(elements), 1)[0];
                     const newSet = createTestSet(shuffled);
 
                     findChanges(oldSet, newSet);
