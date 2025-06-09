@@ -57,6 +57,7 @@ jobs:
       run: |
         npm run lint
         npm test --silent
+        npm run test:tlaplus-grammar
     - name: Publish to Marketplace
       run: |
         vsce publish $(git log -1 --format=%cd --date="format:%Y.%-m.%-d%H%M") --pat "${{ secrets.VSCODE_MARKETPLACE_TLAPLUS_TOKEN }}"

@@ -29,6 +29,8 @@ jobs:
     - name: Test Linux
       if: matrix.os == 'ubuntu-latest'
       run: xvfb-run --auto-servernum npm test --silent
+    - name: Test TLA+ Grammar
+      run: npm run test:tlaplus-grammar
     - name: Upload artifact
       if: matrix.os == 'ubuntu-latest'
       uses: actions/upload-artifact@v4
