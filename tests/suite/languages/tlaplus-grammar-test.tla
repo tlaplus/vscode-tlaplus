@@ -16,7 +16,7 @@ TCTypeOK ==
   (*************************************************************************)
   rmState \in [RM -> {"working", "prepared", "committed", "aborted"}]
 // <~-------  ^^^ support.type.primitive
-//                    ^^^^^^^^ string.quoted.doublte.tlaplus
+//                    ^^^^^^^^ string.quoted.double.tlaplus
 
 TCInit ==   rmState = [rm \in RM |-> "working"]
   (*************************************************************************)
