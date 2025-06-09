@@ -15,6 +15,7 @@ import {
 } from '../panels/checkResultView';
 import { TlcModelCheckerStdoutParser } from '../parsers/tlc';
 import { runTlc, stopProcess } from '../tla2tools';
+import { TlcCoverageDecorationProvider } from '../tlcCoverage';
 
 export const CMD_CHECK_MODEL_RUN = 'tlaplus.model.check.run';
 export const CMD_CHECK_MODEL_RUN_AGAIN = 'tlaplus.model.check.runAgain';
@@ -30,11 +31,19 @@ const TEMPLATE_CFG_PATH = path.resolve(__dirname, '../tools/template.cfg');
 
 let checkProcess: ChildProcess | undefined;
 let lastCheckFiles: SpecFiles | undefined;
+let coverageProvider: TlcCoverageDecorationProvider | undefined;
 const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);
 export const outChannel = new ToolOutputChannel('TLC', mapTlcOutputLine);
 
 class CheckResultHolder {
     checkResult: ModelCheckResult | undefined;
+}
+
+/**
+ * Sets the coverage provider to be used for visualization.
+ */
+export function setCoverageProvider(provider: TlcCoverageDecorationProvider): void {
+    coverageProvider = provider;
 }
 
 /**
@@ -200,6 +209,11 @@ export async function doCheckModel(
             resultHolder.checkResult = checkResult;
             if (showCheckResultView) {
                 updateCheckResultView(checkResult);
+            }
+
+            // Update coverage visualization
+            if (coverageProvider && checkResult.coverageStat.length > 0) {
+                coverageProvider.updateCoverage(checkResult.coverageStat);
             }
         };
         const stdoutParser = new TlcModelCheckerStdoutParser(

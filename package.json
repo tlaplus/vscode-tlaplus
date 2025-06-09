@@ -316,6 +316,17 @@
                 "command": "tlaplus.tlaps.check-step",
                 "title": "Check proof step in TLAPS",
                 "category": "TLA+"
+            },
+            {
+                "command": "tlaplus.tlc.profiler.toggle",
+                "title": "Toggle Coverage Visualization",
+                "category": "TLA+",
+                "icon": "$(flame)"
+            },
+            {
+                "command": "tlaplus.tlc.profiler.clear",
+                "title": "Clear Coverage Data",
+                "category": "TLA+"
             }
         ],
         "snippets": [
@@ -417,6 +428,11 @@
                     "command": "tlaplus.debugger.run",
                     "when": "resourceLangId == tlaplus || editorLangId == tlaplus_cfg",
                     "group": "1_run@20"
+                },
+                {
+                    "command": "tlaplus.tlc.profiler.toggle",
+                    "when": "resourceExtname == .tla",
+                    "group": "navigation"
                 }
             ]
         },
@@ -545,6 +561,42 @@
                     "items": {"type": "string"},
                     "description": "Paths to look for TLA+ modules.",
                     "default": []
+                },
+                "tlaplus.tlc.profiler.enabled": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Enable TLC coverage visualization by default"
+                },
+                "tlaplus.tlc.profiler.baseColor": {
+                    "type": "string",
+                    "default": "#ff0000",
+                    "format": "color",
+                    "description": "Base color for coverage heat map"
+                },
+                "tlaplus.tlc.profiler.relativeScale": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Use relative scaling (percentage of max) instead of absolute execution counts"
+                },
+                "tlaplus.tlc.profiler.wholeLine": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Highlight whole lines instead of just the action text"
+                },
+                "tlaplus.tlc.profiler.showGutterIcons": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Show coverage icons in the gutter"
+                },
+                "tlaplus.tlc.profiler.thresholds": {
+                    "type": "object",
+                    "default": {
+                        "rare": 10,
+                        "low": 100,
+                        "medium": 1000,
+                        "high": 10000
+                    },
+                    "description": "Execution count thresholds for coverage levels"
                 }
             }
         },
