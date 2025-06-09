@@ -289,14 +289,27 @@ export class SetValue extends CollectionValue {
         const thisMatched = new Array(this.items.length).fill(false);
         const otherMatched = new Array(o.items.length).fill(false);
 
-        // First pass: find exact matches by string content
+        const otherItemMap = new Map<string, number[]>();
+        for (let j = 0; j < o.items.length; j++) {
+            const str = o.items[j].str;
+            if (!otherItemMap.has(str)) {
+                otherItemMap.set(str, []);
+            }
+            otherItemMap.get(str)?.push(j);
+        }
+
         for (let i = 0; i < this.items.length; i++) {
-            for (let j = 0; j < o.items.length; j++) {
-                if (!thisMatched[i] && !otherMatched[j] && this.items[i].str === o.items[j].str) {
-                    thisMatched[i] = true;
-                    otherMatched[j] = true;
-                    // Item exists in both sets, remains NOT_CHANGED
-                    break;
+            const str = this.items[i].str;
+            const otherIndices = otherItemMap.get(str);
+            if (otherIndices && otherIndices.length > 0) {
+                // Find first unmatched index in other set
+                for (const j of otherIndices) {
+                    if (!otherMatched[j]) {
+                        thisMatched[i] = true;
+                        otherMatched[j] = true;
+                        // Item exists in both sets, remains NOT_CHANGED
+                        break;
+                    }
                 }
             }
         }
