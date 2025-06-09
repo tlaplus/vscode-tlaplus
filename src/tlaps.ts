@@ -269,7 +269,7 @@ export class TlapsClient {
             });
             markers.forEach(marker => {
                 const start = new vscode.Position(marker.range.start.line, marker.range.start.character);
-                const end = new vscode.Position(marker.range.start.line, marker.range.end.character);
+                const end = new vscode.Position(marker.range.end.line, marker.range.end.character);
                 const range = new vscode.Range(start, end);
                 if (marker.range.start.line === marker.range.end.line) {
                     decorations.get(marker.status + '.first')?.push({
