@@ -289,6 +289,9 @@ export class SetValue extends CollectionValue {
         const thisMatched = new Array(this.items.length).fill(false);
         const otherMatched = new Array(o.items.length).fill(false);
 
+        // Note: Although this is a SetValue, the class doesn't enforce uniqueness
+        // SetValue allows duplicates in its constructor: new SetValue('test', [valueA, valueB, valueA])
+        // So, we need to handle multiple indices for the same string value
         const otherItemMap = new Map<string, number[]>();
         for (let j = 0; j < o.items.length; j++) {
             const str = o.items[j].str;
