@@ -5,6 +5,7 @@ import { TlaCompletionItemProvider, TLA_CONSTANTS, TLA_STARTING_KEYWORDS, TLA_PR
     TLA_OTHER_KEYWORDS, TLA_OPERATORS, TLA_STD_MODULES } from '../../../src/completions/tlaCompletions';
 import { parseDocInfo, replaceDocContents } from '../document';
 import { assertCompletion, assertSymbolClass, createTestDocInfos } from './completion';
+import { ModuleSymbolProvider } from '../../../src/symbols/moduleSymbolProvider';
 
 const EXPECT_NOTHING = 0;
 const EXPECT_STARTING_KEYWORDS = 1;
@@ -93,7 +94,8 @@ async function assertCompletions(
     const docInfo = parseDocInfo(docLines);
     await replaceDocContents(doc, docInfo.lines.join('\n'));
     const docInfos = createTestDocInfos(doc.uri);
-    const completionsProvider = new TlaCompletionItemProvider(docInfos);
+    const moduleSymbolProvider = new ModuleSymbolProvider();
+    const completionsProvider = new TlaCompletionItemProvider(docInfos, moduleSymbolProvider);
     const tokenSrc = new vscode.CancellationTokenSource();
     const ctx: vscode.CompletionContext = {
         triggerKind: vscode.CompletionTriggerKind.TriggerCharacter,
