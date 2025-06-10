@@ -331,6 +331,45 @@
                 "command": "tlaplus.clearModuleCache",
                 "title": "Clear Module Cache",
                 "category": "TLA+"
+            },
+            {
+                "command": "tlaplus.moduleExplorer.refresh",
+                "title": "Refresh",
+                "category": "TLA+ Module Explorer",
+                "icon": "$(refresh)"
+            },
+            {
+                "command": "tlaplus.moduleExplorer.search",
+                "title": "Search",
+                "category": "TLA+ Module Explorer",
+                "icon": "$(search)"
+            },
+            {
+                "command": "tlaplus.moduleExplorer.clearSearch",
+                "title": "Clear Search",
+                "category": "TLA+ Module Explorer"
+            },
+            {
+                "command": "tlaplus.viewModuleSource",
+                "title": "View Module Source",
+                "category": "TLA+ Module Explorer"
+            },
+            {
+                "command": "tlaplus.moduleExplorer.insertExtends",
+                "title": "Insert EXTENDS",
+                "category": "TLA+ Module Explorer",
+                "icon": "$(add)"
+            },
+            {
+                "command": "tlaplus.moduleExplorer.insertSymbol",
+                "title": "Insert Symbol",
+                "category": "TLA+ Module Explorer",
+                "icon": "$(add)"
+            },
+            {
+                "command": "tlaplus.moduleExplorer.copySymbolName",
+                "title": "Copy Symbol Name",
+                "category": "TLA+ Module Explorer"
             }
         ],
         "snippets": [
@@ -432,6 +471,40 @@
                     "command": "tlaplus.debugger.run",
                     "when": "resourceLangId == tlaplus || editorLangId == tlaplus_cfg",
                     "group": "1_run@20"
+                }
+            ],
+            "view/title": [
+                {
+                    "command": "tlaplus.moduleExplorer.refresh",
+                    "when": "view == tlaModuleExplorer",
+                    "group": "navigation"
+                },
+                {
+                    "command": "tlaplus.moduleExplorer.search",
+                    "when": "view == tlaModuleExplorer",
+                    "group": "navigation"
+                }
+            ],
+            "view/item/context": [
+                {
+                    "command": "tlaplus.moduleExplorer.insertExtends",
+                    "when": "view == tlaModuleExplorer && viewItem == module",
+                    "group": "inline"
+                },
+                {
+                    "command": "tlaplus.viewModuleSource",
+                    "when": "view == tlaModuleExplorer && viewItem == module",
+                    "group": "navigation"
+                },
+                {
+                    "command": "tlaplus.moduleExplorer.insertSymbol",
+                    "when": "view == tlaModuleExplorer && viewItem == symbol",
+                    "group": "inline"
+                },
+                {
+                    "command": "tlaplus.moduleExplorer.copySymbolName",
+                    "when": "view == tlaModuleExplorer && viewItem == symbol",
+                    "group": "navigation"
                 }
             ]
         },
@@ -693,6 +766,12 @@
                 {
                     "id": "tlaplus.module-search-paths",
                     "name": "Module Search Paths",
+                    "type": "tree",
+                    "icon": "resources/images/tlaplus.svg"
+                },
+                {
+                    "id": "tlaModuleExplorer",
+                    "name": "Module Explorer",
                     "type": "tree",
                     "icon": "resources/images/tlaplus.svg"
                 }

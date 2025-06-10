@@ -3,6 +3,10 @@ import * as path from 'path';
 import { TlaMegaModuleGenerator } from './generators/megaModuleGenerator';
 import { moduleSearchPaths } from './paths';
 import { ModuleSymbolProvider } from './symbols/moduleSymbolProvider';
+import { ModuleExplorer } from './ui/moduleExplorer';
+import { JarModuleReader } from './utils/jarReader';
+import { ModuleDocumentProvider } from './providers/moduleDocumentProvider';
+import { ModuleExplorerTreeProvider, ModuleExplorerPanel } from './panels/moduleExplorerTreeProvider';
 
 /**
  * Manages TLA+ module discovery and mega-module generation.
@@ -10,11 +14,16 @@ import { ModuleSymbolProvider } from './symbols/moduleSymbolProvider';
 export class ModuleDiscoveryManager {
     private generator: TlaMegaModuleGenerator | undefined;
     private symbolProvider: ModuleSymbolProvider;
+    private moduleExplorer: ModuleExplorer | undefined;
+    private jarReader: JarModuleReader;
+    private documentProvider: ModuleDocumentProvider | undefined;
+    private moduleExplorerPanel: ModuleExplorerPanel | undefined;
     private isGenerating = false;
     private statusItem: vscode.StatusBarItem | undefined;
 
     constructor(private readonly context: vscode.ExtensionContext) {
         this.symbolProvider = new ModuleSymbolProvider();
+        this.jarReader = new JarModuleReader();
     }
 
     /**
@@ -39,7 +48,41 @@ export class ModuleDiscoveryManager {
                 vscode.workspace.workspaceFolders?.[0]
             );
 
+            // Create module explorer
+            this.moduleExplorer = new ModuleExplorer(
+                this.jarReader,
+                this.symbolProvider,
+                toolsJarPath,
+                communityJarPath
+            );
+
+            // Create and register document provider
+            this.documentProvider = new ModuleDocumentProvider(
+                this.jarReader,
+                toolsJarPath,
+                communityJarPath
+            );
+
+            const providerRegistration = vscode.workspace.registerTextDocumentContentProvider(
+                'tla-module',
+                this.documentProvider
+            );
+            this.context.subscriptions.push(providerRegistration);
+
+            // Create Module Explorer tree view
+            const treeDataProvider = new ModuleExplorerTreeProvider(
+                this.jarReader,
+                this.symbolProvider,
+                toolsJarPath,
+                communityJarPath
+            );
+            this.moduleExplorerPanel = new ModuleExplorerPanel(
+                this.context,
+                treeDataProvider
+            );
+
             // Generate mega-modules if needed
+            const wasStale = await this.generator.isStale();
             await this.regenerateIfNeeded();
 
             // Add mega-module paths to module search paths
@@ -55,6 +98,18 @@ export class ModuleDiscoveryManager {
 
             // Watch for JAR file changes
             this.setupFileWatchers(toolsJarPath, communityJarPath);
+
+            // Show welcome message if this was the first time
+            if (wasStale) {
+                const message = 'TLA+ module discovery is ready! ' +
+                    'Use the Module Explorer or type module names to see available operators.';
+                vscode.window.showInformationMessage(message, 'Show Modules'
+                ).then(selection => {
+                    if (selection === 'Show Modules') {
+                        vscode.commands.executeCommand('tlaplus.showAvailableModules');
+                    }
+                });
+            }
 
         } catch (error) {
             console.error('Failed to initialize module discovery:', error);
@@ -77,7 +132,31 @@ export class ModuleDiscoveryManager {
             const wasStale = await this.generator.isStale();
             if (wasStale) {
                 console.log('Regenerating TLA+ mega-modules...');
-                await this.generator.forceRegenerate();
+
+                // Show progress notification
+                await vscode.window.withProgress({
+                    location: vscode.ProgressLocation.Notification,
+                    title: 'TLA+ Module Discovery',
+                    cancellable: false
+                }, async (progress) => {
+                    progress.report({ increment: 0, message: 'Checking module cache...' });
+
+                    progress.report({ increment: 30, message: 'Generating standard modules index...' });
+                    if (this.generator) {
+                        await this.generator.generateStandardModules();
+                    }
+
+                    progress.report({ increment: 60, message: 'Generating community modules index...' });
+                    if (this.generator) {
+                        await this.generator.generateCommunityModules();
+                    }
+
+                    progress.report({ increment: 90, message: 'Parsing module symbols...' });
+                    await this.symbolProvider.clearCache();
+
+                    progress.report({ increment: 100, message: 'Module index ready!' });
+                });
+
                 console.log('TLA+ mega-modules regenerated successfully');
             }
 
@@ -85,6 +164,7 @@ export class ModuleDiscoveryManager {
         } catch (error) {
             console.error('Failed to regenerate mega-modules:', error);
             this.updateStatusBar('$(error) Module indexing failed');
+            vscode.window.showErrorMessage(`Module indexing failed: ${error}`);
         } finally {
             this.isGenerating = false;
         }
@@ -147,7 +227,42 @@ export class ModuleDiscoveryManager {
                 try {
                     this.isGenerating = true;
                     this.updateStatusBar('$(sync~spin) Refreshing module index...');
-                    await this.generator.forceRegenerate();
+
+                    await vscode.window.withProgress({
+                        location: vscode.ProgressLocation.Notification,
+                        title: 'Refreshing TLA+ Module Index',
+                        cancellable: false
+                    }, async (progress) => {
+                        progress.report({ increment: 0, message: 'Clearing cache...' });
+                        if (this.generator) {
+                            await this.generator.clearCache();
+                        }
+                        this.jarReader.clearCache();
+                        this.symbolProvider.clearCache();
+
+                        progress.report({ increment: 20, message: 'Scanning standard modules...' });
+                        if (this.generator) {
+                            await this.generator.generateStandardModules();
+                        }
+
+                        progress.report({ increment: 50, message: 'Scanning community modules...' });
+                        if (this.generator) {
+                            await this.generator.generateCommunityModules();
+                        }
+
+                        progress.report({ increment: 80, message: 'Parsing module symbols...' });
+                        // Force symbol reload by clearing paths and resetting
+                        this.symbolProvider.setMegaModulePaths([]);
+                        const cachePath = this.generator ? this.generator.getCachePath() : '';
+                        const megaModulePaths = [
+                            path.join(cachePath, '_ALL_STANDARD.tla'),
+                            path.join(cachePath, '_ALL_CM.tla')
+                        ];
+                        this.symbolProvider.setMegaModulePaths(megaModulePaths);
+
+                        progress.report({ increment: 100, message: 'Module index updated!' });
+                    });
+
                     vscode.window.showInformationMessage('TLA+ module index refreshed successfully');
                 } catch (error) {
                     vscode.window.showErrorMessage(`Failed to refresh module index: ${error}`);
@@ -158,13 +273,12 @@ export class ModuleDiscoveryManager {
             }),
 
             vscode.commands.registerCommand('tlaplus.showAvailableModules', async () => {
-                if (!this.generator) {
+                if (!this.moduleExplorer) {
                     vscode.window.showWarningMessage('Module discovery is not initialized');
                     return;
                 }
 
-                // TODO: Implement module list display
-                vscode.window.showInformationMessage('Module list display not yet implemented');
+                await this.moduleExplorer.showModuleExplorer();
             }),
 
             vscode.commands.registerCommand('tlaplus.clearModuleCache', async () => {
