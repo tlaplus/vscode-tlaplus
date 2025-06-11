@@ -596,7 +596,7 @@
                         "medium": 1000,
                         "high": 10000
                     },
-                    "description": "Execution count thresholds for coverage levels"
+                    "description": "Invocation count thresholds for coverage levels"
                 }
             }
         },

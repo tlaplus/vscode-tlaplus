@@ -3,19 +3,19 @@ import { CoverageItem } from './model/check';
 
 export interface CoverageLevel {
     name: string;
-    minExecutions: number;
-    maxExecutions: number;
+    minInvocations: number;
+    maxInvocations: number;
     opacity: number;
 }
 
 export class TlcCoverageDecorationProvider {
     private static readonly COVERAGE_LEVELS: CoverageLevel[] = [
-        { name: 'never', minExecutions: 0, maxExecutions: 0, opacity: 0.0 },
-        { name: 'rare', minExecutions: 1, maxExecutions: 10, opacity: 0.2 },
-        { name: 'low', minExecutions: 11, maxExecutions: 100, opacity: 0.4 },
-        { name: 'medium', minExecutions: 101, maxExecutions: 1000, opacity: 0.6 },
-        { name: 'high', minExecutions: 1001, maxExecutions: 10000, opacity: 0.8 },
-        { name: 'hot', minExecutions: 10001, maxExecutions: Infinity, opacity: 1.0 }
+        { name: 'never', minInvocations: 0, maxInvocations: 0, opacity: 0.0 },
+        { name: 'rare', minInvocations: 1, maxInvocations: 10, opacity: 0.2 },
+        { name: 'low', minInvocations: 11, maxInvocations: 100, opacity: 0.4 },
+        { name: 'medium', minInvocations: 101, maxInvocations: 1000, opacity: 0.6 },
+        { name: 'high', minInvocations: 1001, maxInvocations: 10000, opacity: 0.8 },
+        { name: 'hot', minInvocations: 10001, maxInvocations: Infinity, opacity: 1.0 }
     ];
 
     private enabled = false;
@@ -132,14 +132,14 @@ export class TlcCoverageDecorationProvider {
             decorationsByLevel.set(level.name, []);
         });
 
-        // Calculate max executions for relative scaling
-        const maxExecutions = Math.max(...coverageItems.map(item => item.total), 1);
+        // Calculate max invocations for relative scaling
+        const maxInvocations = Math.max(...coverageItems.map(item => item.total), 1);
         const useRelativeScale = vscode.workspace.getConfiguration('tlaplus.tlc.profiler')
             .get<boolean>('relativeScale', false);
 
         // Process each coverage item
         for (const item of coverageItems) {
-            const level = this.getExecutionLevel(item.total, maxExecutions, useRelativeScale);
+            const level = this.getInvocationLevel(item.total, maxInvocations, useRelativeScale);
             const decoration: vscode.DecorationOptions = {
                 range: item.range,
                 hoverMessage: this.createHoverMessage(item)
@@ -159,14 +159,14 @@ export class TlcCoverageDecorationProvider {
         });
     }
 
-    private getExecutionLevel(
-        executions: number,
-        maxExecutions: number,
+    private getInvocationLevel(
+        invocations: number,
+        maxInvocations: number,
         useRelativeScale: boolean
     ): CoverageLevel {
         if (useRelativeScale) {
-            // Scale based on percentage of max executions
-            const percentage = (executions / maxExecutions) * 100;
+            // Scale based on percentage of max invocations
+            const percentage = (invocations / maxInvocations) * 100;
             if (percentage === 0) {return TlcCoverageDecorationProvider.COVERAGE_LEVELS[0];}
             if (percentage <= 1) {return TlcCoverageDecorationProvider.COVERAGE_LEVELS[1];}
             if (percentage <= 10) {return TlcCoverageDecorationProvider.COVERAGE_LEVELS[2];}
@@ -176,7 +176,7 @@ export class TlcCoverageDecorationProvider {
         } else {
             // Use absolute thresholds
             for (const level of TlcCoverageDecorationProvider.COVERAGE_LEVELS) {
-                if (executions >= level.minExecutions && executions <= level.maxExecutions) {
+                if (invocations >= level.minInvocations && invocations <= level.maxInvocations) {
                     return level;
                 }
             }
@@ -189,7 +189,7 @@ export class TlcCoverageDecorationProvider {
         md.appendMarkdown('**TLC Coverage**\n\n');
         md.appendMarkdown(`Action: \`${item.action}\`\n\n`);
         md.appendMarkdown(`Module: ${item.module}\n\n`);
-        md.appendMarkdown(`Executions: **${item.total.toLocaleString()}**\n\n`);
+        md.appendMarkdown(`Invocations: **${item.total.toLocaleString()}**\n\n`);
         md.appendMarkdown(`Distinct states: ${item.distinct.toLocaleString()}`);
         return md;
     }
