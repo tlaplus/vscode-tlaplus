@@ -1,13 +1,16 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 import { runXMLExporter, ToolProcessInfo } from '../tla2tools';
 import { XMLParser } from 'fast-xml-parser';
 import { ToolOutputChannel } from '../outputChannels';
+import { ModuleRegistry } from './moduleRegistry';
 
 const symbolsOutChannel = new ToolOutputChannel('TLA+ Module Symbols');
 
 export interface ModuleSymbol {
     name: string;
-    module: string;
+    module: string;  // The module where this symbol is defined (e.g., "Sequences")
+    sourceModule?: string;  // The mega-module file this was parsed from (e.g., "Json")
     kind: vscode.SymbolKind;
     documentation?: string;
     signature?: string;
@@ -27,14 +30,42 @@ export class ModuleSymbolProvider {
     private cache = new Map<string, SymbolCache>();
     private readonly CACHE_TTL = 300000; // 5 minutes
     private megaModulePaths: string[] = [];
+    private moduleToMegaModule = new Map<string, string>();
+    private standardRegistry: ModuleRegistry | null = null;
+    private communityRegistry: ModuleRegistry | null = null;
+    private cacheDir = '';
 
     /**
      * Sets the paths to mega-modules that should be parsed for symbols.
      */
-    setMegaModulePaths(paths: string[]): void {
+    setMegaModulePaths(paths: string[], cacheDir: string): void {
         this.megaModulePaths = paths;
+        this.cacheDir = cacheDir;
         // Clear cache when paths change
         this.cache.clear();
+        // Load registries
+        this.loadRegistries();
+    }
+
+    /**
+     * Loads the module registries from disk.
+     */
+    private async loadRegistries(): Promise<void> {
+        try {
+            // Load standard modules registry
+            const standardPath = path.join(this.cacheDir, 'standard-modules.registry.json');
+            this.standardRegistry = new ModuleRegistry();
+            await this.standardRegistry.load(standardPath);
+
+            // Load community modules registry
+            const communityPath = path.join(this.cacheDir, 'community-modules.registry.json');
+            this.communityRegistry = new ModuleRegistry();
+            await this.communityRegistry.load(communityPath);
+
+            symbolsOutChannel.appendLine('Module registries loaded successfully');
+        } catch (error) {
+            symbolsOutChannel.appendLine(`Failed to load module registries: ${error}`);
+        }
     }
 
     /**
@@ -83,6 +114,11 @@ export class ModuleSymbolProvider {
     private async parseModuleSymbols(modulePath: string): Promise<ModuleSymbol[]> {
         const processInfo: ToolProcessInfo = await runXMLExporter(modulePath, false);
 
+        // Extract module name from file path (e.g., "/path/to/Json.tla" -> "Json")
+        const path = await import('path');
+        const moduleBasename = path.basename(modulePath, path.extname(modulePath));
+
+
         // Collect stdout
         let stdoutData = '';
         processInfo.process.stdout?.on('data', (data) => {
@@ -110,13 +146,23 @@ export class ModuleSymbolProvider {
             throw new Error('XML exporter produced no output');
         }
 
-        return this.parseXmlContent(stdoutData);
+        return this.parseXmlContent(stdoutData, moduleBasename);
+    }
+
+    /**
+     * Normalizes a module name by removing the .tla extension if present.
+     */
+    private normalizeModuleName(name: string): string {
+        if (name.endsWith('.tla')) {
+            return name.slice(0, -4);
+        }
+        return name;
     }
 
     /**
      * Parses XML content and extracts module symbols.
      */
-    private parseXmlContent(xmlContent: string): ModuleSymbol[] {
+    private parseXmlContent(xmlContent: string, sourceModuleName: string): ModuleSymbol[] {
         const symbols: ModuleSymbol[] = [];
 
         try {
@@ -132,16 +178,19 @@ export class ModuleSymbolProvider {
             }
 
             // Process all entries
+
             for (const entry of xmlObj.modules.context.entry) {
                 if (entry.UserDefinedOpKind) {
                     const opKind = entry.UserDefinedOpKind;
                     const name = opKind.uniquename;
-                    const moduleName = opKind.location?.filename || 'Unknown';
+                    const rawModuleName = opKind.location?.filename || 'Unknown';
+                    const moduleName = this.normalizeModuleName(rawModuleName);
 
                     if (name) {
                         symbols.push({
                             name,
                             module: moduleName,
+                            sourceModule: sourceModuleName,
                             kind: this.determineSymbolKind(
                                 parseInt(opKind.level || '0'),
                                 parseInt(opKind.arity || '0')
@@ -154,12 +203,14 @@ export class ModuleSymbolProvider {
                 } else if (entry.TheoremDefNode) {
                     const theoremNode = entry.TheoremDefNode;
                     const name = theoremNode.uniquename;
-                    const moduleName = theoremNode.location?.filename || 'Unknown';
+                    const rawModuleName = theoremNode.location?.filename || 'Unknown';
+                    const moduleName = this.normalizeModuleName(rawModuleName);
 
                     if (name) {
                         symbols.push({
                             name,
                             module: moduleName,
+                            sourceModule: sourceModuleName,
                             kind: vscode.SymbolKind.Boolean,
                             documentation: `Theorem from ${moduleName}`
                         });
@@ -167,12 +218,14 @@ export class ModuleSymbolProvider {
                 } else if (entry.AssumeDef) {
                     const assumeNode = entry.AssumeDef;
                     const name = assumeNode.uniquename;
-                    const moduleName = assumeNode.location?.filename || 'Unknown';
+                    const rawModuleName = assumeNode.location?.filename || 'Unknown';
+                    const moduleName = this.normalizeModuleName(rawModuleName);
 
                     if (name) {
                         symbols.push({
                             name,
                             module: moduleName,
+                            sourceModule: sourceModuleName,
                             kind: vscode.SymbolKind.Constructor,
                             documentation: `Assumption from ${moduleName}`
                         });
@@ -180,12 +233,14 @@ export class ModuleSymbolProvider {
                 } else if (entry.OpDeclNode) {
                     const declNode = entry.OpDeclNode;
                     const name = declNode.uniquename;
-                    const moduleName = declNode.location?.filename || 'Unknown';
+                    const rawModuleName = declNode.location?.filename || 'Unknown';
+                    const moduleName = this.normalizeModuleName(rawModuleName);
 
                     if (name) {
                         symbols.push({
                             name,
                             module: moduleName,
+                            sourceModule: sourceModuleName,
                             kind: this.determineSymbolKind(
                                 parseInt(declNode.level || '0'),
                                 parseInt(declNode.arity || '0')
@@ -265,8 +320,66 @@ export class ModuleSymbolProvider {
      * Gets symbols for a specific module name.
      */
     async getSymbolsForModule(moduleName: string): Promise<ModuleSymbol[]> {
-        const allSymbols = await this.getAllSymbols();
-        return allSymbols.filter(s => s.module === moduleName);
+        symbolsOutChannel.appendLine('\n=== getSymbolsForModule ===');
+        symbolsOutChannel.appendLine(`Requested module: "${moduleName}"`);
+
+        // Use the registry to get symbols that are exported by the requested module
+        const exportedSymbols: ModuleSymbol[] = [];
+
+        // Check standard registry
+        if (this.standardRegistry) {
+            const standardSymbolNames = this.standardRegistry.getModuleSymbols(moduleName);
+            symbolsOutChannel.appendLine(
+                `Found ${standardSymbolNames.length} symbols in standard registry for ${moduleName}`
+            );
+
+            if (standardSymbolNames.length > 0) {
+                // Get all parsed symbols from mega-modules
+                const allSymbols = await this.getAllSymbols();
+
+                // Find the actual symbol objects for the exported names
+                for (const symbolName of standardSymbolNames) {
+                    const symbol = allSymbols.find(s => s.name === symbolName);
+                    if (symbol) {
+                        // Create a new symbol with corrected module attribution
+                        exportedSymbols.push({
+                            ...symbol,
+                            module: moduleName  // Override to show it as coming from the requested module
+                        });
+                    }
+                }
+            }
+        }
+
+        // Check community registry
+        if (this.communityRegistry) {
+            const communitySymbolNames = this.communityRegistry.getModuleSymbols(moduleName);
+            symbolsOutChannel.appendLine(
+                `Found ${communitySymbolNames.length} symbols in community registry for ${moduleName}`
+            );
+
+            if (communitySymbolNames.length > 0) {
+                // Get all parsed symbols from mega-modules
+                const allSymbols = await this.getAllSymbols();
+
+                // Find the actual symbol objects for the exported names
+                for (const symbolName of communitySymbolNames) {
+                    const symbol = allSymbols.find(s => s.name === symbolName);
+                    if (symbol) {
+                        // Create a new symbol with corrected module attribution
+                        exportedSymbols.push({
+                            ...symbol,
+                            module: moduleName  // Override to show it as coming from the requested module
+                        });
+                    }
+                }
+            }
+        }
+
+        symbolsOutChannel.appendLine(`Returning ${exportedSymbols.length} symbols for ${moduleName}`);
+        symbolsOutChannel.appendLine('=== END getSymbolsForModule ===\n');
+
+        return exportedSymbols;
     }
 
     /**

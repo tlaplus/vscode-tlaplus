@@ -12,6 +12,7 @@ export interface ModuleInfo {
 export interface JarReader {
     listModules(jarPath: string): Promise<ModuleInfo[]>;
     extractModule(jarPath: string, modulePath: string): Promise<string>;
+    extractModuleContent(jarPath: string, modulePath: string): Promise<string>;
 }
 
 /**
@@ -140,6 +141,13 @@ export class JarModuleReader implements JarReader {
             '_JsonTrace', '_TLAPlusCounterExample', '_TLAPlusDebugger', 'SubsetValue'
         ];
         return internalModules.includes(moduleName) || moduleName.startsWith('_');
+    }
+
+    /**
+     * Alias for extractModule - extracts module content from JAR.
+     */
+    async extractModuleContent(jarPath: string, modulePath: string): Promise<string> {
+        return this.extractModule(jarPath, modulePath);
     }
 
     /**

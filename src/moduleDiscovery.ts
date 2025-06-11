@@ -94,7 +94,7 @@ export class ModuleDiscoveryManager {
                 path.join(cachePath, '_ALL_STANDARD.tla'),
                 path.join(cachePath, '_ALL_CM.tla')
             ];
-            this.symbolProvider.setMegaModulePaths(megaModulePaths);
+            this.symbolProvider.setMegaModulePaths(megaModulePaths, cachePath);
 
             // Watch for JAR file changes
             this.setupFileWatchers(toolsJarPath, communityJarPath);
@@ -252,13 +252,13 @@ export class ModuleDiscoveryManager {
 
                         progress.report({ increment: 80, message: 'Parsing module symbols...' });
                         // Force symbol reload by clearing paths and resetting
-                        this.symbolProvider.setMegaModulePaths([]);
                         const cachePath = this.generator ? this.generator.getCachePath() : '';
+                        this.symbolProvider.setMegaModulePaths([], cachePath);
                         const megaModulePaths = [
                             path.join(cachePath, '_ALL_STANDARD.tla'),
                             path.join(cachePath, '_ALL_CM.tla')
                         ];
-                        this.symbolProvider.setMegaModulePaths(megaModulePaths);
+                        this.symbolProvider.setMegaModulePaths(megaModulePaths, cachePath);
 
                         progress.report({ increment: 100, message: 'Module index updated!' });
                     });

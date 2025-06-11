@@ -185,6 +185,10 @@ export class ModuleExplorerTreeProvider implements vscode.TreeDataProvider<Modul
 
         if (element.itemType === 'module' && element.moduleInfo) {
             // Show symbols in module
+            console.log(
+                `[ModuleExplorer] Expanding module: "${element.moduleInfo.name}" ` +
+                `(category: ${element.moduleInfo.category})`
+            );
             const symbols = await this.getModuleSymbols(element.moduleInfo.name);
 
             // Group symbols by kind

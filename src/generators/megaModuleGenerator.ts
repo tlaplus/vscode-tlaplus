@@ -3,6 +3,8 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { promisify } from 'util';
 import { JarModuleReader, ModuleInfo } from '../utils/jarReader';
+import { ModuleRegistry } from '../symbols/moduleRegistry';
+import { ModuleParser } from '../parsers/moduleParser';
 
 const writeFile = promisify(fs.writeFile);
 const mkdir = promisify(fs.mkdir);
@@ -27,6 +29,9 @@ export class TlaMegaModuleGenerator implements MegaModuleGenerator {
     private readonly STANDARD_MODULE_NAME = '_ALL_STANDARD';
     private readonly COMMUNITY_MODULE_NAME = '_ALL_CM';
     private readonly TLAPS_MODULE_NAME = '_ALL_TLAPS';
+    private readonly moduleParser: ModuleParser;
+    private readonly standardRegistry: ModuleRegistry;
+    private readonly communityRegistry: ModuleRegistry;
 
     constructor(
         private readonly toolsJarPath: string,
@@ -35,6 +40,9 @@ export class TlaMegaModuleGenerator implements MegaModuleGenerator {
     ) {
         this.jarReader = new JarModuleReader();
         this.cacheDir = this.determineCacheDir();
+        this.moduleParser = new ModuleParser();
+        this.standardRegistry = new ModuleRegistry();
+        this.communityRegistry = new ModuleRegistry();
     }
 
     /**
@@ -76,12 +84,46 @@ export class TlaMegaModuleGenerator implements MegaModuleGenerator {
     }
 
     /**
+     * Ensures the temp directory exists.
+     */
+    private async ensureTempDir(): Promise<void> {
+        const tempDir = path.join(this.cacheDir, 'temp');
+        await mkdir(tempDir, { recursive: true });
+    }
+
+    /**
      * Generates the standard modules mega-module.
      */
     async generateStandardModules(): Promise<string> {
         const modules = await this.jarReader.listModules(this.toolsJarPath);
         const standardModules = modules.filter(m => m.category === 'standard');
 
+        // Clear and rebuild the registry
+        this.standardRegistry.clear();
+
+        // Parse each module individually to build the registry
+        console.log(`Building module registry for ${standardModules.length} standard modules...`);
+        for (const moduleInfo of standardModules) {
+            try {
+                // Extract module content from JAR
+                const moduleContent = await this.jarReader.extractModuleContent(
+                    this.toolsJarPath,
+                    moduleInfo.internalPath
+                );
+
+                // Parse the module and add to registry
+                await this.moduleParser.parseModule(moduleContent, moduleInfo.name, this.standardRegistry);
+            } catch (error) {
+                console.error(`Failed to parse module ${moduleInfo.name}:`, error);
+            }
+        }
+
+        // Save the registry
+        const registryPath = path.join(this.cacheDir, 'standard-modules.registry.json');
+        await this.standardRegistry.save(registryPath);
+        console.log(`Module registry saved to ${registryPath}`);
+
+        // Generate the mega-module
         const content = this.generateMegaModule(
             this.STANDARD_MODULE_NAME,
             standardModules,
@@ -103,6 +145,32 @@ export class TlaMegaModuleGenerator implements MegaModuleGenerator {
         const modules = await this.jarReader.listModules(this.communityJarPath);
         const communityModules = modules.filter(m => m.category === 'community');
 
+        // Clear and rebuild the registry
+        this.communityRegistry.clear();
+
+        // Parse each module individually to build the registry
+        console.log(`Building module registry for ${communityModules.length} community modules...`);
+        for (const moduleInfo of communityModules) {
+            try {
+                // Extract module content from JAR
+                const moduleContent = await this.jarReader.extractModuleContent(
+                    this.communityJarPath,
+                    moduleInfo.internalPath
+                );
+
+                // Parse the module and add to registry
+                await this.moduleParser.parseModule(moduleContent, moduleInfo.name, this.communityRegistry);
+            } catch (error) {
+                console.error(`Failed to parse module ${moduleInfo.name}:`, error);
+            }
+        }
+
+        // Save the registry
+        const registryPath = path.join(this.cacheDir, 'community-modules.registry.json');
+        await this.communityRegistry.save(registryPath);
+        console.log(`Module registry saved to ${registryPath}`);
+
+        // Generate the mega-module
         const content = this.generateMegaModule(
             this.COMMUNITY_MODULE_NAME,
             communityModules,
