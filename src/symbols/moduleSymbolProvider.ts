@@ -38,46 +38,149 @@ export class ModuleSymbolProvider {
     /**
      * Sets the paths to mega-modules that should be parsed for symbols.
      */
-    setMegaModulePaths(paths: string[], cacheDir: string): void {
+    async setMegaModulePaths(paths: string[], cacheDir: string): Promise<void> {
+        symbolsOutChannel.appendLine('\n=== setMegaModulePaths called ===');
+        symbolsOutChannel.appendLine(`Cache directory: ${cacheDir}`);
+        symbolsOutChannel.appendLine(`Number of mega-module paths: ${paths.length}`);
+        paths.forEach((p, i) => {
+            symbolsOutChannel.appendLine(`  Path ${i}: ${p}`);
+        });
+
         this.megaModulePaths = paths;
         this.cacheDir = cacheDir;
         // Clear cache when paths change
         this.cache.clear();
         // Load registries
-        this.loadRegistries();
+        await this.loadRegistries();
+
+        symbolsOutChannel.appendLine('=== END setMegaModulePaths ===\n');
     }
 
     /**
      * Loads the module registries from disk.
      */
     private async loadRegistries(): Promise<void> {
+        symbolsOutChannel.appendLine('\n=== loadRegistries called ===');
         try {
             // Load standard modules registry
             const standardPath = path.join(this.cacheDir, 'standard-modules.registry.json');
+            symbolsOutChannel.appendLine(`Loading standard registry from: ${standardPath}`);
             this.standardRegistry = new ModuleRegistry();
-            await this.standardRegistry.load(standardPath);
+            const standardLoaded = await this.standardRegistry.load(standardPath);
+            symbolsOutChannel.appendLine(`  Standard registry loaded: ${standardLoaded}`);
+            if (standardLoaded) {
+                const data = this.standardRegistry.getData();
+                symbolsOutChannel.appendLine(`  Standard modules: ${Object.keys(data.moduleExports).length}`);
+                symbolsOutChannel.appendLine(`  Standard symbols: ${Object.keys(data.symbols).length}`);
+            }
 
             // Load community modules registry
             const communityPath = path.join(this.cacheDir, 'community-modules.registry.json');
+            symbolsOutChannel.appendLine(`Loading community registry from: ${communityPath}`);
             this.communityRegistry = new ModuleRegistry();
-            await this.communityRegistry.load(communityPath);
+            const communityLoaded = await this.communityRegistry.load(communityPath);
+            symbolsOutChannel.appendLine(`  Community registry loaded: ${communityLoaded}`);
+            if (communityLoaded) {
+                const data = this.communityRegistry.getData();
+                symbolsOutChannel.appendLine(`  Community modules: ${Object.keys(data.moduleExports).length}`);
+                symbolsOutChannel.appendLine(`  Community symbols: ${Object.keys(data.symbols).length}`);
+            }
 
             symbolsOutChannel.appendLine('Module registries loaded successfully');
         } catch (error) {
             symbolsOutChannel.appendLine(`Failed to load module registries: ${error}`);
         }
+        symbolsOutChannel.appendLine('=== END loadRegistries ===\n');
+    }
+
+    /**
+     * Gets all symbols from mega-modules (internal use).
+     */
+    private async getAllSymbolsFromMegaModules(): Promise<ModuleSymbol[]> {
+        symbolsOutChannel.appendLine('\n=== getAllSymbolsFromMegaModules called ===');
+        const allSymbols: ModuleSymbol[] = [];
+
+        // Parse mega-modules to get all symbols
+        for (const modulePath of this.megaModulePaths) {
+            symbolsOutChannel.appendLine(`Parsing mega-module: ${modulePath}`);
+            const symbols = await this.getModuleSymbols(modulePath);
+            symbolsOutChannel.appendLine(`  Got ${symbols.length} symbols from ${modulePath}`);
+            allSymbols.push(...symbols);
+        }
+
+        symbolsOutChannel.appendLine(`Total symbols from mega-modules: ${allSymbols.length}`);
+        symbolsOutChannel.appendLine('=== END getAllSymbolsFromMegaModules ===\n');
+        return allSymbols;
     }
 
     /**
      * Gets all available module symbols.
      */
     async getAllSymbols(): Promise<ModuleSymbol[]> {
+        symbolsOutChannel.appendLine('\n=== getAllSymbols called ===');
+
         const allSymbols: ModuleSymbol[] = [];
 
-        for (const modulePath of this.megaModulePaths) {
-            const symbols = await this.getModuleSymbols(modulePath);
-            allSymbols.push(...symbols);
+        // If we don't have registries loaded, fall back to mega-module parsing
+        if (!this.standardRegistry && !this.communityRegistry) {
+            symbolsOutChannel.appendLine('No registries loaded, falling back to mega-module parsing');
+            return this.getAllSymbolsFromMegaModules();
         }
+
+        // Build symbols directly from registry data
+        // This avoids XMLExporter issues with mega-modules that EXTEND modules in JARs
+
+        if (this.standardRegistry) {
+            const data = this.standardRegistry.getData();
+            symbolsOutChannel.appendLine(
+                `Processing ${Object.keys(data.symbols).length} symbols from standard registry`
+            );
+
+            for (const [symbolName, symbolInfo] of Object.entries(data.symbols)) {
+                // Create a minimal ModuleSymbol object
+                const symbol: ModuleSymbol = {
+                    name: symbolName,
+                    module: symbolInfo.module,
+                    kind: this.getSymbolKind(symbolInfo.kind),
+                    arity: 0, // We don't have arity info in registry
+                    documentation: `From module: ${symbolInfo.module}\nType: ${symbolInfo.kind}`,
+                    level: 1
+                };
+                allSymbols.push(symbol);
+            }
+        }
+
+        if (this.communityRegistry) {
+            const data = this.communityRegistry.getData();
+            symbolsOutChannel.appendLine(
+                `Processing ${Object.keys(data.symbols).length} symbols from community registry`
+            );
+
+            for (const [symbolName, symbolInfo] of Object.entries(data.symbols)) {
+                // Create a minimal ModuleSymbol object
+                const symbol: ModuleSymbol = {
+                    name: symbolName,
+                    module: symbolInfo.module,
+                    kind: this.getSymbolKind(symbolInfo.kind),
+                    arity: 0, // We don't have arity info in registry
+                    documentation: `From module: ${symbolInfo.module}\nType: ${symbolInfo.kind}`,
+                    level: 1
+                };
+                allSymbols.push(symbol);
+            }
+        }
+
+        symbolsOutChannel.appendLine(`Total symbols collected: ${allSymbols.length}`);
+
+        // Log sample of symbols for debugging
+        if (allSymbols.length > 0) {
+            symbolsOutChannel.appendLine('Sample symbols:');
+            allSymbols.slice(0, 5).forEach(s => {
+                symbolsOutChannel.appendLine(`  - ${s.name} from ${s.module}`);
+            });
+        }
+
+        symbolsOutChannel.appendLine('=== END getAllSymbols ===\n');
 
         return allSymbols;
     }
@@ -89,11 +192,14 @@ export class ModuleSymbolProvider {
         // Check cache first
         const cached = this.cache.get(modulePath);
         if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+            symbolsOutChannel.appendLine(`  Using cached symbols for ${modulePath} (${cached.symbols.length} symbols)`);
             return cached.symbols;
         }
 
         try {
+            symbolsOutChannel.appendLine(`  Parsing symbols from ${modulePath}...`);
             const symbols = await this.parseModuleSymbols(modulePath);
+            symbolsOutChannel.appendLine(`  Parsed ${symbols.length} symbols from ${modulePath}`);
 
             // Cache the results
             this.cache.set(modulePath, {
@@ -139,13 +245,18 @@ export class ModuleSymbolProvider {
         });
 
         if (exitCode !== 0) {
+            symbolsOutChannel.appendLine(`XMLExporter failed for ${modulePath}:`);
+            symbolsOutChannel.appendLine(`  Exit code: ${exitCode}`);
+            symbolsOutChannel.appendLine(`  Stderr: ${stderrData}`);
             throw new Error(`XML exporter failed with exit code ${exitCode}: ${stderrData}`);
         }
 
         if (!stdoutData) {
+            symbolsOutChannel.appendLine(`XMLExporter produced no output for ${modulePath}`);
             throw new Error('XML exporter produced no output');
         }
 
+        symbolsOutChannel.appendLine(`XMLExporter output length: ${stdoutData.length} chars`);
         return this.parseXmlContent(stdoutData, moduleBasename);
     }
 
@@ -178,6 +289,8 @@ export class ModuleSymbolProvider {
             }
 
             // Process all entries
+            symbolsOutChannel.appendLine(`  XML contains ${xmlObj.modules.context.entry.length} entries`);
+            const modulesSeen = new Set<string>();
 
             for (const entry of xmlObj.modules.context.entry) {
                 if (entry.UserDefinedOpKind) {
@@ -187,6 +300,7 @@ export class ModuleSymbolProvider {
                     const moduleName = this.normalizeModuleName(rawModuleName);
 
                     if (name) {
+                        modulesSeen.add(moduleName);
                         symbols.push({
                             name,
                             module: moduleName,
@@ -207,6 +321,7 @@ export class ModuleSymbolProvider {
                     const moduleName = this.normalizeModuleName(rawModuleName);
 
                     if (name) {
+                        modulesSeen.add(moduleName);
                         symbols.push({
                             name,
                             module: moduleName,
@@ -222,6 +337,7 @@ export class ModuleSymbolProvider {
                     const moduleName = this.normalizeModuleName(rawModuleName);
 
                     if (name) {
+                        modulesSeen.add(moduleName);
                         symbols.push({
                             name,
                             module: moduleName,
@@ -237,6 +353,7 @@ export class ModuleSymbolProvider {
                     const moduleName = this.normalizeModuleName(rawModuleName);
 
                     if (name) {
+                        modulesSeen.add(moduleName);
                         symbols.push({
                             name,
                             module: moduleName,
@@ -252,6 +369,9 @@ export class ModuleSymbolProvider {
                     }
                 }
             }
+
+            symbolsOutChannel.appendLine(`  Modules found in XML: ${Array.from(modulesSeen).join(', ')}`);
+            symbolsOutChannel.appendLine(`  Total symbols parsed: ${symbols.length}`);
 
             return symbols;
         } catch (error) {
@@ -276,7 +396,7 @@ export class ModuleSymbolProvider {
     /**
      * Generates documentation for a symbol.
      */
-    private generateDocumentation(name: string, module: string, node: {
+    private generateDocumentation(_name: string, module: string, node: {
         level?: string;
         kind?: string;
         params?: string | { name: string }[];
@@ -317,6 +437,26 @@ export class ModuleSymbolProvider {
     }
 
     /**
+     * Converts a registry kind string to vscode.SymbolKind.
+     */
+    private getSymbolKind(kind: string): vscode.SymbolKind {
+        switch (kind) {
+            case 'operator':
+                return vscode.SymbolKind.Function;
+            case 'constant':
+                return vscode.SymbolKind.Constant;
+            case 'variable':
+                return vscode.SymbolKind.Variable;
+            case 'theorem':
+                return vscode.SymbolKind.Property;
+            case 'assumption':
+                return vscode.SymbolKind.Property;
+            default:
+                return vscode.SymbolKind.Variable;
+        }
+    }
+
+    /**
      * Gets symbols for a specific module name.
      */
     async getSymbolsForModule(moduleName: string): Promise<ModuleSymbol[]> {
@@ -335,7 +475,7 @@ export class ModuleSymbolProvider {
 
             if (standardSymbolNames.length > 0) {
                 // Get all parsed symbols from mega-modules
-                const allSymbols = await this.getAllSymbols();
+                const allSymbols = await this.getAllSymbolsFromMegaModules();
 
                 // Find the actual symbol objects for the exported names
                 for (const symbolName of standardSymbolNames) {
@@ -360,7 +500,7 @@ export class ModuleSymbolProvider {
 
             if (communitySymbolNames.length > 0) {
                 // Get all parsed symbols from mega-modules
-                const allSymbols = await this.getAllSymbols();
+                const allSymbols = await this.getAllSymbolsFromMegaModules();
 
                 // Find the actual symbol objects for the exported names
                 for (const symbolName of communitySymbolNames) {
