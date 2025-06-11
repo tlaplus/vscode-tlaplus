@@ -25,9 +25,46 @@ export class ModuleHoverProvider implements vscode.HoverProvider {
             return undefined;
         }
 
+        // Check if this is a module name in an EXTENDS statement
+        const line = document.lineAt(position.line).text;
+        const beforeWord = line.substring(0, wordRange.start.character);
+
+        // Check if we're in an EXTENDS statement
+        let inExtendsStatement = false;
+        if (/EXTENDS\s*$/.test(beforeWord) || /EXTENDS\s+[\w\s,]*$/.test(beforeWord)) {
+            inExtendsStatement = true;
+        } else {
+            // Check if we're on a continuation line of an EXTENDS statement
+            for (let i = position.line - 1; i >= 0; i--) {
+                const prevLine = document.lineAt(i).text;
+                if (/EXTENDS\s+[\w\s,]*$/.test(prevLine)) {
+                    // Check if there's no other statement between EXTENDS and current position
+                    let hasOtherStatement = false;
+                    for (let j = i + 1; j < position.line; j++) {
+                        const checkLine = document.lineAt(j).text.trim();
+                        if (checkLine && !checkLine.startsWith(',') && !/^[\w\s,]+$/.test(checkLine)) {
+                            hasOtherStatement = true;
+                            break;
+                        }
+                    }
+                    if (!hasOtherStatement) {
+                        inExtendsStatement = true;
+                    }
+                    break;
+                }
+                // Stop if we hit another statement
+                if (prevLine.trim() && !/^[\w\s,]+$/.test(prevLine.trim())) {
+                    break;
+                }
+            }
+        }
+
+        if (inExtendsStatement) {
+            // Provide hover for module name
+            return this.provideModuleHover(word, wordRange);
+        }
+
         // Check if this is a qualified reference (Module!Symbol)
-        const lineText = document.lineAt(position.line).text;
-        const beforeWord = lineText.substring(0, wordRange.start.character);
         const qualifiedMatch = beforeWord.match(/([a-zA-Z_][a-zA-Z0-9_]*)!$/);
 
         let symbols;
@@ -76,13 +113,6 @@ export class ModuleHoverProvider implements vscode.HoverProvider {
             if (symbol.documentation) {
                 contents.appendMarkdown(symbol.documentation);
             }
-
-            // Add usage example for common operators
-            const example = this.getUsageExample(symbol.name, symbol.module);
-            if (example) {
-                contents.appendMarkdown('\n\n**Example:**\n');
-                contents.appendCodeblock(example, 'tlaplus');
-            }
         }
 
         return new vscode.Hover(contents, wordRange);
@@ -104,54 +134,85 @@ export class ModuleHoverProvider implements vscode.HoverProvider {
         }
     }
 
+
     /**
-     * Gets usage examples for well-known operators.
+     * Provides hover information for module names in EXTENDS statements.
      */
-    private getUsageExample(operatorName: string, moduleName: string): string | undefined {
-        const examples: Record<string, string> = {
-            // Sequences module
-            'Append': 'Append(<<1, 2, 3>>, 4) = <<1, 2, 3, 4>>',
-            'Head': 'Head(<<1, 2, 3>>) = 1',
-            'Tail': 'Tail(<<1, 2, 3>>) = <<2, 3>>',
-            'Len': 'Len(<<1, 2, 3>>) = 3',
-            'SubSeq': 'SubSeq(<<1, 2, 3, 4>>, 2, 3) = <<2, 3>>',
-            'SelectSeq': 'SelectSeq(<<1, 2, 3, 4>>, LAMBDA x: x > 2) = <<3, 4>>',
+    private async provideModuleHover(moduleName: string, wordRange: vscode.Range): Promise<vscode.Hover | undefined> {
+        const contents = new vscode.MarkdownString();
 
-            // FiniteSets module
-            'Cardinality': 'Cardinality({1, 2, 3}) = 3',
-            'IsFiniteSet': 'IsFiniteSet({1, 2, 3}) = TRUE',
+        // Add module name header
+        contents.appendCodeblock(moduleName, 'tlaplus');
+        contents.appendMarkdown('\n\n');
 
-            // Integers module
-            'Int': '42 \\in Int',
-            'Nat': '5 \\in Nat',
+        // Get symbols exported by this module
+        const symbols = await this.symbolProvider.getSymbolsForModule(moduleName);
 
-            // Bags module
-            'BagToSet': 'BagToSet(<<1, 2, 2, 3>>) = {1, 2, 3}',
-            'SetToBag': 'SetToBag({1, 2, 3}) = <<1, 2, 3>>',
-            'BagIn': 'BagIn(2, <<1, 2, 2, 3>>)',
-            'EmptyBag': '<<1, 2>> (+) EmptyBag = <<1, 2>>',
+        if (symbols.length > 0) {
+            // Group symbols by kind
+            const operators = symbols.filter(s => s.kind === vscode.SymbolKind.Function);
+            const constants = symbols.filter(s => s.kind === vscode.SymbolKind.Constant);
+            const variables = symbols.filter(s => s.kind === vscode.SymbolKind.Variable);
+            const others = symbols.filter(s =>
+                s.kind !== vscode.SymbolKind.Function &&
+                s.kind !== vscode.SymbolKind.Constant &&
+                s.kind !== vscode.SymbolKind.Variable
+            );
 
-            // TLC module
-            'Print': 'Print("Debug message", value)',
-            'PrintT': 'PrintT("Debug message")',
-            'Assert': 'Assert(x > 0, "x must be positive")',
-            'JavaTime': 'JavaTime',
-            'TLCGet': 'TLCGet("stats")',
-            'TLCSet': 'TLCSet("exit", TRUE)',
 
-            // Randomization module
-            'RandomElement': 'RandomElement({1, 2, 3, 4, 5})',
+            // List exported symbols
+            contents.appendMarkdown(`**Exports ${symbols.length} symbols:**\n\n`);
 
-            // Json module
-            'ToJson': 'ToJson([a |-> 1, b |-> "hello"])',
-            'ToJsonArray': 'ToJsonArray(<<1, 2, 3>>)',
-            'ToJsonObject': 'ToJsonObject([a |-> 1, b |-> 2])',
+            if (operators.length > 0) {
+                contents.appendMarkdown(`**Operators (${operators.length}):**\n`);
+                const operatorNames = operators.slice(0, 10).map(o => {
+                    if (o.arity && o.arity > 0) {
+                        return `${o.name}/${o.arity}`;
+                    }
+                    return o.name;
+                });
+                contents.appendMarkdown(`\`${operatorNames.join('`, `')}\``);
+                if (operators.length > 10) {
+                    contents.appendMarkdown(` and ${operators.length - 10} more...`);
+                }
+                contents.appendMarkdown('\n\n');
+            }
 
-            // RealTime module
-            'RTnow': 'RTnow',
-            'RTBound': 'RTBound(op, delta)'
-        };
+            if (constants.length > 0) {
+                contents.appendMarkdown(`**Constants (${constants.length}):**\n`);
+                const constantNames = constants.slice(0, 10).map(c => c.name);
+                contents.appendMarkdown(`\`${constantNames.join('`, `')}\``);
+                if (constants.length > 10) {
+                    contents.appendMarkdown(` and ${constants.length - 10} more...`);
+                }
+                contents.appendMarkdown('\n\n');
+            }
 
-        return examples[operatorName];
+            if (variables.length > 0) {
+                contents.appendMarkdown(`**Variables (${variables.length}):**\n`);
+                const variableNames = variables.slice(0, 10).map(v => v.name);
+                contents.appendMarkdown(`\`${variableNames.join('`, `')}\``);
+                if (variables.length > 10) {
+                    contents.appendMarkdown(` and ${variables.length - 10} more...`);
+                }
+                contents.appendMarkdown('\n\n');
+            }
+
+            if (others.length > 0) {
+                contents.appendMarkdown(`**Other symbols (${others.length}):**\n`);
+                const otherNames = others.slice(0, 10).map(o => o.name);
+                contents.appendMarkdown(`\`${otherNames.join('`, `')}\``);
+                if (others.length > 10) {
+                    contents.appendMarkdown(` and ${others.length - 10} more...`);
+                }
+                contents.appendMarkdown('\n\n');
+            }
+        } else {
+            contents.appendMarkdown('**Type:** Module\n\n');
+            contents.appendMarkdown('*No symbols found in registry. Module may need to be parsed.*\n');
+        }
+
+        return new vscode.Hover(contents, wordRange);
     }
+
 }

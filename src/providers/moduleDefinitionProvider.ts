@@ -2,16 +2,18 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { JarModuleReader } from '../utils/jarReader';
 import { moduleSearchPaths } from '../paths';
+import { ModuleSymbolProvider } from '../symbols/moduleSymbolProvider';
 
 /**
- * Provides go-to-definition support for module names in EXTENDS statements.
+ * Provides go-to-definition support for module names in EXTENDS statements and operators.
  */
 export class ModuleDefinitionProvider implements vscode.DefinitionProvider {
     private readonly jarReader: JarModuleReader;
 
     constructor(
         private readonly toolsJarPath: string,
-        private readonly communityJarPath: string
+        private readonly communityJarPath: string,
+        private readonly symbolProvider: ModuleSymbolProvider
     ) {
         this.jarReader = new JarModuleReader();
     }
@@ -66,13 +68,19 @@ export class ModuleDefinitionProvider implements vscode.DefinitionProvider {
             }
         }
 
-        if (!inExtendsStatement) {
-            return undefined;
+        if (inExtendsStatement) {
+            // Handle module name in EXTENDS
+            return this.findModuleDefinition(word);
         }
 
-        // Try to find the module
-        const moduleName = word;
+        // Otherwise, try to find operator/symbol definition
+        return this.findOperatorDefinition(document, word, position, wordRange);
+    }
 
+    /**
+     * Finds the definition location for a module name.
+     */
+    private async findModuleDefinition(moduleName: string): Promise<vscode.Definition | undefined> {
         // 1. First, check workspace folders for local modules
         if (vscode.workspace.workspaceFolders) {
             for (const folder of vscode.workspace.workspaceFolders) {
@@ -127,5 +135,48 @@ export class ModuleDefinitionProvider implements vscode.DefinitionProvider {
         }
 
         return undefined;
+    }
+
+    /**
+     * Finds the definition location for an operator/symbol.
+     */
+    private async findOperatorDefinition(
+        document: vscode.TextDocument,
+        symbolName: string,
+        position: vscode.Position,
+        wordRange: vscode.Range
+    ): Promise<vscode.Definition | undefined> {
+        // Check if this is a qualified reference (Module!Symbol)
+        const line = document.lineAt(position.line).text;
+        const beforeWord = line.substring(0, wordRange.start.character);
+        const qualifiedMatch = beforeWord.match(/([a-zA-Z_][a-zA-Z0-9_]*)!$/);
+
+        let symbols;
+        if (qualifiedMatch) {
+            // Qualified reference - search in specific module
+            const moduleName = qualifiedMatch[1];
+            symbols = await this.symbolProvider.getSymbolsForModule(moduleName);
+            symbols = symbols.filter(s => s.name === symbolName);
+        } else {
+            // Unqualified reference - search all symbols
+            symbols = await this.symbolProvider.searchSymbols(symbolName);
+            symbols = symbols.filter(s => s.name === symbolName);
+        }
+
+        if (symbols.length === 0) {
+            return undefined;
+        }
+
+        // For now, return the location of the module that defines the symbol
+        // In the future, we could parse the module to find the exact line
+        const symbol = symbols[0]; // Take the first match
+        const moduleName = symbol.module;
+
+        // Try to find the module file
+        const moduleDefinition = await this.findModuleDefinition(moduleName);
+
+        // If we found the module, return it
+        // In the future, we could enhance this to find the exact line within the module
+        return moduleDefinition;
     }
 }

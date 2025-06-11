@@ -148,7 +148,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             TLAPLUS_FILE_SELECTOR,
             new ModuleDefinitionProvider(
                 path.resolve(context.extensionPath, 'tools/tla2tools.jar'),
-                path.resolve(context.extensionPath, 'tools/CommunityModules-deps.jar')
+                path.resolve(context.extensionPath, 'tools/CommunityModules-deps.jar'),
+                moduleDiscovery.getSymbolProvider()
             )
         ),
         vscode.commands.registerCommand(
