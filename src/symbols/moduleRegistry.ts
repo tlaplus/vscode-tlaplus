@@ -36,6 +36,15 @@ export interface SymbolInfo {
     module: string;      // The module that exports this symbol
     kind: 'operator' | 'constant' | 'variable' | 'theorem' | 'assumption';
     isLocal?: boolean;   // Whether this symbol is LOCAL (not exported)
+    // Enhanced fields for complete symbol information:
+    arity: number;       // Number of parameters (0 for constants/variables)
+    parameters?: Array<{name: string; type?: string}>; // Parameter details
+    documentation?: string; // Documentation/comments
+    level: number;       // Symbol level (1 for basic, 2+ for higher-order)
+    location?: {         // Location in source file
+        line: number;
+        column: number;
+    };
 }
 
 export interface ModuleRegistryData {
@@ -56,16 +65,26 @@ export interface ModuleRegistryData {
  */
 export class ModuleRegistry {
     private data: ModuleRegistryData = {
-        version: '1.0',
+        version: '2.0',  // Updated for enhanced symbol information
         timestamp: new Date().toISOString(),
         symbols: {},
         moduleExports: {}
     };
 
     /**
-     * Adds a symbol to the registry.
+     * Adds a symbol to the registry with full symbol information.
      */
-    addSymbol(symbolName: string, moduleName: string, kind: SymbolInfo['kind'], isLocal: boolean = false): void {
+    addSymbol(
+        symbolName: string,
+        moduleName: string,
+        kind: SymbolInfo['kind'],
+        arity: number = 0,
+        parameters?: Array<{name: string; type?: string}>,
+        documentation?: string,
+        level: number = 1,
+        isLocal: boolean = false,
+        location?: {line: number; column: number}
+    ): void {
         // Don't track LOCAL symbols as they're not exported
         if (isLocal) {
             return;
@@ -74,7 +93,12 @@ export class ModuleRegistry {
         this.data.symbols[symbolName] = {
             module: moduleName,
             kind,
-            isLocal
+            isLocal,
+            arity,
+            parameters,
+            documentation,
+            level,
+            location
         };
 
         // Add to module exports
@@ -147,7 +171,7 @@ export class ModuleRegistry {
      */
     clear(): void {
         this.data = {
-            version: '1.0',
+            version: '2.0',  // Updated for enhanced symbol information
             timestamp: new Date().toISOString(),
             symbols: {},
             moduleExports: {}

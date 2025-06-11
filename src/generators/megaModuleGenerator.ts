@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { promisify } from 'util';
-import { JarModuleReader, ModuleInfo } from '../utils/jarReader';
+import { JarModuleReader } from '../utils/jarReader';
 import { ModuleRegistry } from '../symbols/moduleRegistry';
 import { ModuleParser } from '../parsers/moduleParser';
 
@@ -11,24 +11,21 @@ const mkdir = promisify(fs.mkdir);
 const exists = promisify(fs.exists);
 const stat = promisify(fs.stat);
 
-export interface MegaModuleGenerator {
-    generateStandardModules(): Promise<string>;
-    generateCommunityModules(): Promise<string>;
-    generateTLAPSModules(): Promise<string>;
+export interface ModuleRegistryGenerator {
+    generateStandardModules(): Promise<void>;
+    generateCommunityModules(): Promise<void>;
     getCachePath(): string;
     isStale(): Promise<boolean>;
+    clearCache(): Promise<void>;
 }
 
 
 /**
- * Generates mega-modules that EXTEND all available TLA+ modules.
+ * Generates module registries for TLA+ standard and community modules.
  */
-export class TlaMegaModuleGenerator implements MegaModuleGenerator {
+export class TlaMegaModuleGenerator implements ModuleRegistryGenerator {
     private readonly jarReader: JarModuleReader;
     private readonly cacheDir: string;
-    private readonly STANDARD_MODULE_NAME = '_ALL_STANDARD';
-    private readonly COMMUNITY_MODULE_NAME = '_ALL_CM';
-    private readonly TLAPS_MODULE_NAME = '_ALL_TLAPS';
     private readonly moduleParser: ModuleParser;
     private readonly standardRegistry: ModuleRegistry;
     private readonly communityRegistry: ModuleRegistry;
@@ -92,9 +89,11 @@ export class TlaMegaModuleGenerator implements MegaModuleGenerator {
     }
 
     /**
-     * Generates the standard modules mega-module.
+     * Generates the standard modules registry.
      */
-    async generateStandardModules(): Promise<string> {
+    async generateStandardModules(): Promise<void> {
+        await this.ensureCacheDir();
+
         const modules = await this.jarReader.listModules(this.toolsJarPath);
         const standardModules = modules.filter(m => m.category === 'standard');
 
@@ -121,27 +120,15 @@ export class TlaMegaModuleGenerator implements MegaModuleGenerator {
         // Save the registry
         const registryPath = path.join(this.cacheDir, 'standard-modules.registry.json');
         await this.standardRegistry.save(registryPath);
-        console.log(`Module registry saved to ${registryPath}`);
-
-        // Generate the mega-module
-        const content = this.generateMegaModule(
-            this.STANDARD_MODULE_NAME,
-            standardModules,
-            'TLA+ Standard Modules',
-            ''
-        );
-
-        const filePath = path.join(this.cacheDir, `${this.STANDARD_MODULE_NAME}.tla`);
-        await this.ensureCacheDir();
-        await writeFile(filePath, content, 'utf8');
-
-        return filePath;
+        console.log(`Standard module registry saved to ${registryPath}`);
     }
 
     /**
-     * Generates the community modules mega-module.
+     * Generates the community modules registry.
      */
-    async generateCommunityModules(): Promise<string> {
+    async generateCommunityModules(): Promise<void> {
+        await this.ensureCacheDir();
+
         const modules = await this.jarReader.listModules(this.communityJarPath);
         const communityModules = modules.filter(m => m.category === 'community');
 
@@ -168,39 +155,9 @@ export class TlaMegaModuleGenerator implements MegaModuleGenerator {
         // Save the registry
         const registryPath = path.join(this.cacheDir, 'community-modules.registry.json');
         await this.communityRegistry.save(registryPath);
-        console.log(`Module registry saved to ${registryPath}`);
-
-        // Generate the mega-module
-        const content = this.generateMegaModule(
-            this.COMMUNITY_MODULE_NAME,
-            communityModules,
-            'CommunityModules',
-            'Repository: https://github.com/tlaplus/CommunityModules'
-        );
-
-        const filePath = path.join(this.cacheDir, `${this.COMMUNITY_MODULE_NAME}.tla`);
-        await this.ensureCacheDir();
-        await writeFile(filePath, content, 'utf8');
-
-        return filePath;
+        console.log(`Community module registry saved to ${registryPath}`);
     }
 
-    /**
-     * Generates the TLAPS modules mega-module.
-     * Note: This is a placeholder for future TLAPS integration.
-     */
-    async generateTLAPSModules(): Promise<string> {
-        // TODO: Implement when TLAPS JAR is available
-        const filePath = path.join(this.cacheDir, `${this.TLAPS_MODULE_NAME}.tla`);
-        const content = `---- MODULE ${this.TLAPS_MODULE_NAME} ----
-(* TLAPS modules will be available in a future release *)
-====`;
-
-        await this.ensureCacheDir();
-        await writeFile(filePath, content, 'utf8');
-
-        return filePath;
-    }
 
     /**
      * Checks if the cached modules are stale.
@@ -212,9 +169,9 @@ export class TlaMegaModuleGenerator implements MegaModuleGenerator {
                 return true;
             }
 
-            // Check if mega-module files exist
-            const standardPath = path.join(this.cacheDir, `${this.STANDARD_MODULE_NAME}.tla`);
-            const communityPath = path.join(this.cacheDir, `${this.COMMUNITY_MODULE_NAME}.tla`);
+            // Check if registry files exist
+            const standardPath = path.join(this.cacheDir, 'standard-modules.registry.json');
+            const communityPath = path.join(this.cacheDir, 'community-modules.registry.json');
 
             if (!await exists(standardPath) || !await exists(communityPath)) {
                 return true;
@@ -239,100 +196,23 @@ export class TlaMegaModuleGenerator implements MegaModuleGenerator {
         }
     }
 
-    /**
-     * Generates a mega-module content.
-     */
-    private generateMegaModule(
-        moduleName: string,
-        modules: ModuleInfo[],
-        description: string,
-        additionalInfo: string
-    ): string {
-        const timestamp = new Date().toISOString();
-        const sortedModules = modules.sort((a, b) => a.name.localeCompare(b.name));
-
-        // Split modules into chunks of 10 for better formatting
-        const moduleChunks: string[][] = [];
-        for (let i = 0; i < sortedModules.length; i += 10) {
-            moduleChunks.push(sortedModules.slice(i, i + 10).map(m => m.name));
-        }
-
-        let content = `---- MODULE ${moduleName} ----
-(* Auto-generated index of ${description}
- * Generated: ${timestamp}
- * Total modules: ${modules.length}`;
-
-        if (additionalInfo) {
-            content += `\n * ${additionalInfo}`;
-        }
-
-        content += '\n *)\n \n';
-
-        if (moduleChunks.length > 0) {
-            content += 'EXTENDS ';
-            moduleChunks.forEach((chunk, index) => {
-                if (index > 0) {
-                    content += ',\n        ';
-                }
-                content += chunk.join(', ');
-            });
-        }
-
-        // Add excluded modules comment if any
-        const excludedModules = this.getExcludedModules(moduleName);
-        if (excludedModules.length > 0) {
-            content += `\n        \n(* Internal modules excluded: ${excludedModules.join(', ')} *)`;
-        }
-
-        content += '\n====';
-
-        return content;
-    }
-
-    /**
-     * Gets the list of excluded modules for a given mega-module.
-     */
-    private getExcludedModules(moduleName: string): string[] {
-        if (moduleName === this.STANDARD_MODULE_NAME) {
-            return [
-                'MC', 'MCAliases', 'MCRealTime', '_JsonTrace',
-                '_TLAPlusCounterExample', '_TLAPlusDebugger', 'SubsetValue'
-            ];
-        }
-        return [];
-    }
-
-    /**
-     * Regenerates all mega-modules if needed.
-     */
-    async regenerateIfNeeded(): Promise<boolean> {
-        if (await this.isStale()) {
-            await this.generateStandardModules();
-            await this.generateCommunityModules();
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * Forces regeneration of all mega-modules.
-     */
-    async forceRegenerate(): Promise<void> {
-        await this.generateStandardModules();
-        await this.generateCommunityModules();
-    }
 
     /**
      * Clears the cache directory.
      */
     async clearCache(): Promise<void> {
-        if (await exists(this.cacheDir)) {
-            const files = await promisify(fs.readdir)(this.cacheDir);
-            for (const file of files) {
-                if (file.endsWith('.tla')) {
-                    await promisify(fs.unlink)(path.join(this.cacheDir, file));
-                }
+        const fs = await import('fs');
+        const { promisify } = await import('util');
+        const rm = promisify(fs.rm);
+
+        try {
+            if (await exists(this.cacheDir)) {
+                await rm(this.cacheDir, { recursive: true, force: true });
             }
+        } catch (error) {
+            console.error('Failed to clear cache:', error);
+            throw error;
         }
     }
+
 }

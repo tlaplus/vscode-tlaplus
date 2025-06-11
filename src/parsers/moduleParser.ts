@@ -41,10 +41,20 @@ export class ModuleParser {
             // Extract symbols defined in this module
             const definedSymbols = this.extractDefinedSymbols(moduleContent, moduleName);
 
-            // Add symbols to registry
+            // Add symbols to registry with enhanced information
             let addedCount = 0;
             for (const symbol of definedSymbols) {
-                registry.addSymbol(symbol.name, moduleName, symbol.kind);
+                registry.addSymbol(
+                    symbol.name,
+                    moduleName,
+                    symbol.kind,
+                    symbol.arity,
+                    symbol.parameters,
+                    symbol.documentation,
+                    symbol.level,
+                    symbol.isLocal,
+                    symbol.location
+                );
                 addedCount++;
             }
 
@@ -268,62 +278,172 @@ export class ModuleParser {
     }
 
     /**
-     * Extracts symbols defined in the module content.
+     * Extracts symbols defined in the module content with full information.
      */
     private extractDefinedSymbols(content: string, moduleName: string): Array<{
         name: string;
         kind: 'operator' | 'constant' | 'variable' | 'theorem' | 'assumption';
+        arity: number;
+        parameters?: Array<{name: string; type?: string}>;
+        documentation?: string;
+        level: number;
+        isLocal: boolean;
+        location?: {line: number; column: number};
     }> {
         const symbols: Array<{
             name: string;
             kind: 'operator' | 'constant' | 'variable' | 'theorem' | 'assumption';
+            arity: number;
+            parameters?: Array<{name: string; type?: string}>;
+            documentation?: string;
+            level: number;
+            isLocal: boolean;
+            location?: {line: number; column: number};
         }> = [];
 
-        // Remove comments
-        const cleanContent = this.removeComments(content);
+        // Keep track of line numbers for location info
+        const lines = content.split('\n');
 
-        // Extract operators (name == definition or name(params) == definition)
-        const operatorRegex = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*(?:\([^)]*\))?\s*==(?!=)/gm;
+        // Extract operators with full information
+        const operatorRegex = /^(\s*)(LOCAL\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*(?:\(([^)]*)\))?\s*==(?!=)/gm;
         let match;
-        while ((match = operatorRegex.exec(cleanContent)) !== null) {
-            const name = match[1];
+        while ((match = operatorRegex.exec(content)) !== null) {
+            const indent = match[1];
+            const isLocal = !!match[2];
+            const name = match[3];
+            const paramsStr = match[4];
+
             if (!this.isBuiltInOperator(name) && !name.startsWith('_')) {
-                symbols.push({ name, kind: 'operator' });
+                // Calculate line number
+                const upToMatch = content.substring(0, match.index);
+                const lineNumber = upToMatch.split('\n').length;
+                const columnNumber = indent.length + 1;
+
+                // Extract parameters
+                const parameters: Array<{name: string; type?: string}> = [];
+                let arity = 0;
+                if (paramsStr) {
+                    const params = paramsStr.split(',').map(p => p.trim()).filter(p => p);
+                    arity = params.length;
+                    for (const param of params) {
+                        parameters.push({ name: param });
+                    }
+                }
+
+                // Extract documentation (look for comments above the definition)
+                const documentation = this.extractDocumentation(lines, lineNumber - 1);
+
+                symbols.push({
+                    name,
+                    kind: 'operator',
+                    arity,
+                    parameters: parameters.length > 0 ? parameters : undefined,
+                    documentation,
+                    level: 1, // Basic level, could be enhanced with more analysis
+                    isLocal,
+                    location: { line: lineNumber, column: columnNumber }
+                });
             }
         }
 
         // Extract constants (CONSTANT declarations)
-        const constantRegex = /^\s*CONSTANT(?:S)?\s+([A-Za-z_][A-Za-z0-9_,\s]*)/gm;
-        while ((match = constantRegex.exec(cleanContent)) !== null) {
-            const names = match[1].split(',').map(n => n.trim()).filter(n => n);
+        const constantRegex = /^(\s*)(LOCAL\s+)?CONSTANT(?:S)?\s+([A-Za-z_][A-Za-z0-9_,\s]*)/gm;
+        while ((match = constantRegex.exec(content)) !== null) {
+            const indent = match[1];
+            const isLocal = !!match[2];
+            const names = match[3].split(',').map(n => n.trim()).filter(n => n);
+
+            const upToMatch = content.substring(0, match.index);
+            const lineNumber = upToMatch.split('\n').length;
+            const columnNumber = indent.length + 1;
+            const documentation = this.extractDocumentation(lines, lineNumber - 1);
+
             for (const name of names) {
                 if (!this.isBuiltInOperator(name)) {
-                    symbols.push({ name, kind: 'constant' });
+                    symbols.push({
+                        name,
+                        kind: 'constant',
+                        arity: 0,
+                        documentation,
+                        level: 0,
+                        isLocal,
+                        location: { line: lineNumber, column: columnNumber }
+                    });
                 }
             }
         }
 
         // Extract variables (VARIABLE declarations)
-        const variableRegex = /^\s*VARIABLE(?:S)?\s+([A-Za-z_][A-Za-z0-9_,\s]*)/gm;
-        while ((match = variableRegex.exec(cleanContent)) !== null) {
-            const names = match[1].split(',').map(n => n.trim()).filter(n => n);
+        const variableRegex = /^(\s*)(LOCAL\s+)?VARIABLE(?:S)?\s+([A-Za-z_][A-Za-z0-9_,\s]*)/gm;
+        while ((match = variableRegex.exec(content)) !== null) {
+            const indent = match[1];
+            const isLocal = !!match[2];
+            const names = match[3].split(',').map(n => n.trim()).filter(n => n);
+
+            const upToMatch = content.substring(0, match.index);
+            const lineNumber = upToMatch.split('\n').length;
+            const columnNumber = indent.length + 1;
+            const documentation = this.extractDocumentation(lines, lineNumber - 1);
+
             for (const name of names) {
                 if (!this.isBuiltInOperator(name)) {
-                    symbols.push({ name, kind: 'variable' });
+                    symbols.push({
+                        name,
+                        kind: 'variable',
+                        arity: 0,
+                        documentation,
+                        level: 1,
+                        isLocal,
+                        location: { line: lineNumber, column: columnNumber }
+                    });
                 }
             }
         }
 
         // Extract theorems
-        const theoremRegex = /^\s*THEOREM\s+([A-Za-z_][A-Za-z0-9_]*)\s*==/gm;
-        while ((match = theoremRegex.exec(cleanContent)) !== null) {
-            symbols.push({ name: match[1], kind: 'theorem' });
+        const theoremRegex = /^(\s*)(LOCAL\s+)?THEOREM\s+([A-Za-z_][A-Za-z0-9_]*)\s*==/gm;
+        while ((match = theoremRegex.exec(content)) !== null) {
+            const indent = match[1];
+            const isLocal = !!match[2];
+            const name = match[3];
+
+            const upToMatch = content.substring(0, match.index);
+            const lineNumber = upToMatch.split('\n').length;
+            const columnNumber = indent.length + 1;
+            const documentation = this.extractDocumentation(lines, lineNumber - 1);
+
+            symbols.push({
+                name,
+                kind: 'theorem',
+                arity: 0,
+                documentation,
+                level: 1,
+                isLocal,
+                location: { line: lineNumber, column: columnNumber }
+            });
         }
 
         // Extract assumptions
-        const assumeRegex = /^\s*ASSUME\s+([A-Za-z_][A-Za-z0-9_]*)\s*==/gm;
-        while ((match = assumeRegex.exec(cleanContent)) !== null) {
-            symbols.push({ name: match[1], kind: 'assumption' });
+        const assumeRegex = /^(\s*)(LOCAL\s+)?ASSUME\s+([A-Za-z_][A-Za-z0-9_]*)\s*==/gm;
+        while ((match = assumeRegex.exec(content)) !== null) {
+            const indent = match[1];
+            const isLocal = !!match[2];
+            const name = match[3];
+
+            const upToMatch = content.substring(0, match.index);
+            const lineNumber = upToMatch.split('\n').length;
+            const columnNumber = indent.length + 1;
+            const documentation = this.extractDocumentation(lines, lineNumber - 1);
+
+            symbols.push({
+                name,
+                kind: 'assumption',
+                arity: 0,
+                documentation,
+                level: 1,
+                isLocal,
+                location: { line: lineNumber, column: columnNumber }
+            });
         }
 
         return symbols;
@@ -340,5 +460,57 @@ export class ModuleParser {
         content = content.replace(/\(\*[\s\S]*?\*\)/g, '');
 
         return content;
+    }
+
+    /**
+     * Extracts documentation from comments above a symbol definition.
+     */
+    private extractDocumentation(lines: string[], startLine: number): string | undefined {
+        const docs: string[] = [];
+
+        // Look backwards from the line above the definition
+        for (let i = startLine; i >= 0; i--) {
+            const line = lines[i].trim();
+
+            // Stop if we hit a non-comment line
+            if (line && !line.startsWith('\\*') && !line.includes('(*')) {
+                break;
+            }
+
+            // Extract line comment
+            const lineCommentMatch = line.match(/\\\*\s*(.*?)\s*\*\\/);
+            if (lineCommentMatch) {
+                docs.unshift(lineCommentMatch[1]);
+                continue;
+            }
+
+            // Extract from block comment
+            const blockCommentMatch = line.match(/\(\*\s*(.*?)\s*\*\)/);
+            if (blockCommentMatch) {
+                docs.unshift(blockCommentMatch[1]);
+                continue;
+            }
+
+            // Handle multi-line block comments (simplified)
+            if (line.includes('*)')) {
+                // End of block comment
+                const content = line.substring(0, line.indexOf('*)')).trim();
+                if (content) {
+                    docs.unshift(content);
+                }
+            } else if (line.includes('(*')) {
+                // Start of block comment
+                const content = line.substring(line.indexOf('(*') + 2).trim();
+                if (content) {
+                    docs.unshift(content);
+                }
+                break;
+            } else if (i < startLine && line.startsWith('*')) {
+                // Inside block comment
+                docs.unshift(line.substring(1).trim());
+            }
+        }
+
+        return docs.length > 0 ? docs.join(' ') : undefined;
     }
 }

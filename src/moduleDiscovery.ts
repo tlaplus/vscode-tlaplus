@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { TlaMegaModuleGenerator } from './generators/megaModuleGenerator';
-import { moduleSearchPaths } from './paths';
 import { ModuleSymbolProvider } from './symbols/moduleSymbolProvider';
 import { ModuleExplorer } from './ui/moduleExplorer';
 import { JarModuleReader } from './utils/jarReader';
@@ -85,16 +84,9 @@ export class ModuleDiscoveryManager {
             const wasStale = await this.generator.isStale();
             await this.regenerateIfNeeded();
 
-            // Add mega-module paths to module search paths
+            // Set cache directory for symbol provider
             const cachePath = this.generator.getCachePath();
-            moduleSearchPaths.setSourcePaths('MEGA_MODULES', 'Module Discovery Cache', [cachePath]);
-
-            // Update symbol provider with mega-module paths
-            const megaModulePaths = [
-                path.join(cachePath, '_ALL_STANDARD.tla'),
-                path.join(cachePath, '_ALL_CM.tla')
-            ];
-            await this.symbolProvider.setMegaModulePaths(megaModulePaths, cachePath);
+            await this.symbolProvider.setCacheDirectory(cachePath);
 
             // Watch for JAR file changes
             this.setupFileWatchers(toolsJarPath, communityJarPath);
@@ -151,8 +143,7 @@ export class ModuleDiscoveryManager {
                         await this.generator.generateCommunityModules();
                     }
 
-                    progress.report({ increment: 90, message: 'Parsing module symbols...' });
-                    await this.symbolProvider.clearCache();
+                    progress.report({ increment: 90, message: 'Loading module registries...' });
 
                     progress.report({ increment: 100, message: 'Module index ready!' });
                 });
@@ -238,7 +229,6 @@ export class ModuleDiscoveryManager {
                             await this.generator.clearCache();
                         }
                         this.jarReader.clearCache();
-                        this.symbolProvider.clearCache();
 
                         progress.report({ increment: 20, message: 'Scanning standard modules...' });
                         if (this.generator) {
@@ -250,15 +240,10 @@ export class ModuleDiscoveryManager {
                             await this.generator.generateCommunityModules();
                         }
 
-                        progress.report({ increment: 80, message: 'Parsing module symbols...' });
-                        // Force symbol reload by clearing paths and resetting
+                        progress.report({ increment: 80, message: 'Loading module registries...' });
+                        // Force registry reload
                         const cachePath = this.generator ? this.generator.getCachePath() : '';
-                        await this.symbolProvider.setMegaModulePaths([], cachePath);
-                        const megaModulePaths = [
-                            path.join(cachePath, '_ALL_STANDARD.tla'),
-                            path.join(cachePath, '_ALL_CM.tla')
-                        ];
-                        await this.symbolProvider.setMegaModulePaths(megaModulePaths, cachePath);
+                        await this.symbolProvider.setCacheDirectory(cachePath);
 
                         progress.report({ increment: 100, message: 'Module index updated!' });
                     });
