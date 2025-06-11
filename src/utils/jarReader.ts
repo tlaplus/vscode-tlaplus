@@ -91,6 +91,7 @@ export class JarModuleReader implements JarReader {
                     if (entry.fileName === modulePath) {
                         zipfile.openReadStream(entry, (err, readStream) => {
                             if (err) {
+                                zipfile.close(); // Ensure zipfile is closed on error
                                 reject(err);
                                 return;
                             }
@@ -99,9 +100,13 @@ export class JarModuleReader implements JarReader {
                             readStream.on('data', (chunk: Buffer) => chunks.push(chunk));
                             readStream.on('end', () => {
                                 const content = Buffer.concat(chunks).toString('utf8');
+                                zipfile.close(); // Ensure zipfile is closed after resolving
                                 resolve(content);
                             });
-                            readStream.on('error', reject);
+                            readStream.on('error', (err) => {
+                                zipfile.close(); // Ensure zipfile is closed on error
+                                reject(err);
+                            });
                         });
                     } else {
                         zipfile.readEntry();
@@ -109,10 +114,14 @@ export class JarModuleReader implements JarReader {
                 });
 
                 zipfile.on('end', () => {
+                    zipfile.close(); // Ensure zipfile is closed when not found
                     reject(new Error(`Module ${modulePath} not found in ${jarPath}`));
                 });
 
-                zipfile.on('error', reject);
+                zipfile.on('error', (err) => {
+                    zipfile.close(); // Ensure zipfile is closed on error
+                    reject(err);
+                });
             });
         });
     }
