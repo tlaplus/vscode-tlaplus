@@ -21,6 +21,7 @@ export class TlcCoverageDecorationProvider {
     private enabled = false;
     private decorationTypes = new Map<string, vscode.TextEditorDecorationType>();
     private currentCoverage = new Map<string, CoverageItem[]>(); // filePath -> coverage items
+    private totalDistinctStates = 0;
     private disposables: vscode.Disposable[] = [];
 
     constructor(private context: vscode.ExtensionContext) {
@@ -74,9 +75,14 @@ export class TlcCoverageDecorationProvider {
         );
     }
 
-    public updateCoverage(coverageItems: CoverageItem[]) {
+    public updateCoverage(coverageItems: CoverageItem[], totalDistinctStates?: number) {
         // Clear existing coverage
         this.currentCoverage.clear();
+
+        // Update total distinct states if provided
+        if (totalDistinctStates !== undefined) {
+            this.totalDistinctStates = totalDistinctStates;
+        }
 
         // Group coverage items by file
         for (const item of coverageItems) {
@@ -179,6 +185,14 @@ export class TlcCoverageDecorationProvider {
         md.appendMarkdown(`**Action ${item.action}:**\n`);
         const percentage = item.total > 0 ? ((item.distinct / item.total) * 100).toFixed(2) : '0.00';
         md.appendMarkdown(`- ${item.total} states found with ${item.distinct} distinct (${percentage}%)\n`);
+
+        // Add contribution percentage if we have total distinct states
+        if (this.totalDistinctStates > 0) {
+            const contributionPct = ((item.distinct / this.totalDistinctStates) * 100).toFixed(2);
+            md.appendMarkdown(`- Contributes ${contributionPct}% to total number of `);
+            md.appendMarkdown('distinct states across all actions\n');
+        }
+
         return md;
     }
 

@@ -213,7 +213,13 @@ export async function doCheckModel(
 
             // Update coverage visualization
             if (coverageProvider && checkResult.coverageStat.length > 0) {
-                coverageProvider.updateCoverage(checkResult.coverageStat);
+                // Get total distinct states from the last entry in initialStatesStat
+                let totalDistinctStates = 0;
+                if (checkResult.initialStatesStat.length > 0) {
+                    const lastStat = checkResult.initialStatesStat[checkResult.initialStatesStat.length - 1];
+                    totalDistinctStates = lastStat.distinct;
+                }
+                coverageProvider.updateCoverage(checkResult.coverageStat, totalDistinctStates);
             }
         };
         const stdoutParser = new TlcModelCheckerStdoutParser(
