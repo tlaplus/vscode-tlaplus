@@ -29,10 +29,8 @@ export class TlcCoverageDecorationProvider {
     }
 
     private createDecorationTypes() {
-        const config = vscode.workspace.getConfiguration('tlaplus.tlc.profiler');
-        const baseColor = config.get<string>('baseColor', '#ff0000');
-        const showGutter = config.get<boolean>('showGutterIcons', true);
-        const wholeLine = config.get<boolean>('wholeLine', false);
+        const baseColor = '#ff0000';
+        const wholeLine = false;
 
         TlcCoverageDecorationProvider.COVERAGE_LEVELS.forEach(level => {
             const color = this.hexToRgba(baseColor, level.opacity);
@@ -41,9 +39,7 @@ export class TlcCoverageDecorationProvider {
                 overviewRulerColor: color,
                 overviewRulerLane: vscode.OverviewRulerLane.Left,
                 isWholeLine: wholeLine,
-                rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed,
-                gutterIconPath: showGutter ? this.getGutterIconPath(level.name) : undefined,
-                gutterIconSize: '80%'
+                rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed
             });
             this.decorationTypes.set(level.name, decType);
         });
@@ -56,11 +52,6 @@ export class TlcCoverageDecorationProvider {
         return `rgba(${r}, ${g}, ${b}, ${opacity * 0.3})`; // Max 30% opacity for readability
     }
 
-    private getGutterIconPath(levelName: string): string | undefined {
-        // For now, return undefined until we create the icons
-        // TODO: Generate SVG icons dynamically or use pre-created ones
-        return undefined;
-    }
 
     private registerEventHandlers() {
         // Update decorations when active editor changes
@@ -75,9 +66,8 @@ export class TlcCoverageDecorationProvider {
         // Listen for configuration changes
         this.disposables.push(
             vscode.workspace.onDidChangeConfiguration(event => {
-                if (event.affectsConfiguration('tlaplus.tlc.profiler')) {
-                    this.disposeDecorationTypes();
-                    this.createDecorationTypes();
+                if (event.affectsConfiguration('tlaplus.tlc.profiler.relativeScale') ||
+                    event.affectsConfiguration('tlaplus.tlc.profiler.thresholds')) {
                     this.updateAllEditors();
                 }
             })
@@ -186,11 +176,9 @@ export class TlcCoverageDecorationProvider {
 
     private createHoverMessage(item: CoverageItem): vscode.MarkdownString {
         const md = new vscode.MarkdownString();
-        md.appendMarkdown('**TLC Coverage**\n\n');
-        md.appendMarkdown(`Action: \`${item.action}\`\n\n`);
-        md.appendMarkdown(`Module: ${item.module}\n\n`);
-        md.appendMarkdown(`Invocations: **${item.total.toLocaleString()}**\n\n`);
-        md.appendMarkdown(`Distinct states: ${item.distinct.toLocaleString()}`);
+        md.appendMarkdown(`**Action ${item.action}:**\n`);
+        const percentage = item.total > 0 ? ((item.distinct / item.total) * 100).toFixed(2) : '0.00';
+        md.appendMarkdown(`- ${item.total} states found with ${item.distinct} distinct (${percentage}%)\n`);
         return md;
     }
 

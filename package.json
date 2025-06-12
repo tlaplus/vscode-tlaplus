@@ -567,26 +567,10 @@
                     "default": false,
                     "description": "Enable TLC coverage visualization by default"
                 },
-                "tlaplus.tlc.profiler.baseColor": {
-                    "type": "string",
-                    "default": "#ff0000",
-                    "format": "color",
-                    "description": "Base color for coverage heat map"
-                },
                 "tlaplus.tlc.profiler.relativeScale": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Use relative scaling (percentage of max) instead of absolute execution counts"
-                },
-                "tlaplus.tlc.profiler.wholeLine": {
-                    "type": "boolean",
-                    "default": false,
-                    "description": "Highlight whole lines instead of just the action text"
-                },
-                "tlaplus.tlc.profiler.showGutterIcons": {
-                    "type": "boolean",
-                    "default": true,
-                    "description": "Show coverage icons in the gutter"
+                    "description": "Use relative scaling (percentage of max) instead of absolute invocation counts"
                 },
                 "tlaplus.tlc.profiler.thresholds": {
                     "type": "object",
