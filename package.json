@@ -316,6 +316,60 @@
                 "command": "tlaplus.tlaps.check-step",
                 "title": "Check proof step in TLAPS",
                 "category": "TLA+"
+            },
+            {
+                "command": "tlaplus.refreshModuleIndex",
+                "title": "Refresh Module Index",
+                "category": "TLA+"
+            },
+            {
+                "command": "tlaplus.showAvailableModules",
+                "title": "Show Available Modules",
+                "category": "TLA+"
+            },
+            {
+                "command": "tlaplus.clearModuleCache",
+                "title": "Clear Module Cache",
+                "category": "TLA+"
+            },
+            {
+                "command": "tlaplus.moduleExplorer.refresh",
+                "title": "Refresh",
+                "category": "TLA+ Module Explorer",
+                "icon": "$(refresh)"
+            },
+            {
+                "command": "tlaplus.moduleExplorer.search",
+                "title": "Search",
+                "category": "TLA+ Module Explorer",
+                "icon": "$(search)"
+            },
+            {
+                "command": "tlaplus.moduleExplorer.clearSearch",
+                "title": "Clear Search",
+                "category": "TLA+ Module Explorer"
+            },
+            {
+                "command": "tlaplus.viewModuleSource",
+                "title": "View Module Source",
+                "category": "TLA+ Module Explorer"
+            },
+            {
+                "command": "tlaplus.moduleExplorer.insertExtends",
+                "title": "Insert EXTENDS",
+                "category": "TLA+ Module Explorer",
+                "icon": "$(add)"
+            },
+            {
+                "command": "tlaplus.moduleExplorer.insertSymbol",
+                "title": "Insert Symbol",
+                "category": "TLA+ Module Explorer",
+                "icon": "$(add)"
+            },
+            {
+                "command": "tlaplus.moduleExplorer.copySymbolName",
+                "title": "Copy Symbol Name",
+                "category": "TLA+ Module Explorer"
             }
         ],
         "snippets": [
@@ -418,6 +472,40 @@
                     "when": "resourceLangId == tlaplus || editorLangId == tlaplus_cfg",
                     "group": "1_run@20"
                 }
+            ],
+            "view/title": [
+                {
+                    "command": "tlaplus.moduleExplorer.refresh",
+                    "when": "view == tlaModuleExplorer",
+                    "group": "navigation"
+                },
+                {
+                    "command": "tlaplus.moduleExplorer.search",
+                    "when": "view == tlaModuleExplorer",
+                    "group": "navigation"
+                }
+            ],
+            "view/item/context": [
+                {
+                    "command": "tlaplus.moduleExplorer.insertExtends",
+                    "when": "view == tlaModuleExplorer && viewItem == module",
+                    "group": "inline"
+                },
+                {
+                    "command": "tlaplus.viewModuleSource",
+                    "when": "view == tlaModuleExplorer && viewItem == module",
+                    "group": "navigation"
+                },
+                {
+                    "command": "tlaplus.moduleExplorer.insertSymbol",
+                    "when": "view == tlaModuleExplorer && viewItem == symbol",
+                    "group": "inline"
+                },
+                {
+                    "command": "tlaplus.moduleExplorer.copySymbolName",
+                    "when": "view == tlaModuleExplorer && viewItem == symbol",
+                    "group": "navigation"
+                }
             ]
         },
         "configuration": {
@@ -485,6 +573,35 @@
                         "TLC statistics will be shared without the installation ID.",
                         "No TLC statistics will be shared."
                     ]
+                },
+                "tlaplus.moduleDiscovery.enabled": {
+                    "type": "boolean",
+                    "scope": "window",
+                    "default": true,
+                    "description": "Enable TLA+ module discovery for enhanced completions."
+                },
+                "tlaplus.moduleDiscovery.includeInternal": {
+                    "type": "boolean",
+                    "scope": "window",
+                    "default": false,
+                    "description": "Include internal modules in discovery (modules starting with _)."
+                },
+                "tlaplus.moduleDiscovery.cacheLocation": {
+                    "type": "string",
+                    "scope": "window",
+                    "default": "workspace",
+                    "enum": ["workspace", "temp"],
+                    "enumDescriptions": [
+                        "Store cache in workspace .vscode/tla-index directory",
+                        "Store cache in system temp directory"
+                    ],
+                    "description": "Where to store the module discovery cache."
+                },
+                "tlaplus.moduleDiscovery.autoRefresh": {
+                    "type": "boolean",
+                    "scope": "window",
+                    "default": true,
+                    "description": "Automatically refresh module index when JAR files change."
                 },
                 "tlaplus.mcp.port": {
                     "type": "number",
@@ -651,6 +768,12 @@
                     "name": "Module Search Paths",
                     "type": "tree",
                     "icon": "resources/images/tlaplus.svg"
+                },
+                {
+                    "id": "tlaModuleExplorer",
+                    "name": "Module Explorer",
+                    "type": "tree",
+                    "icon": "resources/images/tlaplus.svg"
                 }
             ]
         }
@@ -673,6 +796,7 @@
         "@types/react": "^18.2.6",
         "@types/react-dom": "^18.2.4",
         "@types/vscode": "^1.95.0",
+        "@types/yauzl": "^2.10.3",
         "@typescript-eslint/eslint-plugin": "^5.59.5",
         "@typescript-eslint/parser": "^5.59.5",
         "@vscode/debugadapter-testsupport": "^1.63.0",
@@ -685,7 +809,8 @@
         "node": "^18.15.0",
         "source-map-support": "^0.5.19",
         "typescript": "^5.0.4",
-        "vscode-tmgrammar-test": "^0.1.1"
+        "vscode-tmgrammar-test": "^0.1.1",
+        "yauzl": "^3.2.0"
     },
     "dependencies": {
         "@cocalc/ansi-to-react": "^7.0.0",

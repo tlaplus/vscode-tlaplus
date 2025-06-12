@@ -34,6 +34,9 @@ import { ModuleSearchPathsTreeDataProvider } from './panels/moduleSearchPathsTre
 import { CheckModuleTool, SmokeModuleTool } from './lm/TLCTool';
 import { ParseModuleTool, SymbolProviderTool } from './lm/SANYTool';
 import { MCPServer } from './lm/MCPServer';
+import { ModuleDiscoveryManager } from './moduleDiscovery';
+import { ModuleHoverProvider } from './providers/moduleHoverProvider';
+import { ModuleDefinitionProvider } from './providers/moduleDefinitionProvider';
 
 const TLAPLUS_FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file', language: LANG_TLAPLUS };
 const TLAPLUS_CFG_FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file', language: LANG_TLAPLUS_CFG };
@@ -49,8 +52,13 @@ let tlapsClient: TlapsClient | undefined;
 /**
  * Extension entry point.
  */
-export function activate(context: vscode.ExtensionContext): void {
+export async function activate(context: vscode.ExtensionContext): Promise<void> {
     moduleSearchPaths.setup(context);
+
+    // Initialize module discovery
+    const moduleDiscovery = new ModuleDiscoveryManager(context);
+    await moduleDiscovery.initialize();
+    moduleDiscovery.registerCommands();
 
     const currentProofStepWebviewViewProvider = new CurrentProofStepWebviewViewProvider(context.extensionUri);
     diagnostic = vscode.languages.createDiagnosticCollection(LANG_TLAPLUS);
@@ -121,10 +129,13 @@ export function activate(context: vscode.ExtensionContext): void {
             { label: 'TLA+' }),
         vscode.languages.registerCompletionItemProvider(
             TLAPLUS_FILE_SELECTOR,
-            new TlaCompletionItemProvider(tlaDocInfos)),
+            new TlaCompletionItemProvider(tlaDocInfos, moduleDiscovery.getSymbolProvider())),
         vscode.languages.registerCompletionItemProvider(
             TLAPLUS_CFG_FILE_SELECTOR,
             new CfgCompletionItemProvider()),
+        vscode.languages.registerHoverProvider(
+            TLAPLUS_FILE_SELECTOR,
+            new ModuleHoverProvider(moduleDiscovery.getSymbolProvider())),
         vscode.languages.registerDeclarationProvider(
             TLAPLUS_FILE_SELECTOR,
             new TlaDeclarationsProvider(tlaDocInfos)
@@ -132,6 +143,14 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.languages.registerDefinitionProvider(
             TLAPLUS_FILE_SELECTOR,
             new TlaDefinitionsProvider(tlaDocInfos)
+        ),
+        vscode.languages.registerDefinitionProvider(
+            TLAPLUS_FILE_SELECTOR,
+            new ModuleDefinitionProvider(
+                path.resolve(context.extensionPath, 'tools/tla2tools.jar'),
+                path.resolve(context.extensionPath, 'tools/CommunityModules-deps.jar'),
+                moduleDiscovery.getSymbolProvider()
+            )
         ),
         vscode.commands.registerCommand(
             TLAPLUS_DEBUG_LAUNCH_CHECKNDEBUG,
