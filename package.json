@@ -559,7 +559,7 @@
                 "tlaplus.moduleSearchPaths": {
                     "type": "array",
                     "items": {"type": "string"},
-                    "description": "Additional paths to look for TLA+ modules. Standard TLA+ modules and Community Modules are included automatically.",
+                    "description": "Additional paths to look for TLA+ modules.",
                     "default": []
                 },
                 "tlaplus.tlc.profiler.enabled": {
