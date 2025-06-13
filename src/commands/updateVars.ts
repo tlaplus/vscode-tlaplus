@@ -1,0 +1,642 @@
+import * as vscode from 'vscode';
+import { runXMLExporter, ToolProcessInfo } from '../tla2tools';
+import { XMLParser } from 'fast-xml-parser';
+import { ToolOutputChannel } from '../outputChannels';
+import * as path from 'path';
+
+const xmlExporterOutChannel = new ToolOutputChannel('UpdateVars XML Exporter');
+
+interface VarsInfo {
+    startLine: number;
+    endLine: number;
+    startChar: number;
+    endChar: number;
+    currentVars: string[];
+    hasNestedTuples: boolean;
+}
+
+/**
+ * Extracts all variables from VARIABLE(S) declarations using regex
+ * Used as fallback when XMLExporter is not available
+ */
+function extractVariablesFromRegex(document: vscode.TextDocument): string[] {
+    const text = document.getText();
+    const lines = text.split(/\r?\n/);
+    const variables: string[] = [];
+
+    // State for multi-line variable declarations
+    let inVariableDecl = false;
+    let currentVarList = '';
+
+    for (const line of lines) {
+        // Check for VARIABLE or VARIABLES keyword
+        const varMatch = line.match(/^\s*(VARIABLES|VARIABLE)\s*(.*)/);  // \s* allows zero or more spaces
+        if (varMatch) {
+            // If we were already in a variable declaration, process the previous one
+            if (currentVarList) {
+                // Remove comments
+                const cleanList = currentVarList.replace(/\\\*.*/g, '').replace(/\(\*[^*]*\*\)/g, '');
+
+                // Split by comma and extract variable names
+                const varNames = cleanList.split(',');
+                for (const varName of varNames) {
+                    const trimmed = varName.trim();
+                    if (trimmed && /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(trimmed)) {
+                        variables.push(trimmed);
+                    }
+                }
+            }
+
+            inVariableDecl = true;
+            currentVarList = varMatch[2];
+        } else if (inVariableDecl) {
+            // Check if line continues variable list (starts with whitespace and contains identifiers)
+            const continueMatch = line.match(/^\s+([a-zA-Z_][a-zA-Z0-9_]*.*)/);
+            if (continueMatch) {
+                // Remove comments from this line before appending
+                const cleanedLine = continueMatch[1].replace(/\\\*.*/, '').replace(/\(\*[^*]*\*\)/g, '');
+                currentVarList += ', ' + cleanedLine;
+            } else {
+                // End of variable declaration - process it
+                if (currentVarList) {
+                    // Remove comments
+                    const cleanList = currentVarList.replace(/\\\*.*/g, '').replace(/\(\*[^*]*\*\)/g, '');
+
+                    // Split by comma and extract variable names
+                    const varNames = cleanList.split(',');
+                    for (const varName of varNames) {
+                        const trimmed = varName.trim();
+                        if (trimmed && /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(trimmed)) {
+                            variables.push(trimmed);
+                        }
+                    }
+                    currentVarList = '';
+                }
+                inVariableDecl = false;
+            }
+        }
+    }
+
+    // Handle case where file ends with variable declaration
+    if (currentVarList) {
+        currentVarList = currentVarList.replace(/\\\*.*/g, '').replace(/\(\*[^*]*\*\)/g, '');
+        const varNames = currentVarList.split(',');
+        for (const varName of varNames) {
+            const trimmed = varName.trim();
+            if (trimmed && /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(trimmed)) {
+                variables.push(trimmed);
+            }
+        }
+    }
+
+    return variables;
+}
+
+/**
+ * Extracts all variables from VARIABLE(S) declarations
+ * Uses hybrid approach: XMLExporter for saved files, regex for unsaved/failures
+ */
+async function extractAllVariables(document: vscode.TextDocument): Promise<string[]> {
+    // Skip XML exporter in test environment
+    if (process.env.VSCODE_TEST === 'true') {
+        return extractVariablesFromRegex(document);
+    }
+
+    try {
+        // Always run both extraction methods for completeness
+        const xmlVariables = await extractVariablesFromXML(document);
+        const regexVariables = extractVariablesFromRegex(document);
+
+        if (xmlVariables !== undefined) {
+            // XML extraction succeeded
+            xmlExporterOutChannel.appendLine(
+                `XML extraction found ${xmlVariables.length} variables: ${xmlVariables.join(', ')}`
+            );
+            xmlExporterOutChannel.appendLine(
+                `Regex extraction found ${regexVariables.length} variables: ${regexVariables.join(', ')}`
+            );
+
+            // Merge and deduplicate results
+            const allVariables = [...new Set([...xmlVariables, ...regexVariables])];
+            xmlExporterOutChannel.appendLine(
+                `Total unique variables after merge: ${allVariables.length} - ${allVariables.join(', ')}`
+            );
+            return allVariables;
+        }
+
+        // Fall back to regex-based extraction only
+        xmlExporterOutChannel.appendLine('Falling back to regex-based variable extraction');
+        xmlExporterOutChannel.appendLine(
+            `Regex extraction found ${regexVariables.length} variables: ${regexVariables.join(', ')}`
+        );
+        return regexVariables;
+
+    } catch (error: unknown) {
+        // If XML extraction fails, fall back to regex
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        xmlExporterOutChannel.appendLine(`XML extraction failed, using regex fallback: ${errorMessage}`);
+        return extractVariablesFromRegex(document);
+    }
+}
+
+/**
+ * Extracts variables from XMLExporter output
+ * Looks for OpDeclNode entries with level=1 and kind=3
+ */
+async function extractVariablesFromXML(document: vscode.TextDocument): Promise<string[] | undefined> {
+    try {
+        if (document.isDirty) {
+            // XMLExporter only works on saved files
+            xmlExporterOutChannel.appendLine('Document is dirty, skipping XML extraction');
+            return undefined;
+        }
+
+        xmlExporterOutChannel.appendLine(`Running XMLExporter on: ${document.fileName}`);
+
+        // Run XML exporter
+        const processInfo: ToolProcessInfo = await runXMLExporter(document.fileName, false);
+
+        // Collect stdout and stderr
+        let stdoutData = '';
+        let stderrData = '';
+
+        processInfo.process.stdout?.on('data', (data) => {
+            stdoutData += data.toString();
+        });
+
+        processInfo.process.stderr?.on('data', (data) => {
+            stderrData += data.toString();
+            xmlExporterOutChannel.appendLine(data.toString());
+        });
+
+        // Wait for process to complete
+        const exitCode = await new Promise<number>((resolve) => {
+            processInfo.process.on('close', (code) => {
+                resolve(code ?? 1);
+            });
+        });
+
+        if (exitCode !== 0) {
+            xmlExporterOutChannel.appendLine(`XML exporter failed with exit code ${exitCode}`);
+            xmlExporterOutChannel.appendLine(`stderr: ${stderrData}`);
+
+            // Check for semantic errors (e.g., unknown operators/variables)
+            if (stderrData.includes('Semantic errors:') || stderrData.includes('Unknown operator:')) {
+                xmlExporterOutChannel.appendLine('Semantic error detected in TLA+ specification');
+                return undefined;
+            }
+
+            // Check for XML validation error - this is still a success case
+            if (stderrData.includes('XMLExportingException: failed to validate XML')) {
+                xmlExporterOutChannel.appendLine('XML validation error detected, but continuing with XML parsing');
+                // Continue processing as the XML content might still be valid
+            } else {
+                return undefined;
+            }
+        }
+
+        if (!stdoutData) {
+            xmlExporterOutChannel.appendLine('XML exporter did not produce any output');
+            return undefined;
+        }
+
+        // Remove SANY output lines (first 3 lines)
+        const lines = stdoutData.split('\n');
+        const xmlStartIndex = lines.findIndex(line => line.trim().startsWith('<?xml'));
+        if (xmlStartIndex === -1) {
+            xmlExporterOutChannel.appendLine('No XML content found in output');
+            return undefined;
+        }
+        const xmlContent = lines.slice(xmlStartIndex).join('\n');
+
+        // Parse XML
+        const parser = new XMLParser({
+            ignoreAttributes: false,
+            attributeNamePrefix: '',
+            isArray: (name) => ['entry', 'ModuleNodeRef', 'operands', 'params'].includes(name),
+            parseTagValue: true,
+            trimValues: true
+        });
+
+        const xmlObj = parser.parse(xmlContent);
+        if (!xmlObj.modules?.context?.entry) {
+            xmlExporterOutChannel.appendLine('Invalid XML structure: missing modules.context.entry');
+            return undefined;
+        }
+
+        const variables: string[] = [];
+        const documentBasename = path.basename(document.fileName, path.extname(document.fileName));
+        xmlExporterOutChannel.appendLine(`Looking for variables in document: ${documentBasename}`);
+
+        // Process entries looking for variables (OpDeclNode with level=1 and kind=3)
+        let totalOpDeclNodes = 0;
+        const entries = Array.isArray(xmlObj.modules.context.entry)
+            ? xmlObj.modules.context.entry
+            : [xmlObj.modules.context.entry];
+        for (const entry of entries) {
+            if (entry.OpDeclNode) {
+                totalOpDeclNodes++;
+                const declNode = entry.OpDeclNode;
+
+                // Skip entries not in current document
+                if (declNode.location?.filename !== documentBasename) {
+                    xmlExporterOutChannel.appendLine(`Skipping OpDeclNode from file: ${declNode.location?.filename}`);
+                    continue;
+                }
+
+                const level = parseInt(String(declNode.level));
+                const kind = parseInt(String(declNode.kind));
+
+                // Variables have level=1 and kind=3
+                if (level === 1 && kind === 3) {
+                    const name = declNode.uniquename;
+                    if (name) {
+                        variables.push(name);
+                        xmlExporterOutChannel.appendLine(`Found variable: ${name} (level=${level}, kind=${kind})`);
+                    }
+                }
+            }
+        }
+
+        xmlExporterOutChannel.appendLine(`Total OpDeclNode entries processed: ${totalOpDeclNodes}`);
+        xmlExporterOutChannel.appendLine(`Extracted ${variables.length} variables from XML: ${variables.join(', ')}`);
+        return variables;
+
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        xmlExporterOutChannel.appendLine(`Error extracting variables from XML: ${errorMessage}`);
+        return undefined;
+    }
+}
+
+/**
+ * Finds the vars definition in the document
+ * Handles multi-line tuples with state machine approach
+ */
+function findVarsDefinition(document: vscode.TextDocument): VarsInfo | undefined {
+    const text = document.getText();
+    const lines = text.split(/\r?\n/);
+
+    // State machine states
+    enum State {
+        SEARCHING,
+        COLLECTING,
+        COMPLETE
+    }
+
+    let state = State.SEARCHING;
+    let startLine = -1;
+    let endLine = -1;
+    let startChar = -1;
+    let endChar = -1;
+    let nestingLevel = 0;
+
+    for (let lineNum = 0; lineNum < lines.length; lineNum++) {
+        const line = lines[lineNum];
+
+        if (state === State.SEARCHING) {
+            const varsMatch = line.match(/^(\s*)vars\s*==\s*<</);
+            if (varsMatch) {
+                state = State.COLLECTING;
+                startLine = lineNum;
+                startChar = varsMatch[0].indexOf('<<');
+                nestingLevel = 1;
+
+                // Check if it's all on one line
+                const startIdx = varsMatch[0].length;
+                for (let i = startIdx; i < line.length; i++) {
+                    if (line[i] === '<' && i + 1 < line.length && line[i + 1] === '<') {
+                        nestingLevel++;
+                        i++; // Skip next character
+                    } else if (line[i] === '>' && i + 1 < line.length && line[i + 1] === '>') {
+                        nestingLevel--;
+                        i++; // Skip next character
+
+                        if (nestingLevel === 0) {
+                            state = State.COMPLETE;
+                            endLine = lineNum;
+                            endChar = i + 1;
+                            break;
+                        }
+                    }
+                }
+            }
+        } else if (state === State.COLLECTING) {
+            // Count nesting levels
+            for (let i = 0; i < line.length; i++) {
+                if (line[i] === '<' && i + 1 < line.length && line[i + 1] === '<') {
+                    nestingLevel++;
+                    i++; // Skip next character
+                } else if (line[i] === '>' && i + 1 < line.length && line[i + 1] === '>') {
+                    nestingLevel--;
+                    i++; // Skip next character
+
+                    if (nestingLevel === 0) {
+                        state = State.COMPLETE;
+                        endLine = lineNum;
+                        endChar = i + 1;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (state === State.COMPLETE) {
+            break;
+        }
+    }
+
+    if (state !== State.COMPLETE) {
+        return undefined;
+    }
+
+    // Extract full content for variable extraction
+    let fullVarsContent = '';
+    if (startLine === endLine) {
+        // Single line: extract content between << and >>
+        fullVarsContent = lines[startLine].substring(startChar + 2, lines[endLine].lastIndexOf('>>'));
+    } else {
+        // Multi-line: combine all lines
+        fullVarsContent = lines[startLine].substring(startChar + 2);
+        for (let i = startLine + 1; i < endLine; i++) {
+            fullVarsContent += '\n' + lines[i];
+        }
+        fullVarsContent += '\n' + lines[endLine].substring(0, lines[endLine].lastIndexOf('>>'));
+    }
+
+    // Extract variables from the vars content
+    const currentVars = extractVariablesFromTuple(fullVarsContent);
+    const hasNestedTuples = fullVarsContent.includes('<<');
+
+    return {
+        startLine,
+        endLine,
+        startChar,
+        endChar,
+        currentVars,
+        hasNestedTuples
+    };
+}
+
+/**
+ * Extracts variable names from a tuple string
+ */
+function extractVariablesFromTuple(tupleContent: string): string[] {
+    // Remove comments
+    const noComments = tupleContent.replace(/\\\\\\*.*/g, '').replace(/\(\\*[^*]*\\*\)/g, '');
+
+    // Simple extraction for basic cases - will be enhanced in Phase 2
+    const variables: string[] = [];
+    const matches = noComments.match(/[a-zA-Z_][a-zA-Z0-9_]*/g);
+
+    if (matches) {
+        for (const match of matches) {
+            // Filter out TLA+ keywords that might appear
+            if (!['vars', 'TRUE', 'FALSE'].includes(match)) {
+                variables.push(match);
+            }
+        }
+    }
+
+    return variables;
+}
+
+/**
+ * Creates text edit to update vars tuple
+ * Preserves formatting, indentation, and comments
+ */
+function createVarsUpdateEdit(
+    document: vscode.TextDocument,
+    varsInfo: VarsInfo,
+    newVars: string[]
+): vscode.TextEdit {
+    const startPos = new vscode.Position(varsInfo.startLine, varsInfo.startChar);
+    const endPos = new vscode.Position(varsInfo.endLine, varsInfo.endChar);
+
+    // Get the document's EOL sequence
+    const eol = document.eol === vscode.EndOfLine.CRLF ? '\r\n' : '\n';
+
+    // Check if original was multi-line
+    const isMultiLine = varsInfo.startLine !== varsInfo.endLine;
+
+    if (isMultiLine) {
+        // Preserve multi-line formatting
+        const lines = document.getText().split(/\r?\n/);
+        const firstLine = lines[varsInfo.startLine];
+        const indentMatch = firstLine.match(/^(\s*)/);
+        const baseIndent = indentMatch ? indentMatch[1] : '';
+
+        // Determine items per line by analyzing the original format
+        const originalContent = extractOriginalVarsContent(document, varsInfo);
+        const itemsPerLine = detectItemsPerLine(originalContent);
+
+        // Build formatted multi-line tuple
+        let result = '<<' + eol;
+        const innerIndent = baseIndent + '    ';
+
+        for (let i = 0; i < newVars.length; i++) {
+            if (i % itemsPerLine === 0 && i > 0) {
+                result = result.trimEnd() + eol;
+            }
+
+            if (i % itemsPerLine === 0) {
+                result += innerIndent;
+            }
+
+            result += newVars[i];
+
+            if (i < newVars.length - 1) {
+                result += ', ';
+            }
+        }
+
+        result += eol + baseIndent + '>>';
+
+        return vscode.TextEdit.replace(new vscode.Range(startPos, endPos), result);
+    } else {
+        // Single-line formatting
+        const newVarsTuple = `<<${newVars.join(', ')}>>`;
+
+        // Check if it's getting too long (> 80 chars) or has many variables
+        const linePrefix = document.lineAt(varsInfo.startLine).text.substring(0, varsInfo.startChar);
+        if ((linePrefix.length + newVarsTuple.length > 80 || newVars.length > 10) && newVars.length > 3) {
+            // Convert to multi-line
+            const indentMatch = linePrefix.match(/^(\s*)/);
+            const baseIndent = indentMatch ? indentMatch[1] : '';
+
+            let result = '<<' + eol;
+            const innerIndent = baseIndent + '    ';
+
+            // Default to 4 items per line for long lists
+            const itemsPerLine = 4;
+
+            for (let i = 0; i < newVars.length; i++) {
+                if (i % itemsPerLine === 0) {
+                    if (i > 0) {result = result.trimEnd() + eol;}
+                    result += innerIndent;
+                }
+
+                result += newVars[i];
+
+                if (i < newVars.length - 1) {
+                    result += ', ';
+                }
+            }
+
+            result += eol + baseIndent + '>>';
+
+            return vscode.TextEdit.replace(new vscode.Range(startPos, endPos), result);
+        }
+
+        return vscode.TextEdit.replace(new vscode.Range(startPos, endPos), newVarsTuple);
+    }
+}
+
+/**
+ * Extracts the original vars content for analysis
+ */
+function extractOriginalVarsContent(document: vscode.TextDocument, varsInfo: VarsInfo): string {
+    const eol = document.eol === vscode.EndOfLine.CRLF ? '\r\n' : '\n';
+    const lines = document.getText().split(/\r?\n/);
+
+    if (varsInfo.startLine === varsInfo.endLine) {
+        return lines[varsInfo.startLine].substring(varsInfo.startChar, varsInfo.endChar);
+    }
+
+    let content = lines[varsInfo.startLine].substring(varsInfo.startChar);
+    for (let i = varsInfo.startLine + 1; i < varsInfo.endLine; i++) {
+        content += eol + lines[i];
+    }
+    content += eol + lines[varsInfo.endLine].substring(0, varsInfo.endChar);
+
+    return content;
+}
+
+/**
+ * Detects how many variables per line in the original format
+ */
+function detectItemsPerLine(varsContent: string): number {
+    // Remove << and >> and trim
+    const innerContent = varsContent
+        .replace(/^<<\s*/s, '')
+        .replace(/\s*>>$/s, '')
+        .trim();
+
+    const lines = innerContent.split(/\r?\n/).filter(line => line.trim());
+
+    if (lines.length === 0) {return 4;} // Default
+    if (lines.length === 1) {
+        // For single line, count the variables
+        const varMatches = lines[0].match(/[a-zA-Z_][a-zA-Z0-9_]*/g);
+        return varMatches ? varMatches.length : 4;
+    }
+
+    // For multi-line, find the most common pattern
+    // Look at the first line that has the most complete set
+    for (const line of lines) {
+        const trimmedLine = line.trim();
+        // Skip lines that end with just one variable (likely incomplete)
+        if (!trimmedLine.endsWith(',')) {
+            continue;
+        }
+
+        const varMatches = trimmedLine.match(/[a-zA-Z_][a-zA-Z0-9_]*/g);
+        if (varMatches && varMatches.length > 0) {
+            return varMatches.length;
+        }
+    }
+
+    // If no complete lines found, use the max
+    let maxItems = 0;
+    for (const line of lines) {
+        const varMatches = line.match(/[a-zA-Z_][a-zA-Z0-9_]*/g);
+        if (varMatches && varMatches.length > maxItems) {
+            maxItems = varMatches.length;
+        }
+    }
+
+    return maxItems > 0 ? maxItems : 4;
+}
+
+/**
+ * Detects if document contains PlusCal algorithm
+ */
+function hasPlusCalAlgorithm(document: vscode.TextDocument): boolean {
+    const text = document.getText();
+    // PlusCal algorithms start with (*--algorithm or (*--fair algorithm
+    return /\(\*--(?:fair )?algorithm/m.test(text);
+}
+
+/**
+ * Main command implementation
+ */
+export async function updateVarsCommand(): Promise<void> {
+    // 1. Get active document
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+        vscode.window.showInformationMessage('No active TLA+ file');
+        return;
+    }
+
+    const document = editor.document;
+    if (document.languageId !== 'tlaplus') {
+        vscode.window.showInformationMessage('This command only works with TLA+ files');
+        return;
+    }
+
+    // 2. Extract all variables
+    const allVariables = await extractAllVariables(document);
+    if (allVariables.length === 0) {
+        vscode.window.showInformationMessage('No variables found in the document');
+        return;
+    }
+
+    // 3. Find vars definition
+    const varsInfo = findVarsDefinition(document);
+    if (!varsInfo) {
+        vscode.window.showInformationMessage("No 'vars' definition found in the current file");
+        return;
+    }
+
+    // 4. Check for PlusCal and handle pc/stack variables
+    const hasPlusCal = hasPlusCalAlgorithm(document);
+    let filteredVariables = [...allVariables];
+
+    if (hasPlusCal) {
+        // Check configuration for including PlusCal variables
+        const config = vscode.workspace.getConfiguration('tlaplus.refactor');
+        const includePlusCalVars = config.get<boolean>('includePlusCalVariables', true);
+
+        if (!includePlusCalVars) {
+            // Filter out pc and stack variables
+            filteredVariables = allVariables.filter(v => v !== 'pc' && v !== 'stack');
+
+            // Show info message about filtered variables
+            const excluded = allVariables.filter(v => v === 'pc' || v === 'stack');
+            if (excluded.length > 0) {
+                vscode.window.showInformationMessage(
+                    `PlusCal variables excluded: ${excluded.join(', ')}. Change setting to include them.`
+                );
+            }
+        }
+    }
+
+    // 5. Compare and update if needed
+    const currentVarsSet = new Set(varsInfo.currentVars);
+    const filteredVarsSet = new Set(filteredVariables);
+
+    // Check if update is needed
+    if (currentVarsSet.size === filteredVarsSet.size &&
+        [...currentVarsSet].every(v => filteredVarsSet.has(v))) {
+        vscode.window.showInformationMessage('vars already up to date');
+        return;
+    }
+
+    // 6. Apply edit with preview
+    const edit = createVarsUpdateEdit(document, varsInfo, filteredVariables);
+    const workspaceEdit = new vscode.WorkspaceEdit();
+    workspaceEdit.set(document.uri, [edit]);
+
+    await vscode.workspace.applyEdit(workspaceEdit);
+    vscode.window.showInformationMessage(`Updated vars with ${filteredVariables.length} variables`);
+}
