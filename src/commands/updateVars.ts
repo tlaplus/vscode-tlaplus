@@ -30,7 +30,7 @@ function extractVariablesFromRegex(document: vscode.TextDocument): string[] {
 
     for (const line of lines) {
         // Check for VARIABLE or VARIABLES keyword
-        const varMatch = line.match(/^\s*(VARIABLE|VARIABLES)\s+(.*)/);
+        const varMatch = line.match(/^\s*(VARIABLES|VARIABLE)\s*(.*)/);  // \s* allows zero or more spaces
         if (varMatch) {
             // If we were already in a variable declaration, process the previous one
             if (currentVarList) {
@@ -53,7 +53,9 @@ function extractVariablesFromRegex(document: vscode.TextDocument): string[] {
             // Check if line continues variable list (starts with whitespace and contains identifiers)
             const continueMatch = line.match(/^\s+([a-zA-Z_][a-zA-Z0-9_]*.*)/);
             if (continueMatch) {
-                currentVarList += ' ' + continueMatch[1];
+                // Remove comments from this line before appending
+                const cleanedLine = continueMatch[1].replace(/\\\*.*/, '').replace(/\(\*[^*]*\*\)/g, '');
+                currentVarList += ', ' + cleanedLine;
             } else {
                 // End of variable declaration - process it
                 if (currentVarList) {
@@ -101,17 +103,33 @@ async function extractAllVariables(document: vscode.TextDocument): Promise<strin
     }
 
     try {
-        // Try XML-based extraction first
+        // Always run both extraction methods for completeness
         const xmlVariables = await extractVariablesFromXML(document);
+        const regexVariables = extractVariablesFromRegex(document);
 
         if (xmlVariables !== undefined) {
             // XML extraction succeeded
-            return xmlVariables;
+            xmlExporterOutChannel.appendLine(
+                `XML extraction found ${xmlVariables.length} variables: ${xmlVariables.join(', ')}`
+            );
+            xmlExporterOutChannel.appendLine(
+                `Regex extraction found ${regexVariables.length} variables: ${regexVariables.join(', ')}`
+            );
+
+            // Merge and deduplicate results
+            const allVariables = [...new Set([...xmlVariables, ...regexVariables])];
+            xmlExporterOutChannel.appendLine(
+                `Total unique variables after merge: ${allVariables.length} - ${allVariables.join(', ')}`
+            );
+            return allVariables;
         }
 
-        // Fall back to regex-based extraction
+        // Fall back to regex-based extraction only
         xmlExporterOutChannel.appendLine('Falling back to regex-based variable extraction');
-        return extractVariablesFromRegex(document);
+        xmlExporterOutChannel.appendLine(
+            `Regex extraction found ${regexVariables.length} variables: ${regexVariables.join(', ')}`
+        );
+        return regexVariables;
 
     } catch (error: unknown) {
         // If XML extraction fails, fall back to regex
@@ -161,6 +179,13 @@ async function extractVariablesFromXML(document: vscode.TextDocument): Promise<s
         if (exitCode !== 0) {
             xmlExporterOutChannel.appendLine(`XML exporter failed with exit code ${exitCode}`);
             xmlExporterOutChannel.appendLine(`stderr: ${stderrData}`);
+
+            // Check for semantic errors (e.g., unknown operators/variables)
+            if (stderrData.includes('Semantic errors:') || stderrData.includes('Unknown operator:')) {
+                xmlExporterOutChannel.appendLine('Semantic error detected in TLA+ specification');
+                return undefined;
+            }
+
             // Check for XML validation error - this is still a success case
             if (stderrData.includes('XMLExportingException: failed to validate XML')) {
                 xmlExporterOutChannel.appendLine('XML validation error detected, but continuing with XML parsing');
