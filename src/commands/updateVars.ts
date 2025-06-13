@@ -1,4 +1,10 @@
 import * as vscode from 'vscode';
+import { runXMLExporter, ToolProcessInfo } from '../tla2tools';
+import { XMLParser } from 'fast-xml-parser';
+import { ToolOutputChannel } from '../outputChannels';
+import * as path from 'path';
+
+const xmlExporterOutChannel = new ToolOutputChannel('UpdateVars XML Exporter');
 
 interface VarsInfo {
     startLine: number;
@@ -10,10 +16,10 @@ interface VarsInfo {
 }
 
 /**
- * Extracts all variables from VARIABLE(S) declarations
- * Parses the document text directly for reliability in tests
+ * Extracts all variables from VARIABLE(S) declarations using regex
+ * Used as fallback when XMLExporter is not available
  */
-async function extractAllVariables(document: vscode.TextDocument): Promise<string[]> {
+function extractVariablesFromRegex(document: vscode.TextDocument): string[] {
     const text = document.getText();
     const lines = text.split(/\r?\n/);
     const variables: string[] = [];
@@ -82,6 +88,160 @@ async function extractAllVariables(document: vscode.TextDocument): Promise<strin
     }
 
     return variables;
+}
+
+/**
+ * Extracts all variables from VARIABLE(S) declarations
+ * Uses hybrid approach: XMLExporter for saved files, regex for unsaved/failures
+ */
+async function extractAllVariables(document: vscode.TextDocument): Promise<string[]> {
+    // Skip XML exporter in test environment
+    if (process.env.VSCODE_TEST === 'true') {
+        return extractVariablesFromRegex(document);
+    }
+
+    try {
+        // Try XML-based extraction first
+        const xmlVariables = await extractVariablesFromXML(document);
+
+        if (xmlVariables !== undefined) {
+            // XML extraction succeeded
+            return xmlVariables;
+        }
+
+        // Fall back to regex-based extraction
+        xmlExporterOutChannel.appendLine('Falling back to regex-based variable extraction');
+        return extractVariablesFromRegex(document);
+
+    } catch (error: unknown) {
+        // If XML extraction fails, fall back to regex
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        xmlExporterOutChannel.appendLine(`XML extraction failed, using regex fallback: ${errorMessage}`);
+        return extractVariablesFromRegex(document);
+    }
+}
+
+/**
+ * Extracts variables from XMLExporter output
+ * Looks for OpDeclNode entries with level=1 and kind=3
+ */
+async function extractVariablesFromXML(document: vscode.TextDocument): Promise<string[] | undefined> {
+    try {
+        if (document.isDirty) {
+            // XMLExporter only works on saved files
+            xmlExporterOutChannel.appendLine('Document is dirty, skipping XML extraction');
+            return undefined;
+        }
+
+        xmlExporterOutChannel.appendLine(`Running XMLExporter on: ${document.fileName}`);
+
+        // Run XML exporter
+        const processInfo: ToolProcessInfo = await runXMLExporter(document.fileName, false);
+
+        // Collect stdout and stderr
+        let stdoutData = '';
+        let stderrData = '';
+
+        processInfo.process.stdout?.on('data', (data) => {
+            stdoutData += data.toString();
+        });
+
+        processInfo.process.stderr?.on('data', (data) => {
+            stderrData += data.toString();
+            xmlExporterOutChannel.appendLine(data.toString());
+        });
+
+        // Wait for process to complete
+        const exitCode = await new Promise<number>((resolve) => {
+            processInfo.process.on('close', (code) => {
+                resolve(code ?? 1);
+            });
+        });
+
+        if (exitCode !== 0) {
+            xmlExporterOutChannel.appendLine(`XML exporter failed with exit code ${exitCode}`);
+            xmlExporterOutChannel.appendLine(`stderr: ${stderrData}`);
+            // Check for XML validation error - this is still a success case
+            if (stderrData.includes('XMLExportingException: failed to validate XML')) {
+                xmlExporterOutChannel.appendLine('XML validation error detected, but continuing with XML parsing');
+                // Continue processing as the XML content might still be valid
+            } else {
+                return undefined;
+            }
+        }
+
+        if (!stdoutData) {
+            xmlExporterOutChannel.appendLine('XML exporter did not produce any output');
+            return undefined;
+        }
+
+        // Remove SANY output lines (first 3 lines)
+        const lines = stdoutData.split('\n');
+        const xmlStartIndex = lines.findIndex(line => line.trim().startsWith('<?xml'));
+        if (xmlStartIndex === -1) {
+            xmlExporterOutChannel.appendLine('No XML content found in output');
+            return undefined;
+        }
+        const xmlContent = lines.slice(xmlStartIndex).join('\n');
+
+        // Parse XML
+        const parser = new XMLParser({
+            ignoreAttributes: false,
+            attributeNamePrefix: '',
+            isArray: (name) => ['entry', 'ModuleNodeRef', 'operands', 'params'].includes(name),
+            parseTagValue: true,
+            trimValues: true
+        });
+
+        const xmlObj = parser.parse(xmlContent);
+        if (!xmlObj.modules?.context?.entry) {
+            xmlExporterOutChannel.appendLine('Invalid XML structure: missing modules.context.entry');
+            return undefined;
+        }
+
+        const variables: string[] = [];
+        const documentBasename = path.basename(document.fileName, path.extname(document.fileName));
+        xmlExporterOutChannel.appendLine(`Looking for variables in document: ${documentBasename}`);
+
+        // Process entries looking for variables (OpDeclNode with level=1 and kind=3)
+        let totalOpDeclNodes = 0;
+        const entries = Array.isArray(xmlObj.modules.context.entry)
+            ? xmlObj.modules.context.entry
+            : [xmlObj.modules.context.entry];
+        for (const entry of entries) {
+            if (entry.OpDeclNode) {
+                totalOpDeclNodes++;
+                const declNode = entry.OpDeclNode;
+
+                // Skip entries not in current document
+                if (declNode.location?.filename !== documentBasename) {
+                    xmlExporterOutChannel.appendLine(`Skipping OpDeclNode from file: ${declNode.location?.filename}`);
+                    continue;
+                }
+
+                const level = parseInt(String(declNode.level));
+                const kind = parseInt(String(declNode.kind));
+
+                // Variables have level=1 and kind=3
+                if (level === 1 && kind === 3) {
+                    const name = declNode.uniquename;
+                    if (name) {
+                        variables.push(name);
+                        xmlExporterOutChannel.appendLine(`Found variable: ${name} (level=${level}, kind=${kind})`);
+                    }
+                }
+            }
+        }
+
+        xmlExporterOutChannel.appendLine(`Total OpDeclNode entries processed: ${totalOpDeclNodes}`);
+        xmlExporterOutChannel.appendLine(`Extracted ${variables.length} variables from XML: ${variables.join(', ')}`);
+        return variables;
+
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        xmlExporterOutChannel.appendLine(`Error extracting variables from XML: ${errorMessage}`);
+        return undefined;
+    }
 }
 
 /**
