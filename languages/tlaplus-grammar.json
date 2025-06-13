@@ -41,8 +41,38 @@
             "match": "\\b(?:IF|THEN|ELSE|CASE|OTHER)\\b"
         },
         "embedded_operators": {
-            "match": "\\\\[a-zA-Z]+\\b",
-            "name": "keyword.operator.tlaplus"
+            "patterns": [
+                {
+                    "comment": "Set operators",
+                    "match": "\\\\(in|notin|subseteq|subset|supseteq|supset|union|intersect|cup|cap|setminus)\\b",
+                    "name": "keyword.operator.set.tlaplus"
+                },
+                {
+                    "comment": "Logic operators",
+                    "match": "\\\\(land|lor|lnot|neg|equiv|implies|iff)\\b",
+                    "name": "keyword.operator.logic.tlaplus"
+                },
+                {
+                    "comment": "Arithmetic operators",
+                    "match": "\\\\(leq|geq|ll|gg|prec|succ|preceq|succeq|sim|simeq|asymp|approx|cong|neq|doteq|propto|models|perp|mid|parallel|bowtie|ltimes|rtimes|div|cdot|star|circ|bullet|wr|oplus|ominus|otimes|oslash|odot|dagger|ddagger)\\b",
+                    "name": "keyword.operator.arithmetic.tlaplus"
+                },
+                {
+                    "comment": "Quantifiers",
+                    "match": "\\\\(A|E|forall|exists)\\b",
+                    "name": "keyword.operator.quantifier.tlaplus"
+                },
+                {
+                    "comment": "Arrows",
+                    "match": "\\\\(times|X)\\b",
+                    "name": "keyword.operator.product.tlaplus"
+                },
+                {
+                    "comment": "Other embedded operators",
+                    "match": "\\\\[a-zA-Z]+\\b",
+                    "name": "keyword.operator.tlaplus"
+                }
+            ]
         },
         "constants": {
             "name": "support.constant.tlaplus",
@@ -147,6 +177,106 @@
             "match": "\\b(\\w+')",
             "name": "variable.name"
         },
+        "temporal_operators": {
+            "patterns": [
+                {
+                    "comment": "Box (always) operator",
+                    "match": "\\[\\]",
+                    "name": "keyword.operator.temporal.always.tlaplus"
+                },
+                {
+                    "comment": "Diamond (eventually) operator",
+                    "match": "<>",
+                    "name": "keyword.operator.temporal.eventually.tlaplus"
+                },
+                {
+                    "comment": "Leads-to operator",
+                    "match": "~>",
+                    "name": "keyword.operator.temporal.leadsto.tlaplus"
+                },
+                {
+                    "comment": "Action brackets",
+                    "match": "\\[([^\\]]+)\\]_\\w+",
+                    "name": "keyword.operator.temporal.action.tlaplus",
+                    "captures": {
+                        "1": {
+                            "patterns": [{"include": "source.tlaplus"}]
+                        }
+                    }
+                },
+                {
+                    "comment": "Angle action",
+                    "match": "<([^>]+)>_\\w+",
+                    "name": "keyword.operator.temporal.action.tlaplus",
+                    "captures": {
+                        "1": {
+                            "patterns": [{"include": "source.tlaplus"}]
+                        }
+                    }
+                }
+            ]
+        },
+        "sequences": {
+            "patterns": [
+                {
+                    "comment": "Sequence/tuple notation",
+                    "begin": "<<",
+                    "end": ">>",
+                    "name": "meta.sequence.tlaplus",
+                    "beginCaptures": {
+                        "0": {"name": "punctuation.definition.sequence.begin.tlaplus"}
+                    },
+                    "endCaptures": {
+                        "0": {"name": "punctuation.definition.sequence.end.tlaplus"}
+                    },
+                    "patterns": [
+                        {"include": "source.tlaplus"}
+                    ]
+                }
+            ]
+        },
+        "set_comprehension": {
+            "patterns": [
+                {
+                    "comment": "Set comprehension",
+                    "match": "(\\{)([^:]+)(:)([^}]+)(\\})",
+                    "captures": {
+                        "1": {"name": "punctuation.definition.set.begin.tlaplus"},
+                        "2": {
+                            "patterns": [{"include": "source.tlaplus"}]
+                        },
+                        "3": {"name": "keyword.operator.set.tlaplus"},
+                        "4": {
+                            "patterns": [{"include": "source.tlaplus"}]
+                        },
+                        "5": {"name": "punctuation.definition.set.end.tlaplus"}
+                    }
+                }
+            ]
+        },
+        "function_construction": {
+            "patterns": [
+                {
+                    "comment": "Function construction [x \\in S |-> expr]",
+                    "match": "(\\[)([^\\|]+)(\\|->)([^\\]]+)(\\])",
+                    "captures": {
+                        "1": {"name": "punctuation.definition.function.begin.tlaplus"},
+                        "2": {
+                            "patterns": [{"include": "source.tlaplus"}]
+                        },
+                        "3": {"name": "keyword.operator.function.tlaplus"},
+                        "4": {
+                            "patterns": [{"include": "source.tlaplus"}]
+                        },
+                        "5": {"name": "punctuation.definition.function.end.tlaplus"}
+                    }
+                }
+            ]
+        },
+        "range_operator": {
+            "match": "\\.\\.",
+            "name": "keyword.operator.range.tlaplus"
+        },
         "module": {
             "begin": "(\\s*-{4,}\\s*)(MODULE)\\s*(\\w+)\\s*(-{4,})",
             "beginCaptures": {
@@ -226,6 +356,21 @@
                 },
                 {
                     "include": "#primed_operators"
+                },
+                {
+                    "include": "#temporal_operators"
+                },
+                {
+                    "include": "#sequences"
+                },
+                {
+                    "include": "#set_comprehension"
+                },
+                {
+                    "include": "#function_construction"
+                },
+                {
+                    "include": "#range_operator"
                 },
                 {
                     "include": "#except_vars"

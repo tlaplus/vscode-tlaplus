@@ -104,15 +104,17 @@ suite('Check Model Test Suite', () => {
         );
     });
 
-    test('Detects set primitive item change', () => {
+    test('Detects set element replacement as deletion + addition', () => {
+        const expected = setX(ROOT, Change.MODIFIED,
+            vX(1, Change.NOT_CHANGED, 'foo'),
+            vX(2, Change.ADDED, 'baroque'),
+            vX(3, Change.NOT_CHANGED, 'baz')
+        );
+        expected.addDeletedItems([v(2, 'bar')]);
         assertChanges(
             set(ROOT, v(1, 'foo'), v(2, 'bar'), v(3, 'baz')),
             set(ROOT, v(1, 'foo'), v(2, 'baroque'), v(3, 'baz')),
-            setX(ROOT, Change.MODIFIED,
-                vX(1, Change.NOT_CHANGED, 'foo'),
-                vX(2, Change.MODIFIED, 'baroque'),
-                vX(3, Change.NOT_CHANGED, 'baz')
-            )
+            expected
         );
     });
 
