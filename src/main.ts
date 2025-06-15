@@ -1,5 +1,9 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as fs from 'fs';
+import { createHash } from 'crypto';
+import { spawn } from 'child_process';
+
 import {
     CMD_CHECK_MODEL_RUN, CMD_CHECK_MODEL_STOP, CMD_CHECK_MODEL_DISPLAY, CMD_SHOW_TLC_OUTPUT,
     CMD_CHECK_MODEL_CUSTOM_RUN, checkModel, displayModelChecking, stopModelChecking,
@@ -228,7 +232,98 @@ export function activate(context: vscode.ExtensionContext): void {
         .then(() => listenTlcStatConfigurationChanges(context.subscriptions));
     showChangeLog(context.extensionPath)
         .catch((err) => console.error(err));
+
+    context.subscriptions.push(
+        vscode.languages.registerDocumentFormattingEditProvider('tlaplus', {
+            provideDocumentFormattingEdits(document: vscode.TextDocument): vscode.ProviderResult<vscode.TextEdit[]> {
+                return new Promise((resolve, reject) => {
+                    const inputText = document.getText();
+                    // need the module name to create the file. The filename should match the module name.
+                    const moduleName = extractModuleName(inputText);
+                    // create a unique temp folder.
+                    const md5Hash = generateHash(inputText, 'md5');
+                    const tempDir = path.join(context.globalStorageUri.fsPath, md5Hash);
+
+                    // create folder if not exists
+                    try {
+                        fs.mkdirSync(tempDir);
+                    } catch (err) {
+                        if ((err as NodeJS.ErrnoException).code !== 'EEXIST') {
+                            reject(err);
+                        }
+                    }
+
+                    let tempInputPath = path.join(context.globalStorageUri.fsPath, md5Hash,  moduleName + '.tla');
+                    const tempOutputPath = path.join(context.globalStorageUri.fsPath, md5Hash, moduleName + '.tla');
+                    // Write input text to temporary file
+                    fs.writeFileSync(tempInputPath, inputText);
+
+                    // if this is a real file, use as input the actual file.
+                    // this is needed because SANY needs to parse also the EXTENDed modules...
+                    // TODO: fails if EXTENDS TLAPS.
+                    if(document.uri.scheme === "file") {
+                        tempInputPath = document.uri.fsPath;
+                    }
+                    // Execute the Java formatter
+
+                    // Execute the Java formatter using spawn
+                    const javaProcess = spawn('java', ['-jar', '/home/fponzi/dev/tla+/tlaplus-formatter/build/libs/tlaplus-formatter.jar', '-v', 'ERROR', tempInputPath, tempInputPath]);
+                    // Capture and log standard output
+                    javaProcess.stdout.on('data', (data) => {
+                        console.log(`STDOUT: ${data}`);
+                    });
+
+                    // Capture and log standard error
+                    javaProcess.stderr.on('data', (data) => {
+                        console.error(`STDERR: ${data}`);
+                    });
+
+                    javaProcess.on('error', (error) => {
+                        vscode.window.showErrorMessage(`Formatter failed: ${error.message}`);
+                        reject(error);
+                    });
+
+                    javaProcess.on('close', (code) => {
+                        if (code !== 0) {
+                            vscode.window.showErrorMessage(`Formatter failed with exit code ${code}`);
+                            return reject(new Error(`Formatter failed with exit code ${code}`));
+                        }
+                        // Read the formatted text
+                        const formattedText = fs.readFileSync(tempOutputPath, 'utf8');
+                        const edit = [vscode.TextEdit.replace(new vscode.Range(0, 0, document.lineCount, 0), formattedText)];
+                        fs.rmSync(tempDir, { recursive: true, force: true });
+                        resolve(edit);
+                    });
+                });
+            }
+        })
+    );
+
+    // Register a command to manually trigger formatting
+    const disposable = vscode.commands.registerCommand('extension.formatDocument', () => {
+        const editor = vscode.window.activeTextEditor;
+        if (editor) {
+            vscode.commands.executeCommand('editor.action.formatDocument');
+        }
+    });
+
+    context.subscriptions.push(disposable);
 }
+
+function generateHash(input: string, algorithm: string): string {
+    const hash = createHash(algorithm);
+    hash.update(input);
+    return hash.digest('hex');
+}
+function extractModuleName(text: string): string | null {
+    const regex = /MODULE\s+(\w+)/;
+    const match = regex.exec(text);
+    if (match && match[1]) {
+        return match[1];
+    }
+    return null;
+}
+
 
 export function deactivate() {
     if (tlapsClient) {
