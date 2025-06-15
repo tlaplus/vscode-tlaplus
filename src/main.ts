@@ -3,7 +3,8 @@ import * as path from 'path';
 import {
     CMD_CHECK_MODEL_RUN, CMD_CHECK_MODEL_STOP, CMD_CHECK_MODEL_DISPLAY, CMD_SHOW_TLC_OUTPUT,
     CMD_CHECK_MODEL_CUSTOM_RUN, checkModel, displayModelChecking, stopModelChecking,
-    showTlcOutput, checkModelCustom, CMD_CHECK_MODEL_RUN_AGAIN, runLastCheckAgain
+    showTlcOutput, checkModelCustom, CMD_CHECK_MODEL_RUN_AGAIN, runLastCheckAgain,
+    setCoverageProvider
 } from './commands/checkModel';
 import { CMD_RUN_REPL, launchRepl, REPLTerminalProfileProvider } from './commands/runRepl';
 import { TLAPLUS_DEBUG_LAUNCH_CHECKNDEBUG, TLAPLUS_DEBUG_LAUNCH_CUSTOMCHECKNDEBUG, TLAPLUS_DEBUG_LAUNCH_DEBUG,
@@ -37,6 +38,8 @@ import { MCPServer } from './lm/MCPServer';
 import { ModuleDiscoveryManager } from './moduleDiscovery';
 import { ModuleHoverProvider } from './providers/moduleHoverProvider';
 import { ModuleDefinitionProvider } from './providers/moduleDefinitionProvider';
+import { TlcCoverageDecorationProvider } from './tlcCoverage';
+import { registerCoverageCommands } from './commands/toggleCoverage';
 
 const TLAPLUS_FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file', language: LANG_TLAPLUS };
 const TLAPLUS_CFG_FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file', language: LANG_TLAPLUS_CFG };
@@ -224,6 +227,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         details => currentProofStepWebviewViewProvider.showProofStepDetails(details),
         configChanged => currentProofStepWebviewViewProvider.considerConfigChanged(configChanged)
     );
+
+    // Initialize coverage provider
+    const coverageProvider = new TlcCoverageDecorationProvider(context);
+    context.subscriptions.push(coverageProvider);
+    setCoverageProvider(coverageProvider);
+
+    // Register coverage commands
+    registerCoverageCommands(context, coverageProvider);
 
     // Check if MCP server should be started based on port configuration
     const mcpPort = vscode.workspace.getConfiguration().get<number>('tlaplus.mcp.port');

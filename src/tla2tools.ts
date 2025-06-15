@@ -400,7 +400,7 @@ function getConfigOptions(cfgName: string, defaultValue: string = ''): string[] 
 export async function getTlcOptions(showPrompt: boolean): Promise<string[] | undefined> {
     // -config is not shown as an option by default so the same options can be used without modification across
     // multiple modules.
-    const defaultOptions = '-coverage 1';
+    const defaultOptions = '-workers 1 -coverage 1';
     const prevConfig = getConfigOptions(CFG_TLC_OPTIONS, defaultOptions);
     const prevConfigString = prevConfig.join(' ');
 

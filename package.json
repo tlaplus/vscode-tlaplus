@@ -370,6 +370,17 @@
                 "command": "tlaplus.moduleExplorer.copySymbolName",
                 "title": "Copy Symbol Name",
                 "category": "TLA+ Module Explorer"
+            },
+            {
+                "command": "tlaplus.tlc.profiler.toggle",
+                "title": "Toggle Coverage Visualization",
+                "category": "TLA+",
+                "icon": "$(flame)"
+            },
+            {
+                "command": "tlaplus.tlc.profiler.clear",
+                "title": "Clear Coverage Data",
+                "category": "TLA+"
             }
         ],
         "snippets": [
@@ -471,6 +482,11 @@
                     "command": "tlaplus.debugger.run",
                     "when": "resourceLangId == tlaplus || editorLangId == tlaplus_cfg",
                     "group": "1_run@20"
+                },
+                {
+                    "command": "tlaplus.tlc.profiler.toggle",
+                    "when": "resourceExtname == .tla",
+                    "group": "navigation"
                 }
             ],
             "view/title": [
@@ -673,6 +689,26 @@
                     },
                     "description": "Paths to look for TLA+ modules.",
                     "default": []
+                },
+                "tlaplus.tlc.profiler.enabled": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Enable TLC coverage visualization by default"
+                },
+                "tlaplus.tlc.profiler.relativeScale": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Use relative scaling (percentage of max) instead of absolute invocation counts"
+                },
+                "tlaplus.tlc.profiler.thresholds": {
+                    "type": "object",
+                    "default": {
+                        "rare": 10,
+                        "low": 100,
+                        "medium": 1000,
+                        "high": 10000
+                    },
+                    "description": "Invocation count thresholds for coverage levels"
                 }
             }
         },
