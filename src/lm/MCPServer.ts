@@ -22,6 +22,27 @@ export class MCPServer implements vscode.Disposable {
         this.startServer(port);
     }
 
+    /**
+     * Resolves a potentially relative file path to an absolute path.
+     * If the path is already absolute, returns it as-is.
+     * If the path is relative, resolves it relative to the workspace root.
+     */
+    private resolveFilePath(fileName: string): string {
+        if (path.isAbsolute(fileName)) {
+            return fileName;
+        }
+        
+        // Get the workspace root directory
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        if (!workspaceFolder) {
+            // If no workspace is open, resolve relative to the current working directory
+            return path.resolve(fileName);
+        }
+        
+        // Resolve relative to the workspace root
+        return path.resolve(workspaceFolder.uri.fsPath, fileName);
+    }
+
     private startServer(port: number): void {
         try {
             const app = express();
@@ -92,15 +113,18 @@ export class MCPServer implements vscode.Disposable {
             { fileName: z.string().describe('The full path to the file containing the TLA+ module.') },
             async ({ fileName }: { fileName: string }) => {
                 try {
+                    // Resolve relative path to absolute path
+                    const absolutePath = this.resolveFilePath(fileName);
+                    
                     // Turn the file name into a vscode.Uri
-                    const fileUri = vscode.Uri.file(fileName);
+                    const fileUri = vscode.Uri.file(absolutePath);
 
                     // Check if the file exists
-                    if (!(await exists(fileName))) {
+                    if (!(await exists(absolutePath))) {
                         return {
                             content: [{
                                 type: 'text',
-                                text: `File ${fileName} does not exist on disk.`
+                                text: `File ${absolutePath} does not exist on disk.`
                             }]
                         };
                     }
@@ -119,7 +143,7 @@ export class MCPServer implements vscode.Disposable {
                         return {
                             content: [{
                                 type: 'text',
-                                text: `No errors found in the TLA+ specification ${fileName}.`
+                                text: `No errors found in the TLA+ specification ${absolutePath}.`
                             }]
                         };
                     } else {
@@ -150,13 +174,16 @@ export class MCPServer implements vscode.Disposable {
             { fileName: z.string().describe('The full path to the file containing the TLA+ module.') },
             async ({ fileName }: { fileName: string }) => {
                 try {
+                    // Resolve relative path to absolute path
+                    const absolutePath = this.resolveFilePath(fileName);
+                    
                     // Turn the file name into a vscode.Uri
-                    const fileUri = vscode.Uri.file(fileName);
-                    if (!(await exists(fileName))) {
+                    const fileUri = vscode.Uri.file(absolutePath);
+                    if (!(await exists(absolutePath))) {
                         return {
                             content: [{
                                 type: 'text',
-                                text: `File ${fileName} does not exist on disk.`
+                                text: `File ${absolutePath} does not exist on disk.`
                             }]
                         };
                     }
@@ -169,7 +196,7 @@ export class MCPServer implements vscode.Disposable {
                     return {
                         content: [{
                             type: 'text',
-                            text: `Document symbols for ${fileName}:\n${JSON.stringify(symbols, null, 2)}`
+                            text: `Document symbols for ${absolutePath}:\n${JSON.stringify(symbols, null, 2)}`
                         }]
                     };
                 } catch (error) {
@@ -190,7 +217,8 @@ export class MCPServer implements vscode.Disposable {
             'Perform an exhaustive model check of the TLA+ module provided as an input file using TLC. Model checking is a formal verification method that systematically explores all reachable states of a system to verify its correctness. This includes checking both safety and liveness properties, and identifying any counterexamples that violate the specified properties. Please note that TLC requires the fully qualified file path to the TLA+ module. Be aware that, due to the potential for state-space explosion, exhaustive model checking may be computationally intensive and time-consuming. In some cases, it may be infeasible to check very large models exhaustively.',
             { fileName: z.string().describe('The full path to the file containing the TLA+ module to parse.') },
             async ({ fileName }) => {
-                return this.runTLCInMCP(fileName, ['-modelcheck']);
+                const absolutePath = this.resolveFilePath(fileName);
+                return this.runTLCInMCP(absolutePath, ['-modelcheck']);
             }
         );
 
@@ -200,7 +228,8 @@ export class MCPServer implements vscode.Disposable {
             'Smoke test the TLA+ module using TLC with the provided input file. Smoke testing is a lightweight verification technique that runs TLC in simulation mode to randomly explore as many behaviors as possible within a specified time limit. This method does not attempt to exhaustively explore the entire state space. If no counterexample is found, it does not imply that the module is correct—only that no violations were observed within the constraints of the test. If a counterexample is found, it demonstrates that the module violates at least one of its specified properties. Note that any counterexample produced may not be minimal due to the non-exhaustive nature of the search. TLC expects the fully qualified file path to the input module.',
             { fileName: z.string().describe('The full path to the file containing the TLA+ module to parse.') },
             async ({ fileName }) => {
-                return this.runTLCInMCP(fileName, ['-simulate'], ['-Dtlc2.TLC.stopAfter=3']);
+                const absolutePath = this.resolveFilePath(fileName);
+                return this.runTLCInMCP(absolutePath, ['-simulate'], ['-Dtlc2.TLC.stopAfter=3']);
             }
         );
 
