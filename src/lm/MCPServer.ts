@@ -88,7 +88,7 @@ export class MCPServer implements vscode.Disposable {
         server.tool(
             'tlaplus_mcp_sany_parse',
             // eslint-disable-next-line max-len
-            'Parse the TLA+ module provided as an input file with SANY from the TLA+ tools. Use this tool when you need to parse a TLA+ module and check for syntax and level-checking errors.',
+            'Parse the input TLA+ module using SANY from the TLA+ tools. Use SANY to perform syntax and level-checking of the module. Ensure that the input is provided as a fully qualified file path, as required by the tool.',
             { fileName: z.string().describe('The full path to the file containing the TLA+ module.') },
             async ({ fileName }: { fileName: string }) => {
                 try {
@@ -146,7 +146,7 @@ export class MCPServer implements vscode.Disposable {
         server.tool(
             'tlaplus_mcp_sany_symbol',
             // eslint-disable-next-line max-len
-            'Extract all symbols from the given TLA+ module. Use this tool when you need to identify the symbols defined in a TLA+ spec—for example, when generating a TLC configuration file. It helps you determine the list of CONSTANTS, the initialization predicate, the next-state relation, the overall behavior specification (Spec), and any defined safety or liveness properties.',
+            'Extract all symbols from the given TLA+ module. Use this tool to identify the symbols defined in a TLA+ specification—such as when generating a TLC configuration file. It assists in determining the list of CONSTANTS, the initialization predicate, the next-state relation, the overall behavior specification (Spec), and any defined safety or liveness properties. Note: SANY expects the fully qualified file path to the TLA+ module.',
             { fileName: z.string().describe('The full path to the file containing the TLA+ module.') },
             async ({ fileName }: { fileName: string }) => {
                 try {
@@ -187,7 +187,7 @@ export class MCPServer implements vscode.Disposable {
         server.tool(
             'tlaplus_mcp_tlc_check',
             // eslint-disable-next-line max-len
-            'Exhaustively model-check the TLA+ module provided as an input file with TLC. Model checking is a formal verification technique that systematically explores the state space of a system to ensure its correctness. It can be used to check safety and liveness properties, as well as to find counterexamples. Due to state-space explostion, model checking may take a long time, and it may be impossible to check large models exhaustively.',
+            'Perform an exhaustive model check of the TLA+ module provided as an input file using TLC. Model checking is a formal verification method that systematically explores all reachable states of a system to verify its correctness. This includes checking both safety and liveness properties, and identifying any counterexamples that violate the specified properties. Please note that TLC requires the fully qualified file path to the TLA+ module. Be aware that, due to the potential for state-space explosion, exhaustive model checking may be computationally intensive and time-consuming. In some cases, it may be infeasible to check very large models exhaustively.',
             { fileName: z.string().describe('The full path to the file containing the TLA+ module to parse.') },
             async ({ fileName }) => {
                 return this.runTLCInMCP(fileName, ['-modelcheck']);
@@ -197,7 +197,7 @@ export class MCPServer implements vscode.Disposable {
         server.tool(
             'tlaplus_mcp_tlc_smoke',
             // eslint-disable-next-line max-len
-            'Smoke test the TLA+ module using TLC with the provided input file. Smoke testing is a lightweight verification method that runs TLC to randomly generate as many behaviors as possible within a specified time limit. Unlike exhaustive model checking, it does not explore the entire state space.  If no counterexample is found during smoke testing, this does not guarantee that the module is correct. However, if a counterexample is found, it proves that the module violates at least one of its properties. Note that, unlike in exhaustive model checking, any counterexample found may not be minimal. "Smoke testing" is defined to be running TLC\'s simulation under a tight time budget.',
+            'Smoke test the TLA+ module using TLC with the provided input file. Smoke testing is a lightweight verification technique that runs TLC in simulation mode to randomly explore as many behaviors as possible within a specified time limit. This method does not attempt to exhaustively explore the entire state space. If no counterexample is found, it does not imply that the module is correct—only that no violations were observed within the constraints of the test. If a counterexample is found, it demonstrates that the module violates at least one of its specified properties. Note that any counterexample produced may not be minimal due to the non-exhaustive nature of the search. TLC expects the fully qualified file path to the input module.',
             { fileName: z.string().describe('The full path to the file containing the TLA+ module to parse.') },
             async ({ fileName }) => {
                 return this.runTLCInMCP(fileName, ['-simulate'], ['-Dtlc2.TLC.stopAfter=3']);
