@@ -233,6 +233,17 @@ export class MCPServer implements vscode.Disposable {
             }
         );
 
+        server.tool(
+            'tlaplus_mcp_tlc_explore',
+            // eslint-disable-next-line max-len
+            'Explore the given TLA+ module by using TLC to randomly generate and print a behavior—a sequence of states, where each state represents an assignment of values to the module’s variables. Choose a meaningful value for the behavior length N that is neither too small nor too large, based on your estimate of what constitutes an interesting behavior for this particular module.',
+            { fileName: z.string().describe('The full path to the file containing the TLA+ module to parse.'), behaviorLength: z.number().min(1).describe('The length of the behavior to generate.') },
+            async ({ fileName, behaviorLength }) => {
+                const absolutePath = this.resolveFilePath(fileName);
+                return this.runTLCInMCP(absolutePath, ['-simulate', '-invlevel', behaviorLength.toString()], ['-Dtlc2.TLC.stopAfter=3']);
+            }
+        );
+
         return server;
     }
 

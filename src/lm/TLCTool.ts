@@ -8,6 +8,12 @@ export interface FileParameter {
 	fileName: string;
 }
 
+export interface BehaviorLengthParameter {
+	behaviorLength: number;
+}
+
+export interface FileWithBehaviorLengthParameter extends FileParameter, BehaviorLengthParameter {}
+
 export class CheckModuleTool implements vscode.LanguageModelTool<FileParameter> {
     async invoke(
         options: vscode.LanguageModelToolInvocationOptions<FileParameter>,
@@ -23,6 +29,15 @@ export class SmokeModuleTool implements vscode.LanguageModelTool<FileParameter> 
     ) {
         // Terminate smoke testing, i.e., simulation after 3 seconds.
         return runTLC(options, token, ['-simulate'], ['-Dtlc2.TLC.stopAfter=3']);
+    }
+}
+export class ExploreModuleTool implements vscode.LanguageModelTool<FileWithBehaviorLengthParameter> {
+    async invoke(
+        options: vscode.LanguageModelToolInvocationOptions<FileWithBehaviorLengthParameter>,
+        token: vscode.CancellationToken
+    ) {
+        // As a safeguard, terminate simulation after 3 seconds.
+        return runTLC(options, token, ['-simulate', '-invlevel', options.input.behaviorLength.toString()], ['-Dtlc2.TLC.stopAfter=3']);
     }
 }
 
