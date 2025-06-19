@@ -3,9 +3,11 @@ import * as path from 'path';
 import { runTlc } from '../tla2tools';
 import { getSpecFiles, mapTlcOutputLine, outChannel } from '../commands/checkModel';
 import { CFG_TLC_STATISTICS_TYPE, ShareOption } from '../commands/tlcStatisticsCfg';
+import { exists } from '../common';
 
 export interface FileParameter {
 	fileName: string;
+	configFileName?: string;
 }
 
 export interface BehaviorLengthParameter {
@@ -68,13 +70,23 @@ async function runTLC(
         );
     }
 
+    // Check if the optional config parameter is provided.  If so, check if the config file exists.
+    if (input.configFileName) {
+        const configFileExists = await exists(vscode.Uri.file(input.configFileName).fsPath);
+        if (!configFileExists) {
+            return new vscode.LanguageModelToolResult(
+                [new vscode.LanguageModelTextPart(`Config file ${input.configFileName} does not exist`)]
+            );
+        }
+    }
+
     // Run TLC with simulation mode
     const shareStats = vscode.workspace.getConfiguration().get<ShareOption>(CFG_TLC_STATISTICS_TYPE);
     if (shareStats !== ShareOption.DoNotShare) {
         extraJavaOpts.push('-Dtlc2.TLC.ide=TLAiVSCode');
     }
     const procInfo = await runTlc(
-        specFiles.tlaFilePath, path.basename(specFiles.cfgFilePath), false, extraOps, extraJavaOpts);
+        specFiles.tlaFilePath, path.basename(input.configFileName ? input.configFileName : specFiles.cfgFilePath), false, extraOps, extraJavaOpts);
     if (procInfo === undefined) {
         return new vscode.LanguageModelToolResult([
             new vscode.LanguageModelTextPart('Failed to start TLC process')

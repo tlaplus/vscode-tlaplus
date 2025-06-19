@@ -215,10 +215,14 @@ export class MCPServer implements vscode.Disposable {
             'tlaplus_mcp_tlc_check',
             // eslint-disable-next-line max-len
             'Perform an exhaustive model check of the TLA+ module provided as an input file using TLC. Model checking is a formal verification method that systematically explores all reachable states of a system to verify its correctness. This includes checking both safety and liveness properties, and identifying any counterexamples that violate the specified properties. Please note that TLC requires the fully qualified file path to the TLA+ module. Be aware that, due to the potential for state-space explosion, exhaustive model checking may be computationally intensive and time-consuming. In some cases, it may be infeasible to check very large models exhaustively.',
-            { fileName: z.string().describe('The full path to the file containing the TLA+ module to parse.') },
-            async ({ fileName }) => {
+            { 
+                fileName: z.string().describe('The full path to the file containing the TLA+ module to parse.'),
+                cfgFile: z.string().optional().describe('Optional path to a custom TLC configuration file.')
+            },
+            async ({ fileName, cfgFile }) => {
                 const absolutePath = this.resolveFilePath(fileName);
-                return this.runTLCInMCP(absolutePath, ['-modelcheck']);
+                const cfgFilePath = cfgFile ? this.resolveFilePath(cfgFile) : undefined;
+                return this.runTLCInMCP(absolutePath, ['-modelcheck'], [], cfgFilePath);
             }
         );
 
@@ -226,10 +230,14 @@ export class MCPServer implements vscode.Disposable {
             'tlaplus_mcp_tlc_smoke',
             // eslint-disable-next-line max-len
             'Smoke test the TLA+ module using TLC with the provided input file. Smoke testing is a lightweight verification technique that runs TLC in simulation mode to randomly explore as many behaviors as possible within a specified time limit. This method does not attempt to exhaustively explore the entire state space. If no counterexample is found, it does not imply that the module is correct—only that no violations were observed within the constraints of the test. If a counterexample is found, it demonstrates that the module violates at least one of its specified properties. Note that any counterexample produced may not be minimal due to the non-exhaustive nature of the search. TLC expects the fully qualified file path to the input module.',
-            { fileName: z.string().describe('The full path to the file containing the TLA+ module to parse.') },
-            async ({ fileName }) => {
+            { 
+                fileName: z.string().describe('The full path to the file containing the TLA+ module to parse.'),
+                cfgFile: z.string().optional().describe('Optional path to a custom TLC configuration file.')
+            },
+            async ({ fileName, cfgFile }) => {
                 const absolutePath = this.resolveFilePath(fileName);
-                return this.runTLCInMCP(absolutePath, ['-simulate'], ['-Dtlc2.TLC.stopAfter=3']);
+                const cfgFilePath = cfgFile ? this.resolveFilePath(cfgFile) : undefined;
+                return this.runTLCInMCP(absolutePath, ['-simulate'], ['-Dtlc2.TLC.stopAfter=3'], cfgFilePath);
             }
         );
 
@@ -237,17 +245,22 @@ export class MCPServer implements vscode.Disposable {
             'tlaplus_mcp_tlc_explore',
             // eslint-disable-next-line max-len
             'Explore the given TLA+ module by using TLC to randomly generate and print a behavior—a sequence of states, where each state represents an assignment of values to the module’s variables. Choose a meaningful value for the behavior length N that is neither too small nor too large, based on your estimate of what constitutes an interesting behavior for this particular module.',
-            { fileName: z.string().describe('The full path to the file containing the TLA+ module to parse.'), behaviorLength: z.number().min(1).describe('The length of the behavior to generate.') },
-            async ({ fileName, behaviorLength }) => {
+            { 
+                fileName: z.string().describe('The full path to the file containing the TLA+ module to parse.'),
+                cfgFile: z.string().optional().describe('Optional path to a custom TLC configuration file.'),
+                behaviorLength: z.number().min(1).describe('The length of the behavior to generate.')
+            },
+            async ({ fileName, behaviorLength, cfgFile }) => {
                 const absolutePath = this.resolveFilePath(fileName);
-                return this.runTLCInMCP(absolutePath, ['-simulate', '-invlevel', behaviorLength.toString()], ['-Dtlc2.TLC.stopAfter=3']);
+                const cfgFilePath = cfgFile ? this.resolveFilePath(cfgFile) : undefined;
+                return this.runTLCInMCP(absolutePath, ['-simulate', '-invlevel', behaviorLength.toString()], ['-Dtlc2.TLC.stopAfter=3'], cfgFilePath);
             }
         );
 
         return server;
     }
 
-    private async runTLCInMCP(fileName: string, extraOps: string[], extraJavaOpts: string[] = []): Promise<{
+    private async runTLCInMCP(fileName: string, extraOps: string[], extraJavaOpts: string[] = [], cfgFilePath?: string): Promise<{
             content: { type: 'text'; text: string; }[];
         }> {
         // Create a URI from the file name
@@ -282,8 +295,11 @@ export class MCPServer implements vscode.Disposable {
                 extraJavaOpts.push('-Dtlc2.TLC.ide=TLAiVSCode');
             }
 
+            // Use the provided cfgFilePath or default to specFiles.cfgFilePath
+            const configFilePath = cfgFilePath || specFiles.cfgFilePath;
+
             const procInfo = await runTlc(
-                specFiles.tlaFilePath, path.basename(specFiles.cfgFilePath), false, extraOps, extraJavaOpts);
+                specFiles.tlaFilePath, path.basename(configFilePath), false, extraOps, extraJavaOpts);
             if (procInfo === undefined) {
                 return {
                     content: [{
