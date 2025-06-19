@@ -200,6 +200,37 @@
                 }
             },
             {
+                "name": "chat-tools-tlaplus_tlc_explore",
+                "canBeReferencedInPrompt": true,
+                "toolReferenceName": "tlaplus_explore",
+                "userDescription": "Explore the TLA+ module using TLC with the provided input file.",
+                "modelDescription": "Explore the given TLA+ module by using TLC to randomly generate and print a behavior—a sequence of states, where each state represents an assignment of values to the module’s variables. Choose a meaningful value for the behavior length N that is neither too small nor too large, based on your estimate of what constitutes an interesting behavior for this particular module.",
+                "displayName": "TLA+: Explore model",
+                "tags": [
+                    "editors",
+                    "chat-tools-tlaplus"
+                ],
+                "icon": "$(files)",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "fileName": {
+                            "type": "string",
+                            "description": "The full path to the file containing the TLA+ module to parse."
+                        },
+                        "behaviorLength": {
+                            "type": "number",
+                            "minimum": 1,
+                            "description": "The length of the behavior to generate."
+                        }
+                    },
+                    "required": [
+                        "fileName",
+                        "behaviorLength"
+                    ]
+                }
+            },
+            {
                 "name": "chat-tools-tlaplus_tlc_check",
                 "canBeReferencedInPrompt": true,
                 "toolReferenceName": "tlaplus_check",

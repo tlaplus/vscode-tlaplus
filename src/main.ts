@@ -32,7 +32,7 @@ import { TlapsClient } from './tlaps';
 import { CurrentProofStepWebviewViewProvider } from './panels/currentProofStepWebviewViewProvider';
 import { moduleSearchPaths } from './paths';
 import { ModuleSearchPathsTreeDataProvider } from './panels/moduleSearchPathsTreeDataProvider';
-import { CheckModuleTool, SmokeModuleTool } from './lm/TLCTool';
+import { CheckModuleTool, ExploreModuleTool, SmokeModuleTool } from './lm/TLCTool';
 import { ParseModuleTool, SymbolProviderTool } from './lm/SANYTool';
 import { MCPServer } from './lm/MCPServer';
 import { TlcCoverageDecorationProvider } from './tlcCoverage';
@@ -197,6 +197,10 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.lm.registerTool(
             'chat-tools-tlaplus_tlc_smoke',
             new SmokeModuleTool()
+        ),
+        vscode.lm.registerTool(
+            'chat-tools-tlaplus_tlc_explore',
+            new ExploreModuleTool()
         ),
         vscode.lm.registerTool(
             'chat-tools-tlaplus_tlc_check',
