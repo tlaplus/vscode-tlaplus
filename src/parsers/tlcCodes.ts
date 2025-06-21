@@ -236,6 +236,7 @@ export const TLC_LIVE_ENCOUNTERED_NONBOOL_PREDICATE = registerCode(2252, TlcCode
 export const TLC_LIVE_FORMULA_TAUTOLOGY = registerCode(2253, TlcCodeType.Error);
 export const TLC_LIVE_FORMULA_STATE_LEVEL = registerCode(2255, TlcCodeType.Warning);
 export const TLC_CONFIG_NO_SPEC_BUT_PROPERTY = registerCode(2257, TlcCodeType.Warning);
+export const TLC_LIVE_FORMULA_AND_FAIRNESS_TAUTOLOGY = registerCode(2258, TlcCodeType.Warning);
 
 export const TLC_EXPECTED_VALUE = registerCode(2215, TlcCodeType.Error);
 export const TLC_EXPECTED_EXPRESSION = registerCode(2246, TlcCodeType.Error);
