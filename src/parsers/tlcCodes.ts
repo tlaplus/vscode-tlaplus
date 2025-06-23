@@ -237,6 +237,8 @@ export const TLC_LIVE_FORMULA_TAUTOLOGY = registerCode(2253, TlcCodeType.Error);
 export const TLC_LIVE_FORMULA_STATE_LEVEL = registerCode(2255, TlcCodeType.Warning);
 export const TLC_CONFIG_NO_SPEC_BUT_PROPERTY = registerCode(2257, TlcCodeType.Warning);
 export const TLC_LIVE_FORMULA_AND_FAIRNESS_TAUTOLOGY = registerCode(2258, TlcCodeType.Warning);
+export const TLC_CONFIG_NO_FAIRNESS_BUT_LIVE_PROPERTY = registerCode(2259, TlcCodeType.Warning);
+export const TLC_INVARIANT_CONSTANT_LEVEL = registerCode(2149, TlcCodeType.Warning);
 
 export const TLC_EXPECTED_VALUE = registerCode(2215, TlcCodeType.Error);
 export const TLC_EXPECTED_EXPRESSION = registerCode(2246, TlcCodeType.Error);
