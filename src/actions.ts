@@ -30,6 +30,27 @@ export class TlaCodeActionProvider implements vscode.CodeActionProvider {
         context: vscode.CodeActionContext,
         token: vscode.CancellationToken
     ): vscode.ProviderResult<(vscode.Command | vscode.CodeAction)[]> {
-        return [ this.actParseModule, this.smokeTestModel ];
+        const actions: (vscode.Command | vscode.CodeAction)[] = [
+            this.actParseModule,
+            this.smokeTestModel
+        ];
+
+        // Check if cursor is on a line with "vars =="
+        const line = document.lineAt(range.start.line);
+        const lineText = line.text;
+
+        if (lineText.match(/^\s*vars\s*==/)) {
+            const updateVarsAction = new vscode.CodeAction(
+                'Update vars tuple',
+                vscode.CodeActionKind.RefactorRewrite
+            );
+            updateVarsAction.command = {
+                command: 'tlaplus.refactor.update_vars',
+                title: 'Update vars tuple'
+            };
+            actions.push(updateVarsAction);
+        }
+
+        return actions;
     }
 }

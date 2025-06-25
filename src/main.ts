@@ -35,6 +35,7 @@ import { ModuleSearchPathsTreeDataProvider } from './panels/moduleSearchPathsTre
 import { CheckModuleTool, ExploreModuleTool, SmokeModuleTool } from './lm/TLCTool';
 import { ParseModuleTool, SymbolProviderTool } from './lm/SANYTool';
 import { MCPServer } from './lm/MCPServer';
+import { updateVarsCommand } from './commands/updateVars';
 import { TlcCoverageDecorationProvider } from './tlcCoverage';
 import { registerCoverageCommands } from './commands/toggleCoverage';
 
@@ -100,13 +101,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         vscode.commands.registerCommand(
             CMD_RUN_REPL,
             () => launchRepl()),
+        vscode.commands.registerCommand(
+            'tlaplus.refactor.update_vars',
+            updateVarsCommand),
         vscode.window.registerTerminalProfileProvider(
             CMD_RUN_REPL,
             new REPLTerminalProfileProvider()),
         vscode.languages.registerCodeActionsProvider(
             TLAPLUS_FILE_SELECTOR,
             new TlaCodeActionProvider(),
-            { providedCodeActionKinds: [vscode.CodeActionKind.Source] }),
+            { providedCodeActionKinds: [vscode.CodeActionKind.Source, vscode.CodeActionKind.RefactorRewrite] }),
         vscode.debug.registerDebugAdapterDescriptorFactory(
             LANG_TLAPLUS,
             new TLADebugAdapterServerDescriptorFactory()),
