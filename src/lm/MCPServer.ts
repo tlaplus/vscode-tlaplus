@@ -76,8 +76,29 @@ export class MCPServer implements vscode.Disposable {
             });
 
             this.mcpServer = app.listen(port, () => {
-                vscode.window.showInformationMessage(`TLA+ MCP server listening at http://localhost:${port}/mcp`);
-                console.log(`TLA+ MCP server listening at http://localhost:${port}/mcp`);
+                // Get the actual port that was assigned (important when port is 0)
+                const actualPort = (this.mcpServer!.address() as any)?.port || port;
+                console.log(`TLA+ MCP server listening at http://localhost:${actualPort}/mcp`);
+                // Only show the information message if running in Cursor, not VSCode.
+                const isCursor = vscode.env.appName?.toLowerCase().includes('cursor');
+                if (isCursor) {
+                    // Show an information message in Cursor including a button to add the MCP server to Cursor.
+                    const addToCursor = 'Add to Cursor';
+                    vscode.window.showInformationMessage(`TLA+ MCP server listening at http://localhost:${actualPort}/mcp`, addToCursor).then(opt => {
+                        if (opt === addToCursor) {
+                            // We will display the information message in Cursor regardless of whether the user has already added the MCP server.
+                            // Fortunately, adding the MCP server is idempotent, so it can be safely repeated without causing issues.
+                            vscode.workspace.getConfiguration().update('tlaplus.mcp.port', actualPort, vscode.ConfigurationTarget.Global);
+                            // base64 encode the URL
+                            const CURSOR_CONFIG = JSON.stringify({ url: `http://localhost:${actualPort}/mcp` });
+                            // https://docs.cursor.com/deeplinks
+                            const CURSOR_DEEPLINK = `cursor://anysphere.cursor-deeplink/mcp/install?name=TLA+MCP+Server&config=${Buffer.from(CURSOR_CONFIG).toString('base64')}`;
+                            console.log(`Cursor deeplink: ${CURSOR_DEEPLINK}`);
+                            // Use the external URI handler to open the deeplink in Cursor because vscode.commands.executeCommand('vscode.open', CURSOR_DEEPLINK) doesn't work.
+                            vscode.env.openExternal(vscode.Uri.parse(CURSOR_DEEPLINK));
+                        }
+                    });
+                }
             }).on('error', (err) => {
                 vscode.window.showErrorMessage(
                     `Failed to start TLA+ MCP server: ${
