@@ -7,10 +7,12 @@ import { CfgOnTypeFormattingEditProvider } from './formatters/cfg';
 import { TlaOnTypeFormattingEditProvider } from './formatters/tla';
 import { TlaDocumentInfos } from './model/documentInfo';
 import { TlaDocumentSymbolsProvider } from './symbols/tlaSymbols';
+import { ModuleSymbolProvider } from './symbols/moduleSymbolProvider';
 
 const LANG_TLAPLUS = 'tlaplus';
 const LANG_TLAPLUS_CFG = 'tlaplus_cfg';
 const tlaDocInfos = new TlaDocumentInfos();
+const moduleSymbolProvider = new ModuleSymbolProvider();
 
 /**
  * Extension entry point.
@@ -31,7 +33,7 @@ export function activate(context: vscode.ExtensionContext): void {
             { label: 'TLA+' }),
         vscode.languages.registerCompletionItemProvider(
             LANG_TLAPLUS,
-            new TlaCompletionItemProvider(tlaDocInfos)),
+            new TlaCompletionItemProvider(tlaDocInfos, moduleSymbolProvider)),
         vscode.languages.registerCompletionItemProvider(
             LANG_TLAPLUS_CFG,
             new CfgCompletionItemProvider()),

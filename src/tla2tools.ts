@@ -82,7 +82,6 @@ export class JavaVersion {
 function makeTlaLibraryJavaOpt(): string {
     const libPaths = paths.moduleSearchPaths.
         getOtherPaths(paths.TLC).
-        filter(p => !p.startsWith('jar:')). // TODO: Support archive paths as well.
         join(path.delimiter);
     return '-DTLA-Library=' + libPaths;
 }
