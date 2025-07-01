@@ -748,7 +748,7 @@
         "@types/express": "^5.0.2",
         "@types/glob": "^8.1.0",
         "@types/mocha": "^10.0.1",
-        "@types/node": "^18.15.0",
+        "@types/node": "^22.0.0",
         "@types/react": "^18.2.6",
         "@types/react-dom": "^18.2.4",
         "@types/vscode": "^1.95.0",
@@ -761,9 +761,9 @@
         "fast-check": "^4.1.1",
         "glob": "^8.1.0",
         "mocha": "^10.2.0",
-        "node": "^18.15.0",
+        "node": "^22.0.0",
         "source-map-support": "^0.5.19",
-        "typescript": "^5.0.4",
+        "typescript": "^5.7.2",
         "vscode-tmgrammar-test": "^0.1.1"
     },
     "dependencies": {
