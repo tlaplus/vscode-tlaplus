@@ -47,7 +47,7 @@ jobs:
       run: echo "::set-output name=version::$(git log -1 --format=%cd --date="format:%Y.%-m.%-d%H%M")"
     - name: Install dependencies
       run: |
-        npm install
+        npm ci
         npm install -g vsce
     - name: Build
       run: |
