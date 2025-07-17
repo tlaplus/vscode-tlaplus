@@ -9,7 +9,7 @@
         "name": "TLA+ Community"
     },
     "engines": {
-        "vscode": "^1.95.0"
+        "vscode": "^1.101.0"
     },
     "categories": [
         "Programming Languages",
@@ -749,8 +749,8 @@
         "@types/glob": "^8.1.0",
         "@types/mocha": "^10.0.1",
         "@types/node": "^24.0.10",
-        "@types/react": "^19.1.8",
-        "@types/react-dom": "^19.1.6",
+        "@types/react": "^18.2.6",
+        "@types/react-dom": "^18.2.4",
         "@types/vscode": "^1.101.0",
         "@typescript-eslint/eslint-plugin": "^8.35.1",
         "@typescript-eslint/parser": "^8.35.1",
@@ -779,9 +779,9 @@
         "express": "^5.1.0",
         "fast-xml-parser": "^5.2.5",
         "moment": "^2.30.1",
-        "react": "^19.1.0",
+        "react": "^18.2.0",
         "react-chartjs-2": "^5.2.0",
-        "react-dom": "^19.1.0",
+        "react-dom": "^18.2.0",
         "vscode-languageclient": "^9.0.0",
         "vscode-uri": "^3.1.0",
         "zod": "^3.25.73"
