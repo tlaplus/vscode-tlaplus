@@ -31,14 +31,14 @@ export class MCPServer implements vscode.Disposable {
         if (path.isAbsolute(fileName)) {
             return fileName;
         }
-        
+
         // Get the workspace root directory
         const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
         if (!workspaceFolder) {
             // If no workspace is open, resolve relative to the current working directory
             return path.resolve(fileName);
         }
-        
+
         // Resolve relative to the workspace root
         return path.resolve(workspaceFolder.uri.fsPath, fileName);
     }
@@ -77,7 +77,7 @@ export class MCPServer implements vscode.Disposable {
 
             this.mcpServer = app.listen(port, () => {
                 // Get the actual port that was assigned (important when port is 0)
-                const actualPort = (this.mcpServer!.address() as any)?.port || port;
+                const actualPort = (this.mcpServer!.address() as { port: number })?.port || port;
                 console.log(`TLA+ MCP server listening at http://localhost:${actualPort}/mcp`);
                 // Only show the information message if running in Cursor, not VSCode.
                 const isCursor = vscode.env.appName?.toLowerCase().includes('cursor');
@@ -136,7 +136,7 @@ export class MCPServer implements vscode.Disposable {
                 try {
                     // Resolve relative path to absolute path
                     const absolutePath = this.resolveFilePath(fileName);
-                    
+
                     // Turn the file name into a vscode.Uri
                     const fileUri = vscode.Uri.file(absolutePath);
 
@@ -197,7 +197,7 @@ export class MCPServer implements vscode.Disposable {
                 try {
                     // Resolve relative path to absolute path
                     const absolutePath = this.resolveFilePath(fileName);
-                    
+
                     // Turn the file name into a vscode.Uri
                     const fileUri = vscode.Uri.file(absolutePath);
                     if (!(await exists(absolutePath))) {
@@ -236,7 +236,7 @@ export class MCPServer implements vscode.Disposable {
             'tlaplus_mcp_tlc_check',
             // eslint-disable-next-line max-len
             'Perform an exhaustive model check of the TLA+ module provided as an input file using TLC. Model checking is a formal verification method that systematically explores all reachable states of a system to verify its correctness. This includes checking both safety and liveness properties, and identifying any counterexamples that violate the specified properties. Please note that TLC requires the fully qualified file path to the TLA+ module. Be aware that, due to the potential for state-space explosion, exhaustive model checking may be computationally intensive and time-consuming. In some cases, it may be infeasible to check very large models exhaustively.',
-            { 
+            {
                 fileName: z.string().describe('The full path to the file containing the TLA+ module to parse.'),
                 cfgFile: z.string().optional().describe('Optional path to a custom TLC configuration file.')
             },
@@ -251,7 +251,7 @@ export class MCPServer implements vscode.Disposable {
             'tlaplus_mcp_tlc_smoke',
             // eslint-disable-next-line max-len
             'Smoke test the TLA+ module using TLC with the provided input file. Smoke testing is a lightweight verification technique that runs TLC in simulation mode to randomly explore as many behaviors as possible within a specified time limit. This method does not attempt to exhaustively explore the entire state space. If no counterexample is found, it does not imply that the module is correct—only that no violations were observed within the constraints of the test. If a counterexample is found, it demonstrates that the module violates at least one of its specified properties. Note that any counterexample produced may not be minimal due to the non-exhaustive nature of the search. TLC expects the fully qualified file path to the input module.',
-            { 
+            {
                 fileName: z.string().describe('The full path to the file containing the TLA+ module to parse.'),
                 cfgFile: z.string().optional().describe('Optional path to a custom TLC configuration file.')
             },
@@ -266,7 +266,7 @@ export class MCPServer implements vscode.Disposable {
             'tlaplus_mcp_tlc_explore',
             // eslint-disable-next-line max-len
             'Explore the given TLA+ module by using TLC to randomly generate and print a behavior—a sequence of states, where each state represents an assignment of values to the module’s variables. Choose a meaningful value for the behavior length N that is neither too small nor too large, based on your estimate of what constitutes an interesting behavior for this particular module.',
-            { 
+            {
                 fileName: z.string().describe('The full path to the file containing the TLA+ module to parse.'),
                 cfgFile: z.string().optional().describe('Optional path to a custom TLC configuration file.'),
                 behaviorLength: z.number().min(1).describe('The length of the behavior to generate.')

@@ -226,7 +226,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         const p = vscode.workspace.getConfiguration().get<number>('tlaplus.mcp.port');
         if (typeof p === 'number' && p === -1) {
             await vscode.workspace.getConfiguration().update('tlaplus.mcp.port', 0, vscode.ConfigurationTarget.Global);
-        }            
+        }
     }
     const mcpPort = vscode.workspace.getConfiguration().get<number>('tlaplus.mcp.port');
     if (typeof mcpPort === 'number' && (mcpPort >= 1024 && mcpPort <= 65535 || mcpPort === 0)) {
@@ -234,7 +234,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         context.subscriptions.push(tlaMcpServer);
 
         // TODO : At this point, we would like to programmatically register the MCP server in Cursor
-        // without creating a permanent file.  A permanent file, i.e., static configuration makes sense for 
+        // without creating a permanent file.  A permanent file, i.e., static configuration makes sense for
         // an external MCP server, but not for the transient MCP server that is started by the extension.
     }
     syncTlcStatisticsSetting()

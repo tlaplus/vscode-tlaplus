@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import moment = require('moment');
+import moment from 'moment';
 import { Moment } from 'moment';
 import { Value, ValueKey, SetValue, SequenceValue, StructureValue,
     InitialStateStatItem, CoverageItem, ModelCheckResult, CheckState, CheckStatus, MessageLine, MessageSpan,
