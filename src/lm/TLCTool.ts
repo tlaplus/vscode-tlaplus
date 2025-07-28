@@ -21,7 +21,7 @@ export class CheckModuleTool implements vscode.LanguageModelTool<FileParameter> 
         options: vscode.LanguageModelToolInvocationOptions<FileParameter>,
         token: vscode.CancellationToken
     ) {
-        return runTLC(options, token, ['-modelcheck']);
+        return runTLC(options, token, ['-modelcheck', '-cleanup']);
     }
 }
 export class SmokeModuleTool implements vscode.LanguageModelTool<FileParameter> {
@@ -30,7 +30,7 @@ export class SmokeModuleTool implements vscode.LanguageModelTool<FileParameter> 
         token: vscode.CancellationToken
     ) {
         // Terminate smoke testing, i.e., simulation after 3 seconds.
-        return runTLC(options, token, ['-simulate'], ['-Dtlc2.TLC.stopAfter=3']);
+        return runTLC(options, token, ['-simulate', '-cleanup'], ['-Dtlc2.TLC.stopAfter=3']);
     }
 }
 export class ExploreModuleTool implements vscode.LanguageModelTool<FileWithBehaviorLengthParameter> {
@@ -39,7 +39,7 @@ export class ExploreModuleTool implements vscode.LanguageModelTool<FileWithBehav
         token: vscode.CancellationToken
     ) {
         // As a safeguard, terminate simulation after 3 seconds.
-        return runTLC(options, token, ['-simulate', '-invlevel', options.input.behaviorLength.toString()], ['-Dtlc2.TLC.stopAfter=3']);
+        return runTLC(options, token, ['-simulate', '-cleanup', '-invlevel', options.input.behaviorLength.toString()], ['-Dtlc2.TLC.stopAfter=3']);
     }
 }
 
