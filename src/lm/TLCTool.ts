@@ -39,7 +39,12 @@ export class ExploreModuleTool implements vscode.LanguageModelTool<FileWithBehav
         token: vscode.CancellationToken
     ) {
         // As a safeguard, terminate simulation after 3 seconds.
-        return runTLC(options, token, ['-simulate', '-cleanup', '-invlevel', options.input.behaviorLength.toString()], ['-Dtlc2.TLC.stopAfter=3']);
+        return runTLC(
+            options,
+            token,
+            ['-simulate', '-cleanup', '-invlevel', options.input.behaviorLength.toString()],
+            ['-Dtlc2.TLC.stopAfter=3']
+        );
     }
 }
 
@@ -86,7 +91,12 @@ async function runTLC(
         extraJavaOpts.push('-Dtlc2.TLC.ide=TLAiVSCode');
     }
     const procInfo = await runTlc(
-        specFiles.tlaFilePath, path.basename(input.configFileName ? input.configFileName : specFiles.cfgFilePath), false, extraOps, extraJavaOpts);
+        specFiles.tlaFilePath,
+        path.basename(input.configFileName ? input.configFileName : specFiles.cfgFilePath),
+        false,
+        extraOps,
+        extraJavaOpts
+    );
     if (procInfo === undefined) {
         return new vscode.LanguageModelToolResult([
             new vscode.LanguageModelTextPart('Failed to start TLC process')
