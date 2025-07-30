@@ -5,7 +5,7 @@ import express from 'express';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import * as vscode from 'vscode';
-import { LANG_TLAPLUS, exists } from '../common';
+import { exists } from '../common';
 import { applyDCollection } from '../diagnostic';
 import { TLADocumentSymbolProvider } from '../symbols/tlaSymbols';
 import { parseSpec, transpilePlusCal } from '../commands/parseModule';
@@ -13,6 +13,7 @@ import { TlaDocumentInfos } from '../model/documentInfo';
 import { getSpecFiles, mapTlcOutputLine, outChannel } from '../commands/checkModel';
 import { runTlc } from '../tla2tools';
 import { CFG_TLC_STATISTICS_TYPE, ShareOption } from '../commands/tlcStatisticsCfg';
+import { getDiagnostic } from '../main';
 
 export class MCPServer implements vscode.Disposable {
 
@@ -156,7 +157,7 @@ export class MCPServer implements vscode.Disposable {
 
                     // Post-process SANY's parse results
                     messages.addAll(specData.dCollection);
-                    const diagnostic = vscode.languages.createDiagnosticCollection(LANG_TLAPLUS);
+                    const diagnostic = getDiagnostic();
                     applyDCollection(messages, diagnostic);
 
                     // Format the result based on whether there were any errors

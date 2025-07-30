@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 import { parseSpec, transpilePlusCal } from '../commands/parseModule';
-import { LANG_TLAPLUS } from '../common';
 import { applyDCollection } from '../diagnostic';
 import { TLADocumentSymbolProvider } from '../symbols/tlaSymbols';
 import { TlaDocumentInfos } from '../model/documentInfo';
+import { getDiagnostic } from '../main';
 
 export interface FileParameter {
 	fileName: string;
@@ -27,7 +27,7 @@ export class ParseModuleTool implements vscode.LanguageModelTool<FileParameter> 
             const specData = await parseSpec(fileUri);
             // Post-process SANY's parse results.
             messages.addAll(specData.dCollection);
-            const diagnostic = vscode.languages.createDiagnosticCollection(LANG_TLAPLUS);
+            const diagnostic = getDiagnostic();
             applyDCollection(messages, diagnostic);
             // We are happy if SANY is happy.
             if (messages.messages.length === 0) {
