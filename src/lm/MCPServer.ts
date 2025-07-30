@@ -85,17 +85,30 @@ export class MCPServer implements vscode.Disposable {
                 if (isCursor) {
                     // Show an information message in Cursor including a button to add the MCP server to Cursor.
                     const addToCursor = 'Add to Cursor';
-                    vscode.window.showInformationMessage(`TLA+ MCP server listening at http://localhost:${actualPort}/mcp`, addToCursor).then(opt => {
+                    vscode.window.showInformationMessage(
+                        `TLA+ MCP server listening at http://localhost:${actualPort}/mcp`,
+                        addToCursor
+                    ).then(opt => {
                         if (opt === addToCursor) {
-                            // We will display the information message in Cursor regardless of whether the user has already added the MCP server.
-                            // Fortunately, adding the MCP server is idempotent, so it can be safely repeated without causing issues.
-                            vscode.workspace.getConfiguration().update('tlaplus.mcp.port', actualPort, vscode.ConfigurationTarget.Global);
+                            // We will display the information message in Cursor regardless of whether the user has
+                            // already added the MCP server.
+                            // Fortunately, adding the MCP server is idempotent, so it can be safely repeated
+                            // without causing issues.
+                            vscode.workspace.getConfiguration().update(
+                                'tlaplus.mcp.port',
+                                actualPort,
+                                vscode.ConfigurationTarget.Global
+                            );
                             // base64 encode the URL
-                            const CURSOR_CONFIG = JSON.stringify({ url: `http://localhost:${actualPort}/mcp` });
+                            const CURSOR_CONFIG = JSON.stringify({
+                                url: `http://localhost:${actualPort}/mcp`
+                            });
                             // https://docs.cursor.com/deeplinks
+                            // eslint-disable-next-line max-len
                             const CURSOR_DEEPLINK = `cursor://anysphere.cursor-deeplink/mcp/install?name=TLA+MCP+Server&config=${Buffer.from(CURSOR_CONFIG).toString('base64')}`;
                             console.log(`Cursor deeplink: ${CURSOR_DEEPLINK}`);
-                            // Use the external URI handler to open the deeplink in Cursor because vscode.commands.executeCommand('vscode.open', CURSOR_DEEPLINK) doesn't work.
+                            // Use the external URI handler to open the deeplink in Cursor because
+                            // vscode.commands.executeCommand('vscode.open', CURSOR_DEEPLINK) doesn't work.
                             vscode.env.openExternal(vscode.Uri.parse(CURSOR_DEEPLINK));
                         }
                     });
@@ -275,14 +288,24 @@ export class MCPServer implements vscode.Disposable {
             async ({ fileName, behaviorLength, cfgFile }) => {
                 const absolutePath = this.resolveFilePath(fileName);
                 const cfgFilePath = cfgFile ? this.resolveFilePath(cfgFile) : undefined;
-                return this.runTLCInMCP(absolutePath, ['-simulate', '-invlevel', behaviorLength.toString()], ['-Dtlc2.TLC.stopAfter=3'], cfgFilePath);
+                return this.runTLCInMCP(
+                    absolutePath,
+                    ['-simulate', '-invlevel', behaviorLength.toString()],
+                    ['-Dtlc2.TLC.stopAfter=3'],
+                    cfgFilePath
+                );
             }
         );
 
         return server;
     }
 
-    private async runTLCInMCP(fileName: string, extraOps: string[], extraJavaOpts: string[] = [], cfgFilePath?: string): Promise<{
+    private async runTLCInMCP(
+        fileName: string,
+        extraOps: string[],
+        extraJavaOpts: string[] = [],
+        cfgFilePath?: string
+    ): Promise<{
             content: { type: 'text'; text: string; }[];
         }> {
         // Create a URI from the file name
