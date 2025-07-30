@@ -63,6 +63,24 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     const currentProofStepWebviewViewProvider = new CurrentProofStepWebviewViewProvider(context.extensionUri);
     diagnostic = vscode.languages.createDiagnosticCollection(LANG_TLAPLUS);
     context.subscriptions.push(
+        vscode.workspace.onDidDeleteFiles((event) => {
+            event.files.forEach((uri) => {
+                // Clear diagnostics for deleted TLA+ files
+                // Note: We can't check languageId for deleted files, so we use file extension
+                if (uri.fsPath.endsWith('.tla')) {
+                    diagnostic.delete(uri);
+                }
+            });
+        }),
+        vscode.workspace.onDidRenameFiles((event) => {
+            event.files.forEach((rename) => {
+                // Clear diagnostics for the old file path when TLA+ files are renamed
+                // Note: We can't check languageId for the old URI, so we use file extension
+                if (rename.oldUri.fsPath.endsWith('.tla')) {
+                    diagnostic.delete(rename.oldUri);
+                }
+            });
+        }),
         vscode.commands.registerCommand(
             CMD_PARSE_MODULE,
             () => parseModule(diagnostic)),
