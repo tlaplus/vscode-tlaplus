@@ -78,7 +78,7 @@ export class MCPServer implements vscode.Disposable {
 
             this.mcpServer = app.listen(port, () => {
                 // Get the actual port that was assigned (important when port is 0)
-                const actualPort = (this.mcpServer!.address() as { port: number })?.port || port;
+                const actualPort = (this.mcpServer?.address() as { port: number })?.port || port;
                 console.log(`TLA+ MCP server listening at http://localhost:${actualPort}/mcp`);
                 // Only show the information message if running in Cursor, not VSCode.
                 const isCursor = vscode.env.appName?.toLowerCase().includes('cursor');
