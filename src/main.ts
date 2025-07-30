@@ -81,6 +81,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
                 }
             });
         }),
+        vscode.workspace.onDidSaveTextDocument((document) => {
+            // Clear diagnostics if the document is empty after being saved.
+            if (document.getText().trim() === '' &&
+                document.languageId === LANG_TLAPLUS) {
+                diagnostic.delete(document.uri);
+            }
+        }),
         vscode.commands.registerCommand(
             CMD_PARSE_MODULE,
             () => parseModule(diagnostic)),
