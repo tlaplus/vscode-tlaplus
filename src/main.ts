@@ -47,6 +47,11 @@ const tlaDocInfos = new TlaDocumentInfos();
 // Holds all the error messages
 let diagnostic: vscode.DiagnosticCollection;
 
+// Export function to access the diagnostic collection
+export function getDiagnostic(): vscode.DiagnosticCollection {
+    return diagnostic;
+}
+
 let tlapsClient: TlapsClient | undefined;
 
 /**
