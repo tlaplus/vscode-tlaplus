@@ -260,7 +260,7 @@ export class MCPServer implements vscode.Disposable {
                 const absolutePath = this.resolveFilePath(fileName);
                 const cfgFilePath = cfgFile ? this.resolveFilePath(cfgFile) : undefined;
                 // Prepend the command line argument ['-modelcheck'] to extra opts.
-                const options = extraOpts ? ['-modelcheck', ...extraOpts] : ['-modelcheck'];
+                const options = extraOpts ? ['-cleanup', '-modelcheck', ...extraOpts] : ['-cleanup', '-modelcheck'];
                 return this.runTLCInMCP(absolutePath, options, [], cfgFilePath);
             }
         );
@@ -279,7 +279,7 @@ export class MCPServer implements vscode.Disposable {
                 const absolutePath = this.resolveFilePath(fileName);
                 const cfgFilePath = cfgFile ? this.resolveFilePath(cfgFile) : undefined;
                 // Prepend the command line argument ['-modelcheck'] to extra opts.
-                const options = extraOpts ? ['-simulate', ...extraOpts] : ['-simulate'];
+                const options = extraOpts ? ['-cleanup', '-simulate', ...extraOpts] : ['-cleanup', '-simulate'];
                 return this.runTLCInMCP(absolutePath, options, ['-Dtlc2.TLC.stopAfter=3'], cfgFilePath);
             }
         );
@@ -300,8 +300,8 @@ export class MCPServer implements vscode.Disposable {
                 const cfgFilePath = cfgFile ? this.resolveFilePath(cfgFile) : undefined;
                 // Prepend the command line argument ['-modelcheck'] to extra opts.
                 const options = extraOpts ?
-                    ['-simulate', '-invlevel', behaviorLength.toString(), ...extraOpts] :
-                    ['-simulate', '-invlevel', behaviorLength.toString()];
+                    ['-cleanup', '-simulate', '-invlevel', behaviorLength.toString(), ...extraOpts] :
+                    ['-cleanup', '-simulate', '-invlevel', behaviorLength.toString()];
                 return this.runTLCInMCP(
                     absolutePath,
                     options,
