@@ -8,6 +8,7 @@ import { exists } from '../common';
 export interface FileParameter {
 	fileName: string;
 	configFileName?: string;
+	extraOpts?: string[];
 }
 
 export interface BehaviorLengthParameter {
@@ -21,7 +22,9 @@ export class CheckModuleTool implements vscode.LanguageModelTool<FileParameter> 
         options: vscode.LanguageModelToolInvocationOptions<FileParameter>,
         token: vscode.CancellationToken
     ) {
-        return runTLC(options, token, ['-modelcheck', '-cleanup']);
+        const baseOpts = ['-modelcheck', '-cleanup'];
+        const extraOpts = options.input.extraOpts || [];
+        return runTLC(options, token, [...baseOpts, ...extraOpts]);
     }
 }
 export class SmokeModuleTool implements vscode.LanguageModelTool<FileParameter> {
@@ -30,7 +33,9 @@ export class SmokeModuleTool implements vscode.LanguageModelTool<FileParameter> 
         token: vscode.CancellationToken
     ) {
         // Terminate smoke testing, i.e., simulation after 3 seconds.
-        return runTLC(options, token, ['-simulate', '-cleanup'], ['-Dtlc2.TLC.stopAfter=3']);
+        const baseOpts = ['-simulate', '-cleanup'];
+        const extraOpts = options.input.extraOpts || [];
+        return runTLC(options, token, [...baseOpts, ...extraOpts], ['-Dtlc2.TLC.stopAfter=3']);
     }
 }
 export class ExploreModuleTool implements vscode.LanguageModelTool<FileWithBehaviorLengthParameter> {
@@ -39,10 +44,12 @@ export class ExploreModuleTool implements vscode.LanguageModelTool<FileWithBehav
         token: vscode.CancellationToken
     ) {
         // As a safeguard, terminate simulation after 3 seconds.
+        const baseOpts = ['-simulate', '-cleanup', '-invlevel', options.input.behaviorLength.toString()];
+        const extraOpts = options.input.extraOpts || [];
         return runTLC(
             options,
             token,
-            ['-simulate', '-cleanup', '-invlevel', options.input.behaviorLength.toString()],
+            [...baseOpts, ...extraOpts],
             ['-Dtlc2.TLC.stopAfter=3']
         );
     }
