@@ -568,7 +568,7 @@
                 },
                 "tlaplus.mcp.port": {
                     "type": "number",
-                    "scope": "machine",
+                    "scope": "window",
                     "default": -1,
                     "markdownDescription": "Listening port for TLA+ MCP server. If set to -1, MCP server will be disabled. Restart VSCode to apply changes."
                 },
