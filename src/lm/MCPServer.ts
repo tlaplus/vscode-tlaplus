@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import * as http from 'http';
 import * as path from 'path';
+import * as fs from 'fs';
 import express from 'express';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
@@ -21,6 +22,20 @@ export class MCPServer implements vscode.Disposable {
 
     constructor(port: number) {
         this.startServer(port);
+    }
+
+    /**
+     * Gets the path to the knowledge base directory within the extension.
+     */
+    private getKnowledgeBasePath(): string {
+        // Get the extension context to find the extension path
+        const extension = vscode.extensions.getExtension('tlaplus.vscode-ide');
+        if (!extension) {
+            throw new Error('TLA+ extension not found');
+        }
+
+        // The knowledge base is in the resources/knowledgebase directory of the extension
+        return path.join(extension.extensionPath, 'resources', 'knowledgebase');
     }
 
     /**
@@ -139,6 +154,10 @@ export class MCPServer implements vscode.Disposable {
         const server = new McpServer({
             name: 'TLA+ MCP Tools',
             version: '1.0.0',
+        }, {
+            capabilities: {
+                resources: {}  // Enable resource support
+            }
         });
 
         server.tool(
@@ -311,7 +330,98 @@ export class MCPServer implements vscode.Disposable {
             }
         );
 
+        // Register TLA+ knowledge base resources
+        this.registerKnowledgeBaseResources(server);
+
         return server;
+    }
+
+    /**
+     * Registers TLA+ knowledge base resources from the extension's knowledge base directory.
+     */
+    private registerKnowledgeBaseResources(server: McpServer): void {
+        try {
+            const knowledgeBasePath = this.getKnowledgeBasePath();
+
+            // Check if the knowledge base directory exists
+            if (!fs.existsSync(knowledgeBasePath)) {
+                console.warn(`Knowledge base directory not found: ${knowledgeBasePath}`);
+                return;
+            }
+
+            // Read all markdown files in the knowledge base directory
+            const files = fs.readdirSync(knowledgeBasePath);
+            const markdownFiles = files.filter(file => file.endsWith('.md'));
+
+            // Register each markdown file as a resource
+            for (const file of markdownFiles) {
+                const filePath = path.join(knowledgeBasePath, file);
+                const resourceName = path.basename(file); // keep .md extension to enable syntax highlighting in VSCode.
+                const resourceUri = `tlaplus://knowledge/${resourceName}`;
+
+                // The parsing logic below is simple and does not handle errors. This is acceptable because knowledge
+                // base articles are version-controlled in Git, so we can assume they are properly formatted.
+
+                // Read the frontmatter to get metadata
+                const content = fs.readFileSync(filePath, 'utf-8');
+                const lines = content.split('\n');
+                let title = resourceName.replace(/-/g, ' ');
+                let description = '';
+
+                // Simple frontmatter parsing
+                if (lines[0] === '---') {
+                    let i = 1;
+                    while (i < lines.length && lines[i] !== '---') {
+                        const line = lines[i].trim();
+                        if (line.startsWith('title:')) {
+                            title = line.substring(6).trim();
+                        } else if (line.startsWith('description:')) {
+                            description = line.substring(12).trim();
+                        }
+                        i++;
+                    }
+                }
+
+                // Register the resource
+                server.resource(
+                    resourceName,
+                    resourceUri,
+                    {
+                        title: title,
+                        description: description,
+                        mimeType: 'text/markdown',
+                        annotations: {
+                            audience: ['user', 'assistant'],
+                            priority: 0.8
+                        }
+                    },
+                    async () => {
+                        try {
+                            const fileContent = await fs.promises.readFile(filePath, 'utf-8');
+                            // Remove the frontmatter
+                            const contentWithoutFrontmatter = fileContent.split('---').slice(2).join('---').trim();
+                            return {
+                                contents: [
+                                    {
+                                        uri: resourceUri,
+                                        name: file,
+                                        title: description, // Description as the title because it provides more context
+                                        mimeType: 'text/markdown',
+                                        text: contentWithoutFrontmatter
+                                    }
+                                ]
+                            };
+                        } catch (error) {
+                            throw new Error(`Failed to read knowledge base file: ${error}`);
+                        }
+                    }
+                );
+
+                console.log(`Registered TLA+ knowledge base resource: ${resourceName} at ${resourceUri}`);
+            }
+        } catch (error) {
+            console.error('Error registering knowledge base resources:', error);
+        }
     }
 
     private async runTLCInMCP(

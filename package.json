@@ -791,7 +791,7 @@
         "@cocalc/ansi-to-react": "^7.0.0",
         "@microsoft/fast-components": "^2.30.6",
         "@microsoft/fast-react-wrapper": "^0.3.18",
-        "@modelcontextprotocol/sdk": "^1.11.2",
+        "@modelcontextprotocol/sdk": "^1.17.2",
         "@vscode/codicons": "^0.0.33",
         "@vscode/debugadapter": "^1.63.0",
         "@vscode/webview-ui-toolkit": "^1.2.2",
