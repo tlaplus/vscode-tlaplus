@@ -59,17 +59,20 @@ jobs:
         npm test --silent
         npm run test:tlaplus-grammar
     - name: Publish to Marketplace
+      continue-on-error: true
       run: |
         vsce publish $(git log -1 --format=%cd --date="format:%Y.%-m.%-d%H%M") --pat "${{ secrets.VSCODE_MARKETPLACE_TLAPLUS_TOKEN }}"
         mv vscode-ide-1.7.0.vsix vscode-tlaplus-$(git log -1 --format=%cd --date="format:%Y.%-m.%-d%H%M").vsix
         ls -lah
     - name: Upload the file as an artifact
+      continue-on-error: true
       uses: actions/upload-artifact@v4
       with:
           name: vscode-ide-1.7.0.vsix
           path: |
             *.vsix
     - name: Publish to Open VSX
+      continue-on-error: true
       run: |
         npm install --global ovsx
         git log -1 --format=%cd --date="format:%Y.%-m.%-d%H%M" | xargs -I {} jq '.version = "{}"' package.json > tmp.json && mv tmp.json package.json
