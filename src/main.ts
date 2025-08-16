@@ -37,6 +37,10 @@ import { ParseModuleTool, SymbolProviderTool } from './lm/SANYTool';
 import { MCPServer } from './lm/MCPServer';
 import { TlcCoverageDecorationProvider } from './tlcCoverage';
 import { registerCoverageCommands } from './commands/toggleCoverage';
+import { sanyCache } from './cache/sanyCache';
+import { debouncedSanyManager } from './cache/debouncedSany';
+import { dependencyTracker } from './cache/dependencyTracker';
+import { performanceMonitor } from './cache/performanceMonitor';
 
 const TLAPLUS_FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file', language: LANG_TLAPLUS };
 const TLAPLUS_CFG_FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file', language: LANG_TLAPLUS_CFG };
@@ -250,6 +254,46 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
     // Register coverage commands
     registerCoverageCommands(context, coverageProvider);
+
+    // Initialize SANY cache system
+    // Note: The cache modules are already instantiated as singletons, so we just need to
+    // set up their disposal and register commands
+    context.subscriptions.push({
+        dispose: () => {
+            sanyCache.clear();
+            debouncedSanyManager.clearAll();
+            dependencyTracker.clear();
+            performanceMonitor.dispose();
+        }
+    });
+
+    // Register cache-related commands
+    context.subscriptions.push(
+        vscode.commands.registerCommand('tlaplus.cache.clear', () => {
+            sanyCache.clear();
+            vscode.window.showInformationMessage('SANY cache cleared');
+        }),
+        vscode.commands.registerCommand('tlaplus.cache.showStats', () => {
+            const outputChannel = vscode.window.createOutputChannel('SANY Cache Statistics');
+            performanceMonitor.showPerformanceOutput(outputChannel);
+        }),
+        vscode.commands.registerCommand('tlaplus.cache.invalidateFile', () => {
+            const editor = vscode.window.activeTextEditor;
+            if (editor && editor.document.languageId === LANG_TLAPLUS) {
+                sanyCache.invalidate(editor.document.fileName);
+                vscode.window.showInformationMessage(`Cache cleared for ${path.basename(editor.document.fileName)}`);
+            } else {
+                vscode.window.showWarningMessage('No active TLA+ file to invalidate');
+            }
+        })
+    );
+
+    // Show performance status bar if configured
+    if (vscode.workspace.getConfiguration().get<boolean>('tlaplus.sany.performance.showStatusBar', false)) {
+        const statusBarItem = performanceMonitor.createStatusBarItem();
+        context.subscriptions.push(statusBarItem);
+        statusBarItem.show();
+    }
 
     // Start MCP server - unconditionally in Cursor (AI-first IDE), or based on port configuration in VSCode
     if (vscode.env.appName?.toLowerCase().includes('cursor')) {

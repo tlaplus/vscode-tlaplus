@@ -4,6 +4,8 @@ import { ToolOutputChannel } from '../outputChannels';
 import { runXMLExporter, ToolProcessInfo } from '../tla2tools';
 import * as path from 'path';
 import { XMLParser } from 'fast-xml-parser';
+import { debouncedSanyManager } from '../cache/debouncedSany';
+import { performanceMonitor } from '../cache/performanceMonitor';
 
 const COMMA_LEN = 1;
 export const ROOT_SYMBOL_NAME = '*';
@@ -225,7 +227,19 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
                 return undefined;
             }
 
-            // Run XML exporter
+            // Try to get cached result first
+            const cachedResult = await debouncedSanyManager.executeSany(document.fileName, true);
+            if (cachedResult.fromCache && cachedResult.symbols && cachedResult.symbols.length > 0) {
+                performanceMonitor.recordEvent({ 
+                    type: 'cache_hit', 
+                    filePath: document.fileName,
+                    fromCache: true 
+                });
+                sanyOutChannel.appendLine(`Using cached symbols for ${document.fileName}`);
+                return cachedResult.symbols;
+            }
+
+            // If not cached or cache doesn't have symbols, run XML exporter directly
             const processInfo: ToolProcessInfo = await runXMLExporter(document.fileName, false);
 
             // Create promises to collect stdout and stderr

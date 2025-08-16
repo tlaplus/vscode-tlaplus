@@ -179,19 +179,29 @@ export async function exists(filePath: string): Promise<boolean> {
 // Used to avoid overloading the environment with too frequent events.
 export class DelayedFn {
     private latest : (() => void) | null = null;
+    private timeoutId: NodeJS.Timeout | null = null;
     constructor(private period: number) {}
 
     public do(f : () => void) {
         const wasScheduled = !!this.latest;
         this.latest = f;
         if (!wasScheduled) {
-            setTimeout(() => {
+            this.timeoutId = setTimeout(() => {
                 const f = this.latest;
                 this.latest = null;
+                this.timeoutId = null;
                 if (f) {
                     f();
                 }
             }, this.period);
         }
+    }
+
+    public cancel() {
+        if (this.timeoutId) {
+            clearTimeout(this.timeoutId);
+            this.timeoutId = null;
+        }
+        this.latest = null;
     }
 }

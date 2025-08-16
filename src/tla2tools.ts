@@ -366,7 +366,23 @@ function addReturnCodeHandler(proc: ChildProcess, toolName?: string) {
 }
 
 function getConfigOptions(cfgName: string, defaultValue: string = ''): string[] {
-    const allConfigs = vscode.workspace.getConfiguration().inspect<string>(cfgName);
+    // Handle test environment where inspect may not be available
+    const config = vscode.workspace.getConfiguration();
+    let allConfigs: any;
+    
+    try {
+        if (typeof config.inspect === 'function') {
+            allConfigs = config.inspect<string>(cfgName);
+        }
+    } catch (error) {
+        // Fallback for test environment
+    }
+
+    if (!allConfigs) {
+        // Fallback to direct get in test environment
+        const value = config.get<string>(cfgName);
+        return splitArguments(value || defaultValue);
+    }
 
     if (!supressConfigWarnings && allConfigs?.workspaceValue && allConfigs?.globalValue) {
         vscode.window

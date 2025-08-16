@@ -391,6 +391,21 @@
                 "command": "tlaplus.tlc.profiler.clear",
                 "title": "Clear Coverage Data",
                 "category": "TLA+"
+            },
+            {
+                "command": "tlaplus.cache.clear",
+                "title": "Clear SANY Cache",
+                "category": "TLA+"
+            },
+            {
+                "command": "tlaplus.cache.showStats",
+                "title": "Show SANY Cache Statistics",
+                "category": "TLA+"
+            },
+            {
+                "command": "tlaplus.cache.invalidateFile",
+                "title": "Invalidate Current File Cache",
+                "category": "TLA+"
             }
         ],
         "snippets": [
@@ -656,6 +671,34 @@
                         "high": 10000
                     },
                     "description": "Invocation count thresholds for coverage levels"
+                },
+                "tlaplus.sany.cache.enabled": {
+                    "type": "boolean",
+                    "scope": "window",
+                    "default": true,
+                    "description": "Enable SANY result caching to improve performance by avoiding redundant parsing operations."
+                },
+                "tlaplus.sany.cache.maxSize": {
+                    "type": "number",
+                    "scope": "window",
+                    "default": 50,
+                    "minimum": 10,
+                    "maximum": 500,
+                    "description": "Maximum size of the SANY cache in MB. Older entries will be evicted when the limit is reached."
+                },
+                "tlaplus.sany.debounceDelay": {
+                    "type": "number",
+                    "scope": "window",
+                    "default": 500,
+                    "minimum": 100,
+                    "maximum": 5000,
+                    "description": "Delay in milliseconds before executing SANY after document changes. Helps prevent excessive parsing during typing."
+                },
+                "tlaplus.sany.performance.showStatusBar": {
+                    "type": "boolean",
+                    "scope": "window",
+                    "default": false,
+                    "description": "Show SANY cache performance metrics in the status bar."
                 }
             }
         },

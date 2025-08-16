@@ -5,6 +5,7 @@ import { SanyData, SanyStdoutParser } from '../parsers/sany';
 import { runPlusCal, runSany } from '../tla2tools';
 import { ToolOutputChannel } from '../outputChannels';
 import { LANG_TLAPLUS } from '../common';
+import { debouncedSanyManager } from '../cache/debouncedSany';
 
 export const CMD_PARSE_MODULE = 'tlaplus.parse';
 
@@ -55,6 +56,22 @@ export async function transpilePlusCal(fileUri: vscode.Uri): Promise<DCollection
  * Parses the resulting TLA+ spec.
  */
 export async function parseSpec(fileUri: vscode.Uri): Promise<SanyData> {
+    // Try to use cached/debounced SANY execution first
+    const result = await debouncedSanyManager.executeSany(fileUri.fsPath, false);
+    
+    if (result.fromCache) {
+        sanyOutChannel.appendLine(`Using cached SANY result for ${fileUri.fsPath}`);
+    } else {
+        sanyOutChannel.appendLine(`Executed fresh SANY parsing for ${fileUri.fsPath} (${result.executionTime}ms)`);
+    }
+    
+    return result.sanyData;
+}
+
+/**
+ * Parses the resulting TLA+ spec without caching (for situations where fresh parsing is required).
+ */
+export async function parseSpecDirect(fileUri: vscode.Uri): Promise<SanyData> {
     const procInfo = await runSany(fileUri.fsPath);
     sanyOutChannel.bindTo(procInfo);
     const stdoutParser = new SanyStdoutParser(procInfo.process.stdout);
