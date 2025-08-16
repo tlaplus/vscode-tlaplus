@@ -1,11 +1,10 @@
 import * as vscode from 'vscode';
 import { SanyData, SanyStdoutParser } from '../parsers/sany';
-import { runSany, runXMLExporter, ToolProcessInfo } from '../tla2tools';
-import { sanyCache, CacheEntry } from './sanyCache';
+import { runSany, runXMLExporter } from '../tla2tools';
+import { sanyCache } from './sanyCache';
 import { dependencyTracker } from './dependencyTracker';
 import { DelayedFn } from '../common';
 import { XMLParser } from 'fast-xml-parser';
-import * as path from 'path';
 import { TlaSymbolInformation } from '../symbols/tlaSymbols';
 import { performanceMonitor } from './performanceMonitor';
 
@@ -47,9 +46,9 @@ export interface DebouncedStats {
  * and provides intelligent caching with dependency tracking.
  */
 export class DebouncedSanyManager {
-    private pendingExecutions = new Map<string, PendingExecution[]>();
-    private debouncedExecutions = new Map<string, DelayedFn>();
-    private activeExecutions = new Set<string>();
+    private readonly pendingExecutions = new Map<string, PendingExecution[]>();
+    private readonly debouncedExecutions = new Map<string, DelayedFn>();
+    private readonly activeExecutions = new Set<string>();
 
     constructor() {
         // Clean up on configuration changes

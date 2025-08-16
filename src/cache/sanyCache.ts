@@ -36,8 +36,8 @@ export interface CacheStatistics {
  * based on file content changes and dependency relationships.
  */
 export class SanyCache {
-    private cache = new Map<string, CacheEntry>();
-    private accessOrder = new Map<string, number>();
+    private readonly cache = new Map<string, CacheEntry>();
+    private readonly accessOrder = new Map<string, number>();
     private accessCounter = 0;
     private stats: CacheStatistics = {
         hits: 0,
@@ -144,17 +144,17 @@ export class SanyCache {
     private estimateEntrySize(entry: CacheEntry): number {
         // Rough estimation: base entry size + symbols + diagnostics
         let size = 1000; // Base overhead
-        
+
         // Estimate symbols size
         size += entry.symbols.length * 500; // Rough estimate per symbol
-        
+
         // Estimate diagnostics size
         const messages = entry.sanyData.dCollection.getMessages();
         size += messages.length * 200; // Rough estimate per diagnostic message
-        
+
         // Dependencies
         size += entry.dependencies.join('').length * 2;
-        
+
         return size;
     }
 
@@ -171,14 +171,14 @@ export class SanyCache {
     private findLRUKey(): string | undefined {
         let lruKey: string | undefined;
         let minAccess = Infinity;
-        
+
         for (const [key, accessTime] of this.accessOrder) {
             if (accessTime < minAccess) {
                 minAccess = accessTime;
                 lruKey = key;
             }
         }
-        
+
         return lruKey;
     }
 
@@ -187,7 +187,7 @@ export class SanyCache {
      */
     private enforceMemoryLimit(): void {
         const maxSize = this.getMaxSizeBytes();
-        
+
         while (this.stats.totalSize > maxSize && this.cache.size > 0) {
             const lruKey = this.findLRUKey();
             if (lruKey) {
@@ -219,7 +219,7 @@ export class SanyCache {
     private async isEntryValid(filePath: string, entry: CacheEntry): Promise<boolean> {
         const currentHash = await this.calculateFileHash(filePath);
         const currentModTime = await this.getFileModTime(filePath);
-        
+
         return entry.fileHash === currentHash && entry.lastModified === currentModTime;
     }
 
@@ -233,7 +233,7 @@ export class SanyCache {
 
         const key = this.getCacheKey(filePath);
         const entry = this.cache.get(key);
-        
+
         if (!entry) {
             this.stats.misses++;
             return undefined;
@@ -271,7 +271,7 @@ export class SanyCache {
         const key = this.getCacheKey(filePath);
         const fileHash = await this.calculateFileHash(filePath);
         const lastModified = await this.getFileModTime(filePath);
-        
+
         const entry: CacheEntry = {
             fileHash,
             lastModified,
@@ -292,10 +292,10 @@ export class SanyCache {
 
         this.cache.set(key, entry);
         this.updateAccessOrder(key);
-        
+
         const entrySize = this.estimateEntrySize(entry);
         this.stats.totalSize += entrySize;
-        
+
         // Enforce memory limit
         this.enforceMemoryLimit();
     }
@@ -313,17 +313,17 @@ export class SanyCache {
      */
     public invalidateDependents(filePath: string): void {
         const keysToInvalidate: string[] = [];
-        
+
         for (const [key, entry] of this.cache) {
             // Normalize paths for comparison
             const normalizedFilePath = path.resolve(filePath);
             const normalizedDeps = entry.dependencies.map(dep => path.resolve(dep));
-            
+
             if (normalizedDeps.includes(normalizedFilePath)) {
                 keysToInvalidate.push(key);
             }
         }
-        
+
         for (const key of keysToInvalidate) {
             this.evict(key);
         }
@@ -371,7 +371,7 @@ export class SanyCache {
      * Get all cached file paths
      */
     public getCachedPaths(): string[] {
-        return Array.from(this.cache.keys()).map(key => 
+        return Array.from(this.cache.keys()).map(key =>
             vscode.Uri.parse(key).fsPath
         );
     }
