@@ -34,8 +34,8 @@ function isStatementBoundary(line: string, allowInstance: boolean = false): bool
  * Check current line for module reference keywords
  */
 function checkCurrentLine(beforeWord: string): boolean {
-    return hasExtendsKeyword(beforeWord) || 
-           hasInstanceKeyword(beforeWord) || 
+    return hasExtendsKeyword(beforeWord) ||
+           hasInstanceKeyword(beforeWord) ||
            /==\s*INSTANCE\s*$/.test(beforeWord);
 }
 
@@ -45,11 +45,11 @@ function checkCurrentLine(beforeWord: string): boolean {
 function searchPreviousLines(document: vscode.TextDocument, position: vscode.Position): boolean {
     for (let lineNum = position.line - 1; lineNum >= 0; lineNum--) {
         const prevLine = document.lineAt(lineNum).text;
-        
+
         if (isStatementBoundary(prevLine, true)) {
             break;
         }
-        
+
         if (hasExtendsKeyword(prevLine) || hasInstanceKeyword(prevLine)) {
             return true;
         }
@@ -64,14 +64,14 @@ function searchFollowingLines(document: vscode.TextDocument, position: vscode.Po
     if (position.line >= document.lineCount - 1) {
         return false;
     }
-    
+
     for (let lineNum = position.line + 1; lineNum < document.lineCount; lineNum++) {
         const nextLine = document.lineAt(lineNum).text;
-        
+
         if (isStatementBoundary(nextLine, true)) {
             break;
         }
-        
+
         // Check if there's a comma after our word (for EXTENDS lists)
         if (lineNum === position.line + 1 && /^\s*,/.test(afterWord)) {
             if (hasExtendsKeyword(nextLine)) {
@@ -94,23 +94,23 @@ function getModuleReference(document: vscode.TextDocument, position: vscode.Posi
     const line = document.lineAt(position.line).text;
     const word = document.getText(range);
     const beforeWord = line.substring(0, range.start.character);
-    
+
     // Check current line
     if (checkCurrentLine(beforeWord)) {
         return word;
     }
-    
+
     // Check previous lines
     if (position.line > 0 && searchPreviousLines(document, position)) {
         return word;
     }
-    
+
     // Check following lines for multi-line EXTENDS
     const afterWord = line.substring(range.end.character);
     if (searchFollowingLines(document, position, afterWord)) {
         return word;
     }
-    
+
     return undefined;
 }
 
@@ -237,7 +237,7 @@ function symbolLocations(document: vscode.TextDocument, docInfo: TlaDocumentInfo
     }
 
     const line = document.lineAt(position.line).text;
-    
+
     // Check if this is a record field access
     if (isRecordFieldAccess(line, range)) {
         return undefined;
@@ -253,7 +253,7 @@ function symbolLocations(document: vscode.TextDocument, docInfo: TlaDocumentInfo
     const symbols = docInfo.isPlusCalAt(position)
         ? docInfo.symbols.concat(docInfo.plusCalSymbols)
         : docInfo.symbols;
-    
+
     const locations = [];
     for (const symbol of symbols) {
         if (symbol.name === word && symbol.location.range.start.isBeforeOrEqual(range.start)) {
@@ -273,7 +273,7 @@ function provideSymbolLocations(
 ): vscode.Location | vscode.Location[] | undefined {
     // First check if we're in an EXTENDS or INSTANCE clause
     const moduleRef = getModuleReference(document, position);
-    
+
     if (moduleRef) {
         const moduleUri = findModuleFile(moduleRef, document.uri);
         if (moduleUri) {
