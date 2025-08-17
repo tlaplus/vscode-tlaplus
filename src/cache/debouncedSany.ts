@@ -8,6 +8,27 @@ import { XMLParser } from 'fast-xml-parser';
 import { TlaSymbolInformation } from '../symbols/tlaSymbols';
 import { performanceMonitor } from './performanceMonitor';
 
+/**
+ * XML entry structure from TLA+ XML exporter
+ */
+interface XmlEntry {
+    UID?: {
+        $name: string;
+    };
+    level?: {
+        _: string;
+    };
+    location?: {
+        $beginLine?: string;
+        $beginColumn?: string;
+        $endLine?: string;
+        $endColumn?: string;
+    };
+    kind?: {
+        _: string;
+    };
+}
+
 const CFG_SANY_DEBOUNCE_DELAY = 'tlaplus.sany.debounceDelay';
 const DEFAULT_DEBOUNCE_DELAY = 500;
 
@@ -333,7 +354,7 @@ export class DebouncedSanyManager {
      * Create a symbol from an XML entry (simplified)
      */
     private createSymbolFromXmlEntry(
-        entry: any,
+        entry: XmlEntry,
         documentUri: vscode.Uri
     ): vscode.SymbolInformation | undefined {
         try {
@@ -372,7 +393,7 @@ export class DebouncedSanyManager {
     /**
      * Determine symbol kind from XML entry
      */
-    private getSymbolKind(entry: any): vscode.SymbolKind {
+    private getSymbolKind(entry: XmlEntry): vscode.SymbolKind {
         const kind = entry.kind?._;
 
         switch (kind) {

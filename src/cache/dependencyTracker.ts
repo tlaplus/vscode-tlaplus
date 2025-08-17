@@ -26,8 +26,8 @@ export interface DependencyStats {
  * and automatically invalidates cache when dependencies change.
  */
 export class DependencyTracker {
-    private dependencies = new Map<string, DependencyInfo>();
-    private fileWatchers = new Map<string, vscode.FileSystemWatcher>();
+    private readonly dependencies = new Map<string, DependencyInfo>();
+    private readonly fileWatchers = new Map<string, vscode.FileSystemWatcher>();
     private isScanning = false;
 
     constructor() {
@@ -40,15 +40,15 @@ export class DependencyTracker {
      */
     private setupGlobalFileWatcher(): void {
         const watcher = vscode.workspace.createFileSystemWatcher('**/*.tla');
-        
+
         watcher.onDidChange((uri) => {
             this.handleFileChange(uri.fsPath);
         });
-        
+
         watcher.onDidDelete((uri) => {
             this.handleFileDelete(uri.fsPath);
         });
-        
+
         watcher.onDidCreate((uri) => {
             this.handleFileCreate(uri.fsPath);
         });
@@ -64,13 +64,13 @@ export class DependencyTracker {
 
         // Invalidate cache for the changed file
         sanyCache.invalidate(filePath);
-        
+
         // Invalidate cache for files that depend on this file
         sanyCache.invalidateDependents(filePath);
-        
+
         // Re-scan dependencies for the changed file
         await this.scanDependencies(filePath);
-        
+
         // Invalidate dependents again in case dependencies changed
         sanyCache.invalidateDependents(filePath);
     }
@@ -81,14 +81,14 @@ export class DependencyTracker {
     private handleFileDelete(filePath: string): void {
         // Remove from dependency tracking
         this.dependencies.delete(filePath);
-        
+
         // Stop watching this file specifically
         const watcher = this.fileWatchers.get(filePath);
         if (watcher) {
             watcher.dispose();
             this.fileWatchers.delete(filePath);
         }
-        
+
         // Invalidate cache
         sanyCache.invalidate(filePath);
         sanyCache.invalidateDependents(filePath);
@@ -114,46 +114,72 @@ export class DependencyTracker {
             const trimmedLine = line.trim();
 
             // Skip comments
-            if (trimmedLine.startsWith('\\*') || trimmedLine.startsWith('(*')) {
+            if (this.isComment(trimmedLine)) {
                 continue;
             }
 
-            // Match EXTENDS statements
-            const extendsMatch = trimmedLine.match(/^EXTENDS\s+(.+)$/);
-            if (extendsMatch) {
-                const modules = extendsMatch[1].split(',').map(m => m.trim());
-                for (const module of modules) {
-                    const modulePath = this.resolveModulePath(module, fileDir);
-                    if (modulePath) {
-                        dependencies.push(modulePath);
-                    }
-                }
-                continue;
-            }
-
-            // Match INSTANCE statements
-            const instanceMatch = trimmedLine.match(/^(\w+)\s*==\s*INSTANCE\s+(\w+)/);
-            if (instanceMatch) {
-                const module = instanceMatch[2];
-                const modulePath = this.resolveModulePath(module, fileDir);
-                if (modulePath) {
-                    dependencies.push(modulePath);
-                }
-                continue;
-            }
-
-            // Also check for inline INSTANCE statements
-            const inlineInstanceMatch = trimmedLine.match(/INSTANCE\s+(\w+)/);
-            if (inlineInstanceMatch) {
-                const module = inlineInstanceMatch[1];
-                const modulePath = this.resolveModulePath(module, fileDir);
-                if (modulePath) {
-                    dependencies.push(modulePath);
-                }
-            }
+            // Process different statement types
+            this.extractExtendsModules(trimmedLine, fileDir, dependencies);
+            this.extractInstanceModules(trimmedLine, fileDir, dependencies);
         }
 
         return [...new Set(dependencies)]; // Remove duplicates
+    }
+
+    /**
+     * Check if a line is a comment
+     */
+    private isComment(line: string): boolean {
+        return line.startsWith('\\*') || line.startsWith('(*');
+    }
+
+    /**
+     * Extract modules from EXTENDS statements
+     */
+    private extractExtendsModules(line: string, baseDir: string, dependencies: string[]): void {
+        const extendsRegex = /^EXTENDS\s+(.+)$/;
+        const match = extendsRegex.exec(line);
+        
+        if (!match) {
+            return;
+        }
+
+        const modules = match[1].split(',').map(m => m.trim());
+        this.addModuleDependencies(modules, baseDir, dependencies);
+    }
+
+    /**
+     * Extract modules from INSTANCE statements
+     */
+    private extractInstanceModules(line: string, baseDir: string, dependencies: string[]): void {
+        // Try assignment-style INSTANCE first
+        const assignmentRegex = /^(\w+)\s*==\s*INSTANCE\s+(\w+)/;
+        let match = assignmentRegex.exec(line);
+        
+        if (match) {
+            this.addModuleDependencies([match[2]], baseDir, dependencies);
+            return;
+        }
+
+        // Try inline INSTANCE
+        const inlineRegex = /INSTANCE\s+(\w+)/;
+        match = inlineRegex.exec(line);
+        
+        if (match) {
+            this.addModuleDependencies([match[1]], baseDir, dependencies);
+        }
+    }
+
+    /**
+     * Add module dependencies to the list
+     */
+    private addModuleDependencies(modules: string[], baseDir: string, dependencies: string[]): void {
+        for (const module of modules) {
+            const modulePath = this.resolveModulePath(module, baseDir);
+            if (modulePath) {
+                dependencies.push(modulePath);
+            }
+        }
     }
 
     /**
@@ -168,7 +194,7 @@ export class DependencyTracker {
             'BagsExt', 'FiniteSetsExt', 'FunctionsExt', 'SequencesExt',
             'VectorClocks', 'Bitwise', 'DifferentialEquations', 'Graphs'
         ];
-        
+
         if (standardModules.includes(moduleName)) {
             return undefined; // Don't track standard library dependencies
         }
@@ -190,7 +216,8 @@ export class DependencyTracker {
                     return path.resolve(possiblePath);
                 }
             } catch (error) {
-                // Continue trying other paths
+                // Log the error but continue trying other paths
+                console.debug(`Failed to check path ${possiblePath}: ${error}`);
             }
         }
 
@@ -215,7 +242,8 @@ export class DependencyTracker {
                     return path.resolve(possiblePath);
                 }
             } catch (error) {
-                // Continue searching
+                // Log the error but continue searching other workspace folders
+                console.debug(`Failed to check workspace path ${possiblePath}: ${error}`);
             }
         }
 
@@ -242,7 +270,8 @@ export class DependencyTracker {
 
             return dependencies;
         } catch (error) {
-            // File might not exist or be readable
+            // Handle file read errors
+            console.debug(`Failed to scan dependencies for ${filePath}: ${error}`);
             this.dependencies.delete(filePath);
             return [];
         } finally {
@@ -336,11 +365,11 @@ export class DependencyTracker {
      */
     public getDependencyGraph(): Map<string, string[]> {
         const graph = new Map<string, string[]>();
-        
+
         for (const [file, info] of this.dependencies) {
             graph.set(file, [...info.dependencies]);
         }
-        
+
         return graph;
     }
 
@@ -352,7 +381,7 @@ export class DependencyTracker {
         if (!info) {
             return false;
         }
-        
+
         const age = Date.now() - info.lastScanned;
         return age <= maxAgeMs;
     }
@@ -362,11 +391,11 @@ export class DependencyTracker {
      */
     public getAllDependencies(): Map<string, string[]> {
         const result = new Map<string, string[]>();
-        
+
         for (const [file, info] of this.dependencies) {
             result.set(file, [...info.dependencies]);
         }
-        
+
         return result;
     }
 

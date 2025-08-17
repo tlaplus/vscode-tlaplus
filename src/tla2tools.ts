@@ -58,25 +58,23 @@ export class ToolProcessInfo {
     constructor(
         readonly commandLine: string,
         readonly process: ChildProcess
-    ) {}
+    ) { }
 }
 
 /**
  * Thrown when there's some problem with Java or TLA+ tooling.
  */
 export class ToolingError extends Error {
-    constructor(message: string) {
-        super(message);
-    }
+
 }
 
 export class JavaVersion {
-    static UNKNOWN_VERSION = '?';
+    static readonly UNKNOWN_VERSION = '?';
 
     constructor(
         readonly version: string,
         readonly fullOutput: string[]
-    ) {}
+    ) { }
 }
 
 function makeTlaLibraryJavaOpt(): string {
@@ -101,8 +99,8 @@ export async function runSany(tlaFilePath: string): Promise<ToolProcessInfo> {
     return runTool(
         TlaTool.SANY,
         tlaFilePath,
-        [ path.basename(tlaFilePath) ],
-        [ makeTlaLibraryJavaOpt() ]
+        [path.basename(tlaFilePath)],
+        [makeTlaLibraryJavaOpt()]
     );
 }
 
@@ -110,8 +108,8 @@ export async function runXMLExporter(tlaFilePath: string, addRetCodeHandler: boo
     return runTool(
         TlaTool.XMLExporter,
         tlaFilePath,
-        [ '-o', path.basename(tlaFilePath) ], // -o turns XML schema validation off.
-        [ makeTlaLibraryJavaOpt() ],
+        ['-o', path.basename(tlaFilePath)], // -o turns XML schema validation off.
+        [makeTlaLibraryJavaOpt()],
         addRetCodeHandler
     );
 }
@@ -161,7 +159,7 @@ export async function runReplTerminal(): Promise<void> {
     const javaPath = await obtainJavaPath();
     const args = buildJavaOptions(getConfigOptions(CFG_JAVA_OPTIONS), toolsJarPath);
     args.push(TlaTool.REPL);
-    vscode.window.createTerminal({shellPath: javaPath, shellArgs: args}).show();
+    vscode.window.createTerminal({ shellPath: javaPath, shellArgs: args }).show();
 }
 
 export async function runTlc(
@@ -177,7 +175,7 @@ export async function runTlc(
         return undefined;
     }
     const customOptions = extraOpts.concat(promptedOptions);
-    const javaOptions = [ makeTlaLibraryJavaOpt() ];
+    const javaOptions = [makeTlaLibraryJavaOpt()];
     const shareStats = vscode.workspace.getConfiguration().get<ShareOption>(CFG_TLC_STATISTICS_TYPE);
     if (shareStats !== ShareOption.DoNotShare) {
         javaOptions.push('-Dtlc2.TLC.ide=vscode');
@@ -368,8 +366,8 @@ function addReturnCodeHandler(proc: ChildProcess, toolName?: string) {
 function getConfigOptions(cfgName: string, defaultValue: string = ''): string[] {
     // Handle test environment where inspect may not be available
     const config = vscode.workspace.getConfiguration();
-    let allConfigs: any;
-    
+    let allConfigs: { key: string; defaultValue?: string; globalValue?: string; workspaceValue?: string; workspaceFolderValue?: string } | undefined;
+
     try {
         if (typeof config.inspect === 'function') {
             allConfigs = config.inspect<string>(cfgName);
@@ -388,7 +386,7 @@ function getConfigOptions(cfgName: string, defaultValue: string = ''): string[] 
         vscode.window
             .showWarningMessage(
                 `Both workspace and global configurations found for ${cfgName}. Only the workspace configuration `
-                    + 'will be used.',
+                + 'will be used.',
                 'ok',
                 'hide warnings',
                 'open settings')
@@ -454,7 +452,7 @@ export async function getTlcOptions(showPrompt: boolean): Promise<string[] | und
 }
 
 function buildCommandLine(programName: string, args: string[]): string {
-    const line = [ programName ];
+    const line = [programName];
     args
         .map(arg => arg.indexOf(' ') >= 0 ? '"' + arg + '"' : arg)
         .forEach(arg => line.push(arg));
