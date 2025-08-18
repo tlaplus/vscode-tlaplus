@@ -34,8 +34,8 @@ function isStatementBoundary(line: string, allowInstance: boolean = false): bool
  */
 function checkCurrentLine(beforeWord: string): boolean {
     return hasExtendsKeyword(beforeWord) ||
-           hasInstanceKeyword(beforeWord) ||
-           /==\s*INSTANCE\s*$/.test(beforeWord);
+        hasInstanceKeyword(beforeWord) ||
+        /==\s*INSTANCE\s*$/.test(beforeWord);
 }
 
 /**
@@ -131,11 +131,10 @@ async function findModuleFile(moduleName: string, currentDocumentUri: vscode.Uri
         return undefined;
     }
 
-    // Get the directory of the current document
-    const currentDir = path.dirname(currentDocumentUri.fsPath);
-
-    // Try to find the module file in the same directory
     const moduleFileName = `${moduleName}.tla`;
+
+    // First, try to find the module file in the same directory as the current document
+    const currentDir = path.dirname(currentDocumentUri.fsPath);
     const modulePath = path.join(currentDir, moduleFileName);
     const moduleUri = vscode.Uri.file(modulePath);
 
@@ -146,32 +145,18 @@ async function findModuleFile(moduleName: string, currentDocumentUri: vscode.Uri
         // File doesn't exist in current directory, continue searching
     }
 
-    // Try to find in workspace folders
-    if (vscode.workspace.workspaceFolders) {
-        for (const folder of vscode.workspace.workspaceFolders) {
-            const workspacePath = path.join(folder.uri.fsPath, moduleFileName);
-            const workspaceUri = vscode.Uri.file(workspacePath);
-            
-            try {
-                await vscode.workspace.fs.stat(workspaceUri);
-                return workspaceUri;
-            } catch {
-                // File doesn't exist, continue searching
-            }
+    const searchPatterns = [
+        `**/${moduleFileName}`,
+        `**/modules/${moduleFileName}`,
+        `**/specs/${moduleFileName}`,
+        `**/src/${moduleFileName}`,
+        `**/lib/${moduleFileName}`
+    ];
 
-            // Also check in common subdirectories
-            const commonDirs = ['modules', 'specs', 'src', 'lib'];
-            for (const dir of commonDirs) {
-                const subPath = path.join(folder.uri.fsPath, dir, moduleFileName);
-                const subUri = vscode.Uri.file(subPath);
-                
-                try {
-                    await vscode.workspace.fs.stat(subUri);
-                    return subUri;
-                } catch {
-                    // File doesn't exist, continue searching
-                }
-            }
+    for (const pattern of searchPatterns) {
+        const foundFiles = await vscode.workspace.findFiles(pattern, undefined, 1);
+        if (foundFiles.length > 0) {
+            return foundFiles[0];
         }
     }
 
