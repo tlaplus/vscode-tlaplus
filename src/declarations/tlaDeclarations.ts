@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import * as fs from 'fs';
 import { TlaDocumentInfos, TlaDocumentInfo } from '../model/documentInfo';
 
 /**
@@ -117,7 +116,7 @@ function getModuleReference(document: vscode.TextDocument, position: vscode.Posi
 /**
  * Try to find a TLA+ module file given a module name
  */
-function findModuleFile(moduleName: string, currentDocumentUri: vscode.Uri): vscode.Uri | undefined {
+async function findModuleFile(moduleName: string, currentDocumentUri: vscode.Uri): Promise<vscode.Uri | undefined> {
     // Standard library modules that don't have physical files
     const standardModules = [
         'TLC', 'Integers', 'Naturals', 'Reals', 'Sequences', 'FiniteSets',
@@ -138,25 +137,39 @@ function findModuleFile(moduleName: string, currentDocumentUri: vscode.Uri): vsc
     // Try to find the module file in the same directory
     const moduleFileName = `${moduleName}.tla`;
     const modulePath = path.join(currentDir, moduleFileName);
+    const moduleUri = vscode.Uri.file(modulePath);
 
-    if (fs.existsSync(modulePath)) {
-        return vscode.Uri.file(modulePath);
+    try {
+        await vscode.workspace.fs.stat(moduleUri);
+        return moduleUri;
+    } catch {
+        // File doesn't exist in current directory, continue searching
     }
 
     // Try to find in workspace folders
     if (vscode.workspace.workspaceFolders) {
         for (const folder of vscode.workspace.workspaceFolders) {
             const workspacePath = path.join(folder.uri.fsPath, moduleFileName);
-            if (fs.existsSync(workspacePath)) {
-                return vscode.Uri.file(workspacePath);
+            const workspaceUri = vscode.Uri.file(workspacePath);
+            
+            try {
+                await vscode.workspace.fs.stat(workspaceUri);
+                return workspaceUri;
+            } catch {
+                // File doesn't exist, continue searching
             }
 
             // Also check in common subdirectories
             const commonDirs = ['modules', 'specs', 'src', 'lib'];
             for (const dir of commonDirs) {
                 const subPath = path.join(folder.uri.fsPath, dir, moduleFileName);
-                if (fs.existsSync(subPath)) {
-                    return vscode.Uri.file(subPath);
+                const subUri = vscode.Uri.file(subPath);
+                
+                try {
+                    await vscode.workspace.fs.stat(subUri);
+                    return subUri;
+                } catch {
+                    // File doesn't exist, continue searching
                 }
             }
         }
@@ -266,16 +279,16 @@ function symbolLocations(document: vscode.TextDocument, docInfo: TlaDocumentInfo
 /**
  * Common logic for providing declarations/definitions
  */
-function provideSymbolLocations(
+async function provideSymbolLocations(
     document: vscode.TextDocument,
     position: vscode.Position,
     docInfos: TlaDocumentInfos
-): vscode.Location | vscode.Location[] | undefined {
+): Promise<vscode.Location | vscode.Location[] | undefined> {
     // First check if we're in an EXTENDS or INSTANCE clause
     const moduleRef = getModuleReference(document, position);
 
     if (moduleRef) {
-        const moduleUri = findModuleFile(moduleRef, document.uri);
+        const moduleUri = await findModuleFile(moduleRef, document.uri);
         if (moduleUri) {
             // Return location at the beginning of the module file
             return new vscode.Location(moduleUri, new vscode.Position(0, 0));
