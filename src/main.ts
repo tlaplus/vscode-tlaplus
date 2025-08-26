@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
 import {
     CMD_CHECK_MODEL_RUN, CMD_CHECK_MODEL_STOP, CMD_CHECK_MODEL_DISPLAY, CMD_SHOW_TLC_OUTPUT,
     CMD_CHECK_MODEL_CUSTOM_RUN, checkModel, displayModelChecking, stopModelChecking,
@@ -22,7 +21,7 @@ import { TlaOnTypeFormattingEditProvider } from './formatters/tla';
 import { CfgOnTypeFormattingEditProvider } from './formatters/cfg';
 import { TlaCodeActionProvider } from './actions';
 import { TlaDocumentSymbolsProvider } from './symbols/tlaSymbols';
-import { LANG_TLAPLUS, LANG_TLAPLUS_CFG, exists, readFile, writeFile } from './common';
+import { LANG_TLAPLUS, LANG_TLAPLUS_CFG } from './common';
 import { TlaCompletionItemProvider } from './completions/tlaCompletions';
 import { CfgCompletionItemProvider } from './completions/cfgCompletions';
 import { TlaDeclarationsProvider, TlaDefinitionsProvider } from './declarations/tlaDeclarations';
@@ -40,7 +39,6 @@ import { registerCoverageCommands } from './commands/toggleCoverage';
 
 const TLAPLUS_FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file', language: LANG_TLAPLUS };
 const TLAPLUS_CFG_FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file', language: LANG_TLAPLUS_CFG };
-const CHANGELOG_URL = vscode.Uri.parse('https://github.com/tlaplus/vscode-tlaplus/blob/master/CHANGELOG.md#change-log');
 
 const tlaDocInfos = new TlaDocumentInfos();
 
@@ -270,8 +268,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     syncTlcStatisticsSetting()
         .catch((err) => console.error(err))
         .then(() => listenTlcStatConfigurationChanges(context.subscriptions));
-    showChangeLog(context.extensionPath)
-        .catch((err) => console.error(err));
 }
 
 export function deactivate() {
@@ -279,32 +275,4 @@ export function deactivate() {
         tlapsClient.deactivate();
     }
     tlapsClient = undefined;
-}
-
-async function showChangeLog(extPath: string) {
-    const pkgData = await readFile(`${extPath}${path.sep}package.json`);
-    const curVersion = JSON.parse(pkgData).version;
-    const prevFilePath = `${extPath}${path.sep}version`;
-    let prevVersion;
-    if (await exists(prevFilePath)) {
-        prevVersion = await readFile(prevFilePath);
-    }
-    if (getMajorMinor(curVersion) === getMajorMinor(prevVersion)) {
-        return;
-    }
-    await writeFile(prevFilePath, curVersion);
-    const showOpt = 'Show changelog';
-    const dismissOpt = 'Dismiss';
-    const opt = await vscode.window.showInformationMessage('TLA+ extension has been updated.', showOpt, dismissOpt);
-    if (opt === showOpt) {
-        vscode.commands.executeCommand('vscode.open', CHANGELOG_URL);
-    }
-}
-
-function getMajorMinor(version: string | undefined): string | undefined {
-    if (!version || version === '') {
-        return undefined;
-    }
-    const matches = /^(\d+.\d+)/g.exec(version);
-    return matches ? matches[1] : undefined;
 }
