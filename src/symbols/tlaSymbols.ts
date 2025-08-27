@@ -153,8 +153,19 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
         document: vscode.TextDocument,
         token: vscode.CancellationToken
     ): Promise<vscode.SymbolInformation[] | vscode.DocumentSymbol[]> {
+
+        let xmlExporterPromise: Promise<vscode.SymbolInformation[] | undefined> | undefined;
         // Run the XML exporter in the background while regex parsing runs.
-        const xmlExporterPromise = this.runXmlExporter(document);
+        if (process.env.VSCODE_TEST !== 'true' && !document.isDirty) {
+            // Skip XML exporter when running in test environment
+            // Do not forcefully save the document if it is dirty because that may mess with
+            // other extensions or code actions that are triggered by saving.  However,
+            // there is no point in having SANY export XML if the document is not saved because
+            // the saved document might be completely different from the one in the editor.
+            xmlExporterPromise = this.runXmlExporter(document.uri);
+        } else {
+            xmlExporterPromise = Promise.resolve(undefined);
+        }
 
         // Extract the symbols from the document line by line based on regex matching.
         // This doesn't rise to the level of what SANY does, but it works even if the
@@ -209,24 +220,10 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
     /**
      * Runs the XML exporter on the document and returns a promise that resolves to the parsed symbols
      */
-    private async runXmlExporter(document: vscode.TextDocument): Promise<vscode.SymbolInformation[] | undefined> {
-        // Skip XML exporter when running in test environment
-        if (process.env.VSCODE_TEST === 'true') {
-            return undefined;
-        }
-
+    private async runXmlExporter(uri: vscode.Uri): Promise<vscode.SymbolInformation[] | undefined> {
         try {
-            if (document.isDirty) {
-                // Do not forcefully save the document if it is dirty because that may mess with
-                // other extensions or code actions that are triggered by saving.  However,
-                // there is no point in having SANY export XML if the document is not saved
-                // because the saved document might be completely different from the one in the
-                // editor.
-                return undefined;
-            }
-
             // Run XML exporter
-            const processInfo: ToolProcessInfo = await runXMLExporter(document.fileName, false);
+            const processInfo: ToolProcessInfo = await runXMLExporter(uri, false);
 
             // Create promises to collect stdout and stderr
             let stdoutData = '';
@@ -260,7 +257,7 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
                 return undefined;
             }
 
-            return this.parseXmlSymbols(stdoutData, document.uri);
+            return this.parseXmlSymbols(stdoutData, uri);
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             sanyOutChannel.appendLine(`Error running XML exporter: ${errorMessage}`);
