@@ -213,9 +213,13 @@ async function runTool(
 }
 
 export function moduleSearchPaths(): string[] {
+    // In the Java ecosystem, paths often use the jar:file:... scheme. However, many non-Java environments—such as
+    // JavaScript/TypeScript—do not handle this scheme correctly. To avoid compatibility issues, we use the
+    // jarfile:... scheme instead, even though tools like TLC/SANY still emit jar:file:... in places such as their
+    // startup banners.
     return [
-        'jar:file:' + toolsJarPath + '!' + TLA_TOOLS_STANDARD_MODULES,
-        'jar:file:' + cmodsJarPath + '!' + '/'
+        'jarfile:' + toolsJarPath + '!' + TLA_TOOLS_STANDARD_MODULES,
+        'jarfile:' + cmodsJarPath + '!' + '/'
     ];
 }
 
