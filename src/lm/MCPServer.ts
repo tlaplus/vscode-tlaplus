@@ -238,10 +238,18 @@ export class MCPServer implements vscode.Disposable {
         server.tool(
             'tlaplus_mcp_sany_symbol',
             // eslint-disable-next-line max-len
-            'Extract all symbols from the given TLA+ module. Use this tool to identify the symbols defined in a TLA+ specification—such as when generating a TLC configuration file. It assists in determining the list of CONSTANTS, the initialization predicate, the next-state relation, the overall behavior specification (Spec), and any defined safety or liveness properties. Supports both file system paths and JAR file paths (jarfile:/path/to/archive.jar!/path/in/archive).',
-            // eslint-disable-next-line max-len
-            { fileName: z.string().describe('The full path to the file containing the TLA+ module (including jarfile:... paths for modules inside JAR archives).') },
-            async ({ fileName }: { fileName: string }) => {
+            'Extract all symbols from the given TLA+ module. Use this tool to identify the symbols defined in a TLA+ specification—such as when generating a TLC configuration file. It assists in determining the list of CONSTANTS, the initialization predicate, the next-state relation, the overall behavior specification (Spec), and any defined safety or liveness properties. Note: SANY expects the fully qualified file path to the TLA+ module.',
+            {
+                fileName: z.string().describe(
+                    'The full path to the file containing the TLA+ module ' +
+                    '(including jarfile:... paths for modules inside JAR archives).'
+                ),
+                includeExtendedModules: z.boolean().optional().describe(
+                    'If true, includes symbols from extended and instantiated modules. ' +
+                    'By default, only symbols from the current module are included.'
+                )
+            },
+            async ({ fileName, includeExtendedModules }: { fileName: string; includeExtendedModules?: boolean }) => {
                 try {
                     let fileUri: vscode.Uri;
                     let displayPath: string;
@@ -271,7 +279,9 @@ export class MCPServer implements vscode.Disposable {
                     const document = await vscode.workspace.openTextDocument(fileUri);
                     const tdsp = new TLADocumentSymbolProvider(new TlaDocumentInfos());
                     const symbols =
-                        await tdsp.provideDocumentSymbols(document, new vscode.CancellationTokenSource().token);
+                        await tdsp.provideDocumentSymbols(
+                            document, new vscode.CancellationTokenSource().token, includeExtendedModules
+                        );
 
                     return {
                         content: [{
