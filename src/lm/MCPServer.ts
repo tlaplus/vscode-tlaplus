@@ -238,22 +238,34 @@ export class MCPServer implements vscode.Disposable {
         server.tool(
             'tlaplus_mcp_sany_symbol',
             // eslint-disable-next-line max-len
-            'Extract all symbols from the given TLA+ module. Use this tool to identify the symbols defined in a TLA+ specification—such as when generating a TLC configuration file. It assists in determining the list of CONSTANTS, the initialization predicate, the next-state relation, the overall behavior specification (Spec), and any defined safety or liveness properties. Note: SANY expects the fully qualified file path to the TLA+ module.',
-            { fileName: z.string().describe('The full path to the file containing the TLA+ module.') },
+            'Extract all symbols from the given TLA+ module. Use this tool to identify the symbols defined in a TLA+ specification—such as when generating a TLC configuration file. It assists in determining the list of CONSTANTS, the initialization predicate, the next-state relation, the overall behavior specification (Spec), and any defined safety or liveness properties. Supports both file system paths and JAR file paths (jarfile:/path/to/archive.jar!/path/in/archive).',
+            // eslint-disable-next-line max-len
+            { fileName: z.string().describe('The full path to the file containing the TLA+ module (including jarfile:... paths for modules inside JAR archives).') },
             async ({ fileName }: { fileName: string }) => {
                 try {
-                    // Resolve relative path to absolute path
-                    const absolutePath = this.resolveFilePath(fileName);
+                    let fileUri: vscode.Uri;
+                    let displayPath: string;
 
-                    // Turn the file name into a vscode.Uri
-                    const fileUri = vscode.Uri.file(absolutePath);
-                    if (!(await exists(absolutePath))) {
-                        return {
-                            content: [{
-                                type: 'text',
-                                text: `File ${absolutePath} does not exist on disk.`
-                            }]
-                        };
+                    // Check if this is a JAR file path
+                    if (fileName.startsWith('jarfile:')) {
+                        // Use the jarfile URI directly
+                        fileUri = vscode.Uri.parse(fileName);
+                        displayPath = fileName;
+                    } else {
+                        // Regular file system path
+                        const absolutePath = this.resolveFilePath(fileName);
+                        fileUri = vscode.Uri.file(absolutePath);
+                        displayPath = absolutePath;
+
+                        // Check if file exists on disk
+                        if (!(await exists(absolutePath))) {
+                            return {
+                                content: [{
+                                    type: 'text',
+                                    text: `File ${absolutePath} does not exist on disk.`
+                                }]
+                            };
+                        }
                     }
 
                     const document = await vscode.workspace.openTextDocument(fileUri);
@@ -264,7 +276,7 @@ export class MCPServer implements vscode.Disposable {
                     return {
                         content: [{
                             type: 'text',
-                            text: `Document symbols for ${absolutePath}:\n${JSON.stringify(symbols, null, 2)}`
+                            text: `Document symbols for ${displayPath}:\n${JSON.stringify(symbols, null, 2)}`
                         }]
                     };
                 } catch (error) {
