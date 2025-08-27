@@ -11,16 +11,26 @@ import { applyDCollection } from '../diagnostic';
 import { TLADocumentSymbolProvider } from '../symbols/tlaSymbols';
 import { parseSpec, transpilePlusCal } from '../commands/parseModule';
 import { TlaDocumentInfos } from '../model/documentInfo';
+import { JarFileSystemProvider } from '../JarFileSystemProvider';
 import { getSpecFiles, mapTlcOutputLine, outChannel } from '../commands/checkModel';
 import { runTlc } from '../tla2tools';
 import { CFG_TLC_STATISTICS_TYPE, ShareOption } from '../commands/tlcStatisticsCfg';
 import { getDiagnostic } from '../main';
+import { moduleSearchPaths } from '../paths';
 
 export class MCPServer implements vscode.Disposable {
 
     private mcpServer: http.Server | undefined;
+    private jarProvider: JarFileSystemProvider;
+    private jarProviderDisposable: vscode.Disposable;
 
     constructor(port: number) {
+        // Initialize JAR file system provider
+        this.jarProvider = new JarFileSystemProvider();
+        this.jarProviderDisposable = vscode.workspace.registerFileSystemProvider('jarfile', this.jarProvider, {
+            isReadonly: true
+        });
+
         this.startServer(port);
     }
 
@@ -148,6 +158,10 @@ export class MCPServer implements vscode.Disposable {
             this.mcpServer.close();
             this.mcpServer = undefined;
         }
+
+        // Clean up JAR file system provider
+        this.jarProviderDisposable.dispose();
+        this.jarProvider.dispose();
     }
 
     private getServer(): McpServer {
@@ -259,6 +273,96 @@ export class MCPServer implements vscode.Disposable {
                             type: 'text',
                             // eslint-disable-next-line max-len
                             text: `Failed to retrieve document symbols: ${error instanceof Error ? error.message : String(error)}`
+                        }]
+                    };
+                }
+            }
+        );
+
+        server.tool(
+            'tlaplus_mcp_sany_modules',
+            // eslint-disable-next-line max-len
+            'Retrieves a list of all TLA+ modules recognized by SANY, making it easy to see which modules can be imported into a TLA+ specification.',
+            {},
+            async () => {
+                try {
+                    const sources = moduleSearchPaths.getSources();
+                    const modulesBySearchPath: { [searchPath: string]: string[] } = {};
+
+                    for (const source of sources) {
+                        const paths = moduleSearchPaths.getSourcePaths(source.name);
+
+                        for (const searchPath of paths) {
+                            // if searchPath starts with jarfile:/path/to/file.jar, list the
+                            // *.tla files contained in the jar file using JarFileSystemProvider
+                            if (searchPath.startsWith('jarfile:')) {
+                                try {
+                                    // Convert searchPath to a proper jarfile URI
+                                    const jarUri = vscode.Uri.parse(searchPath);
+
+                                    // Use the JarFileSystemProvider to read directory contents
+                                    const entries = await this.jarProvider.readDirectory(jarUri);
+                                    const tlaFiles = entries
+                                        .filter(([name, type]) =>
+                                            type === vscode.FileType.File && name.endsWith('.tla'))
+                                        .map(([name]) => name);
+
+                                    if (tlaFiles.length > 0) {
+                                        modulesBySearchPath[searchPath] = [];
+                                        for (const file of tlaFiles) {
+                                            const moduleName = path.basename(file);
+                                            // Skip modules whose name starts with '_'
+                                            if (!moduleName.startsWith('_')) {
+                                                const s = `${searchPath}${path.sep}${moduleName}`;
+                                                modulesBySearchPath[searchPath].push(s);
+                                            }
+                                        }
+                                    }
+                                } catch (error) {
+                                    // Log error but continue processing other search paths
+                                    console.warn(`Failed to read JAR directory ${searchPath}: ${error}`);
+                                }
+                            } else if (await exists(searchPath)) {
+                                const files = await fs.promises.readdir(searchPath);
+                                const tlaFiles = files.filter(file => file.endsWith('.tla'));
+
+                                if (tlaFiles.length > 0) {
+                                    modulesBySearchPath[searchPath] = [];
+                                    for (const file of tlaFiles) {
+                                        // Skip modules whose name starts with '_'
+                                        const moduleName = path.basename(file, '.tla');
+                                        if (!moduleName.startsWith('_')) {
+                                            // prefix with searchPath (use platform-specific path separator)
+                                            modulesBySearchPath[searchPath].push(`${searchPath}${path.sep}${file}`);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Format output grouped by search path
+                    const output: string[] = [];
+                    for (const [searchPath, modules] of Object.entries(modulesBySearchPath)) {
+                        output.push(`Search path: ${searchPath}`);
+                        for (const module of modules) {
+                            output.push(`  ${module}`);
+                        }
+                        output.push(''); // Add empty line between groups
+                    }
+
+                    return {
+                        content: [{
+                            type: 'text',
+                            text: `Available TLA+ modules from configured search paths:\n\n${output.join('\n')}`
+                        }]
+                    };
+                } catch (error) {
+                    return {
+                        content: [{
+                            type: 'text',
+                            // eslint-disable-next-line max-len
+                            text: `Failed to retrieve list of modules: ${error instanceof Error ? error.message : String(error)}`
                         }]
                     };
                 }
