@@ -106,15 +106,23 @@ export async function runSany(tlaFilePath: string): Promise<ToolProcessInfo> {
     );
 }
 
-export async function runXMLExporter(uri: vscode.Uri, addRetCodeHandler: boolean = true): Promise<ToolProcessInfo> {
+export async function runXMLExporter(
+    uri: vscode.Uri, addRetCodeHandler: boolean = true, includeExtendedModules: boolean = false
+): Promise<ToolProcessInfo> {
     // If the URI scheme is our 'jarfile' scheme, SANY accepts the file name as is.
     // Otherwise, we need to convert it to a file system path.
     const fsPath = uri.scheme === 'jarfile' ? path.basename(uri.fsPath) : uri.fsPath;
 
+    const toolOptions = [ '-o' ]; // -o turns XML schema validation off.
+    if (!includeExtendedModules) {
+        toolOptions.push('-r'); // -r restricts to current module only
+    }
+    toolOptions.push(path.basename(fsPath));
+
     return runTool(
         TlaTool.XMLExporter,
         fsPath,
-        [ '-o', path.basename(fsPath) ], // -o turns XML schema validation off.
+        toolOptions,
         [ makeTlaLibraryJavaOpt() ],
         addRetCodeHandler
     );

@@ -2,7 +2,6 @@ import * as vscode from 'vscode';
 import { Module, TlaDocumentInfo, TlaDocumentInfos } from '../model/documentInfo';
 import { ToolOutputChannel } from '../outputChannels';
 import { runXMLExporter, ToolProcessInfo } from '../tla2tools';
-import * as path from 'path';
 import { XMLParser } from 'fast-xml-parser';
 
 const COMMA_LEN = 1;
@@ -133,9 +132,10 @@ export class TLADocumentSymbolProvider implements vscode.DocumentSymbolProvider 
 
     async provideDocumentSymbols(
         document: vscode.TextDocument,
-        token: vscode.CancellationToken
+        token: vscode.CancellationToken,
+        includeExtendedModules?: boolean
     ): Promise<vscode.SymbolInformation[] | vscode.DocumentSymbol[]> {
-        return await this.tlaDocSymbolsProvider.provideDocumentSymbols(document, token);
+        return await this.tlaDocSymbolsProvider.provideDocumentSymbols(document, token, includeExtendedModules);
     }
 }
 
@@ -151,7 +151,8 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
 
     async provideDocumentSymbols(
         document: vscode.TextDocument,
-        token: vscode.CancellationToken
+        token: vscode.CancellationToken,
+        includeExtendedModules?: boolean
     ): Promise<vscode.SymbolInformation[] | vscode.DocumentSymbol[]> {
 
         let xmlExporterPromise: Promise<vscode.SymbolInformation[] | undefined> | undefined;
@@ -162,7 +163,7 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
             // other extensions or code actions that are triggered by saving.  However,
             // there is no point in having SANY export XML if the document is not saved because
             // the saved document might be completely different from the one in the editor.
-            xmlExporterPromise = this.runXmlExporter(document.uri);
+            xmlExporterPromise = this.runXmlExporter(document.uri, includeExtendedModules);
         } else {
             xmlExporterPromise = Promise.resolve(undefined);
         }
@@ -220,10 +221,12 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
     /**
      * Runs the XML exporter on the document and returns a promise that resolves to the parsed symbols
      */
-    private async runXmlExporter(uri: vscode.Uri): Promise<vscode.SymbolInformation[] | undefined> {
+    private async runXmlExporter(
+        uri: vscode.Uri, includeExtendedModules?: boolean
+    ): Promise<vscode.SymbolInformation[] | undefined> {
         try {
             // Run XML exporter
-            const processInfo: ToolProcessInfo = await runXMLExporter(uri, false);
+            const processInfo: ToolProcessInfo = await runXMLExporter(uri, false, includeExtendedModules);
 
             // Create promises to collect stdout and stderr
             let stdoutData = '';
@@ -287,17 +290,11 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
 
             // Process all entries.
             if (xmlObj.modules.context && xmlObj.modules.context.entry) {
-                const documentBasename = path.basename(documentUri.fsPath, path.extname(documentUri.fsPath));
-
                 // Process all entries and create symbols
                 for (const entry of xmlObj.modules.context.entry) {
                     if (entry.UserDefinedOpKind) {
                         // Process user-defined operators (functions)
                         const opKind = entry.UserDefinedOpKind;
-                        // Skip entries that are not in documentUri.
-                        if (opKind.location.filename !== documentBasename) {
-                            continue;
-                        }
                         const name = opKind.uniquename;
 
                         if (name && opKind.location) {
@@ -319,10 +316,6 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
                     } else if (entry.TheoremDefNode) {
                         // Process theorem/axiom/lemma definitions
                         const theoremNode = entry.TheoremDefNode;
-                        // Skip entries that are not in documentUri.
-                        if (theoremNode.location.filename !== documentBasename) {
-                            continue;
-                        }
                         const name = theoremNode.uniquename;
 
                         if (name && theoremNode.location) {
@@ -342,10 +335,6 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
                     } else if (entry.AssumeDef) {
                         // Process assume definitions
                         const assumeNode = entry.AssumeDef;
-                        // Skip entries that are not in documentUri.
-                        if (assumeNode.location.filename !== documentBasename) {
-                            continue;
-                        }
                         const name = assumeNode.uniquename;
 
                         if (name && assumeNode.location) {
@@ -365,10 +354,6 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
                     } else if (entry.OpDeclNode) {
                         // Process variable/constant declarations
                         const declNode = entry.OpDeclNode;
-                        // Skip entries that are not in documentUri.
-                        if (declNode.location.filename !== documentBasename) {
-                            continue;
-                        }
                         const name = declNode.uniquename;
 
                         if (name && declNode.location) {
