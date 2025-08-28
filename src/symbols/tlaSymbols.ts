@@ -27,9 +27,32 @@ export class TlaSymbolInformation extends vscode.SymbolInformation {
         kind: vscode.SymbolKind,
         containerName: string,
         location: vscode.Location,
+        public readonly preComment?: string,
         public readonly level?: number
     ) {
         super(name, kind, containerName, location);
+    }
+
+    /**
+     * Custom JSON serialization to include TLA+ specific properties
+     */
+    toJSON(): any {
+        const result: any = {
+            name: this.name,
+            kind: this.kind,
+            containerName: this.containerName,
+            location: this.location
+        };
+
+        if (this.level !== undefined) {
+            result.level = this.level;
+        }
+
+        if (this.preComment !== undefined) {
+            result.preComment = this.preComment;
+        }
+
+        return result;
     }
 }
 
@@ -301,6 +324,7 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
                             const location = opKind.location;
                             const line = parseInt(location.line?.begin || '0') - 1;
                             const col = parseInt(location.column?.begin || '0') - 1;
+                            const preComments = opKind['pre-comments'] || undefined;
                             const level = parseInt(opKind.level);
                             symbols.push(new TlaSymbolInformation(
                                 name,
@@ -310,6 +334,7 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
                                     documentUri,
                                     new vscode.Position(line, col)
                                 ),
+                                preComments,
                                 level
                             ));
                         }
@@ -360,6 +385,7 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
                             const location = declNode.location;
                             const line = parseInt(location.line?.begin || '0') - 1;
                             const col = parseInt(location.column?.begin || '0') - 1;
+                            const preComments = declNode['pre-comments'] || undefined;
                             const level = parseInt(declNode.level); // Parse level from declaration
 
                             symbols.push(new TlaSymbolInformation(
@@ -370,6 +396,7 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
                                     documentUri,
                                     new vscode.Position(line, col)
                                 ),
+                                preComments,
                                 level
                             ));
                         }
