@@ -10,6 +10,99 @@ import { McpServer as SdkMcpServer } from '@modelcontextprotocol/sdk/server/mcp.
 const fsp = fs.promises;
 
 suite('MCP Server regressions', () => {
+    suite('validateArticleName should prevent path traversal', () => {
+        const prototype = MCPServer.prototype as unknown as {
+            validateArticleName(name: string): void;
+        };
+
+        test('validateArticleName accepts valid article names', () => {
+            const validNames = [
+                'tla-choose-nondeterminism',
+                'tla-diagnose-property-violations',
+                'simple-article',
+                'article_with_underscores',
+                'Article123',
+                'a',
+                'article.md'
+            ];
+
+            for (const name of validNames) {
+                assert.doesNotThrow(() => {
+                    prototype.validateArticleName(name);
+                }, `Should accept valid article name: ${name}`);
+            }
+        });
+
+        test('validateArticleName rejects path traversal attempts', () => {
+            const maliciousNames = [
+                '../../../etc/passwd',
+                '..\\..\\windows\\system32\\config\\sam',
+                'article/../../../secret.txt',
+                'article\\..\\..\\secret.txt',
+                '../article',
+                '..\\article',
+                'article/subdir/file',
+                'article\\subdir\\file'
+            ];
+
+            for (const name of maliciousNames) {
+                assert.throws(() => {
+                    prototype.validateArticleName(name);
+                }, /Invalid article name.*contains path/, `Should reject malicious name: ${name}`);
+            }
+        });
+
+        test('validateArticleName rejects dangerous characters', () => {
+            const dangerousNames = [
+                'article\x00null',  // null byte
+                'article<script>',
+                'article>redirect',
+                'article|pipe',
+                'article*wildcard',
+                'article?query',
+                'article"quote',
+                'article\'quote',
+                'article`backtick',
+                'article;semicolon',
+                'article:colon'
+            ];
+
+            for (const name of dangerousNames) {
+                assert.throws(() => {
+                    prototype.validateArticleName(name);
+                }, /Invalid article name.*contains (invalid characters|null byte)/, `Should reject dangerous name: ${name}`);
+            }
+        });
+
+        test('validateArticleName rejects empty and invalid inputs', () => {
+            const invalidInputs = [
+                '',
+                null as unknown as string,
+                undefined as unknown as string,
+                123 as unknown as string,
+                {} as unknown as string
+            ];
+
+            for (const input of invalidInputs) {
+                assert.throws(() => {
+                    prototype.validateArticleName(input);
+                }, /Article name must be a non-empty string/, `Should reject invalid input: ${input}`);
+            }
+        });
+
+        test('validateArticleName rejects excessively long names', () => {
+            const longName = 'a'.repeat(101);
+            assert.throws(() => {
+                prototype.validateArticleName(longName);
+            }, /Invalid article name.*is too long/, 'Should reject names longer than 100 characters');
+
+            const maxLengthName = 'a'.repeat(100);
+            assert.doesNotThrow(() => {
+                prototype.validateArticleName(maxLengthName);
+            }, 'Should accept names exactly 100 characters long');
+        });
+    });
+
     suite('validateWorkspacePath should block symlinks', () => {
         test('validateWorkspacePath rejects escaped path', async function() {
             if (process.platform === 'win32') {
