@@ -456,6 +456,85 @@ export class MCPServer implements vscode.Disposable {
             }
         );
 
+        server.tool(
+            'tlaplus_mcp_knowledge_list',
+            'List all available TLA+ knowledge base articles with optional search filtering. Use this to discover what documentation is available.',
+            {
+                search: z.string().optional().describe(
+                    'Optional search term to filter articles by title, description, or content. Case-insensitive partial matching.'
+                )
+            },
+            async ({ search }) => {
+                try {
+                    const knowledgeBasePath = this.getKnowledgeBasePath();
+                    
+                    if (!fs.existsSync(knowledgeBasePath)) {
+                        return {
+                            content: [{
+                                type: 'text',
+                                text: `Knowledge base directory not found: ${knowledgeBasePath}`
+                            }]
+                        };
+                    }
+
+                    const files = fs.readdirSync(knowledgeBasePath);
+                    const markdownFiles = files.filter(file => file.endsWith('.md'));
+
+                    return await this.listKnowledgeArticles(knowledgeBasePath, markdownFiles, search);
+                } catch (error) {
+                    return {
+                        content: [{
+                            type: 'text',
+                            text: `Error accessing knowledge base: ${error instanceof Error ? error.message : String(error)}`
+                        }]
+                    };
+                }
+            }
+        );
+
+        server.tool(
+            'tlaplus_mcp_knowledge_get',
+            'Retrieve specific TLA+ knowledge base articles by name. Use this when you know which articles you want to read.',
+            {
+                articles: z.array(z.string()).describe(
+                    'Array of article names to retrieve (without .md extension). ' +
+                    'Examples: ["choose-nondeterminism", "diagnose-property-violations"]'
+                )
+            },
+            async ({ articles }) => {
+                try {
+                    const knowledgeBasePath = this.getKnowledgeBasePath();
+                    
+                    if (!fs.existsSync(knowledgeBasePath)) {
+                        return {
+                            content: [{
+                                type: 'text',
+                                text: `Knowledge base directory not found: ${knowledgeBasePath}`
+                            }]
+                        };
+                    }
+
+                    if (!articles || articles.length === 0) {
+                        return {
+                            content: [{
+                                type: 'text',
+                                text: 'Please specify which articles to retrieve using the "articles" parameter.'
+                            }]
+                        };
+                    }
+
+                    return await this.getKnowledgeArticles(knowledgeBasePath, articles);
+                } catch (error) {
+                    return {
+                        content: [{
+                            type: 'text',
+                            text: `Error accessing knowledge base: ${error instanceof Error ? error.message : String(error)}`
+                        }]
+                    };
+                }
+            }
+        );
+
         // Register TLA+ knowledge base resources
         this.registerKnowledgeBaseResources(server);
 
@@ -463,7 +542,172 @@ export class MCPServer implements vscode.Disposable {
     }
 
     /**
+     * Lists knowledge base articles with optional search filtering.
+     */
+    private async listKnowledgeArticles(
+        knowledgeBasePath: string, 
+        markdownFiles: string[], 
+        search?: string
+    ): Promise<{ content: { type: 'text'; text: string; }[]; }> {
+        const articles: Array<{name: string, title: string, description: string}> = [];
+
+        for (const file of markdownFiles) {
+            const filePath = path.join(knowledgeBasePath, file);
+            const content = fs.readFileSync(filePath, 'utf-8');
+            const metadata = this.parseMarkdownFrontmatter(content);
+            
+            const articleName = path.basename(file, '.md');
+            const title = metadata.title || articleName.replace(/-/g, ' ');
+            const description = metadata.description || '';
+
+            // Apply search filter if provided
+            if (!search) {
+                articles.push({ name: articleName, title, description });
+            } else {
+                const searchLower = search.toLowerCase();
+                const titleMatch = title.toLowerCase().includes(searchLower);
+                const descMatch = description.toLowerCase().includes(searchLower);
+                
+                if (titleMatch || descMatch) {
+                    articles.push({ name: articleName, title, description });
+                }
+            }
+        }
+
+        // Format the listing
+        const listing = articles.map(article => {
+            const titleLine = `**${article.title}** (${article.name})`;
+            const descLine = article.description ? `  ${article.description}` : '';
+            return titleLine + (descLine ? '\n' + descLine : '');
+        }).join('\n\n');
+
+        const header = search ? 
+            `Found ${articles.length} TLA+ knowledge base articles matching "${search}":` :
+            `Available TLA+ knowledge base articles (${articles.length} total):`;
+
+        const footer = articles.length > 0 ? 
+            '\n\nUse tlaplus_mcp_knowledge_get with articles=["article-name"] to retrieve full content.' : 
+            '';
+
+        return {
+            content: [{
+                type: 'text',
+                text: `${header}\n\n${listing}${footer}`
+            }]
+        };
+    }
+
+    /**
+     * Retrieves specific knowledge base articles by name.
+     */
+    private async getKnowledgeArticles(
+        knowledgeBasePath: string, 
+        requestedArticles: string[]
+    ): Promise<{ content: { type: 'text'; text: string; }[]; }> {
+        const results: Array<{name: string, title: string, content: string}> = [];
+        const notFound: string[] = [];
+
+        for (const articleName of requestedArticles) {
+            // Handle both with and without .md extension
+            const fileName = articleName.endsWith('.md') ? articleName : `${articleName}.md`;
+            const filePath = path.join(knowledgeBasePath, fileName);
+
+            if (fs.existsSync(filePath)) {
+                const fileContent = fs.readFileSync(filePath, 'utf-8');
+                const metadata = this.parseMarkdownFrontmatter(fileContent);
+                
+                // Remove frontmatter from content
+                const contentWithoutFrontmatter = fileContent.split('---').slice(2).join('---').trim();
+                
+                results.push({
+                    name: articleName,
+                    title: metadata.title || articleName.replace(/-/g, ' '),
+                    content: contentWithoutFrontmatter
+                });
+            } else {
+                notFound.push(articleName);
+            }
+        }
+
+        // Format the response
+        let response = '';
+        
+        if (results.length > 0) {
+            response += results.map(article => {
+                return `# ${article.title}\n\n${article.content}`;
+            }).join('\n\n---\n\n');
+        }
+
+        if (notFound.length > 0) {
+            const notFoundMsg = `\n\n**Articles not found:** ${notFound.join(', ')}`;
+            response += notFoundMsg;
+            
+            // Include list of all available articles when some keys fail
+            try {
+                const files = fs.readdirSync(knowledgeBasePath);
+                const markdownFiles = files.filter(file => file.endsWith('.md'));
+                const availableArticles: Array<{name: string, title: string, description: string}> = [];
+
+                for (const file of markdownFiles) {
+                    const filePath = path.join(knowledgeBasePath, file);
+                    const content = fs.readFileSync(filePath, 'utf-8');
+                    const metadata = this.parseMarkdownFrontmatter(content);
+                    
+                    const articleName = path.basename(file, '.md');
+                    const title = metadata.title || articleName.replace(/-/g, ' ');
+                    const description = metadata.description || '';
+
+                    availableArticles.push({ name: articleName, title, description });
+                }
+
+                // Format the listing of available articles
+                const listing = availableArticles.map(article => {
+                    const titleLine = `**${article.title}** (${article.name})`;
+                    const descLine = article.description ? `  ${article.description}` : '';
+                    return titleLine + (descLine ? '\n' + descLine : '');
+                }).join('\n\n');
+
+                response += `\n\n**Available articles (${availableArticles.length} total):**\n\n${listing}`;
+            } catch (error) {
+                // If we can't list available articles, just continue without them
+                console.warn('Failed to list available articles:', error);
+            }
+        }
+
+        return {
+            content: [{
+                type: 'text',
+                text: response || 'No articles found.'
+            }]
+        };
+    }
+
+    /**
+     * Parses markdown frontmatter to extract metadata.
+     */
+    private parseMarkdownFrontmatter(content: string): {title?: string, description?: string} {
+        const lines = content.split('\n');
+        const metadata: {title?: string, description?: string} = {};
+
+        if (lines[0] === '---') {
+            let i = 1;
+            while (i < lines.length && lines[i] !== '---') {
+                const line = lines[i].trim();
+                if (line.startsWith('title:')) {
+                    metadata.title = line.substring(6).trim();
+                } else if (line.startsWith('description:')) {
+                    metadata.description = line.substring(12).trim();
+                }
+                i++;
+            }
+        }
+
+        return metadata;
+    }
+
+    /**
      * Registers TLA+ knowledge base resources from the extension's knowledge base directory.
+     * @deprecated Use the tlaplus_mcp_knowledge tool instead
      */
     private registerKnowledgeBaseResources(server: McpServer): void {
         try {
