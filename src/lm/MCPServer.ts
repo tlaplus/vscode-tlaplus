@@ -18,6 +18,18 @@ import { CFG_TLC_STATISTICS_TYPE, ShareOption } from '../commands/tlcStatisticsC
 import { getDiagnostic } from '../main';
 import { moduleSearchPaths } from '../paths';
 
+/**
+ * Custom error class for article validation errors.
+ * Used when validating knowledge base article names.
+ */
+export class ArticleValidationError extends Error {
+    constructor(message: string, public readonly articleName: string) {
+        super(message);
+        this.name = 'ArticleValidationError';
+    }
+}
+
+
 export class MCPServer implements vscode.Disposable {
 
     private mcpServer: http.Server | undefined;
@@ -191,7 +203,7 @@ export class MCPServer implements vscode.Disposable {
             app.post('/mcp', async (req, res) => {
                 let serverInstance: McpServer | undefined;
                 try {
-                    serverInstance = this.getServer();
+                    serverInstance = await this.getServer();
                     // Check for duplicate protocol version headers which cause LiteLLM to fail connecting.
                     const protocolVersion = req.headers['mcp-protocol-version'];
                     if (protocolVersion && typeof protocolVersion === 'string' && protocolVersion.includes(',')) {
@@ -328,7 +340,7 @@ export class MCPServer implements vscode.Disposable {
         this.jarProviderHandle.dispose();
     }
 
-    private getServer(): McpServer {
+    private async getServer(): Promise<McpServer> {
         const server = new McpServer({
             name: 'TLA+ MCP Tools',
             version: '1.0.0',
@@ -933,27 +945,362 @@ export class MCPServer implements vscode.Disposable {
             );
         }
 
+        // Check if knowledge base tools should be enabled
+        const enableKnowledgeBaseTools =
+            vscode.workspace.getConfiguration().get<boolean>('tlaplus.mcp.enableKnowledgeBaseTools', false);
+
         // Register TLA+ knowledge base resources
-        this.registerKnowledgeBaseResources(server);
+        await this.registerKnowledgeBaseResources(server);
+
+        if (enableKnowledgeBaseTools) {
+            server.tool(
+                'tlaplus_mcp_knowledge_list',
+                'List all available TLA+ knowledge base articles with optional search filtering. Use this to discover what documentation is available.',
+                {
+                    search: z.string().optional().describe(
+                        'Optional search term to filter articles by title, description, or content. Case-insensitive partial matching.'
+                    )
+                },
+                async ({ search }) => {
+                    try {
+                        const knowledgeBasePath = this.getKnowledgeBasePath();
+
+                        try {
+                            await fs.promises.access(knowledgeBasePath);
+                        } catch (error) {
+                            return {
+                                content: [{
+                                    type: 'text',
+                                    text: `Knowledge base directory not found: ${knowledgeBasePath}`
+                                }]
+                            };
+                        }
+
+                        const files = await fs.promises.readdir(knowledgeBasePath);
+                        const markdownFiles = files.filter(file => file.endsWith('.md'));
+
+                        return await this.listKnowledgeArticles(knowledgeBasePath, markdownFiles, search);
+                    } catch (error) {
+                        return {
+                            content: [{
+                                type: 'text',
+                                text: `Error accessing knowledge base: ${error instanceof Error ? error.message : String(error)}`
+                            }]
+                        };
+                    }
+                }
+            );
+
+            server.tool(
+                'tlaplus_mcp_knowledge_get',
+                'Retrieve specific TLA+ knowledge base articles by name. Use this when you know which articles you want to read.',
+                {
+                    articles: z.array(z.string()).describe(
+                        'Array of article names to retrieve (without .md extension). ' +
+                    'Examples: ["tla-choose-nondeterminism", "tla-diagnose-property-violations"]'
+                    )
+                },
+                async ({ articles }) => {
+                    try {
+                        const knowledgeBasePath = this.getKnowledgeBasePath();
+
+                        try {
+                            await fs.promises.access(knowledgeBasePath);
+                        } catch (error) {
+                            return {
+                                content: [{
+                                    type: 'text',
+                                    text: `Knowledge base directory not found: ${knowledgeBasePath}`
+                                }]
+                            };
+                        }
+
+                        if (!articles || articles.length === 0) {
+                            return {
+                                content: [{
+                                    type: 'text',
+                                    text: 'Please specify which articles to retrieve using the "articles" parameter.'
+                                }]
+                            };
+                        }
+
+                        return await this.getKnowledgeArticles(knowledgeBasePath, articles);
+                    } catch (error) {
+                        return {
+                            content: [{
+                                type: 'text',
+                                text: `Error accessing knowledge base: ${error instanceof Error ? error.message : String(error)}`
+                            }]
+                        };
+                    }
+                }
+            );
+        }
 
         return server;
     }
 
     /**
+     * Lists knowledge base articles with optional search filtering.
+     */
+    private async listKnowledgeArticles(
+        knowledgeBasePath: string,
+        markdownFiles: string[],
+        search?: string
+    ): Promise<{ content: { type: 'text'; text: string; }[]; }> {
+        const articles: Array<{name: string, title: string, description: string}> = [];
+
+        for (const file of markdownFiles) {
+            const filePath = path.join(knowledgeBasePath, file);
+            const content = await fs.promises.readFile(filePath, 'utf-8');
+            const metadata = this.parseMarkdownFrontmatter(content);
+
+            const articleName = path.basename(file, '.md');
+            const title = metadata.title || articleName.replace(/-/g, ' ');
+            const description = metadata.description || '';
+
+            // Apply search filter if provided
+            if (!search) {
+                articles.push({ name: articleName, title, description });
+            } else {
+                const searchLower = search.toLowerCase();
+                const titleMatch = title.toLowerCase().includes(searchLower);
+                const descMatch = description.toLowerCase().includes(searchLower);
+
+                // Also search in the content (without frontmatter)
+                let contentWithoutFrontmatter: string;
+                if (content.startsWith('---')) {
+                    // Has frontmatter, remove it
+                    const parts = content.split('---');
+                    if (parts.length >= 3) {
+                        contentWithoutFrontmatter = parts.slice(2).join('---').trim();
+                    } else {
+                        // Malformed frontmatter, use entire content
+                        contentWithoutFrontmatter = content;
+                    }
+                } else {
+                    // No frontmatter, use entire content
+                    contentWithoutFrontmatter = content;
+                }
+                const contentMatch = contentWithoutFrontmatter.toLowerCase().includes(searchLower);
+
+                if (titleMatch || descMatch || contentMatch) {
+                    articles.push({ name: articleName, title, description });
+                }
+            }
+        }
+
+        // Format the listing
+        const listing = articles.map(article => {
+            const titleLine = `**${article.title}** (${article.name})`;
+            const descLine = article.description ? `  ${article.description}` : '';
+            return titleLine + (descLine ? '\n' + descLine : '');
+        }).join('\n\n');
+
+        const header = search ?
+            `Found ${articles.length} TLA+ knowledge base articles matching "${search}":` :
+            `Available TLA+ knowledge base articles (${articles.length} total):`;
+
+        const footer = articles.length > 0 ?
+            '\n\nUse tlaplus_mcp_knowledge_get with articles=["article-name"] to retrieve full content.' :
+            '';
+
+        return {
+            content: [{
+                type: 'text',
+                text: `${header}\n\n${listing}${footer}`
+            }]
+        };
+    }
+
+    /**
+     * Validates that an article name is safe and doesn't contain path traversal sequences.
+     * Article names should only contain alphanumeric characters, hyphens, and underscores.
+     */
+    private validateArticleName(articleName: string): void {
+        // Check for null, undefined, or empty strings
+        if (!articleName || typeof articleName !== 'string') {
+            throw new ArticleValidationError('Article name must be a non-empty string', articleName || '');
+        }
+
+        // Remove .md extension if present for validation
+        const nameWithoutExtension = articleName.endsWith('.md') ?
+            articleName.slice(0, -3) : articleName;
+
+        // Check for path separators and traversal sequences
+        if (nameWithoutExtension.includes('/') || nameWithoutExtension.includes('\\')) {
+            throw new ArticleValidationError(`Invalid article name: "${articleName}" contains path separators`, articleName);
+        }
+
+        if (nameWithoutExtension.includes('..')) {
+            throw new ArticleValidationError(`Invalid article name: "${articleName}" contains path traversal sequence`, articleName);
+        }
+
+        // Check for other potentially dangerous characters
+        if (nameWithoutExtension.includes('\0')) {
+            throw new ArticleValidationError(`Invalid article name: "${articleName}" contains null byte`, articleName);
+        }
+
+        // Ensure the name only contains safe characters: letters, numbers, hyphens, underscores
+        const safePattern = /^[a-zA-Z0-9_-]+$/;
+        if (!safePattern.test(nameWithoutExtension)) {
+            throw new ArticleValidationError(`Invalid article name: "${articleName}" contains invalid characters. Only letters, numbers, hyphens, and underscores are allowed`, articleName);
+        }
+
+        // Prevent excessively long names
+        if (nameWithoutExtension.length > 100) {
+            throw new ArticleValidationError(`Invalid article name: "${articleName}" is too long (max 100 characters)`, articleName);
+        }
+    }
+
+    /**
+     * Retrieves specific knowledge base articles by name.
+     */
+    private async getKnowledgeArticles(
+        knowledgeBasePath: string,
+        requestedArticles: string[]
+    ): Promise<{ content: { type: 'text'; text: string; }[]; }> {
+        const results: Array<{name: string, title: string, content: string}> = [];
+        const notFound: string[] = [];
+
+        for (const articleName of requestedArticles) {
+            try {
+                // Validate the article name to prevent path traversal attacks
+                this.validateArticleName(articleName);
+
+                // Handle both with and without .md extension
+                const fileName = articleName.endsWith('.md') ? articleName : `${articleName}.md`;
+                const filePath = path.join(knowledgeBasePath, fileName);
+
+                const fileContent = await fs.promises.readFile(filePath, 'utf-8');
+                const metadata = this.parseMarkdownFrontmatter(fileContent);
+
+                // Remove frontmatter from content
+                let contentWithoutFrontmatter: string;
+                if (fileContent.startsWith('---')) {
+                    // Has frontmatter, remove it
+                    const parts = fileContent.split('---');
+                    if (parts.length >= 3) {
+                        contentWithoutFrontmatter = parts.slice(2).join('---').trim();
+                    } else {
+                        // Malformed frontmatter, use entire content
+                        contentWithoutFrontmatter = fileContent;
+                    }
+                } else {
+                    // No frontmatter, use entire content
+                    contentWithoutFrontmatter = fileContent;
+                }
+
+                results.push({
+                    name: articleName,
+                    title: metadata.title || articleName.replace(/-/g, ' '),
+                    content: contentWithoutFrontmatter
+                });
+            } catch (error) {
+                // Handle validation errors and file access errors
+                if (error instanceof ArticleValidationError) {
+                    // For validation errors, include the error message in the response
+                    notFound.push(`${articleName} (${error.message})`);
+                } else {
+                    // File doesn't exist or can't be read
+                    notFound.push(articleName);
+                }
+            }
+        }
+
+        // Format the response
+        let response = '';
+
+        if (results.length > 0) {
+            response += results.map(article => {
+                return `# ${article.title}\n\n${article.content}`;
+            }).join('\n\n---\n\n');
+        }
+
+        if (notFound.length > 0) {
+            const notFoundMsg = `\n\n**Articles not found:** ${notFound.join(', ')}`;
+            response += notFoundMsg;
+
+            // Include list of all available articles when some keys fail
+            try {
+                const files = await fs.promises.readdir(knowledgeBasePath);
+                const markdownFiles = files.filter(file => file.endsWith('.md'));
+                const availableArticles: Array<{name: string, title: string, description: string}> = [];
+
+                for (const file of markdownFiles) {
+                    const filePath = path.join(knowledgeBasePath, file);
+                    const content = await fs.promises.readFile(filePath, 'utf-8');
+                    const metadata = this.parseMarkdownFrontmatter(content);
+
+                    const articleName = path.basename(file, '.md');
+                    const title = metadata.title || articleName.replace(/-/g, ' ');
+                    const description = metadata.description || '';
+
+                    availableArticles.push({ name: articleName, title, description });
+                }
+
+                // Format the listing of available articles
+                const listing = availableArticles.map(article => {
+                    const titleLine = `**${article.title}** (${article.name})`;
+                    const descLine = article.description ? `  ${article.description}` : '';
+                    return titleLine + (descLine ? '\n' + descLine : '');
+                }).join('\n\n');
+
+                response += `\n\n**Available articles (${availableArticles.length} total):**\n\n${listing}`;
+            } catch (error) {
+                // If we can't list available articles, just continue without them
+                console.warn('Failed to list available articles:', error);
+            }
+        }
+
+        return {
+            content: [{
+                type: 'text',
+                text: response || 'No articles found.'
+            }]
+        };
+    }
+
+    /**
+     * Parses markdown frontmatter to extract metadata.
+     */
+    private parseMarkdownFrontmatter(content: string): {title?: string, description?: string} {
+        const lines = content.split('\n');
+        const metadata: {title?: string, description?: string} = {};
+
+        if (lines[0] === '---') {
+            let i = 1;
+            while (i < lines.length && lines[i] !== '---') {
+                const line = lines[i].trim();
+                if (line.startsWith('title:')) {
+                    metadata.title = line.substring(6).trim();
+                } else if (line.startsWith('description:')) {
+                    metadata.description = line.substring(12).trim();
+                }
+                i++;
+            }
+        }
+
+        return metadata;
+    }
+
+    /**
      * Registers TLA+ knowledge base resources from the extension's knowledge base directory.
      */
-    private registerKnowledgeBaseResources(server: McpServer): void {
+    private async registerKnowledgeBaseResources(server: McpServer): Promise<void> {
         try {
             const knowledgeBasePath = this.getKnowledgeBasePath();
 
             // Check if the knowledge base directory exists
-            if (!fs.existsSync(knowledgeBasePath)) {
+            try {
+                await fs.promises.access(knowledgeBasePath);
+            } catch (error) {
                 console.warn(`Knowledge base directory not found: ${knowledgeBasePath}`);
                 return;
             }
 
             // Read all markdown files in the knowledge base directory
-            const files = fs.readdirSync(knowledgeBasePath);
+            const files = await fs.promises.readdir(knowledgeBasePath);
             const markdownFiles = files.filter(file => file.endsWith('.md'));
 
             // Register each markdown file as a resource
@@ -966,7 +1313,7 @@ export class MCPServer implements vscode.Disposable {
                 // base articles are version-controlled in Git, so we can assume they are properly formatted.
 
                 // Read the frontmatter to get metadata
-                const content = fs.readFileSync(filePath, 'utf-8');
+                const content = await fs.promises.readFile(filePath, 'utf-8');
                 const lines = content.split('\n');
                 let title = resourceName.replace(/-/g, ' ');
                 let description = '';
@@ -1002,7 +1349,20 @@ export class MCPServer implements vscode.Disposable {
                         try {
                             const fileContent = await fs.promises.readFile(filePath, 'utf-8');
                             // Remove the frontmatter
-                            const contentWithoutFrontmatter = fileContent.split('---').slice(2).join('---').trim();
+                            let contentWithoutFrontmatter: string;
+                            if (fileContent.startsWith('---')) {
+                                // Has frontmatter, remove it
+                                const parts = fileContent.split('---');
+                                if (parts.length >= 3) {
+                                    contentWithoutFrontmatter = parts.slice(2).join('---').trim();
+                                } else {
+                                    // Malformed frontmatter, use entire content
+                                    contentWithoutFrontmatter = fileContent;
+                                }
+                            } else {
+                                // No frontmatter, use entire content
+                                contentWithoutFrontmatter = fileContent;
+                            }
                             return {
                                 contents: [
                                     {
