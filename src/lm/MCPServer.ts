@@ -75,10 +75,10 @@ export class MCPServer implements vscode.Disposable {
             app.use(express.json());
 
             const server = this.getServer();
-            app.post('/mcp', async (req, res) => {
+            app.all('/mcp', async (req, res) => {
                 try {
                     const transport: StreamableHTTPServerTransport = new StreamableHTTPServerTransport({
-                        sessionIdGenerator: undefined,
+                        sessionIdGenerator: undefined // Use stateless mode to avoid initialization complexity
                     });
                     res.on('close', () => {
                         console.log('Request closed');
