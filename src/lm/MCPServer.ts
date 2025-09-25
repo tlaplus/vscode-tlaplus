@@ -101,6 +101,38 @@ export class MCPServer implements vscode.Disposable {
                 }
             });
 
+            // GET endpoint - return 405 for stateless mode
+            // The server MUST either return Content-Type: text/event-stream in response to this HTTP GET,
+            // or else return HTTP 405 Method Not Allowed, indicating that the server does not offer an
+            // SSE stream at this endpoint.
+            app.get('/mcp', (req, res) => {
+                res.status(405).json({
+                    jsonrpc: '2.0',
+                    error: {
+                        code: -32000,
+                        message: 'Method not allowed.'
+                    },
+                    id: null
+                });
+            });
+
+            // DELETE endpoint - return 405 for stateless mode
+            // Clients that no longer need a particular session (e.g., because the user is leaving the client
+            // application) SHOULD send an HTTP DELETE to the MCP endpoint with the Mcp-Session-Id header, to
+            // explicitly terminate the session. The server MAY respond to this request with HTTP 405 Method
+            // Not Allowed, indicating that the server does not allow clients to terminate sessions.
+            app.delete('/mcp', (req, res) => {
+                res.status(405).json({
+                    jsonrpc: '2.0',
+                    error: {
+                        code: -32000,
+                        message: 'Method not allowed.'
+                    },
+                    id: null
+                });
+            });
+
+
             this.mcpServer = app.listen(port, () => {
                 // Get the actual port that was assigned (important when port is 0)
                 const actualPort = (this.mcpServer?.address() as { port: number })?.port || port;
