@@ -627,6 +627,12 @@ export class MCPServer implements vscode.Disposable {
             const shareStats = vscode.workspace.getConfiguration().get<ShareOption>(CFG_TLC_STATISTICS_TYPE);
             if (shareStats !== ShareOption.DoNotShare) {
                 extraJavaOpts.push('-Dtlc2.TLC.ide=TLAiVSCode');
+                // Wait for the statistics to be reported. Normally, TLC exits too quickly for this to happen,
+                // which is intentional when TLC is run by humans. However, when invoked by the MCP server,
+                // we want to ensure the statistics are reported, since the runtime is dominated by the LLM
+                // invocation anyway.
+                // https://github.com/tlaplus/tlaplus/commit/4c54d983415fcdce254be9a7e074175a200dda37
+                extraJavaOpts.push('-Dutil.ExecutionStatisticsCollector.waitForCompletion=true');
             }
 
             // Use the provided cfgFilePath or default to specFiles.cfgFilePath
