@@ -77,6 +77,13 @@ export class MCPServer implements vscode.Disposable {
             const server = this.getServer();
             app.all('/mcp', async (req, res) => {
                 try {
+                    // Check for duplicate protocol version headers which cause LiteLLM to fail connecting.
+                    const protocolVersion = req.headers['mcp-protocol-version'];
+                    if (protocolVersion && typeof protocolVersion === 'string' && protocolVersion.includes(',')) {
+                        // Normalize the protocol version by taking the first one
+                        req.headers['mcp-protocol-version'] = protocolVersion.split(',')[0].trim();
+                    }
+
                     const transport: StreamableHTTPServerTransport = new StreamableHTTPServerTransport({
                         sessionIdGenerator: undefined // Use stateless mode to avoid initialization complexity
                     });
