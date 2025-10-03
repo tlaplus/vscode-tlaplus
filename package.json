@@ -572,6 +572,12 @@
                     "default": -1,
                     "markdownDescription": "Listening port for TLA+ MCP server. If set to -1, MCP server will be disabled. Restart VSCode to apply changes."
                 },
+                "tlaplus.mcp.enableFilesystemTools": {
+                    "type": "boolean",
+                    "scope": "window",
+                    "default": false,
+                    "markdownDescription": "Enable filesystem tools (list_directory, read_file, write_file) in the MCP server. These tools allow reading and writing files within the workspace. Restart VSCode to apply changes. It is unlikely that you will want to enable this, because VSCode and Cursor already provide filesystem operations."
+                },
                 "tlaplus.pdf.convertCommand": {
                     "default": "pdflatex",
                     "type": "string",

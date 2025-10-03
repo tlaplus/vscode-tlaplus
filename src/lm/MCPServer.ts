@@ -69,6 +69,43 @@ export class MCPServer implements vscode.Disposable {
         return path.resolve(workspaceFolder.uri.fsPath, fileName);
     }
 
+    /**
+     * Validates that the given absolute path is within the workspace.
+     * Returns the validated path if valid, throws an error if not.
+     * Uses path.relative() to prevent path traversal attacks.
+     */
+    private validateWorkspacePath(absolutePath: string): string {
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        if (!workspaceFolder) {
+            throw new Error('No workspace is open');
+        }
+
+        const workspaceRoot = workspaceFolder.uri.fsPath;
+
+        // Normalize both paths to handle different path separators and resolve . and ..
+        const normalizedPath = path.normalize(absolutePath);
+        const normalizedWorkspace = path.normalize(workspaceRoot);
+
+        // Use path.relative() to get the relative path from workspace to target
+        const relativePath = path.relative(normalizedWorkspace, normalizedPath);
+
+        // Check for path traversal attempts:
+        // 1. If relative path starts with '..' or contains '../' at the beginning, it's outside workspace
+        // 2. If relative path is empty, it's the workspace root itself (allowed)
+        // 3. On Windows, check for drive letter changes (e.g., C: to D:)
+        if (relativePath.startsWith('..') || relativePath.startsWith(`..${path.sep}`)) {
+            throw new Error(`Access denied: Path ${absolutePath} is outside the workspace (path traversal detected)`);
+        }
+
+        // Additional check for absolute paths that might bypass the relative check
+        // This handles cases where the path might be on a different drive on Windows
+        if (path.isAbsolute(relativePath)) {
+            throw new Error(`Access denied: Path ${absolutePath} is outside the workspace (absolute path detected)`);
+        }
+
+        return normalizedPath;
+    }
+
     private startServer(port: number): void {
         try {
             const app = express();
@@ -220,18 +257,19 @@ export class MCPServer implements vscode.Disposable {
             { fileName: z.string().describe('The full path to the file containing the TLA+ module.') },
             async ({ fileName }: { fileName: string }) => {
                 try {
-                    // Resolve relative path to absolute path
+                    // Resolve relative path to absolute path and validate it's within workspace
                     const absolutePath = this.resolveFilePath(fileName);
+                    const validatedPath = this.validateWorkspacePath(absolutePath);
 
                     // Turn the file name into a vscode.Uri
-                    const fileUri = vscode.Uri.file(absolutePath);
+                    const fileUri = vscode.Uri.file(validatedPath);
 
                     // Check if the file exists
-                    if (!(await exists(absolutePath))) {
+                    if (!(await exists(validatedPath))) {
                         return {
                             content: [{
                                 type: 'text',
-                                text: `File ${absolutePath} does not exist on disk.`
+                                text: `File ${validatedPath} does not exist on disk.`
                             }]
                         };
                     }
@@ -250,7 +288,7 @@ export class MCPServer implements vscode.Disposable {
                         return {
                             content: [{
                                 type: 'text',
-                                text: `No errors found in the TLA+ specification ${absolutePath}.`
+                                text: `No errors found in the TLA+ specification ${validatedPath}.`
                             }]
                         };
                     } else {
@@ -301,15 +339,16 @@ export class MCPServer implements vscode.Disposable {
                     } else {
                         // Regular file system path
                         const absolutePath = this.resolveFilePath(fileName);
-                        fileUri = vscode.Uri.file(absolutePath);
-                        displayPath = absolutePath;
+                        const validatedPath = this.validateWorkspacePath(absolutePath);
+                        fileUri = vscode.Uri.file(validatedPath);
+                        displayPath = validatedPath;
 
                         // Check if file exists on disk
-                        if (!(await exists(absolutePath))) {
+                        if (!(await exists(validatedPath))) {
                             return {
                                 content: [{
                                     type: 'text',
-                                    text: `File ${absolutePath} does not exist on disk.`
+                                    text: `File ${validatedPath} does not exist on disk.`
                                 }]
                             };
                         }
@@ -442,10 +481,11 @@ export class MCPServer implements vscode.Disposable {
             },
             async ({ fileName, cfgFile, extraOpts }) => {
                 const absolutePath = this.resolveFilePath(fileName);
-                const cfgFilePath = cfgFile ? this.resolveFilePath(cfgFile) : undefined;
+                const validatedPath = this.validateWorkspacePath(absolutePath);
+                const cfgFilePath = cfgFile ? this.validateWorkspacePath(this.resolveFilePath(cfgFile)) : undefined;
                 // Prepend the command line argument ['-modelcheck'] to extra opts.
                 const options = extraOpts ? ['-cleanup', '-modelcheck', ...extraOpts] : ['-cleanup', '-modelcheck'];
-                return this.runTLCInMCP(absolutePath, options, [], cfgFilePath);
+                return this.runTLCInMCP(validatedPath, options, [], cfgFilePath);
             }
         );
 
@@ -461,10 +501,11 @@ export class MCPServer implements vscode.Disposable {
             },
             async ({ fileName, cfgFile, extraOpts }) => {
                 const absolutePath = this.resolveFilePath(fileName);
-                const cfgFilePath = cfgFile ? this.resolveFilePath(cfgFile) : undefined;
+                const validatedPath = this.validateWorkspacePath(absolutePath);
+                const cfgFilePath = cfgFile ? this.validateWorkspacePath(this.resolveFilePath(cfgFile)) : undefined;
                 // Prepend the command line argument ['-modelcheck'] to extra opts.
                 const options = extraOpts ? ['-cleanup', '-simulate', ...extraOpts] : ['-cleanup', '-simulate'];
-                return this.runTLCInMCP(absolutePath, options, ['-Dtlc2.TLC.stopAfter=3'], cfgFilePath);
+                return this.runTLCInMCP(validatedPath, options, ['-Dtlc2.TLC.stopAfter=3'], cfgFilePath);
             }
         );
 
@@ -481,19 +522,328 @@ export class MCPServer implements vscode.Disposable {
             },
             async ({ fileName, behaviorLength, cfgFile, extraOpts }) => {
                 const absolutePath = this.resolveFilePath(fileName);
-                const cfgFilePath = cfgFile ? this.resolveFilePath(cfgFile) : undefined;
+                const validatedPath = this.validateWorkspacePath(absolutePath);
+                const cfgFilePath = cfgFile ? this.validateWorkspacePath(this.resolveFilePath(cfgFile)) : undefined;
                 // Prepend the command line argument ['-modelcheck'] to extra opts.
                 const options = extraOpts ?
                     ['-cleanup', '-simulate', '-invlevel', behaviorLength.toString(), ...extraOpts] :
                     ['-cleanup', '-simulate', '-invlevel', behaviorLength.toString()];
                 return this.runTLCInMCP(
-                    absolutePath,
+                    validatedPath,
                     options,
                     ['-Dtlc2.TLC.stopAfter=3'],
                     cfgFilePath
                 );
             }
         );
+
+        /*
+        *
+        * Provide auxiliary tools to list, read, and write files within the workspace.
+        * The TLA+ tools (SANY, TLC, …) rely on a filesystem-centric model, which blocks
+        * many workflows. Making them filesystem-agnostic
+        * (https://github.com/tlaplus/tlaplus/issues/719) is a major refactoring and not
+        * expected soon.
+        *
+        * Cursor and similar environments already provide filesystem operations, and those
+        * should be preferred. Our filesystem tools exist as a fallback to avoid dead ends
+        * when LLMs need to create files consumed by SANY, TLC, and related MCP tools.
+        *
+        * Clients could implement their own filesystem operations, but if client and server
+        * run on different hosts, they would be unable to create files on the server host
+        * where SANY/TLC run.
+        *
+        * Implementor's Notes:
+        * - We chose to keep the TLA+ MCP tools file-based, even though their APIs could have
+        * been migrated to streams. The risk was unclear client behavior: MCP clients like
+        * Cursor ultimately need to write to files, since human users expect to view and
+        * manage those files directly.
+        * - MCP tools were chosen over MCP resources: they are widely supported, better for
+        * interactive use, and simpler for validation.
+        * - Filesystem operations use absolute paths, since TLC and SANY require them. For
+        * security, access is restricted to files under the active VSCode or Cursor workspace.
+        */
+
+        // Check if filesystem tools should be enabled
+        const enableFilesystemTools =
+            vscode.workspace.getConfiguration().get<boolean>('tlaplus.mcp.enableFilesystemTools', false);
+
+        if (enableFilesystemTools) {
+            server.tool(
+                'list_directory',
+                // eslint-disable-next-line max-len
+                'List the contents of a directory within the workspace. Only directories within the VSCode workspace are accessible for security reasons.',
+                {
+                    // eslint-disable-next-line max-len
+                    directoryPath: z.string().describe('The absolute path to the directory to list. Must be within the workspace.')
+                },
+                async ({ directoryPath }) => {
+                    try {
+                    // Resolve and validate the path
+                        const absolutePath = this.resolveFilePath(directoryPath);
+                        const validatedPath = this.validateWorkspacePath(absolutePath);
+
+                        // Check if the directory exists
+                        if (!(await exists(validatedPath))) {
+                            return {
+                                content: [{
+                                    type: 'text',
+                                    text: `Directory ${validatedPath} does not exist.`
+                                }]
+                            };
+                        }
+
+                        // Check if it's actually a directory
+                        const stat = await fs.promises.stat(validatedPath);
+                        if (!stat.isDirectory()) {
+                            return {
+                                content: [{
+                                    type: 'text',
+                                    text: `Path ${validatedPath} is not a directory.`
+                                }]
+                            };
+                        }
+
+                        // Read directory contents
+                        const entries = await fs.promises.readdir(validatedPath, { withFileTypes: true });
+
+                        // Collect entries
+                        const directories: string[] = [];
+                        const files: string[] = [];
+                        const symlinks: string[] = [];
+
+                        for (const entry of entries) {
+                            if (entry.isDirectory()) {
+                                directories.push(entry.name);
+                            } else if (entry.isFile()) {
+                                files.push(entry.name);
+                            } else if (entry.isSymbolicLink()) {
+                                symlinks.push(entry.name);
+                            }
+                        }
+
+                        // Sort all arrays alphabetically
+                        directories.sort((a, b) => a.localeCompare(b));
+                        files.sort((a, b) => a.localeCompare(b));
+                        symlinks.sort((a, b) => a.localeCompare(b));
+
+                        // Return structured JSON with metadata and entries separated
+                        const result = {
+                            metadata: {
+                                path: validatedPath,
+                                totalEntries: entries.length,
+                                directoryCount: directories.length,
+                                fileCount: files.length,
+                                symlinkCount: symlinks.length
+                            },
+                            entries: {
+                                directories: directories,
+                                files: files,
+                                symlinks: symlinks
+                            }
+                        };
+
+                        return {
+                            content: [{
+                                type: 'text',
+                                text: JSON.stringify(result, null, 2)
+                            }]
+                        };
+                    } catch (error) {
+                        return {
+                            content: [{
+                                type: 'text',
+                                // eslint-disable-next-line max-len
+                                text: `Error listing directory: ${error instanceof Error ? error.message : String(error)}`
+                            }]
+                        };
+                    }
+                }
+            );
+
+            server.tool(
+                'read_file',
+                // eslint-disable-next-line max-len
+                'Read the contents of a file within the workspace. Only files within the VSCode workspace are accessible for security reasons.',
+                {
+                    // eslint-disable-next-line max-len
+                    fileName: z.string().describe('The absolute path to the file to read. Must be within the VSCode or Cursor workspace.'),
+                    // eslint-disable-next-line max-len
+                    encoding: z.string().optional().describe('The encoding to use when reading the file. Defaults to utf-8.')
+                },
+                async ({ fileName, encoding = 'utf-8' }) => {
+                    try {
+                        // Resolve and validate the path
+                        const absolutePath = this.resolveFilePath(fileName);
+                        const validatedPath = this.validateWorkspacePath(absolutePath);
+
+                        // Check if the file exists
+                        if (!(await exists(validatedPath))) {
+                            return {
+                                content: [{
+                                    type: 'text',
+                                    text: `File ${validatedPath} does not exist.`
+                                }]
+                            };
+                        }
+
+                        // Check if it's actually a file
+                        const stat = await fs.promises.stat(validatedPath);
+                        if (!stat.isFile()) {
+                            return {
+                                content: [{
+                                    type: 'text',
+                                    text: `Path ${validatedPath} is not a file.`
+                                }]
+                            };
+                        }
+
+                        // Check file size to prevent reading very large files
+                        const maxFileSize = 10 * 1024 * 1024; // 10MB limit
+                        if (stat.size > maxFileSize) {
+                            return {
+                                content: [{
+                                    type: 'text',
+                                    text: `File ${validatedPath} is too large (${stat.size} bytes). ` +
+                                    `Maximum allowed size is ${maxFileSize} bytes.`
+                                }]
+                            };
+                        }
+
+                        // Read the file contents
+                        const fileContent = await fs.promises.readFile(
+                            validatedPath,
+                            { encoding: encoding as BufferEncoding }
+                        );
+
+                        // Return structured JSON with metadata and content separated
+                        const result = {
+                            metadata: {
+                                path: validatedPath,
+                                size: stat.size,
+                                encoding: encoding,
+                                mtime: stat.mtime.toISOString(),
+                                ctime: stat.ctime.toISOString()
+                            },
+                            content: fileContent
+                        };
+
+                        return {
+                            content: [{
+                                type: 'text',
+                                text: JSON.stringify(result, null, 2)
+                            }]
+                        };
+                    } catch (error) {
+                        return {
+                            content: [{
+                                type: 'text',
+                                text: `Error reading file: ${error instanceof Error ? error.message : String(error)}`
+                            }]
+                        };
+                    }
+                }
+            );
+
+            server.tool(
+                'write_file',
+                // eslint-disable-next-line max-len
+                'Write content to a file within the workspace. Only files within the VSCode workspace can be written for security reasons. Creates the file if it does not exist, or overwrites it if it does.',
+                {
+                    // eslint-disable-next-line max-len
+                    fileName: z.string().describe('The absolute path to the file to write. Must be within the workspace.'),
+                    // eslint-disable-next-line max-len
+                    content: z.string().describe('The content to write to the file.'),
+                    // eslint-disable-next-line max-len
+                    encoding: z.string().optional().describe('The encoding to use when writing the file. Defaults to utf-8.'),
+                    // eslint-disable-next-line max-len
+                    createDirectories: z.boolean().optional().describe('Whether to create parent directories if they do not exist. Defaults to false.')
+                },
+                async ({ fileName, content, encoding = 'utf-8', createDirectories = false }) => {
+                    try {
+                        // Resolve and validate the path
+                        const absolutePath = this.resolveFilePath(fileName);
+                        const validatedPath = this.validateWorkspacePath(absolutePath);
+
+                        // Check if parent directory exists, create if requested
+                        const parentDir = path.dirname(validatedPath);
+                        if (!(await exists(parentDir))) {
+                            if (createDirectories) {
+                                await fs.promises.mkdir(parentDir, { recursive: true });
+                            } else {
+                                return {
+                                    content: [{
+                                        type: 'text',
+                                        text: `Parent directory ${parentDir} does not exist. ` +
+                                        'Set createDirectories to true to create it automatically.'
+                                    }]
+                                };
+                            }
+                        }
+
+                        // Check if the target is a directory
+                        if (await exists(validatedPath)) {
+                            const stat = await fs.promises.stat(validatedPath);
+                            if (stat.isDirectory()) {
+                                return {
+                                    content: [{
+                                        type: 'text',
+                                        text: `Path ${validatedPath} is a directory, not a file.`
+                                    }]
+                                };
+                            }
+                        }
+
+                        // Check content size to prevent writing very large files
+                        const maxContentSize = 10 * 1024 * 1024; // 10MB limit
+                        const contentBuffer = Buffer.from(content, encoding as BufferEncoding);
+                        if (contentBuffer.length > maxContentSize) {
+                            return {
+                                content: [{
+                                    type: 'text',
+                                    text: `Content is too large (${contentBuffer.length} bytes). ` +
+                                    `Maximum allowed size is ${maxContentSize} bytes.`
+                                }]
+                            };
+                        }
+
+                        // Write the file
+                        await fs.promises.writeFile(validatedPath, content, { encoding: encoding as BufferEncoding });
+
+                        // Get file stats after writing
+                        const stat = await fs.promises.stat(validatedPath);
+
+                        // Return structured JSON with operation result
+                        const result = {
+                            metadata: {
+                                path: validatedPath,
+                                size: stat.size,
+                                encoding: encoding,
+                                mtime: stat.mtime.toISOString(),
+                                ctime: stat.ctime.toISOString(),
+                                operation: 'write'
+                            },
+                            success: true,
+                            message: `Successfully wrote ${stat.size} bytes to ${validatedPath}`
+                        };
+
+                        return {
+                            content: [{
+                                type: 'text',
+                                text: JSON.stringify(result, null, 2)
+                            }]
+                        };
+                    } catch (error) {
+                        return {
+                            content: [{
+                                type: 'text',
+                                text: `Error writing file: ${error instanceof Error ? error.message : String(error)}`
+                            }]
+                        };
+                    }
+                }
+            );
+        }
 
         // Register TLA+ knowledge base resources
         this.registerKnowledgeBaseResources(server);
