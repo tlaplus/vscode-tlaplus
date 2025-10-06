@@ -1,5 +1,6 @@
 import * as assert from 'assert';
 import * as fs from 'fs';
+import * as http from 'http';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
@@ -9,7 +10,7 @@ const fsp = fs.promises;
 
 suite('MCP Server regressions', () => {
     suite('validateWorkspacePath should block symlinks', () => {
-        test('validateWorkspacePath rejects escaped path', async function() {
+        test('validateWorkspacePath rejects escaped path', async function () {
             if (process.platform === 'win32') {
                 this.skip();
             }
@@ -66,6 +67,61 @@ suite('MCP Server regressions', () => {
                     fsp.rm(sandboxRoot, { recursive: true, force: true }),
                     fsp.rm(outsideRoot, { recursive: true, force: true })
                 ]);
+            }
+        });
+    });
+
+    suite('HTTP endpoint routing', () => {
+        test('GET /mcp returns 405 without invoking the MCP handler', async function () {
+            const prototype = MCPServer.prototype as unknown as {
+                getServer(): unknown;
+            };
+            const originalGetServer = prototype.getServer;
+
+            const connectCalls: unknown[] = [];
+            prototype.getServer = () => ({
+                async connect(transport: unknown) {
+                    connectCalls.push(transport);
+                }
+            });
+
+            let server: MCPServer | undefined;
+            try {
+                server = new MCPServer(0);
+                const httpServer = (server as unknown as {
+                    mcpServer?: http.Server;
+                }).mcpServer;
+                assert.ok(httpServer, 'MCP HTTP server should be created');
+
+                await new Promise<void>((resolve) => {
+                    httpServer.once('listening', () => resolve());
+                });
+
+                const address = httpServer.address();
+                const port = typeof address === 'object' && address !== null ? address.port : address;
+                assert.strictEqual(typeof port, 'number', 'HTTP server should expose a numeric port');
+
+                const response = await new Promise<{ statusCode: number | undefined }>((resolve, reject) => {
+                    const req = http.request({
+                        hostname: '127.0.0.1',
+                        port: port as number,
+                        path: '/mcp',
+                        method: 'GET'
+                    }, res => {
+                        res.resume();
+                        res.on('end', () => resolve({ statusCode: res.statusCode }));
+                    });
+                    req.on('error', reject);
+                    req.end();
+                });
+
+                assert.strictEqual(connectCalls.length, 0,
+                    'GET /mcp should never reach the MCP request handler in stateless mode');
+                assert.strictEqual(response.statusCode, 405,
+                    'GET /mcp must return 405 when SSE is not supported');
+            } finally {
+                server?.dispose();
+                prototype.getServer = originalGetServer;
             }
         });
     });
