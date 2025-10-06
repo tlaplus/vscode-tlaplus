@@ -11,7 +11,7 @@ const fsp = fs.promises;
 
 suite('MCP Server regressions', () => {
     suite('validateWorkspacePath should block symlinks', () => {
-        test('validateWorkspacePath rejects escaped path', async function () {
+        test('validateWorkspacePath rejects escaped path', async function() {
             if (process.platform === 'win32') {
                 this.skip();
             }
@@ -73,7 +73,7 @@ suite('MCP Server regressions', () => {
     });
 
     suite('HTTP endpoint routing', () => {
-        test('GET /mcp returns 405 without invoking the MCP handler', async function () {
+        test('GET /mcp returns 405 without invoking the MCP handler', async function() {
             const prototype = MCPServer.prototype as unknown as {
                 getServer(): unknown;
             };
@@ -126,7 +126,7 @@ suite('MCP Server regressions', () => {
             }
         });
 
-        test('Each POST /mcp request uses a fresh MCP server instance', async function () {
+        test('Each POST /mcp request uses a fresh MCP server instance', async function() {
             const prototype = MCPServer.prototype as unknown as {
                 getServer(): unknown;
             };
