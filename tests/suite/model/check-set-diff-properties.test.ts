@@ -218,13 +218,30 @@ suite('Set Diff Properties Test Suite', () => {
 
                     findChanges(oldSet, newSet);
 
-                    const oldUnique = new Set(oldElements);
-                    const newUnique = new Set(newElements);
+                    const oldCounts = new Map<string, number>();
+                    const newCounts = new Map<string, number>();
 
-                    const hasAdditions = [...newUnique].some(e => !oldUnique.has(e));
-                    const hasDeletions = [...oldUnique].some(e => !newUnique.has(e));
+                    oldElements.forEach(e => oldCounts.set(e, (oldCounts.get(e) || 0) + 1));
+                    newElements.forEach(e => newCounts.set(e, (newCounts.get(e) || 0) + 1));
 
-                    if (hasAdditions || hasDeletions) {
+                    let hasDifference = false;
+                    const seen = new Set<string>();
+
+                    oldCounts.forEach((count, str) => {
+                        const newCount = newCounts.get(str) || 0;
+                        if (count !== newCount) {
+                            hasDifference = true;
+                        }
+                        seen.add(str);
+                    });
+
+                    newCounts.forEach((_, str) => {
+                        if (!seen.has(str)) {
+                            hasDifference = true;
+                        }
+                    });
+
+                    if (hasDifference) {
                         assert.strictEqual(newSet.changeType, Change.MODIFIED,
                             'Set should be MODIFIED when elements are added or deleted');
                     } else {
