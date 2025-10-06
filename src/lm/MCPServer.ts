@@ -82,28 +82,109 @@ export class MCPServer implements vscode.Disposable {
 
         const workspaceRoot = workspaceFolder.uri.fsPath;
 
-        // Normalize both paths to handle different path separators and resolve . and ..
-        const normalizedPath = path.normalize(absolutePath);
         const normalizedWorkspace = path.normalize(workspaceRoot);
+        const normalizedPath = path.normalize(absolutePath);
+
+        let resolvedWorkspace: string;
+        try {
+            resolvedWorkspace = this.resolveCanonicalPath(normalizedWorkspace, false);
+        } catch (error) {
+            const workspaceError = error instanceof Error ? error.message : String(error);
+            throw new Error(
+                `Access denied: Unable to resolve workspace root (${normalizedWorkspace}): ` +
+                workspaceError
+            );
+        }
+
+        let resolvedTarget = normalizedPath;
+        try {
+            resolvedTarget = this.resolveCanonicalPath(normalizedPath, true);
+        } catch (error) {
+            if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+                const parentDir = path.dirname(normalizedPath);
+                const fileName = path.basename(normalizedPath);
+                try {
+                    const resolvedParent = this.resolveCanonicalPath(parentDir, false);
+                    resolvedTarget = path.join(resolvedParent, fileName);
+                } catch (innerError) {
+                    const parentError = innerError instanceof Error ? innerError.message : String(innerError);
+                    throw new Error(
+                        `Access denied: Path ${absolutePath} is outside the workspace (cannot resolve ` +
+                        `${parentDir}): ${parentError}`
+                    );
+                }
+            } else {
+                const targetError = error instanceof Error ? error.message : String(error);
+                throw new Error(
+                    `Access denied: Unable to resolve target path (${normalizedPath}): ` +
+                    targetError
+                );
+            }
+        }
 
         // Use path.relative() to get the relative path from workspace to target
-        const relativePath = path.relative(normalizedWorkspace, normalizedPath);
+        const relativePath = path.relative(resolvedWorkspace, resolvedTarget);
 
         // Check for path traversal attempts:
         // 1. If relative path starts with '..' or contains '../' at the beginning, it's outside workspace
         // 2. If relative path is empty, it's the workspace root itself (allowed)
         // 3. On Windows, check for drive letter changes (e.g., C: to D:)
         if (relativePath.startsWith('..') || relativePath.startsWith(`..${path.sep}`)) {
-            throw new Error(`Access denied: Path ${absolutePath} is outside the workspace (path traversal detected)`);
+            throw new Error(
+                `Access denied: Path ${absolutePath} is outside the workspace (path traversal detected)`
+            );
         }
 
         // Additional check for absolute paths that might bypass the relative check
         // This handles cases where the path might be on a different drive on Windows
         if (path.isAbsolute(relativePath)) {
-            throw new Error(`Access denied: Path ${absolutePath} is outside the workspace (absolute path detected)`);
+            throw new Error(
+                `Access denied: Path ${absolutePath} is outside the workspace (absolute path detected)`
+            );
         }
 
-        return normalizedPath;
+        if (path.parse(resolvedWorkspace).root.toLowerCase() !== path.parse(resolvedTarget).root.toLowerCase()) {
+            throw new Error(
+                `Access denied: Path ${absolutePath} is outside the workspace (different volume)`
+            );
+        }
+
+        return resolvedTarget;
+    }
+
+    private resolveCanonicalPath(absolutePath: string, allowMissing: boolean): string {
+        const normalizedAbsolute = path.resolve(absolutePath);
+        const parsed = path.parse(normalizedAbsolute);
+        const baseRoot = parsed.root;
+        const parts = normalizedAbsolute
+            .slice(baseRoot.length)
+            .split(path.sep)
+            .filter(part => part.length > 0);
+
+        let resolved = baseRoot;
+        const realpathFn: (path: string) => string =
+            typeof fs.realpathSync.native === 'function' ? fs.realpathSync.native : fs.realpathSync;
+
+        for (let index = 0; index < parts.length; index += 1) {
+            const segment = parts[index];
+            const candidate = path.join(resolved, segment);
+
+            try {
+                resolved = realpathFn(candidate);
+            } catch (error) {
+                const err = error as NodeJS.ErrnoException;
+                if (err.code === 'ENOENT' && allowMissing) {
+                    resolved = candidate;
+                    for (let rest = index + 1; rest < parts.length; rest += 1) {
+                        resolved = path.join(resolved, parts[rest]);
+                    }
+                    return resolved;
+                }
+                throw err;
+            }
+        }
+
+        return resolved;
     }
 
     private startServer(port: number): void {
@@ -216,8 +297,7 @@ export class MCPServer implements vscode.Disposable {
                 }
             }).on('error', (err) => {
                 vscode.window.showErrorMessage(
-                    `Failed to start TLA+ MCP server: ${
-                        err instanceof Error ? err.message : String(err)
+                    `Failed to start TLA+ MCP server: ${err instanceof Error ? err.message : String(err)
                     }`
                 );
                 console.error('Error starting TLA+ MCP server:', err);
@@ -579,7 +659,7 @@ export class MCPServer implements vscode.Disposable {
                 },
                 async ({ directoryPath }) => {
                     try {
-                    // Resolve and validate the path
+                        // Resolve and validate the path
                         const absolutePath = this.resolveFilePath(directoryPath);
                         const validatedPath = this.validateWorkspacePath(absolutePath);
 
@@ -705,7 +785,7 @@ export class MCPServer implements vscode.Disposable {
                                 content: [{
                                     type: 'text',
                                     text: `File ${validatedPath} is too large (${stat.size} bytes). ` +
-                                    `Maximum allowed size is ${maxFileSize} bytes.`
+                                        `Maximum allowed size is ${maxFileSize} bytes.`
                                 }]
                             };
                         }
@@ -775,7 +855,7 @@ export class MCPServer implements vscode.Disposable {
                                     content: [{
                                         type: 'text',
                                         text: `Parent directory ${parentDir} does not exist. ` +
-                                        'Set createDirectories to true to create it automatically.'
+                                            'Set createDirectories to true to create it automatically.'
                                     }]
                                 };
                             }
@@ -802,7 +882,7 @@ export class MCPServer implements vscode.Disposable {
                                 content: [{
                                     type: 'text',
                                     text: `Content is too large (${contentBuffer.length} bytes). ` +
-                                    `Maximum allowed size is ${maxContentSize} bytes.`
+                                        `Maximum allowed size is ${maxContentSize} bytes.`
                                 }]
                             };
                         }
@@ -945,8 +1025,8 @@ export class MCPServer implements vscode.Disposable {
         extraJavaOpts: string[] = [],
         cfgFilePath?: string
     ): Promise<{
-            content: { type: 'text'; text: string; }[];
-        }> {
+        content: { type: 'text'; text: string; }[];
+    }> {
         // Create a URI from the file name
         const fileUri = vscode.Uri.file(fileName);
         // Check if the file exists
