@@ -192,9 +192,10 @@ export class MCPServer implements vscode.Disposable {
             const app = express();
             app.use(express.json());
 
-            const server = this.getServer();
             app.post('/mcp', async (req, res) => {
+                let serverInstance: McpServer | undefined;
                 try {
+                    serverInstance = this.getServer();
                     // Check for duplicate protocol version headers which cause LiteLLM to fail connecting.
                     const protocolVersion = req.headers['mcp-protocol-version'];
                     if (protocolVersion && typeof protocolVersion === 'string' && protocolVersion.includes(',')) {
@@ -208,10 +209,22 @@ export class MCPServer implements vscode.Disposable {
                     res.on('close', () => {
                         console.log('Request closed');
                         transport.close();
+                        if (serverInstance !== undefined) {
+                            serverInstance.close().catch(error => {
+                                console.warn('Error closing MCP server instance:', error);
+                            });
+                            serverInstance = undefined;
+                        }
                     });
-                    await server.connect(transport);
+                    await serverInstance.connect(transport);
                     await transport.handleRequest(req, res, req.body);
                 } catch (error) {
+                    if (serverInstance !== undefined) {
+                        serverInstance.close().catch(closeError => {
+                            console.warn('Error closing MCP server instance after failure:', closeError);
+                        });
+                        serverInstance = undefined;
+                    }
                     console.error('Error handling MCP request:', error);
                     if (!res.headersSent) {
                         res.status(500).json({

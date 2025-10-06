@@ -5,6 +5,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { MCPServer } from '../../../src/lm/MCPServer';
+import { McpServer as SdkMcpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 const fsp = fs.promises;
 
@@ -120,6 +121,73 @@ suite('MCP Server regressions', () => {
                 assert.strictEqual(response.statusCode, 405,
                     'GET /mcp must return 405 when SSE is not supported');
             } finally {
+                server?.dispose();
+                prototype.getServer = originalGetServer;
+            }
+        });
+
+        test('Each POST /mcp request uses a fresh MCP server instance', async function () {
+            const prototype = MCPServer.prototype as unknown as {
+                getServer(): unknown;
+            };
+            const originalGetServer = prototype.getServer;
+
+            const serverInstances: SdkMcpServer[] = [];
+            prototype.getServer = () => {
+                const instance = new SdkMcpServer({
+                    name: 'test-server',
+                    version: '1.0.0'
+                });
+                serverInstances.push(instance);
+                return instance;
+            };
+
+            let server: MCPServer | undefined;
+            try {
+                server = new MCPServer(0);
+                const httpServer = (server as unknown as {
+                    mcpServer?: http.Server;
+                }).mcpServer;
+                assert.ok(httpServer, 'MCP HTTP server should be created');
+
+                await new Promise<void>((resolve) => {
+                    httpServer.once('listening', () => resolve());
+                });
+
+                const address = httpServer.address();
+                const port = typeof address === 'object' && address !== null ? address.port : address;
+                assert.strictEqual(typeof port, 'number', 'HTTP server should expose a numeric port');
+
+                const makePostRequest = async () => await new Promise<void>((resolve, reject) => {
+                    const req = http.request({
+                        hostname: '127.0.0.1',
+                        port: port as number,
+                        path: '/mcp',
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json, text/event-stream'
+                        }
+                    }, res => {
+                        res.resume();
+                        res.on('end', () => resolve());
+                    });
+                    req.on('error', reject);
+                    req.write(JSON.stringify({
+                        jsonrpc: '2.0',
+                        id: 1,
+                        method: 'ping'
+                    }));
+                    req.end();
+                });
+
+                await makePostRequest();
+                await makePostRequest();
+
+                assert.strictEqual(serverInstances.length, 2,
+                    'Each POST /mcp request should create a fresh MCP server instance');
+            } finally {
+                await Promise.allSettled(serverInstances.map(instance => instance.close()));
                 server?.dispose();
                 prototype.getServer = originalGetServer;
             }
