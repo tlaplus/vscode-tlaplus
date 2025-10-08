@@ -14,17 +14,31 @@ export class ParseModuleTool implements vscode.LanguageModelTool<FileParameter> 
         options: vscode.LanguageModelToolInvocationOptions<FileParameter>,
         token: vscode.CancellationToken
     ) {
+        const cancellationResult = (filePath: string) => new vscode.LanguageModelToolResult(
+            [new vscode.LanguageModelTextPart(`Parsing cancelled for ${filePath}.`)]
+        );
+        const throwIfCancelled = () => {
+            if (token.isCancellationRequested) {
+                throw new vscode.CancellationError();
+            }
+        };
         // create an URI from the file name and check if the file exists.
         const fileUri = vscode.Uri.file(options.input.fileName);
         if (!fileUri) {
             return new vscode.LanguageModelToolResult(
                 [new vscode.LanguageModelTextPart(`File ${options.input.fileName} does not exist`)]);
         }
+        if (token.isCancellationRequested) {
+            return cancellationResult(fileUri.fsPath);
+        }
 
         try {
+            throwIfCancelled();
             // Transpile PlusCal to TLA+ (if any), and parse the resulting TLA+ spec.
-            const messages = await transpilePlusCal(fileUri);
-            const specData = await parseSpec(fileUri);
+            const messages = await transpilePlusCal(fileUri, token);
+            throwIfCancelled();
+            const specData = await parseSpec(fileUri, token);
+            throwIfCancelled();
             // Post-process SANY's parse results.
             messages.addAll(specData.dCollection);
             const diagnostic = getDiagnostic();
@@ -38,12 +52,18 @@ export class ParseModuleTool implements vscode.LanguageModelTool<FileParameter> 
                 // Loop over the parse failures in messages.messages and create a new LanguageModelTextPart for
                 // each DMessage.
                 return new vscode.LanguageModelToolResult(messages.messages.map((msg) => {
-                    return new vscode.LanguageModelTextPart(
-                        `Parsing of file ${msg.filePath} failed at line ${msg.diagnostic.range.start.line} with 
-						error '${msg.diagnostic.message}'`);
+                    const line = msg.diagnostic.range.start.line;
+                    const textParts = [
+                        `Parsing of file ${msg.filePath} failed at line ${line}`,
+                        `with error '${msg.diagnostic.message}'`
+                    ];
+                    return new vscode.LanguageModelTextPart(textParts.join(' '));
                 }));
             }
         } catch (err) {
+            if (err instanceof vscode.CancellationError) {
+                return cancellationResult(fileUri.fsPath);
+            }
             return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart(`Parsing failed: ${err}`)]);
         }
     }
