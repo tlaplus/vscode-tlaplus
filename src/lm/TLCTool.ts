@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { runTlc } from '../tla2tools';
+import { runTlc, stopProcess, ToolProcessInfo } from '../tla2tools';
 import { getSpecFiles, mapTlcOutputLine, outChannel } from '../commands/checkModel';
 import { CFG_TLC_STATISTICS_TYPE, ShareOption } from '../commands/tlcStatisticsCfg';
 import { exists } from '../common';
@@ -61,6 +61,19 @@ async function runTLC(
     extraOps: string[],
     extraJavaOpts: string[] = []
 ): Promise<vscode.LanguageModelToolResult> {
+    const cancellationResult = (filePath: string) => new vscode.LanguageModelToolResult([
+        new vscode.LanguageModelTextPart(`Model checking cancelled for ${filePath}.`)
+    ]);
+    const maybeReturnOnCancel = (procInfo?: ToolProcessInfo): vscode.LanguageModelToolResult | undefined => {
+        if (token.isCancellationRequested) {
+            if (procInfo) {
+                stopProcess(procInfo.process);
+            }
+            return cancellationResult(input.fileName);
+        }
+        return undefined;
+    };
+
     // create an URI from the file name
     const input = options.input;
     const fileUri = vscode.Uri.file(input.fileName);
@@ -70,7 +83,16 @@ async function runTLC(
             [new vscode.LanguageModelTextPart(`File ${input.fileName} does not exist`)]);
     }
 
+    const cancelBeforeStart = maybeReturnOnCancel();
+    if (cancelBeforeStart) {
+        return cancelBeforeStart;
+    }
+
     const specFiles = await getSpecFiles(fileUri, false);
+    const cancelAfterSpecLookup = maybeReturnOnCancel();
+    if (cancelAfterSpecLookup) {
+        return cancelAfterSpecLookup;
+    }
     if (!specFiles) {
         // Extract the spec name from the file name.
         const specName = path.basename(input.fileName, path.extname(input.fileName));
@@ -85,6 +107,10 @@ async function runTLC(
     // Check if the optional config parameter is provided.  If so, check if the config file exists.
     if (input.configFileName) {
         const configFileExists = await exists(vscode.Uri.file(input.configFileName).fsPath);
+        const cancelAfterConfigCheck = maybeReturnOnCancel();
+        if (cancelAfterConfigCheck) {
+            return cancelAfterConfigCheck;
+        }
         if (!configFileExists) {
             return new vscode.LanguageModelToolResult(
                 [new vscode.LanguageModelTextPart(`Config file ${input.configFileName} does not exist`)]
@@ -104,6 +130,10 @@ async function runTLC(
         extraOps,
         extraJavaOpts
     );
+    const cancelAfterStart = maybeReturnOnCancel(procInfo);
+    if (cancelAfterStart) {
+        return cancelAfterStart;
+    }
     if (procInfo === undefined) {
         return new vscode.LanguageModelToolResult([
             new vscode.LanguageModelTextPart('Failed to start TLC process')
@@ -115,6 +145,16 @@ async function runTLC(
 
     // Create output collector
     const outputLines: string[] = [];
+    let cancelled = false;
+    const disposeCancellation = token.onCancellationRequested(() => {
+        cancelled = true;
+        stopProcess(procInfo.process);
+    });
+    const immediateCancellation = maybeReturnOnCancel(procInfo);
+    if (immediateCancellation) {
+        disposeCancellation.dispose();
+        return immediateCancellation;
+    }
 
     // Return a promise that resolves when the process completes.
     return new Promise<vscode.LanguageModelToolResult>((resolve) => {
@@ -138,10 +178,12 @@ async function runTLC(
 
         // Listen for process completion
         procInfo.process.on('close', (code) => {
+            disposeCancellation.dispose();
             const result = new vscode.LanguageModelToolResult([
                 new vscode.LanguageModelTextPart(
-                    `Model check completed with exit code ${code}.\n\n` +
-					`Output:\n${outputLines.join('\n')}`
+                    cancelled
+                        ? `Model checking cancelled for ${input.fileName}.`
+                        : `Model check completed with exit code ${code}.\n\nOutput:\n${outputLines.join('\n')}`
                 )
             ]);
             resolve(result);
