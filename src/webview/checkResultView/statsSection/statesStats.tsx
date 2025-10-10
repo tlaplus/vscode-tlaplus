@@ -14,8 +14,8 @@ interface StatesStatsI {stats: InitialStateStatItem[]}
 export const StatesStats = React.memo(({stats}: StatesStatsI) => (
     <>
         <VscodeTabHeader slot="header">States</VscodeTabHeader>
-        <VscodeTabPanel panel className="max-width-fit-content">
-            <VscodeTable aria-label="States statistics" borderedRows responsive>
+        <VscodeTabPanel panel className="max-width-fit-content panel-padding">
+            <VscodeTable aria-label="States statistics" borderedRows>
                 <VscodeTableHeader>
                     <VscodeTableRow>
                         {headerColumns.map((v, id) =>

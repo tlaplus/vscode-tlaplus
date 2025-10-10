@@ -25,7 +25,7 @@ export const OutputSection = React.memo(({checkResult}: OutputSectionI) => {
                 {!emptyErrors(checkResult) &&
                     <>
                         <VscodeTabHeader slot="header">Errors</VscodeTabHeader>
-                        <VscodeTabPanel panel className="flex-direction-column">
+                        <VscodeTabPanel panel className="flex-direction-column panel-padding">
                             {checkResult.errors.map((error: ErrorInfo, errorId: number) => (
                                 <div key={errorId} className="margin-0">
                                     {error.lines.map((v, index) => (
@@ -39,7 +39,7 @@ export const OutputSection = React.memo(({checkResult}: OutputSectionI) => {
                 {!emptyOutputLines(checkResult) &&
                     <>
                         <VscodeTabHeader slot="header">Output</VscodeTabHeader>
-                        <VscodeTabPanel panel className="flex-direction-column">
+                        <VscodeTabPanel panel className="flex-direction-column panel-padding">
                             {checkResult.outputLines.map((v, index) => <OutputLineElement key={index} line={v}/>)}
                         </VscodeTabPanel>
                     </>}
@@ -47,7 +47,7 @@ export const OutputSection = React.memo(({checkResult}: OutputSectionI) => {
                 {!emptyWarnings(checkResult) &&
                     <>
                         <VscodeTabHeader slot="header">Warnings</VscodeTabHeader>
-                        <VscodeTabPanel panel className="flex-direction-column">
+                        <VscodeTabPanel panel className="flex-direction-column panel-padding">
                             {checkResult.warnings.map((warning: WarningInfo, warningId: number) => (
                                 <p key={warningId} className="margin-0">
                                     {warning.lines.map((v, index) =>(
