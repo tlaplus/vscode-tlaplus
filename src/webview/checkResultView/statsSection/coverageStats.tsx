@@ -21,8 +21,8 @@ export const CoverageStats = React.memo(({stats}: CoverageStatsI) => {
     return (
         <>
             <VscodeTabHeader slot="header">Coverage</VscodeTabHeader>
-            <VscodeTabPanel panel className="max-width-fit-content panel-padding">
-                <VscodeTable aria-label="Coverage statistics" borderedRows>
+            <VscodeTabPanel panel className="panel-padding">
+                <VscodeTable aria-label="Coverage statistics" borderedRows responsive breakpoint={320}>
                     <VscodeTableHeader>
                         <VscodeTableRow>
                             {headerColumns.map((v, id) =>
