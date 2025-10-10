@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { TlapsProofObligationState, TlapsProofStepDetails } from '../../../model/tlaps.ts';
-import { VSCodeLink } from '@vscode/webview-ui-toolkit/react/index';
+import { VSCodeLink } from '../../checkResultView/common';
 import { vscodeClient } from '../vscode_client.ts';
 import { Location } from 'vscode-languageclient';
 import { ProofStatusIcon } from '../proofStatusIcon/index.tsx';

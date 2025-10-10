@@ -1,4 +1,11 @@
-import { VSCodeDataGrid, VSCodeDataGridRow, VSCodePanelTab, VSCodePanelView } from '@vscode/webview-ui-toolkit/react';
+import {
+    VscodeTabHeader,
+    VscodeTabPanel,
+    VscodeTable,
+    VscodeTableBody,
+    VscodeTableHeader,
+    VscodeTableRow
+} from '@vscode-elements/react-elements';
 import * as React from 'react';
 import { CoverageItem } from '../../../model/check';
 import { CodeRangeLink, DataGridCellDefault, DataGridCellHeader } from '../common';
@@ -11,30 +18,34 @@ export const CoverageStats = React.memo(({stats}: CoverageStatsI) => {
     const codeLink = (stat: CoverageItem) =>
         <CodeRangeLink line={stat.action} filepath={stat.filePath} range={stat.range}/>;
 
-    return (<>
-        <VSCodePanelTab id="stats-tab-2"> Coverage </VSCodePanelTab>
-        <VSCodePanelView id="stats-view-2" className="max-width-fit-content">
-            <VSCodeDataGrid aria-label="Coverage statistics">
-                <VSCodeDataGridRow rowType="sticky-header">
-                    {headerColumns.map((v, id) =>
-                        <DataGridCellHeader
-                            key={id}
-                            id={id+1}
-                            value={v.value}
-                            alignRight={v.alignRight}
-                            tooltip={v.tooltip}/>)}
-                </VSCodeDataGridRow>
+    return (
+        <>
+            <VscodeTabHeader slot="header">Coverage</VscodeTabHeader>
+            <VscodeTabPanel panel className="max-width-fit-content">
+                <VscodeTable aria-label="Coverage statistics" borderedRows responsive>
+                    <VscodeTableHeader>
+                        <VscodeTableRow>
+                            {headerColumns.map((v, id) =>
+                                <DataGridCellHeader
+                                    key={id}
+                                    value={v.value}
+                                    alignRight={v.alignRight}
+                                    tooltip={v.tooltip}/>)}
+                        </VscodeTableRow>
+                    </VscodeTableHeader>
 
-                {stats.map((stat, index) =>
-                    <VSCodeDataGridRow key={index} className={stat.total !== 0 ? '' : 'coverage-zero'}>
-                        <DataGridCellDefault id={1} value={stat.module} alignRight={false} tooltip={tooltip(stat)}/>
-                        <DataGridCellDefault id={2} value={codeLink(stat)} alignRight={false} tooltip={tooltip(stat)}/>
-                        <DataGridCellDefault id={3} value={stat.total} alignRight={true} tooltip={tooltip(stat)}/>
-                        <DataGridCellDefault id={4} value={stat.distinct} alignRight={true} tooltip={tooltip(stat)}/>
-                    </VSCodeDataGridRow>)}
-            </VSCodeDataGrid>
-        </VSCodePanelView>
-    </>
+                    <VscodeTableBody>
+                        {stats.map((stat, index) =>
+                            <VscodeTableRow key={index} className={stat.total !== 0 ? '' : 'coverage-zero'}>
+                                <DataGridCellDefault value={stat.module} alignRight={false} tooltip={tooltip(stat)}/>
+                                <DataGridCellDefault value={codeLink(stat)} alignRight={false} tooltip={tooltip(stat)}/>
+                                <DataGridCellDefault value={stat.total} alignRight={true} tooltip={tooltip(stat)}/>
+                                <DataGridCellDefault value={stat.distinct} alignRight={true} tooltip={tooltip(stat)}/>
+                            </VscodeTableRow>)}
+                    </VscodeTableBody>
+                </VscodeTable>
+            </VscodeTabPanel>
+        </>
     );
 });
 

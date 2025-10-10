@@ -1,4 +1,4 @@
-import { VSCodePanels } from '@vscode/webview-ui-toolkit/react';
+import { VscodeTabs } from '@vscode-elements/react-elements';
 import * as React from 'react';
 import { ModelCheckResult } from '../../../model/check';
 import { ErrorTrace } from './errorTrace';
@@ -13,9 +13,9 @@ export const ErrorTraceSection = React.memo(({checkResult}: ErrorTraceSectionI) 
 
     return (
         <section>
-            <VSCodePanels id="error-trace-panels">
+            <VscodeTabs id="error-trace-tabs" panel>
                 {checkResult.errors.map((error, index) => <ErrorTrace key={index} errorInfo={error} traceId={index}/>)}
-            </VSCodePanels>
+            </VscodeTabs>
         </section>
     );
 });
