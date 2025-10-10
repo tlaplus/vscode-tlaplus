@@ -33,7 +33,7 @@ export const ErrorTrace = React.memo(({errorInfo, traceId}: ErrorTraceI) => {
     return (
         <>
             <VscodeTabHeader slot="header">Counterexample {traceId}</VscodeTabHeader>
-            <VscodeTabPanel panel className="flex-direction-column">
+            <VscodeTabPanel panel className="flex-direction-column panel-padding">
                 <div className="error-trace-options">
                     <VscodeTextfield onChange={handleFilterChange} placeholder="Filter">
                         <span

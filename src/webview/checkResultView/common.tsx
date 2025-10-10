@@ -14,6 +14,11 @@ const baseLinkStyle: React.CSSProperties = {
     font: 'inherit'
 };
 
+const tableCellClass = (alignRight: boolean) =>
+    [alignRight ? 'text-align-right' : '', 'hidden-overflow-ellipsis', 'table-cell-padding']
+        .filter(Boolean)
+        .join(' ');
+
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement>;
 
 export const VSCodeLink = React.memo(({children, style, className, ...rest}: ButtonProps) => (
@@ -55,7 +60,7 @@ interface DataGridCellI {
 export const DataGridCellHeader = React.memo(({value, alignRight, tooltip}: DataGridCellI) => (
     <VscodeTableHeaderCell
         title={tooltip}
-        className={`${alignRight ? 'text-align-right' : ''} hidden-overflow-ellipsis`}>
+        className={tableCellClass(alignRight)}>
         {value}
     </VscodeTableHeaderCell>
 ));
@@ -63,7 +68,7 @@ export const DataGridCellHeader = React.memo(({value, alignRight, tooltip}: Data
 export const DataGridCellDefault = React.memo(({value, alignRight, tooltip}: DataGridCellI) => (
     <VscodeTableCell
         title={tooltip}
-        className={`${alignRight ? 'text-align-right' : ''} hidden-overflow-ellipsis`}>
+        className={tableCellClass(alignRight)}>
         {typeof value === 'number' ? num(value) : value}
     </VscodeTableCell>
 ));
