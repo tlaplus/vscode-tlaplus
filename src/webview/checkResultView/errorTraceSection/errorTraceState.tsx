@@ -1,10 +1,11 @@
-import { TreeItem } from '@microsoft/fast-components';
 import * as React from 'react';
 import { CollectionValue, ErrorTraceItem } from '../../../model/check';
 import { CodeRangeLink } from '../common';
-import { VSCodeTreeItem } from '../tree';
-import { ErrorTraceSettings } from './errorTrace';
 import { ErrorTraceVariable } from './errorTraceVariable';
+import { VscodeTreeItem } from '@vscode-elements/react-elements';
+import { ErrorTraceSettings } from './errorTrace';
+
+type TreeItemElement = HTMLElementTagNameMap['vscode-tree-item'];
 
 interface ErrorTraceStateI {errorTraceItem: ErrorTraceItem, settings: ErrorTraceSettings, expanded: boolean}
 export const ErrorTraceState = React.memo(({errorTraceItem, settings, expanded}: ErrorTraceStateI) => {
@@ -12,25 +13,23 @@ export const ErrorTraceState = React.memo(({errorTraceItem, settings, expanded}:
     const stateId = 'state-'+errorTraceItem.num;
 
     // Not using onExpandedChanged because collapseAll/expandAll would also trigger that event
-    const handleExpand = (e: React.MouseEvent) => {
-        if ((e.target as HTMLElement).id === stateId) {
-            settings.setExpandValue(errorTraceItem.num-1, (e.currentTarget as TreeItem).expanded);
-        }
+    const handleExpand = (event: React.MouseEvent<TreeItemElement>) => {
+        settings.setExpandValue(errorTraceItem.num-1, event.currentTarget.open);
     };
-    const handleExpandKey = (e: React.KeyboardEvent<HTMLElement>) => {
-        if ((e.target as HTMLElement).id === stateId && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
-            settings.setExpandValue(errorTraceItem.num-1, (e.currentTarget as TreeItem).expanded);
+    const handleExpandKey = (event: React.KeyboardEvent<TreeItemElement>) => {
+        if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+            settings.setExpandValue(errorTraceItem.num-1, event.currentTarget.open);
         }
     };
 
     return (
-        <VSCodeTreeItem id={stateId} expanded={expanded} onClick={handleExpand} onKeyDown={handleExpandKey}>
+        <VscodeTreeItem id={stateId} open={expanded} onClick={handleExpand} onKeyDown={handleExpandKey}>
             <div className="error-trace-title">
                 <span> {errorTraceItem.num}: {errorTraceItem.title} </span>
                 <CodeRangeLink line=' >>' filepath={errorTraceItem.filePath} range={errorTraceItem.range}/>
             </div>
 
-            {!expanded ? <VSCodeTreeItem/> :
+            {!expanded ? <VscodeTreeItem/> :
                 errorTraceItem.variables.items
                     .map(
                         (value) =>
@@ -39,6 +38,6 @@ export const ErrorTraceState = React.memo(({errorTraceItem, settings, expanded}:
                                 value={value as CollectionValue}
                                 stateId={errorTraceItem.num}
                                 settings={settings}/>)}
-        </VSCodeTreeItem>
+        </VscodeTreeItem>
     );
 });

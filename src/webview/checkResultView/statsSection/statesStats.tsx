@@ -1,4 +1,11 @@
-import { VSCodeDataGrid, VSCodeDataGridRow, VSCodePanelTab, VSCodePanelView } from '@vscode/webview-ui-toolkit/react';
+import {
+    VscodeTabHeader,
+    VscodeTabPanel,
+    VscodeTable,
+    VscodeTableBody,
+    VscodeTableHeader,
+    VscodeTableRow
+} from '@vscode-elements/react-elements';
 import * as React from 'react';
 import { InitialStateStatItem } from '../../../model/check';
 import { DataGridCellDefault, DataGridCellHeader } from '../common';
@@ -6,29 +13,32 @@ import { DataGridCellDefault, DataGridCellHeader } from '../common';
 interface StatesStatsI {stats: InitialStateStatItem[]}
 export const StatesStats = React.memo(({stats}: StatesStatsI) => (
     <>
-        <VSCodePanelTab id="stats-tab-1">States</VSCodePanelTab>
-        <VSCodePanelView id="stats-view-1" className="max-width-fit-content">
-            <VSCodeDataGrid aria-label="States statistics">
-                <VSCodeDataGridRow rowType="sticky-header">
-                    {headerColumns.map((v, id) =>
-                        <DataGridCellHeader
-                            key={id}
-                            id={id+1}
-                            value={v.value}
-                            alignRight={v.alignRight}
-                            tooltip={v.tooltip}/>)}
-                </VSCodeDataGridRow>
+        <VscodeTabHeader slot="header">States</VscodeTabHeader>
+        <VscodeTabPanel panel className="max-width-fit-content">
+            <VscodeTable aria-label="States statistics" borderedRows responsive>
+                <VscodeTableHeader>
+                    <VscodeTableRow>
+                        {headerColumns.map((v, id) =>
+                            <DataGridCellHeader
+                                key={id}
+                                value={v.value}
+                                alignRight={v.alignRight}
+                                tooltip={v.tooltip}/>)}
+                    </VscodeTableRow>
+                </VscodeTableHeader>
 
-                {stats.map((stat, index) =>
-                    <VSCodeDataGridRow key={index}>
-                        <DataGridCellDefault id={1} value={stat.timeStamp} alignRight={false}/>
-                        <DataGridCellDefault id={2} value={stat.diameter} alignRight={true}/>
-                        <DataGridCellDefault id={3} value={stat.total} alignRight={true}/>
-                        <DataGridCellDefault id={4} value={stat.distinct} alignRight={true}/>
-                        <DataGridCellDefault id={5} value={stat.queueSize} alignRight={true}/>
-                    </VSCodeDataGridRow>)}
-            </VSCodeDataGrid>
-        </VSCodePanelView>
+                <VscodeTableBody>
+                    {stats.map((stat, index) =>
+                        <VscodeTableRow key={index}>
+                            <DataGridCellDefault value={stat.timeStamp} alignRight={false}/>
+                            <DataGridCellDefault value={stat.diameter} alignRight={true}/>
+                            <DataGridCellDefault value={stat.total} alignRight={true}/>
+                            <DataGridCellDefault value={stat.distinct} alignRight={true}/>
+                            <DataGridCellDefault value={stat.queueSize} alignRight={true}/>
+                        </VscodeTableRow>)}
+                </VscodeTableBody>
+            </VscodeTable>
+        </VscodeTabPanel>
     </>
 ));
 

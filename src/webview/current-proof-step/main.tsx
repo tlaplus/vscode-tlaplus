@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { TlapsConfigChanged, TlapsProofObligationState, TlapsProofStepDetails } from '../../model/tlaps.ts';
 import { Obligation } from './obligation/index.tsx';
 import { StepCounts } from './stepCounts/index.tsx';
-import { VSCodeLink } from '@vscode/webview-ui-toolkit/react/index';
+import { VSCodeLink } from '../checkResultView/common';
 import { vscodeClient } from './vscode_client.ts';
 import { ProofStatusIcon } from './proofStatusIcon/index.tsx';
 import '@vscode/codicons/dist/codicon.css';

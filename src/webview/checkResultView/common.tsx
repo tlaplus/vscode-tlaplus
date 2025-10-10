@@ -1,7 +1,30 @@
-import { VSCodeDataGridCell, VSCodeLink } from '@vscode/webview-ui-toolkit/react';
 import * as React from 'react';
 import { Position, Range } from 'vscode';
 import { vscode } from './vscode';
+import { VscodeTableCell, VscodeTableHeaderCell } from '@vscode-elements/react-elements';
+
+const baseLinkStyle: React.CSSProperties = {
+    background: 'none',
+    border: 'none',
+    padding: 0,
+    margin: 0,
+    color: 'var(--vscode-textLink-foreground)',
+    cursor: 'pointer',
+    textDecoration: 'underline',
+    font: 'inherit'
+};
+
+type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement>;
+
+export const VSCodeLink = React.memo(({children, style, className, ...rest}: ButtonProps) => (
+    <button
+        type="button"
+        className={className}
+        style={{...baseLinkStyle, ...style}}
+        {...rest}>
+        {children}
+    </button>
+));
 
 export const EmptyLine = () => <div style={{marginTop: '1em'}}/>;
 
@@ -24,29 +47,25 @@ export const CodePositionLink = React.memo(({line, filepath, position}: CodePosi
 });
 
 interface DataGridCellI {
-    id: number,
     value: React.JSX.Element | string | number,
     alignRight: boolean,
     tooltip?: string
 }
 
-export const DataGridCellHeader = React.memo(({id, value, alignRight, tooltip}: DataGridCellI) => (
-    <VSCodeDataGridCell title={tooltip}
-        cell-type="columnheader"
-        grid-column={id}
+export const DataGridCellHeader = React.memo(({value, alignRight, tooltip}: DataGridCellI) => (
+    <VscodeTableHeaderCell
+        title={tooltip}
         className={`${alignRight ? 'text-align-right' : ''} hidden-overflow-ellipsis`}>
         {value}
-    </VSCodeDataGridCell>
+    </VscodeTableHeaderCell>
 ));
 
-export const DataGridCellDefault = React.memo(({id, value, alignRight, tooltip}: DataGridCellI) => (
-    <VSCodeDataGridCell
+export const DataGridCellDefault = React.memo(({value, alignRight, tooltip}: DataGridCellI) => (
+    <VscodeTableCell
         title={tooltip}
-        cell-type="default"
-        grid-column={id}
         className={`${alignRight ? 'text-align-right' : ''} hidden-overflow-ellipsis`}>
         {typeof value === 'number' ? num(value) : value}
-    </VSCodeDataGridCell>
+    </VscodeTableCell>
 ));
 
 const num = (n: number) => Number(n).toLocaleString().split(',').join(' ');

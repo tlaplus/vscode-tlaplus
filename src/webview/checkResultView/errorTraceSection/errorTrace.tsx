@@ -1,9 +1,14 @@
-import { TextField } from '@vscode/webview-ui-toolkit';
-import { VSCodePanelTab, VSCodePanelView, VSCodeTextField } from '@vscode/webview-ui-toolkit/react';
+import {
+    VscodeTabHeader,
+    VscodeTabPanel,
+    VscodeTextfield,
+    VscodeTree
+} from '@vscode-elements/react-elements';
 import * as React from 'react';
 import { ErrorInfo } from '../../../model/check';
-import { VSCodeTreeView } from '../tree';
 import { ErrorTraceState } from './errorTraceState';
+
+type TextfieldElement = HTMLElementTagNameMap['vscode-textfield'];
 
 interface ErrorTraceI {errorInfo: ErrorInfo, traceId: number}
 export const ErrorTrace = React.memo(({errorInfo, traceId}: ErrorTraceI) => {
@@ -14,17 +19,28 @@ export const ErrorTrace = React.memo(({errorInfo, traceId}: ErrorTraceI) => {
     const {settings, expandedStates, setHideModified, setFilter, collapseAllStates, expandAllStates} =
         useSettings(errorInfo.errorTrace.length);
 
+    const handleFilterChange = (event: React.ChangeEvent<TextfieldElement>) => {
+        setFilter(event.currentTarget.value);
+    };
+
+    const handleFilterIconClick = (event: React.MouseEvent<HTMLSpanElement>) => {
+        const field = event.currentTarget.closest('vscode-textfield') as TextfieldElement | null;
+        if (field) {
+            setFilter(field.value);
+        }
+    };
+
     return (
         <>
-            <VSCodePanelTab id={`error-trace-tab-${traceId}`}> Counterexample {traceId} </VSCodePanelTab>
-            <VSCodePanelView id={`error-trace-view-${traceId}`} className="flex-direction-column">
+            <VscodeTabHeader slot="header">Counterexample {traceId}</VscodeTabHeader>
+            <VscodeTabPanel panel className="flex-direction-column">
                 <div className="error-trace-options">
-                    <VSCodeTextField onChange={(e) => setFilter(e.currentTarget.value)} placeholder="Filter">
+                    <VscodeTextfield onChange={handleFilterChange} placeholder="Filter">
                         <span
-                            slot="end"
+                            slot="content-after"
                             className="codicon codicon-search cursor-pointer"
-                            onClick={(e) => setFilter((e.currentTarget.parentNode as TextField).value)}/>
-                    </VSCodeTextField>
+                            onClick={handleFilterIconClick}/>
+                    </VscodeTextfield>
 
                     {settings.hideModified &&
                         <span
@@ -50,7 +66,7 @@ export const ErrorTrace = React.memo(({errorInfo, traceId}: ErrorTraceI) => {
 
                 </div>
 
-                <VSCodeTreeView>
+                <VscodeTree>
                     {errorInfo.errorTrace.map(
                         (v, index) =>
                             <ErrorTraceState
@@ -58,8 +74,8 @@ export const ErrorTrace = React.memo(({errorInfo, traceId}: ErrorTraceI) => {
                                 errorTraceItem={v}
                                 settings={settings}
                                 expanded={expandedStates[index]}/>)}
-                </VSCodeTreeView>
-            </VSCodePanelView>
+                </VscodeTree>
+            </VscodeTabPanel>
         </>
     );
 });
