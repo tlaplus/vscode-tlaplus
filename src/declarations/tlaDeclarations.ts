@@ -1,20 +1,8 @@
 import * as vscode from "vscode";
 import * as path from "path";
 import { TlaDocumentInfos, TlaDocumentInfo } from "../model/documentInfo";
-
-/**
- * Check if text contains EXTENDS keyword
- */
-function hasExtendsKeyword(text: string): boolean {
-  return /\bEXTENDS\b/.test(text);
-}
-
-/**
- * Check if text contains INSTANCE keyword
- */
-function hasInstanceKeyword(text: string): boolean {
-  return /\bINSTANCE\b/.test(text);
-}
+import { moduleSearchPaths } from "../paths";
+import { createJarModuleUri } from "../providers/jarModuleContentProvider";
 
 /**
  * Check if line is a statement boundary
@@ -26,73 +14,11 @@ function isStatementBoundary(
   if (/^={4,}/.test(line) || /^-{4,}/.test(line)) {
     return true;
   }
-  if (/==\s*$/.test(line) && (!allowInstance || !line.includes("INSTANCE"))) {
-    return true;
-  }
-  return false;
-}
-
-/**
- * Check current line for module reference keywords
- */
-function checkCurrentLine(beforeWord: string): boolean {
-  return (
-    hasExtendsKeyword(beforeWord) ||
-    hasInstanceKeyword(beforeWord) ||
-    /==\s*INSTANCE\s*$/.test(beforeWord)
-  );
-}
-
-/**
- * Search previous lines for module reference keywords
- */
-function searchPreviousLines(
-  document: vscode.TextDocument,
-  position: vscode.Position,
-): boolean {
-  for (let lineNum = position.line - 1; lineNum >= 0; lineNum--) {
-    const prevLine = document.lineAt(lineNum).text;
-
-    if (isStatementBoundary(prevLine, true)) {
-      break;
-    }
-
-    if (hasExtendsKeyword(prevLine) || hasInstanceKeyword(prevLine)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-/**
- * Search following lines for EXTENDS in multi-line declarations
- */
-function searchFollowingLines(
-  document: vscode.TextDocument,
-  position: vscode.Position,
-  afterWord: string,
-): boolean {
-  if (position.line >= document.lineCount - 1) {
-    return false;
-  }
-
-  for (
-    let lineNum = position.line + 1;
-    lineNum < document.lineCount;
-    lineNum++
+  if (
+    /\b==\b/.test(line) &&
+    (!allowInstance || !/\bINSTANCE\b/.test(line))
   ) {
-    const nextLine = document.lineAt(lineNum).text;
-
-    if (isStatementBoundary(nextLine, true)) {
-      break;
-    }
-
-    // Check if there's a comma after our word (for EXTENDS lists)
-    if (lineNum === position.line + 1 && /^\s*,/.test(afterWord)) {
-      if (hasExtendsKeyword(nextLine)) {
-        return true;
-      }
-    }
+    return true;
   }
   return false;
 }
@@ -109,27 +35,167 @@ function getModuleReference(
     return undefined;
   }
 
-  const line = document.lineAt(position.line).text;
   const word = document.getText(range);
-  const beforeWord = line.substring(0, range.start.character);
-
-  // Check current line
-  if (checkCurrentLine(beforeWord)) {
-    return word;
+  if (!getModuleClauseContext(document, range)) {
+    return undefined;
   }
 
-  // Check previous lines
-  if (position.line > 0 && searchPreviousLines(document, position)) {
-    return word;
+  return word;
+}
+
+type ModuleClause = "EXTENDS" | "INSTANCE";
+
+interface InstanceWithContext {
+  moduleName: string;
+  symbolName: string;
+}
+
+function getModuleClauseContext(
+  document: vscode.TextDocument,
+  range: vscode.Range,
+): ModuleClause | undefined {
+  const statementStart = findStatementStartLine(document, range.start.line);
+  const fragmentRange = new vscode.Range(
+    new vscode.Position(statementStart, 0),
+    range.start,
+  );
+  const fragmentText = document.getText(fragmentRange);
+
+  const extendsIndex = fragmentText.lastIndexOf("EXTENDS");
+  const instanceIndex = fragmentText.lastIndexOf("INSTANCE");
+
+  if (extendsIndex < 0 && instanceIndex < 0) {
+    return undefined;
   }
 
-  // Check following lines for multi-line EXTENDS
-  const afterWord = line.substring(range.end.character);
-  if (searchFollowingLines(document, position, afterWord)) {
-    return word;
+  if (extendsIndex > instanceIndex) {
+    const afterExtends = fragmentText.substring(
+      extendsIndex + "EXTENDS".length,
+    );
+    if (containsTerminator(afterExtends)) {
+      return undefined;
+    }
+    return "EXTENDS";
   }
 
-  return undefined;
+  const afterInstance = fragmentText.substring(
+    instanceIndex + "INSTANCE".length,
+  );
+  if (/\bWITH\b/.test(afterInstance) || containsTerminator(afterInstance)) {
+    return undefined;
+  }
+  return "INSTANCE";
+}
+
+function findStatementStartLine(
+  document: vscode.TextDocument,
+  line: number,
+): number {
+  for (let lineNum = line; lineNum > 0; lineNum--) {
+    const prevLine = document.lineAt(lineNum - 1).text;
+    if (isStatementBoundary(prevLine, true)) {
+      return lineNum;
+    }
+  }
+  return 0;
+}
+
+function containsTerminator(fragment: string): boolean {
+  return /\bWITH\b|\bLET\b|\b==\b|\bINSTANCE\b/.test(fragment);
+}
+
+function findStatementEndLine(
+  document: vscode.TextDocument,
+  line: number,
+): number {
+  let endLine = line;
+  for (let lineNum = line; lineNum < document.lineCount - 1; lineNum++) {
+    const nextLine = document.lineAt(lineNum + 1).text;
+    if (isStatementBoundary(nextLine, true)) {
+      break;
+    }
+    endLine = lineNum + 1;
+  }
+  return endLine;
+}
+
+function getStatementRange(
+  document: vscode.TextDocument,
+  position: vscode.Position,
+): vscode.Range {
+  const startLine = findStatementStartLine(document, position.line);
+  const endLine = findStatementEndLine(document, position.line);
+  const endRange = document.lineAt(endLine).range.end;
+  return new vscode.Range(new vscode.Position(startLine, 0), endRange);
+}
+
+function getInstanceWithContext(
+  document: vscode.TextDocument,
+  position: vscode.Position,
+): InstanceWithContext | undefined {
+  const range = document.getWordRangeAtPosition(position);
+  if (!range) {
+    return undefined;
+  }
+
+  const statementRange = getStatementRange(document, range.start);
+  const statementText = document.getText(statementRange);
+  const wordOffset =
+    document.offsetAt(range.start) - document.offsetAt(statementRange.start);
+
+  const beforeWord = statementText.substring(0, wordOffset);
+  const instanceMatches = Array.from(
+    beforeWord.matchAll(/INSTANCE\s+([A-Za-z0-9_']+)/g),
+  );
+  if (instanceMatches.length === 0) {
+    return undefined;
+  }
+
+  const lastInstanceMatch = instanceMatches[instanceMatches.length - 1];
+  const moduleName = lastInstanceMatch[1];
+  const instanceIndex = lastInstanceMatch.index ?? -1;
+
+  const withIndex = beforeWord.toUpperCase().lastIndexOf("WITH");
+  if (withIndex < 0 || withIndex < instanceIndex) {
+    return undefined;
+  }
+
+  if (!isLeftHandSideOfInstanceAssignment(statementText, wordOffset)) {
+    return undefined;
+  }
+
+  return {
+    moduleName,
+    symbolName: document.getText(range),
+  };
+}
+
+function isLeftHandSideOfInstanceAssignment(
+  statementText: string,
+  wordOffset: number,
+): boolean {
+  for (let index = wordOffset - 1; index >= 0; index--) {
+    const ch = statementText[index];
+    if (/\s/.test(ch)) {
+      continue;
+    }
+    if (ch === ",") {
+      return true;
+    }
+    if (ch === "-") {
+      if (index > 0 && statementText[index - 1] === "<") {
+        return false;
+      }
+    }
+    if (
+      (ch === "H" || ch === "h") &&
+      index >= 3 &&
+      statementText.substring(index - 3, index + 1).toUpperCase() === "WITH"
+    ) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /**
@@ -139,38 +205,6 @@ async function findModuleFile(
   moduleName: string,
   currentDocumentUri: vscode.Uri,
 ): Promise<vscode.Uri | undefined> {
-  // Standard library modules that don't have physical files
-  const standardModules = [
-    "TLC",
-    "Integers",
-    "Naturals",
-    "Reals",
-    "Sequences",
-    "FiniteSets",
-    "Bags",
-    "RealTime",
-    "TLCExt",
-    "Json",
-    "IOUtils",
-    "SVG",
-    "Bitwise",
-    "FiniteSetsExt",
-    "Functions",
-    "CSV",
-    "Combinatorics",
-    "Folds",
-    "Graphs",
-    "SequencesExt",
-    "BagsExt",
-    "DifferentialEquations",
-    "VectorClocks",
-  ];
-
-  if (standardModules.includes(moduleName)) {
-    // These are standard library modules, no file to navigate to
-    return undefined;
-  }
-
   const moduleFileName = `${moduleName}.tla`;
 
   // First, try to find the module file in the same directory as the current document
@@ -200,7 +234,139 @@ async function findModuleFile(
     }
   }
 
+  const resolved = await findModuleInSearchPaths(
+    moduleFileName,
+    currentDocumentUri,
+  );
+  if (resolved) {
+    return resolved;
+  }
+
   return undefined;
+}
+
+async function findModuleInSearchPaths(
+  moduleFileName: string,
+  currentDocumentUri: vscode.Uri,
+): Promise<vscode.Uri | undefined> {
+  const sources = moduleSearchPaths.getSources();
+  for (const source of sources) {
+    const basePaths = moduleSearchPaths.getSourcePaths(source.name) ?? [];
+    for (const basePath of basePaths) {
+      const candidate = await resolveModuleInBasePath(
+        basePath,
+        moduleFileName,
+        currentDocumentUri,
+      );
+      if (candidate) {
+        return candidate;
+      }
+    }
+  }
+  return undefined;
+}
+
+async function resolveModuleInBasePath(
+  basePath: string,
+  moduleFileName: string,
+  currentDocumentUri: vscode.Uri,
+): Promise<vscode.Uri | undefined> {
+  if (!basePath) {
+    return undefined;
+  }
+
+  try {
+    if (basePath.startsWith("jar:file:")) {
+      const exclamationIndex = basePath.indexOf("!");
+      if (exclamationIndex < 0) {
+        return undefined;
+      }
+
+      const jarPrefix = basePath.substring(0, exclamationIndex);
+      const innerPath = basePath.substring(exclamationIndex + 1);
+      const normalizedInner = innerPath.startsWith("/")
+        ? innerPath
+        : `/${innerPath}`;
+      const jarFileUri = vscode.Uri.parse(
+        jarPrefix.replace(/^jar:/, ""),
+      );
+      const entryRoot = normalizedInner.replace(/^\//, "");
+      const moduleInnerPath = path.posix.join(entryRoot, moduleFileName);
+      return createJarModuleUri(jarFileUri.fsPath, moduleInnerPath);
+    }
+
+    const workspaceFolder = vscode.workspace.getWorkspaceFolder(
+      currentDocumentUri,
+    );
+    const baseDir = workspaceFolder
+      ? workspaceFolder.uri.fsPath
+      : path.dirname(currentDocumentUri.fsPath);
+    const modulePath = path.isAbsolute(basePath)
+      ? path.join(basePath, moduleFileName)
+      : path.join(baseDir, basePath, moduleFileName);
+    const candidate = vscode.Uri.file(modulePath);
+    await vscode.workspace.fs.stat(candidate);
+    return candidate;
+  } catch {
+    // Ignore directories that do not contain the module
+  }
+  return undefined;
+}
+
+async function ensureModuleSymbols(
+  moduleUri: vscode.Uri,
+  docInfos: TlaDocumentInfos,
+): Promise<void> {
+  if (moduleUri.scheme !== "file") {
+    return;
+  }
+  const cached = docInfos.get(moduleUri);
+  if (cached.symbols.length > 0 || cached.plusCalSymbols.length > 0) {
+    return;
+  }
+
+  try {
+    await vscode.workspace.openTextDocument(moduleUri);
+  } catch {
+    return;
+  }
+
+  try {
+    await vscode.commands.executeCommand(
+      "vscode.executeDocumentSymbolProvider",
+      moduleUri,
+    );
+  } catch {
+    // ignore symbol provider failures; fallback will handle navigation
+  }
+}
+
+async function findSymbolInModule(
+  moduleUri: vscode.Uri,
+  symbolName: string,
+  docInfos: TlaDocumentInfos,
+): Promise<vscode.Location | undefined> {
+  await ensureModuleSymbols(moduleUri, docInfos);
+  const document = await vscode.workspace.openTextDocument(moduleUri);
+  const searchName = trimTicks(symbolName);
+  const escapedName = searchName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const definitionPattern = new RegExp(
+    `^(\\s*)(${escapedName})(\\b|\\(|\\[|')`,
+    "m",
+  );
+
+  const text = document.getText();
+  const match = definitionPattern.exec(text);
+  if (!match) {
+    return undefined;
+  }
+
+  const leadingWhitespace = match[1] ?? "";
+  const symbolSegment = match[2] ?? searchName;
+  const symbolOffset = match.index + leadingWhitespace.length;
+  const position = document.positionAt(symbolOffset);
+  const endPosition = position.translate(0, symbolSegment.length);
+  return new vscode.Location(moduleUri, new vscode.Range(position, endPosition));
 }
 
 /**
@@ -326,7 +492,25 @@ async function provideSymbolLocations(
   position: vscode.Position,
   docInfos: TlaDocumentInfos,
 ): Promise<vscode.Location | vscode.Location[] | undefined> {
-  // First check if we're in an EXTENDS or INSTANCE clause
+  // First check if we're inside an INSTANCE ... WITH clause (left-hand side)
+  const instanceContext = getInstanceWithContext(document, position);
+  if (instanceContext) {
+    const moduleUri = await findModuleFile(instanceContext.moduleName, document.uri);
+    if (moduleUri) {
+      const targetLocation = await findSymbolInModule(
+        moduleUri,
+        instanceContext.symbolName,
+        docInfos,
+      );
+      if (targetLocation) {
+        return targetLocation;
+      }
+      // Fallback to the module start if symbol lookup failed
+      return new vscode.Location(moduleUri, new vscode.Position(0, 0));
+    }
+  }
+
+  // Then check if we're in an EXTENDS or INSTANCE clause
   const moduleRef = getModuleReference(document, position);
 
   if (moduleRef) {

@@ -22,7 +22,7 @@ const extensionConfig = {
     format: 'cjs',
     entryPoints: ['./src/main.ts'],
     outfile: './out/main.js',
-    external: ['vscode'],
+    external: ['vscode', 'zlib'],
 };
 
 // Config for extension source code (to be run in a Web-based context)
@@ -33,7 +33,7 @@ const extensionBrowserConfig = {
     format: 'cjs',
     entryPoints: ['./src/main.browser.ts'],
     outfile: './out/main.browser.js',
-    external: ['vscode', 'path', 'fs', 'os', 'child_process', 'stream'],
+    external: ['vscode', 'path', 'fs', 'os', 'child_process', 'stream', 'zlib'],
 };
 
 // Config for webview source code (to be run in a web-based context)
