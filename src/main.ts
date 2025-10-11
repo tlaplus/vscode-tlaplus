@@ -36,6 +36,7 @@ import { ParseModuleTool, SymbolProviderTool } from './lm/SANYTool';
 import { MCPServer } from './lm/MCPServer';
 import { TlcCoverageDecorationProvider } from './tlcCoverage';
 import { registerCoverageCommands } from './commands/toggleCoverage';
+import { acquireJarFileSystemProvider } from './JarFileSystemProvider';
 
 const TLAPLUS_FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file', language: LANG_TLAPLUS };
 const TLAPLUS_CFG_FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file', language: LANG_TLAPLUS_CFG };
@@ -57,6 +58,16 @@ let tlapsClient: TlapsClient | undefined;
  */
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
     moduleSearchPaths.setup(context);
+
+    const jarProviderHandle = acquireJarFileSystemProvider();
+    context.subscriptions.push(
+        jarProviderHandle,
+        vscode.workspace.onDidOpenTextDocument((document) => {
+            if (document.uri.scheme === 'jarfile' && document.languageId !== LANG_TLAPLUS) {
+                void vscode.languages.setTextDocumentLanguage(document, LANG_TLAPLUS);
+            }
+        })
+    );
 
     const currentProofStepWebviewViewProvider = new CurrentProofStepWebviewViewProvider(context.extensionUri);
     diagnostic = vscode.languages.createDiagnosticCollection(LANG_TLAPLUS);
