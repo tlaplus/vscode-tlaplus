@@ -11,7 +11,7 @@ import { applyDCollection } from '../diagnostic';
 import { TLADocumentSymbolProvider } from '../symbols/tlaSymbols';
 import { parseSpec, transpilePlusCal } from '../commands/parseModule';
 import { TlaDocumentInfos } from '../model/documentInfo';
-import { JarFileSystemProvider } from '../JarFileSystemProvider';
+import { JarFileSystemProvider, JarFileSystemProviderHandle, acquireJarFileSystemProvider } from '../JarFileSystemProvider';
 import { getSpecFiles, mapTlcOutputLine, outChannel } from '../commands/checkModel';
 import { runTlc } from '../tla2tools';
 import { CFG_TLC_STATISTICS_TYPE, ShareOption } from '../commands/tlcStatisticsCfg';
@@ -22,14 +22,12 @@ export class MCPServer implements vscode.Disposable {
 
     private mcpServer: http.Server | undefined;
     private jarProvider: JarFileSystemProvider;
-    private jarProviderDisposable: vscode.Disposable;
+    private jarProviderHandle: JarFileSystemProviderHandle;
 
     constructor(port: number) {
         // Initialize JAR file system provider
-        this.jarProvider = new JarFileSystemProvider();
-        this.jarProviderDisposable = vscode.workspace.registerFileSystemProvider('jarfile', this.jarProvider, {
-            isReadonly: true
-        });
+        this.jarProviderHandle = acquireJarFileSystemProvider();
+        this.jarProvider = this.jarProviderHandle.provider;
 
         this.startServer(port);
     }
@@ -329,8 +327,7 @@ export class MCPServer implements vscode.Disposable {
         }
 
         // Clean up JAR file system provider
-        this.jarProviderDisposable.dispose();
-        this.jarProvider.dispose();
+        this.jarProviderHandle.dispose();
     }
 
     private getServer(): McpServer {

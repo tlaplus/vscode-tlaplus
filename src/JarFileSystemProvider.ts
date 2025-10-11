@@ -241,3 +241,36 @@ export class JarFileSystemProvider implements vscode.FileSystemProvider {
         this._emitter.dispose();
     }
 }
+
+let sharedProvider: JarFileSystemProvider | undefined;
+let sharedRegistration: vscode.Disposable | undefined;
+let sharedRefCount = 0;
+
+export interface JarFileSystemProviderHandle extends vscode.Disposable {
+    provider: JarFileSystemProvider;
+}
+
+export function acquireJarFileSystemProvider(): JarFileSystemProviderHandle {
+    if (!sharedProvider) {
+        sharedProvider = new JarFileSystemProvider();
+        sharedRegistration = vscode.workspace.registerFileSystemProvider('jarfile', sharedProvider, {
+            isReadonly: true
+        });
+    }
+    sharedRefCount++;
+
+    return {
+        provider: sharedProvider,
+        dispose: () => {
+            if (sharedRefCount > 0) {
+                sharedRefCount--;
+                if (sharedRefCount === 0) {
+                    sharedRegistration?.dispose();
+                    sharedRegistration = undefined;
+                    sharedProvider?.dispose();
+                    sharedProvider = undefined;
+                }
+            }
+        }
+    };
+}
