@@ -349,23 +349,38 @@ async function resolveModuleInBasePath(
   }
 
   try {
-    if (basePath.startsWith("jar:file:")) {
+    if (basePath.startsWith("jar:file:") || basePath.startsWith("jarfile:")) {
       const exclamationIndex = basePath.indexOf("!");
       if (exclamationIndex < 0) {
         return undefined;
       }
 
-      const jarPrefix = basePath.substring(0, exclamationIndex);
       const innerPath = basePath.substring(exclamationIndex + 1);
       const normalizedInner = innerPath.startsWith("/")
         ? innerPath
         : `/${innerPath}`;
-      const jarFileUri = vscode.Uri.parse(
-        jarPrefix.replace(/^jar:/, ""),
-      );
       const entryRoot = normalizedInner.replace(/^\//, "");
       const moduleInnerPath = path.posix.join(entryRoot, moduleFileName);
-      const jarUri = createJarUri(jarFileUri.fsPath, moduleInnerPath);
+
+      let jarFsPath: string | undefined;
+      if (basePath.startsWith("jar:file:")) {
+        const jarPrefix = basePath.substring(0, exclamationIndex);
+        const jarFileUri = vscode.Uri.parse(jarPrefix.replace(/^jar:/, ""));
+        jarFsPath = jarFileUri.fsPath;
+      } else {
+        const rawPath = basePath.substring("jarfile:".length, exclamationIndex);
+        try {
+          jarFsPath = vscode.Uri.file(rawPath).fsPath;
+        } catch {
+          jarFsPath = rawPath;
+        }
+      }
+
+      if (!jarFsPath) {
+        return undefined;
+      }
+
+      const jarUri = createJarUri(jarFsPath, moduleInnerPath);
       try {
         await vscode.workspace.fs.stat(jarUri);
         return jarUri;
