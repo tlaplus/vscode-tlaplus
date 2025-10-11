@@ -766,6 +766,7 @@
         "test:tlaplus-grammar": "vscode-tmgrammar-test ./tests/suite/languages/*.tla -g ./languages/tlaplus-grammar.json -g ./languages/pluscal-grammar.json"
     },
     "devDependencies": {
+        "@types/adm-zip": "^0.5.7",
         "@types/express": "^5.0.2",
         "@types/glob": "^8.1.0",
         "@types/mocha": "^10.0.1",
@@ -798,6 +799,7 @@
         "await-notify": "^1.0.1",
         "chart.js": "^4.4.1",
         "express": "^5.1.0",
+        "adm-zip": "^0.5.16",
         "fast-xml-parser": "^5.2.1",
         "moment": "^2.29.4",
         "react": "^18.2.0",

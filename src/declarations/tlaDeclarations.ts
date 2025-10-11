@@ -2,7 +2,12 @@ import * as vscode from "vscode";
 import * as path from "path";
 import { TlaDocumentInfos, TlaDocumentInfo } from "../model/documentInfo";
 import { moduleSearchPaths } from "../paths";
-import { createJarModuleUri } from "../providers/jarModuleContentProvider";
+function createJarUri(archivePath: string, internalPath: string): vscode.Uri {
+  const normalizedInternal = internalPath.startsWith("/")
+    ? internalPath
+    : `/${internalPath}`;
+  return vscode.Uri.parse(`jarfile:${archivePath}!${normalizedInternal}`);
+}
 
 /**
  * Check if line is a statement boundary
@@ -170,6 +175,74 @@ function getInstanceWithContext(
   };
 }
 
+function stripComments(text: string): string {
+  return text
+    .replace(/\(\*[\s\S]*?\*\)/g, " ")
+    .replace(/\\\*.*$/gm, "");
+}
+
+function extractModuleNamesFromStatement(
+  statementText: string,
+  keyword: "EXTENDS" | "INSTANCE",
+): string[] {
+  const normalized = stripComments(statementText);
+  const keywordIndex = normalized
+    .toUpperCase()
+    .indexOf(keyword.toUpperCase());
+  if (keywordIndex < 0) {
+    return [];
+  }
+
+  let after = normalized.substring(keywordIndex + keyword.length);
+  if (keyword === "INSTANCE") {
+    const withIndex = after.toUpperCase().indexOf("WITH");
+    if (withIndex >= 0) {
+      after = after.substring(0, withIndex);
+    }
+  }
+
+  return after
+    .split(",")
+    .map((part) => part.trim())
+    .map((part) => {
+      const match = /^([A-Za-z0-9_']+)/.exec(part);
+      return match ? match[1] : undefined;
+    })
+    .filter((name): name is string => !!name);
+}
+
+function collectReferencedModules(
+  document: vscode.TextDocument,
+): string[] {
+  const documentText = document.getText();
+  const seenStatements = new Set<string>();
+  const modules = new Set<string>();
+
+  const processKeyword = (keyword: "EXTENDS" | "INSTANCE") => {
+    const regex = new RegExp(`\\b${keyword}\\b`, "gi");
+    let match: RegExpExecArray | null;
+    while ((match = regex.exec(documentText))) {
+      const position = document.positionAt(match.index);
+      const statementRange = getStatementRange(document, position);
+      const key = `${statementRange.start.line}:${statementRange.start.character}`;
+      if (seenStatements.has(`${keyword}:${key}`)) {
+        continue;
+      }
+      seenStatements.add(`${keyword}:${key}`);
+      const statementText = document.getText(statementRange);
+      const names = extractModuleNamesFromStatement(statementText, keyword);
+      for (const name of names) {
+        modules.add(name);
+      }
+    }
+  };
+
+  processKeyword("EXTENDS");
+  processKeyword("INSTANCE");
+
+  return Array.from(modules);
+}
+
 function isLeftHandSideOfInstanceAssignment(
   statementText: string,
   wordOffset: number,
@@ -292,7 +365,13 @@ async function resolveModuleInBasePath(
       );
       const entryRoot = normalizedInner.replace(/^\//, "");
       const moduleInnerPath = path.posix.join(entryRoot, moduleFileName);
-      return createJarModuleUri(jarFileUri.fsPath, moduleInnerPath);
+      const jarUri = createJarUri(jarFileUri.fsPath, moduleInnerPath);
+      try {
+        await vscode.workspace.fs.stat(jarUri);
+        return jarUri;
+      } catch {
+        return undefined;
+      }
     }
 
     const workspaceFolder = vscode.workspace.getWorkspaceFolder(
@@ -523,9 +602,41 @@ async function provideSymbolLocations(
 
   // Fall back to regular symbol resolution
   const docInfo = docInfos.get(document.uri);
-  return docInfo
-    ? symbolLocations(document, docInfo, position) || []
-    : undefined;
+  const localLocations = docInfo
+    ? symbolLocations(document, docInfo, position) ?? []
+    : [];
+
+  if (localLocations.length > 0) {
+    return localLocations;
+  }
+
+  const range = document.getWordRangeAtPosition(position);
+  if (!range) {
+    return localLocations;
+  }
+
+  const searchName = trimTicks(document.getText(range));
+  if (!searchName) {
+    return localLocations;
+  }
+
+  const referencedModules = collectReferencedModules(document);
+  for (const moduleName of referencedModules) {
+    const moduleUri = await findModuleFile(moduleName, document.uri);
+    if (!moduleUri) {
+      continue;
+    }
+    const targetLocation = await findSymbolInModule(
+      moduleUri,
+      searchName,
+      docInfos,
+    );
+    if (targetLocation) {
+      return targetLocation;
+    }
+  }
+
+  return localLocations;
 }
 
 export class TlaDeclarationsProvider implements vscode.DeclarationProvider {
