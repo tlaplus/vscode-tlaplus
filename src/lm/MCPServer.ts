@@ -11,7 +11,7 @@ import { applyDCollection } from '../diagnostic';
 import { TLADocumentSymbolProvider } from '../symbols/tlaSymbols';
 import { parseSpec, transpilePlusCal } from '../commands/parseModule';
 import { TlaDocumentInfos } from '../model/documentInfo';
-import { JarFileSystemProvider } from '../JarFileSystemProvider';
+import { JarFileSystemProviderHandle, acquireJarFileSystemProvider } from '../JarFileSystemProvider';
 import { getSpecFiles, mapTlcOutputLine, outChannel } from '../commands/checkModel';
 import { runTlc } from '../tla2tools';
 import { CFG_TLC_STATISTICS_TYPE, ShareOption } from '../commands/tlcStatisticsCfg';
@@ -21,15 +21,11 @@ import { moduleSearchPaths } from '../paths';
 export class MCPServer implements vscode.Disposable {
 
     private mcpServer: http.Server | undefined;
-    private jarProvider: JarFileSystemProvider;
-    private jarProviderDisposable: vscode.Disposable;
+    private jarProviderHandle: JarFileSystemProviderHandle;
 
     constructor(port: number) {
         // Initialize JAR file system provider
-        this.jarProvider = new JarFileSystemProvider();
-        this.jarProviderDisposable = vscode.workspace.registerFileSystemProvider('jarfile', this.jarProvider, {
-            isReadonly: true
-        });
+        this.jarProviderHandle = acquireJarFileSystemProvider();
 
         this.startServer(port);
     }
@@ -329,8 +325,7 @@ export class MCPServer implements vscode.Disposable {
         }
 
         // Clean up JAR file system provider
-        this.jarProviderDisposable.dispose();
-        this.jarProvider.dispose();
+        this.jarProviderHandle.dispose();
     }
 
     private getServer(): McpServer {
@@ -493,8 +488,8 @@ export class MCPServer implements vscode.Disposable {
                                     // Convert searchPath to a proper jarfile URI
                                     const jarUri = vscode.Uri.parse(searchPath);
 
-                                    // Use the JarFileSystemProvider to read directory contents
-                                    const entries = await this.jarProvider.readDirectory(jarUri);
+                                    // Use the workspace FS (backed by the shared jarfile provider) to enumerate entries
+                                    const entries = await vscode.workspace.fs.readDirectory(jarUri);
                                     const tlaFiles = entries
                                         .filter(([name, type]) =>
                                             type === vscode.FileType.File && name.endsWith('.tla'))

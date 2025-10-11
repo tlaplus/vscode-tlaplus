@@ -26,7 +26,7 @@ export class JarFileSystemProvider implements vscode.FileSystemProvider {
     /**
      * Cache for ZIP instances to avoid repeatedly opening the same archive
      */
-    private zipCache = new Map<string, AdmZip>();
+    private readonly zipCache = new Map<string, AdmZip>();
 
     /**
      * Parse a jarfile: URI into archive path and internal path
@@ -240,4 +240,46 @@ export class JarFileSystemProvider implements vscode.FileSystemProvider {
         this.zipCache.clear();
         this._emitter.dispose();
     }
+}
+
+let sharedProvider: JarFileSystemProvider | undefined;
+let sharedRegistration: vscode.Disposable | undefined;
+let sharedRefCount = 0;
+
+export interface JarFileSystemProviderHandle extends vscode.Disposable {
+    readonly provider?: JarFileSystemProvider;
+}
+
+export function acquireJarFileSystemProvider(): JarFileSystemProviderHandle {
+    if (!sharedProvider && !sharedRegistration) {
+        const provider = new JarFileSystemProvider();
+        try {
+            sharedRegistration = vscode.workspace.registerFileSystemProvider('jarfile', provider, {
+                isReadonly: true
+            });
+            sharedProvider = provider;
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            if (!/already registered/i.test(message)) {
+                throw error;
+            }
+            // Another extension (or previous test run) already registered the scheme.
+            // We can still rely on the workspace FS APIs without keeping our own provider.
+            provider.dispose();
+        }
+    }
+
+    sharedRefCount++;
+
+    return {
+        provider: sharedProvider,
+        dispose: () => {
+            if (sharedRefCount > 0 && --sharedRefCount === 0) {
+                sharedRegistration?.dispose();
+                sharedRegistration = undefined;
+                sharedProvider?.dispose();
+                sharedProvider = undefined;
+            }
+        }
+    };
 }
