@@ -572,6 +572,12 @@
                     "default": -1,
                     "markdownDescription": "Listening port for TLA+ MCP server. If set to -1, MCP server will be disabled. Restart VSCode to apply changes."
                 },
+                "tlaplus.mcp.enableFilesystemTools": {
+                    "type": "boolean",
+                    "scope": "window",
+                    "default": false,
+                    "markdownDescription": "Enable filesystem tools (list_directory, read_file, write_file) in the MCP server. These tools allow reading and writing files within the workspace. Restart VSCode to apply changes. It is unlikely that you will want to enable this, because VSCode and Cursor already provide filesystem operations."
+                },
                 "tlaplus.pdf.convertCommand": {
                     "default": "pdflatex",
                     "type": "string",
@@ -790,16 +796,15 @@
     },
     "dependencies": {
         "@cocalc/ansi-to-react": "^7.0.0",
-        "@microsoft/fast-components": "^2.30.6",
-        "@microsoft/fast-react-wrapper": "^0.3.18",
         "@modelcontextprotocol/sdk": "^1.17.2",
         "@vscode/codicons": "^0.0.33",
         "@vscode/debugadapter": "^1.63.0",
-        "@vscode/webview-ui-toolkit": "^1.2.2",
+        "@vscode-elements/elements": "^2.3.1",
+        "@vscode-elements/react-elements": "^2.3.1",
+        "adm-zip": "^0.5.16",
         "await-notify": "^1.0.1",
         "chart.js": "^4.4.1",
         "express": "^5.1.0",
-        "adm-zip": "^0.5.16",
         "fast-xml-parser": "^5.2.1",
         "moment": "^2.29.4",
         "react": "^18.2.0",

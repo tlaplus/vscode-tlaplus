@@ -1,16 +1,27 @@
-import { TreeItem } from '@microsoft/fast-components';
 import * as React from 'react';
 import { CollectionValue } from '../../../model/check';
-import { VSCodeTreeItem } from '../tree';
 import { vscode } from '../vscode';
 import { ErrorTraceSettings } from './errorTrace';
 import Ansi from '@cocalc/ansi-to-react';
+import { VscodeTreeItem } from '@vscode-elements/react-elements';
+
+type TreeItemElement = HTMLElementTagNameMap['vscode-tree-item'];
 
 interface ErrorTraceVariableI {value: CollectionValue, stateId: number, settings: ErrorTraceSettings}
 export const ErrorTraceVariable = React.memo(({value, stateId, settings}: ErrorTraceVariableI) => {
 
     const [expanded, setExpanded] = React.useState(false);
-    const handleExpanded = (e) => setExpanded((e.currentTarget as TreeItem).expanded);
+    const handleClick = (event: React.MouseEvent<TreeItemElement>) => {
+        if ((event.target as HTMLElement).closest('.var-menu')) {
+            return;
+        }
+        setExpanded(event.currentTarget.open);
+    };
+    const handleKeyDown = (event: React.KeyboardEvent<TreeItemElement>) => {
+        if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+            setExpanded(event.currentTarget.open);
+        }
+    };
 
     if (stateId !== 1 && settings.hideModified && value.changeType === 'N') {
         return (null);
@@ -28,7 +39,7 @@ export const ErrorTraceVariable = React.memo(({value, stateId, settings}: ErrorT
     const changeTypeClass = 'value-'+value.changeType;
 
     return (
-        <VSCodeTreeItem expanded={expanded} onExpandedChanged={handleExpanded}>
+        <VscodeTreeItem open={expanded} onClick={handleClick} onKeyDown={handleKeyDown}>
             <div className="var-block">
                 <div className="var-name" title={changeHints[value.changeType]}>
                     <span className={changeTypeClass}> {value.key} </span>
@@ -62,7 +73,7 @@ export const ErrorTraceVariable = React.memo(({value, stateId, settings}: ErrorT
 
 
             {hasVariableChildrenToDisplay(value) &&
-                (!expanded ? <VSCodeTreeItem/> :
+                (!expanded ? <VscodeTreeItem/> :
                     (value as CollectionValue).items.map(
                         (childValue) =>
                             <ErrorTraceVariable
@@ -72,7 +83,7 @@ export const ErrorTraceVariable = React.memo(({value, stateId, settings}: ErrorT
                                 settings={settings}/>))}
 
             {value.deletedItems &&
-                (!expanded ? <VSCodeTreeItem/> :
+                (!expanded ? <VscodeTreeItem/> :
                     value.deletedItems.map(
                         (childValue) =>
                             <ErrorTraceVariable
@@ -80,7 +91,7 @@ export const ErrorTraceVariable = React.memo(({value, stateId, settings}: ErrorT
                                 value={childValue as CollectionValue}
                                 stateId={stateId}
                                 settings={settings}/>))}
-        </VSCodeTreeItem>
+        </VscodeTreeItem>
     );
 });
 

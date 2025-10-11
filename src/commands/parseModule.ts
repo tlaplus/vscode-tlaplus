@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { DCollection, applyDCollection } from '../diagnostic';
 import { TranspilerStdoutParser } from '../parsers/pluscal';
 import { SanyData, SanyStdoutParser } from '../parsers/sany';
-import { runPlusCal, runSany } from '../tla2tools';
+import { runPlusCal, runSany, stopProcess, ToolProcessInfo } from '../tla2tools';
 import { ToolOutputChannel } from '../outputChannels';
 import { LANG_TLAPLUS } from '../common';
 
@@ -44,19 +44,56 @@ async function doParseFile(doc: vscode.TextDocument, diagnostic: vscode.Diagnost
 /**
  * Transpiles PlusCal code in the current .tla file to TLA+ code in the same file.
  */
-export async function transpilePlusCal(fileUri: vscode.Uri): Promise<DCollection> {
+export async function transpilePlusCal(fileUri: vscode.Uri, token?: vscode.CancellationToken): Promise<DCollection> {
+    throwIfCancelled(token);
     const procInfo = await runPlusCal(fileUri.fsPath);
     plusCalOutChannel.bindTo(procInfo);
+    const cancellationDisposable = registerCancellation(procInfo, token);
     const stdoutParser = new TranspilerStdoutParser(procInfo.process.stdout, fileUri.fsPath);
-    return stdoutParser.readAll();
+    try {
+        const result = await stdoutParser.readAll();
+        throwIfCancelled(token);
+        return result;
+    } finally {
+        cancellationDisposable?.dispose();
+    }
 }
 
 /**
  * Parses the resulting TLA+ spec.
  */
-export async function parseSpec(fileUri: vscode.Uri): Promise<SanyData> {
+export async function parseSpec(fileUri: vscode.Uri, token?: vscode.CancellationToken): Promise<SanyData> {
+    throwIfCancelled(token);
     const procInfo = await runSany(fileUri.fsPath);
     sanyOutChannel.bindTo(procInfo);
+    const cancellationDisposable = registerCancellation(procInfo, token);
     const stdoutParser = new SanyStdoutParser(procInfo.process.stdout);
-    return stdoutParser.readAll();
+    try {
+        const result = await stdoutParser.readAll();
+        throwIfCancelled(token);
+        return result;
+    } finally {
+        cancellationDisposable?.dispose();
+    }
+}
+
+function throwIfCancelled(token: vscode.CancellationToken | undefined): void {
+    if (token?.isCancellationRequested) {
+        throw new vscode.CancellationError();
+    }
+}
+
+function registerCancellation(
+    procInfo: ToolProcessInfo,
+    token: vscode.CancellationToken | undefined
+): vscode.Disposable | undefined {
+    if (!token) {
+        return undefined;
+    }
+    const cancel = () => stopProcess(procInfo.process);
+    if (token.isCancellationRequested) {
+        cancel();
+        return undefined;
+    }
+    return token.onCancellationRequested(cancel);
 }

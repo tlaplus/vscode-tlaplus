@@ -76,17 +76,24 @@ class CheckResultViewPanel {
     }
 
     public static renderEmpty(extensionUri: vscode.Uri) {
+        const preserveFocus = vscode.workspace.getConfiguration()
+            .get<boolean>('tlaplus.tlc.modelChecker.preserveEditorFocus');
+        const previousEditor = preserveFocus ? vscode.window.activeTextEditor : undefined;
         if (!CheckResultViewPanel.currentPanel) {
             CheckResultViewPanel.currentPanel = new CheckResultViewPanel(extensionUri);
         }
 
         this.updateCheckResult(ModelCheckResult.createEmpty(ModelCheckResultSource.Process));
-        const preserveFocus = vscode.workspace.getConfiguration()
-            .get<boolean>('tlaplus.tlc.modelChecker.preserveEditorFocus');
         CheckResultViewPanel.currentPanel.panel.reveal(undefined, preserveFocus);
+        if (preserveFocus && previousEditor) {
+            void vscode.window.showTextDocument(previousEditor.document, previousEditor.viewColumn, true);
+        }
     }
 
     public static renderLastResult(extensionUri: vscode.Uri) {
+        const preserveFocus = vscode.workspace.getConfiguration()
+            .get<boolean>('tlaplus.tlc.modelChecker.preserveEditorFocus');
+        const previousEditor = preserveFocus ? vscode.window.activeTextEditor : undefined;
         if (!CheckResultViewPanel.currentPanel) {
             CheckResultViewPanel.currentPanel = new CheckResultViewPanel(extensionUri);
         }
@@ -96,9 +103,10 @@ class CheckResultViewPanel {
             : ModelCheckResult.createEmpty(ModelCheckResultSource.Process);
 
         this.updateCheckResult(lastModelResult);
-        const preserveFocus = vscode.workspace.getConfiguration()
-            .get<boolean>('tlaplus.tlc.modelChecker.preserveEditorFocus');
         CheckResultViewPanel.currentPanel.panel.reveal(undefined, preserveFocus);
+        if (preserveFocus && previousEditor) {
+            void vscode.window.showTextDocument(previousEditor.document, previousEditor.viewColumn, true);
+        }
     }
 
     private updateView(checkResult: ModelCheckResult) {

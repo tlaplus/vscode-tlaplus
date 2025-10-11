@@ -106,11 +106,23 @@ export async function runSany(tlaFilePath: string): Promise<ToolProcessInfo> {
     );
 }
 
-export async function runXMLExporter(tlaFilePath: string, addRetCodeHandler: boolean = true): Promise<ToolProcessInfo> {
+export async function runXMLExporter(
+    uri: vscode.Uri, addRetCodeHandler: boolean = true, includeExtendedModules: boolean = false
+): Promise<ToolProcessInfo> {
+    // If the URI scheme is our 'jarfile' scheme, SANY accepts the file name as is.
+    // Otherwise, we need to convert it to a file system path.
+    const fsPath = uri.scheme === 'jarfile' ? path.basename(uri.fsPath) : uri.fsPath;
+
+    const toolOptions = [ '-o' ]; // -o turns XML schema validation off.
+    if (!includeExtendedModules) {
+        toolOptions.push('-r'); // -r restricts to current module only
+    }
+    toolOptions.push(path.basename(fsPath));
+
     return runTool(
         TlaTool.XMLExporter,
-        tlaFilePath,
-        [ '-o', path.basename(tlaFilePath) ], // -o turns XML schema validation off.
+        fsPath,
+        toolOptions,
         [ makeTlaLibraryJavaOpt() ],
         addRetCodeHandler
     );
@@ -213,9 +225,13 @@ async function runTool(
 }
 
 export function moduleSearchPaths(): string[] {
+    // In the Java ecosystem, paths often use the jar:file:... scheme. However, many non-Java environments—such as
+    // JavaScript/TypeScript—do not handle this scheme correctly. To avoid compatibility issues, we use the
+    // jarfile:... scheme instead, even though tools like TLC/SANY still emit jar:file:... in places such as their
+    // startup banners.
     return [
-        'jar:file:' + toolsJarPath + '!' + TLA_TOOLS_STANDARD_MODULES,
-        'jar:file:' + cmodsJarPath + '!' + '/'
+        'jarfile:' + toolsJarPath + '!' + TLA_TOOLS_STANDARD_MODULES,
+        'jarfile:' + cmodsJarPath + '!' + '/'
     ];
 }
 

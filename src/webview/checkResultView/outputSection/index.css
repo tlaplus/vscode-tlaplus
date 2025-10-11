@@ -1,5 +1,15 @@
 .flex-direction-column {
+    display: flex;
     flex-direction: column;
+    width: 100%;
+    min-width: 0;
+}
+
+.panel-padding {
+    padding: 12px 16px;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
 }
 
 .margin-0 {
