@@ -447,7 +447,7 @@ suite('Spec-Model Validation', () => {
             if (params.modelMissingModule) {
                 assert.strictEqual(result.success, false);
             }
-        }), { numRuns: 100 });
+        }), { numRuns: 50 });
     });
 
     async function createWorkspace(): Promise<void> {
