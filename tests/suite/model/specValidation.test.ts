@@ -4,7 +4,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { afterEach } from 'mocha';
 import { SpecFiles } from '../../../src/model/check';
-import { validateModelSpecPair, SpecValidationOptions } from '../../../src/model/specValidation';
+import { validateModelSpecPair, SanyRunnerParams } from '../../../src/model/specValidation';
 import { SanyData } from '../../../src/parsers/sany';
 
 suite('Spec-Model Validation', () => {
@@ -23,8 +23,11 @@ suite('Spec-Model Validation', () => {
         const specFiles = new SpecFiles(modelPath, path.join(workDir, 'MCSpec.cfg'));
         await fs.writeFile(specFiles.cfgFilePath, '');
 
-        const result = await validateModelSpecPair(specFiles, path.join(workDir, 'Spec.tla'), {
-            sanyRunner: createSnapshotAwareSanyRunner()
+        const specPath = path.join(workDir, 'Spec.tla');
+        const runners = createSanyRunners(specPath, modelPath);
+        const result = await validateModelSpecPair(specFiles, specPath, {
+            dependencyRunner: runners.dependency,
+            validationRunner: runners.validation
         });
 
         assert.strictEqual(result.success, true);
@@ -37,11 +40,18 @@ suite('Spec-Model Validation', () => {
         const specFiles = new SpecFiles(modelPath, path.join(workDir, 'MCSpec.cfg'));
         await fs.writeFile(specFiles.cfgFilePath, '');
 
-        const result = await validateModelSpecPair(specFiles, path.join(workDir, 'Spec.tla'), {
-            sanyRunner: async (modelSnapshotPath) => {
+        const specPath = path.join(workDir, 'Spec.tla');
+        const result = await validateModelSpecPair(specFiles, specPath, {
+            dependencyRunner: async (params) => {
                 const data = new SanyData();
-                const modelName = await readModuleName(modelSnapshotPath);
-                data.modulePaths.set(modelName ?? 'MCSpec', modelSnapshotPath);
+                const modelName = await readModuleName(params.snapshotModulePath);
+                data.modulePaths.set(modelName ?? 'MCSpec', params.snapshotModulePath);
+                return data;
+            },
+            validationRunner: async (params) => {
+                const data = new SanyData();
+                const modelName = await readModuleName(params.snapshotModulePath);
+                data.modulePaths.set(modelName ?? 'MCSpec', params.snapshotModulePath);
                 return data;
             }
         });
@@ -58,12 +68,27 @@ suite('Spec-Model Validation', () => {
         await fs.writeFile(specFiles.cfgFilePath, '');
 
         const result = await validateModelSpecPair(specFiles, specPath, {
-            sanyRunner: async (modelSnapshotPath, _libraryDirs) => {
+            dependencyRunner: async (params) => {
                 const data = new SanyData();
-                const modelName = await readModuleName(modelSnapshotPath);
+                const modelName = await readModuleName(params.snapshotModulePath);
+                if (modelName) {
+                    data.modulePaths.set(modelName, params.snapshotModulePath);
+                }
+                const specSnapshot = params.snapshot.resolveOriginalToSnapshot(specPath);
+                if (specSnapshot) {
+                    const specName = await readModuleName(specSnapshot);
+                    if (specName) {
+                        data.modulePaths.set(specName, specSnapshot);
+                    }
+                }
+                return data;
+            },
+            validationRunner: async (params) => {
+                const data = new SanyData();
+                const modelName = await readModuleName(params.snapshotModulePath);
                 const specName = await readModuleName(specPath);
                 if (modelName) {
-                    data.modulePaths.set(modelName, modelSnapshotPath);
+                    data.modulePaths.set(modelName, params.snapshotModulePath);
                 }
                 if (specName) {
                     data.modulePaths.set(specName, specPath);
@@ -73,7 +98,7 @@ suite('Spec-Model Validation', () => {
         });
 
         assert.strictEqual(result.success, false);
-        assert.ok(result.message && result.message.includes('not the active module'));
+        assert.ok(result.message && result.message.includes('does not EXTEND'));
     });
 
     test('uses overrides for unsaved buffers', async () => {
@@ -89,8 +114,10 @@ suite('Spec-Model Validation', () => {
         overrides.set(normalizeForOverride(specPath), tlaModule(newSpecName));
         overrides.set(normalizeForOverride(modelPath), tlaModelModule(newModelName, newSpecName));
 
+        const runners = createSanyRunners(specPath, modelPath);
         const result = await validateModelSpecPair(specFiles, specPath, {
-            sanyRunner: createSnapshotAwareSanyRunner(),
+            dependencyRunner: runners.dependency,
+            validationRunner: runners.validation,
             documentOverrides: overrides
         });
 
@@ -134,14 +161,14 @@ suite('Spec-Model Validation', () => {
         return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
     }
 
-    function createSnapshotAwareSanyRunner(): SpecValidationOptions['sanyRunner'] {
-        return async (modelSnapshotPath, libraryDirs) => {
+    function createSanyRunners(specPath: string, modelPath: string) {
+        const dependency = async (params: SanyRunnerParams) => {
             const data = new SanyData();
-            const modelName = await readModuleName(modelSnapshotPath);
+            const modelName = await readModuleName(params.snapshotModulePath);
             if (modelName) {
-                data.modulePaths.set(modelName, modelSnapshotPath);
+                data.modulePaths.set(modelName, params.snapshotModulePath);
             }
-            const specSnapshotPath = await findFileInDirs(libraryDirs, 'Spec.tla');
+            const specSnapshotPath = params.snapshot.resolveOriginalToSnapshot(specPath);
             if (specSnapshotPath) {
                 const specName = await readModuleName(specSnapshotPath);
                 if (specName) {
@@ -150,19 +177,24 @@ suite('Spec-Model Validation', () => {
             }
             return data;
         };
-    }
 
-    async function findFileInDirs(dirs: string[], fileName: string): Promise<string | undefined> {
-        for (const dir of dirs) {
-            const candidate = path.join(dir, fileName);
-            try {
-                await fs.stat(candidate);
-                return candidate;
-            } catch {
-                continue;
+        const validation = async (params: SanyRunnerParams) => {
+            const data = new SanyData();
+            const modelName = await readModuleName(params.snapshotModulePath);
+            if (modelName) {
+                data.modulePaths.set(modelName, params.snapshotModulePath);
             }
-        }
-        return undefined;
+            const specSnapshotPath = params.snapshot.resolveOriginalToSnapshot(specPath);
+            if (specSnapshotPath) {
+                const specName = await readModuleName(specSnapshotPath);
+                if (specName) {
+                    data.modulePaths.set(specName, specSnapshotPath);
+                }
+            }
+            return data;
+        };
+
+        return { dependency, validation };
     }
 
     async function readModuleName(fsPath: string): Promise<string | undefined> {

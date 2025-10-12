@@ -1,17 +1,17 @@
 import * as fs from 'fs/promises';
+import { readFileSync } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { LANG_TLAPLUS } from '../common';
 import { SpecFiles } from './check';
-import { resolveModuleUri } from './moduleResolver';
-import { extractModuleName, extractReferencedModuleNames, fallbackModuleNameFromPath } from './tlaModuleUtils';
-import { runSany } from '../tla2tools';
+import { runSany, SanyRunOptions } from '../tla2tools';
 import { SanyData, SanyStdoutParser } from '../parsers/sany';
 
 export interface SpecValidationOptions {
     documentOverrides?: Map<string, string>;
-    sanyRunner?: (tlaFilePath: string, libraryDirs: string[]) => Promise<SanyData>;
+    dependencyRunner?: SanyRunner;
+    validationRunner?: SanyRunner;
 }
 
 export interface SpecValidationResult {
@@ -19,21 +19,27 @@ export interface SpecValidationResult {
     message?: string;
 }
 
-interface ModuleMetadata {
-    originalPath: string;
-    moduleName: string;
-    referencedModules: Set<string>;
-    content: string;
+export interface SanyRunnerParams {
+    readonly mode: 'dependency' | 'validation';
+    readonly snapshotModulePath: string;
+    readonly libraryPaths: string[];
+    readonly snapshot: SnapshotState;
 }
 
-interface SnapshotInfo {
-    rootDir: string;
-    pathMap: Map<string, string>;
-    libraryDirs: string[];
+type SanyRunner = (params: SanyRunnerParams) => Promise<SanyData>;
+
+interface SnapshotState {
+    readonly rootDir: string;
+    resolveOriginalToSnapshot(originalPath: string): string | undefined;
+    resolveSnapshotToOriginal(snapshotPath: string): string | undefined;
+    listSnapshotPaths(): string[];
 }
 
 const TEMP_DIR_PREFIX = 'tlaplus-model-snapshot-';
 
+/**
+ * Validates that the model `.tla` extends/instances the active spec using SANY as the single source of truth.
+ */
 export async function validateModelSpecPair(
     specFiles: SpecFiles,
     activeSpecPath: string,
@@ -47,40 +53,41 @@ export async function validateModelSpecPair(
         return { success: true };
     }
 
-    const overrides = options.documentOverrides ?? collectOpenDocumentOverrides();
-    const modules = await collectModules(
-        new Set<string>([specFiles.tlaFilePath, activeSpecPath]),
-        overrides
-    );
-
-    const activeSpecMetadata = modules.get(normalizedActiveSpec);
-    if (!activeSpecMetadata) {
-        return {
-            success: false,
-            message: `Cannot read active specification module at ${activeSpecPath}.`
-        };
-    }
-
-    const snapshot = await createSnapshot(modules);
+    const overrides = options.documentOverrides ?? await collectOpenDocumentOverrides();
+    const snapshot = await ModelSnapshot.create();
     try {
-        const sany = await runSanyWithSnapshot(
-            snapshot,
-            normalizedModelPath,
-            options.sanyRunner
-        );
-        const success = verifySpecReferenced(
-            sany,
-            activeSpecMetadata,
-            snapshot,
-            normalizedActiveSpec
-        );
-        if (success.success) {
-            return success;
+        await snapshot.addModule(specFiles.tlaFilePath, overrides);
+        await snapshot.addModule(activeSpecPath, overrides);
+
+        const modelSnapshotPath = snapshot.getSnapshotPath(specFiles.tlaFilePath);
+        if (!modelSnapshotPath) {
+            throw new Error(`Snapshot is missing model module ${specFiles.tlaFilePath}.`);
         }
-        return {
-            success: false,
-            message: success.message
-        };
+
+        const dependencyRunner = options.dependencyRunner ?? defaultSanyRunner;
+        const dependencyData = await dependencyRunner({
+            mode: 'dependency',
+            snapshotModulePath: modelSnapshotPath,
+            libraryPaths: snapshot.getLibraryPaths(),
+            snapshot: snapshot.getState()
+        });
+
+        await mirrorDependenciesIntoSnapshot(snapshot, dependencyData, overrides);
+
+        const validationRunner = options.validationRunner ?? defaultSanyRunner;
+        const validationData = await validationRunner({
+            mode: 'validation',
+            snapshotModulePath: modelSnapshotPath,
+            libraryPaths: snapshot.getLibraryPaths(),
+            snapshot: snapshot.getState()
+        });
+
+        return evaluateValidationResult(
+            validationData,
+            snapshot,
+            activeSpecPath,
+            overrides
+        );
     } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         return {
@@ -88,11 +95,66 @@ export async function validateModelSpecPair(
             message: `Unable to validate model against active specification: ${message}`
         };
     } finally {
-        await removeSnapshot(snapshot);
+        await snapshot.dispose();
     }
 }
 
-function collectOpenDocumentOverrides(): Map<string, string> {
+async function defaultSanyRunner(params: SanyRunnerParams): Promise<SanyData> {
+    const options: SanyRunOptions = { extraLibraryPaths: params.libraryPaths };
+    const procInfo = await runSany(params.snapshotModulePath, options);
+    const parser = new SanyStdoutParser(procInfo.process.stdout);
+    return parser.readAll();
+}
+
+async function mirrorDependenciesIntoSnapshot(
+    snapshot: ModelSnapshot,
+    sanyData: SanyData,
+    overrides: Map<string, string>
+): Promise<void> {
+    for (const modulePath of sanyData.modulePaths.values()) {
+        if (!modulePath) {
+            continue;
+        }
+        if (snapshot.isSnapshotPath(modulePath)) {
+            continue;
+        }
+        if (isArchiveModulePath(modulePath)) {
+            continue;
+        }
+        await snapshot.addModule(modulePath, overrides);
+    }
+}
+
+function evaluateValidationResult(
+    sanyData: SanyData,
+    snapshot: ModelSnapshot,
+    activeSpecPath: string,
+    overrides: Map<string, string>
+): SpecValidationResult {
+    const expectedSnapshotPath = snapshot.getSnapshotPath(activeSpecPath);
+    if (!expectedSnapshotPath) {
+        return {
+            success: false,
+            message: `Snapshot is missing the active specification ${activeSpecPath}.`
+        };
+    }
+
+    const specReferenced = Array.from(sanyData.modulePaths.values())
+        .some((resolvedPath) => resolvedPath !== undefined
+            && snapshot.pathsEqual(resolvedPath, expectedSnapshotPath));
+
+    if (specReferenced) {
+        return { success: true };
+    }
+
+    const specModuleName = inferModuleName(activeSpecPath, overrides) ?? path.basename(activeSpecPath);
+    return {
+        success: false,
+        message: `Model does not EXTEND or INSTANCE module ${specModuleName}.`
+    };
+}
+
+async function collectOpenDocumentOverrides(): Promise<Map<string, string>> {
     const normalize = normalizeFsPath;
     const overrides = new Map<string, string>();
     vscode.workspace.textDocuments
@@ -101,136 +163,90 @@ function collectOpenDocumentOverrides(): Map<string, string> {
     return overrides;
 }
 
-async function collectModules(
-    rootPaths: Set<string>,
-    overrides: Map<string, string>
-): Promise<Map<string, ModuleMetadata>> {
-    const modules = new Map<string, ModuleMetadata>();
-    const queue: string[] = Array.from(rootPaths);
-
-    while (queue.length > 0) {
-        const currentPath = queue.pop();
-        if (!currentPath) {
-            continue;
-        }
-        const normalized = normalizeFsPath(currentPath);
-        if (modules.has(normalized)) {
-            continue;
-        }
-        const canonicalPath = path.resolve(currentPath);
-        const content = await getModuleContent(canonicalPath, overrides);
-        const moduleName = extractModuleName(content) ?? fallbackModuleNameFromPath(canonicalPath);
-        const references = extractReferencedModuleNames(content);
-        modules.set(normalized, {
-            originalPath: canonicalPath,
-            moduleName,
-            referencedModules: references,
-            content
-        });
-
-        for (const referencedName of references) {
-            const resolved = await resolveModuleUri(referencedName, vscode.Uri.file(canonicalPath));
-            if (resolved && resolved.scheme === 'file') {
-                queue.push(resolved.fsPath);
-            }
-        }
-    }
-    return modules;
-}
-
-async function getModuleContent(fsPath: string, overrides: Map<string, string>): Promise<string> {
-    const normalized = normalizeFsPath(fsPath);
-    const fromOverride = overrides.get(normalized);
-    if (typeof fromOverride === 'string') {
-        return fromOverride;
+function inferModuleName(modulePath: string, overrides: Map<string, string>): string | undefined {
+    const normalized = normalizeFsPath(modulePath);
+    const content = overrides.get(normalized);
+    if (content) {
+        return extractModuleName(content);
     }
     try {
-        return await fs.readFile(fsPath, 'utf8');
-    } catch (err) {
-        throw new Error(`Cannot read module ${fsPath}: ${err instanceof Error ? err.message : String(err)}`);
-    }
-}
-
-async function createSnapshot(modules: Map<string, ModuleMetadata>): Promise<SnapshotInfo> {
-    const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), TEMP_DIR_PREFIX));
-    const pathMap = new Map<string, string>();
-    const libraryDirs = new Set<string>();
-
-    for (const [normalizedPath, metadata] of modules.entries()) {
-        const relative = deriveSnapshotRelativePath(metadata.originalPath);
-        const targetPath = path.join(rootDir, relative);
-        await fs.mkdir(path.dirname(targetPath), { recursive: true });
-        await fs.writeFile(targetPath, metadata.content, 'utf8');
-        pathMap.set(normalizedPath, targetPath);
-        libraryDirs.add(path.dirname(targetPath));
-    }
-
-    return {
-        rootDir,
-        pathMap,
-        libraryDirs: Array.from(libraryDirs)
-    };
-}
-
-async function removeSnapshot(snapshot: SnapshotInfo): Promise<void> {
-    try {
-        await fs.rm(snapshot.rootDir, { recursive: true, force: true });
+        return extractModuleName(readFileSync(modulePath, 'utf8'));
     } catch {
-        // Best-effort cleanup
+        return undefined;
     }
 }
 
-async function runSanyWithSnapshot(
-    snapshot: SnapshotInfo,
-    normalizedModelPath: string,
-    sanyRunner?: (tlaFilePath: string, libraryDirs: string[]) => Promise<SanyData>
-): Promise<SanyData> {
-    const modelSnapshotPath = snapshot.pathMap.get(normalizedModelPath);
-    if (!modelSnapshotPath) {
-        throw new Error('Snapshot missing model module.');
-    }
-
-    const runner = sanyRunner ?? defaultSanyRunner;
-    return runner(modelSnapshotPath, snapshot.libraryDirs);
+function extractModuleName(content: string): string | undefined {
+    const match = content.match(/^\s*-{4,}\s*MODULE\s+([A-Za-z0-9_]+)\s*-{4,}/m);
+    return match ? match[1] : undefined;
 }
 
-async function defaultSanyRunner(tlaFilePath: string, libraryDirs: string[]): Promise<SanyData> {
-    const procInfo = await runSany(tlaFilePath, { extraLibraryPaths: libraryDirs });
-    const parser = new SanyStdoutParser(procInfo.process.stdout);
-    return parser.readAll();
-}
+class ModelSnapshot {
+    private constructor(
+        readonly rootDir: string
+    ) {}
 
-function verifySpecReferenced(
-    sany: SanyData,
-    specMetadata: ModuleMetadata,
-    snapshot: SnapshotInfo,
-    normalizedActiveSpec: string
-): SpecValidationResult {
-    const expectedSnapshotPath = snapshot.pathMap.get(normalizedActiveSpec);
-    if (!expectedSnapshotPath) {
+    private readonly originalToSnapshot = new Map<string, string>();
+    private readonly snapshotToOriginal = new Map<string, string>();
+    private readonly fallbackDirs = new Set<string>();
+
+    static async create(): Promise<ModelSnapshot> {
+        const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), TEMP_DIR_PREFIX));
+        return new ModelSnapshot(rootDir);
+    }
+
+    getState(): SnapshotState {
         return {
-            success: false,
-            message: `Snapshot missing expected specification module ${specMetadata.moduleName}.`
+            rootDir: this.rootDir,
+            resolveOriginalToSnapshot: (originalPath: string) => this.getSnapshotPath(originalPath),
+            resolveSnapshotToOriginal: (snapshotPath: string) => this.snapshotToOriginal.get(normalizeFsPath(snapshotPath)),
+            listSnapshotPaths: () => Array.from(this.snapshotToOriginal.keys())
         };
     }
 
-    const referencedPath = sany.modulePaths.get(specMetadata.moduleName);
-    if (!referencedPath) {
-        return {
-            success: false,
-            message: `Model does not EXTEND or INSTANCE module ${specMetadata.moduleName}.`
-        };
+    getSnapshotPath(originalPath: string): string | undefined {
+        return this.originalToSnapshot.get(normalizeFsPath(originalPath));
     }
 
-    if (!pathsEqual(referencedPath, expectedSnapshotPath)) {
-        return {
-            success: false,
-            message: `Model references ${specMetadata.moduleName} at ${referencedPath}, `
-                + `not the active module at ${specMetadata.originalPath}.`
-        };
+    isSnapshotPath(candidate: string): boolean {
+        const normalizedRoot = normalizeFsPath(this.rootDir);
+        const normalizedCandidate = normalizeFsPath(candidate);
+        return normalizedCandidate.startsWith(normalizedRoot);
     }
 
-    return { success: true };
+    pathsEqual(pathA: string, pathB: string): boolean {
+        return normalizeFsPath(pathA) === normalizeFsPath(pathB);
+    }
+
+    getLibraryPaths(): string[] {
+        return [this.rootDir, ...Array.from(this.fallbackDirs)];
+    }
+
+    async addModule(originalPath: string, overrides: Map<string, string>): Promise<void> {
+        const normalizedOriginal = normalizeFsPath(originalPath);
+        if (this.originalToSnapshot.has(normalizedOriginal)) {
+            return;
+        }
+
+        const content = overrides.get(normalizedOriginal) ?? await fs.readFile(originalPath, 'utf8');
+        const relative = deriveSnapshotRelativePath(originalPath);
+        const targetPath = path.join(this.rootDir, relative);
+
+        await fs.mkdir(path.dirname(targetPath), { recursive: true });
+        await fs.writeFile(targetPath, content, 'utf8');
+
+        this.originalToSnapshot.set(normalizedOriginal, targetPath);
+        this.snapshotToOriginal.set(normalizeFsPath(targetPath), normalizedOriginal);
+        this.fallbackDirs.add(path.dirname(originalPath));
+    }
+
+    async dispose(): Promise<void> {
+        try {
+            await fs.rm(this.rootDir, { recursive: true, force: true });
+        } catch {
+            // Best-effort cleanup
+        }
+    }
 }
 
 function deriveSnapshotRelativePath(originalPath: string): string {
@@ -248,9 +264,6 @@ function sanitizeExternalPath(fsPath: string): string {
     const withoutDrive = fsPath.replace(/:/g, '');
     const normalized = withoutDrive.replace(/\\/g, '/');
     const parts = normalized.split('/').filter(Boolean);
-    if (parts.length === 0) {
-        return path.basename(fsPath);
-    }
     return path.join(...parts);
 }
 
@@ -259,10 +272,6 @@ function normalizeFsPath(fsPath: string): string {
     return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
 }
 
-function pathsEqual(pathA: string, pathB: string): boolean {
-    const normalize = (p: string) => {
-        const resolved = path.resolve(p);
-        return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
-    };
-    return normalize(pathA) === normalize(pathB);
+function isArchiveModulePath(modulePath: string): boolean {
+    return modulePath.startsWith('jar:file:') || modulePath.startsWith('jarfile:');
 }
