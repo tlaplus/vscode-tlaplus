@@ -191,7 +191,8 @@ export async function runTlc(
     cfgFilePath: string,
     showOptionsPrompt: boolean,
     extraOpts: string[] = [],
-    extraJavaOpts: string[] = []
+    extraJavaOpts: string[] = [],
+    extraLibraryPaths: string[] = []
 ): Promise<ToolProcessInfo | undefined> {
     const promptedOptions = await getTlcOptions(showOptionsPrompt);
     if (promptedOptions === undefined) {
@@ -199,7 +200,7 @@ export async function runTlc(
         return undefined;
     }
     const customOptions = extraOpts.concat(promptedOptions);
-    const javaOptions = [ makeTlaLibraryJavaOpt() ];
+    const javaOptions = [ makeTlaLibraryJavaOpt(extraLibraryPaths) ];
     const shareStats = vscode.workspace.getConfiguration().get<ShareOption>(CFG_TLC_STATISTICS_TYPE);
     if (shareStats !== ShareOption.DoNotShare) {
         javaOptions.push('-Dtlc2.TLC.ide=vscode');

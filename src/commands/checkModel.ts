@@ -1,12 +1,12 @@
 import { ChildProcess } from 'child_process';
-import { copyFile } from 'fs';
+import { copyFile, readFileSync } from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { Utils } from 'vscode-uri';
 import { LANG_TLAPLUS, LANG_TLAPLUS_CFG, exists, listFiles, replaceExtension } from '../common';
 import { applyDCollection } from '../diagnostic';
 import { ModelCheckResult, ModelCheckResultSource, SpecFiles } from '../model/check';
-import { validateModelSpecPair } from '../model/specValidation';
+import { validateModelSpecPair, ValidationSnapshot } from '../model/specValidation';
 import { ToolOutputChannel } from '../outputChannels';
 import { saveStreamToFile } from '../outputSaver';
 import {
@@ -65,16 +65,28 @@ export async function checkModel(
         return;
     }
     const validationPath = getValidationSpecPath(uri);
-    if (validationPath) {
-        const validationResult = await validateModelSpecPair(specFiles, validationPath);
-        if (!validationResult.success) {
-            const message = validationResult.message
-                ?? 'Selected model does not reference the active specification.';
-            vscode.window.showWarningMessage(message);
-            return;
-        }
+    const validationResult = await validateModelSpecPair(
+        specFiles,
+        validationPath,
+        { retainSnapshot: true }
+    );
+    if (!validationResult.success) {
+        const message = validationResult.message
+            ?? 'Selected model does not reference the active specification.';
+        vscode.window.showWarningMessage(message);
+        await validationResult.snapshot?.dispose();
+        return;
     }
-    doCheckModel(specFiles, true, extContext, diagnostic, true);
+    doCheckModel(
+        specFiles,
+        true,
+        extContext,
+        diagnostic,
+        true,
+        [],
+        undefined,
+        validationResult.snapshot
+    );
 }
 
 export async function runLastCheckAgain(
@@ -88,7 +100,19 @@ export async function runLastCheckAgain(
     if (!canRunTlc(extContext)) {
         return;
     }
-    doCheckModel(lastCheckFiles, true, extContext, diagnostic, false);
+    const validationResult = await validateModelSpecPair(
+        lastCheckFiles,
+        undefined,
+        { retainSnapshot: true }
+    );
+    if (!validationResult.success) {
+        const message = validationResult.message
+            ?? 'Selected model does not reference the active specification.';
+        vscode.window.showWarningMessage(message);
+        await validationResult.snapshot?.dispose();
+        return;
+    }
+    doCheckModel(lastCheckFiles, true, extContext, diagnostic, false, [], undefined, validationResult.snapshot);
 }
 
 export async function checkModelCustom(
@@ -120,14 +144,19 @@ export async function checkModelCustom(
         doc.uri.fsPath,
         path.join(path.dirname(doc.uri.fsPath), cfgFileName)
     );
-    const validationResult = await validateModelSpecPair(specFiles, doc.uri.fsPath);
+    const validationResult = await validateModelSpecPair(
+        specFiles,
+        doc.uri.fsPath,
+        { retainSnapshot: true }
+    );
     if (!validationResult.success) {
         const message = validationResult.message
             ?? 'Selected model does not reference the active specification.';
         vscode.window.showWarningMessage(message);
+        await validationResult.snapshot?.dispose();
         return;
     }
-    doCheckModel(specFiles, true, extContext, diagnostic, true);
+    doCheckModel(specFiles, true, extContext, diagnostic, true, [], undefined, validationResult.snapshot);
 }
 
 /**
@@ -170,13 +199,48 @@ function getActiveEditorFileUri(extContext: vscode.ExtensionContext): vscode.Uri
     return doc.uri;
 }
 
-function getValidationSpecPath(fileUri: vscode.Uri): string | undefined {
+export function getValidationSpecPath(fileUri: vscode.Uri): string | undefined {
     if (fileUri.fsPath.endsWith('.tla')) {
         return fileUri.fsPath;
+    }
+    if (fileUri.fsPath.endsWith('.cfg')) {
+        const specFromCfg = resolveSpecFromConfig(fileUri.fsPath);
+        if (specFromCfg) {
+            return specFromCfg;
+        }
     }
     const editor = vscode.window.activeTextEditor;
     if (editor && editor.document.languageId === LANG_TLAPLUS) {
         return editor.document.uri.fsPath;
+    }
+    if (fileUri.fsPath.endsWith('.cfg')) {
+        const companion = replaceExtension(fileUri.fsPath, 'tla');
+        return companion;
+    }
+    return undefined;
+}
+
+function resolveSpecFromConfig(cfgPath: string): string | undefined {
+    try {
+        const content = readFileSync(cfgPath, 'utf8');
+        const lines = content.split(/\r?\n/);
+        for (const rawLine of lines) {
+            const line = rawLine.trim();
+            if (line.length === 0) {
+                continue;
+            }
+            if (line.startsWith('\\*') || line.startsWith('\*')) {
+                continue;
+            }
+            const match = /^SPECIFICATION\s+([A-Za-z0-9_]+)/i.exec(line);
+            if (match) {
+                const moduleName = match[1];
+                const dir = path.dirname(cfgPath);
+                return path.join(dir, `${moduleName}.tla`);
+            }
+        }
+    } catch {
+        // Ignore and fall back to other strategies.
     }
     return undefined;
 }
@@ -211,16 +275,35 @@ export async function doCheckModel(
     diagnostic: vscode.DiagnosticCollection,
     showOptionsPrompt: boolean,
     extraOpts: string[] = [],
-    debuggerPortCallback?: (port?: number) => void
+    debuggerPortCallback?: (port?: number) => void,
+    validationSnapshot?: ValidationSnapshot
 ): Promise<ModelCheckResult | undefined> {
+    const runTlaPath = validationSnapshot?.modelPath ?? specFiles.tlaFilePath;
+    const runCfgPath = validationSnapshot?.configPath ?? path.basename(specFiles.cfgFilePath);
+    const libraryPaths = validationSnapshot?.libraryPaths ?? [];
+    let snapshotDisposed = false;
+    const disposeSnapshot = async () => {
+        if (snapshotDisposed || !validationSnapshot) {
+            return;
+        }
+        snapshotDisposed = true;
+        await validationSnapshot.dispose();
+    };
     try {
         lastCheckFiles = specFiles;
         vscode.commands.executeCommand('setContext', CTX_TLC_CAN_RUN_AGAIN, true);
         updateStatusBarItem(true, specFiles);
         const procInfo = await runTlc(
-            specFiles.tlaFilePath, path.basename(specFiles.cfgFilePath), showOptionsPrompt, extraOpts);
+            runTlaPath,
+            runCfgPath,
+            showOptionsPrompt,
+            extraOpts,
+            [],
+            libraryPaths
+        );
         if (procInfo === undefined) {
             // Command cancelled by user
+            await disposeSnapshot();
             return undefined;
         }
         outChannel.bindTo(procInfo);
@@ -228,6 +311,7 @@ export async function doCheckModel(
         checkProcess.on('close', () => {
             checkProcess = undefined;
             updateStatusBarItem(false, lastCheckFiles);
+            void disposeSnapshot();
         });
         if (showCheckResultView) {
             attachFileSaver(specFiles.tlaFilePath, checkProcess);
@@ -263,6 +347,7 @@ export async function doCheckModel(
         applyDCollection(dCol, diagnostic);
         return resultHolder.checkResult;
     } catch (err) {
+        await disposeSnapshot();
         statusBarItem.hide();
         vscode.window.showErrorMessage(`Error checking model: ${err}`);
     }
