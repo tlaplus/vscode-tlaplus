@@ -28,7 +28,7 @@ suite('checkModel spec path resolution', () => {
         setActiveEditor(fakeEditor(specUri, 'tlaplus'));
 
         const resolved = getValidationSpecPath(specUri);
-        assert.strictEqual(resolved, tlaPath);
+        assertPathEquals(resolved, tlaPath);
     });
 
     test('falls back to active .tla editor when launching from .cfg', () => {
@@ -38,7 +38,7 @@ suite('checkModel spec path resolution', () => {
         setActiveEditor(fakeEditor(vscode.Uri.file(specPath), 'tlaplus'));
 
         const resolved = getValidationSpecPath(cfgUri);
-        assert.strictEqual(resolved, specPath);
+        assertPathEquals(resolved, specPath);
     });
 
     test('falls back to companion .tla when no spec editor is active', () => {
@@ -47,7 +47,7 @@ suite('checkModel spec path resolution', () => {
         setActiveEditor(fakeEditor(vscode.Uri.file('/workspace/Readme.md'), 'markdown'));
 
         const resolved = getValidationSpecPath(cfgUri);
-        assert.strictEqual(resolved, path.join('/workspace', 'MCSpec.tla'));
+        assertPathEquals(resolved, path.join('/workspace', 'MCSpec.tla'));
     });
 
     test('ignores SPEC directive when no spec editor is active', async () => {
@@ -57,7 +57,7 @@ suite('checkModel spec path resolution', () => {
         setActiveEditor(undefined);
 
         const resolved = getValidationSpecPath(vscode.Uri.file(cfgPath));
-        assert.strictEqual(resolved, path.join(workDir, 'MCSpec.tla'));
+        assertPathEquals(resolved, path.join(workDir, 'MCSpec.tla'));
     });
 
     test('property: launching from cfg prefers active tlaplus editor when available', async () => {
@@ -86,7 +86,7 @@ suite('checkModel spec path resolution', () => {
             const expected = activeEditor && activeEditor.document.languageId === 'tlaplus'
                 ? activeEditor.document.uri.fsPath
                 : path.join(workDir, 'MCSpec.tla');
-            assert.strictEqual(resolved, expected);
+            assertPathEquals(resolved, expected);
         }), { numRuns: 20 });
     });
 
@@ -131,7 +131,7 @@ suite('checkModel spec path resolution', () => {
             } else {
                 expected = path.join(workDir, 'MCSpec.tla');
             }
-            assert.strictEqual(resolved, expected);
+            assertPathEquals(resolved, expected);
         }), { numRuns: 20 });
     });
 
@@ -151,7 +151,7 @@ suite('checkModel spec path resolution', () => {
             setActiveEditor(undefined);
 
             const resolved = getValidationSpecPath(vscode.Uri.file(cfgPath));
-            assert.strictEqual(resolved, `${cfgBase}.tla`);
+            assertPathEquals(resolved, `${cfgBase}.tla`);
         }), { numRuns: 10 });
     });
 
@@ -170,5 +170,18 @@ suite('checkModel spec path resolution', () => {
                 uri
             }
         };
+    }
+
+    function assertPathEquals(actual: string | undefined, expected: string | undefined): void {
+        if (!actual || !expected) {
+            assert.strictEqual(actual, expected);
+            return;
+        }
+        assert.strictEqual(normalizeFsPath(actual), normalizeFsPath(expected));
+    }
+
+    function normalizeFsPath(fsPath: string): string {
+        const resolved = path.resolve(fsPath);
+        return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
     }
 });

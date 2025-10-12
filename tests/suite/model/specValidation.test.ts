@@ -301,7 +301,7 @@ suite('Spec-Model Validation', () => {
                 const relative = path.relative(p, modelSnapshotPath);
                 return relative === '' || !relative.startsWith('..');
             }), 'Snapshot library paths should include the model path');
-            assert.strictEqual(
+            assertPathEquals(
                 snapshot.resolveSnapshotToOriginal(modelSnapshotPath),
                 specFiles.tlaFilePath
             );
@@ -568,3 +568,16 @@ suite('Spec-Model Validation', () => {
     }
 
 });
+
+function assertPathEquals(actual: string | undefined, expected: string | undefined): void {
+    if (!actual || !expected) {
+        assert.strictEqual(actual, expected);
+        return;
+    }
+    assert.strictEqual(normalizeFsPath(actual), normalizeFsPath(expected));
+}
+
+function normalizeFsPath(fsPath: string): string {
+    const resolved = path.resolve(fsPath);
+    return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
+}
