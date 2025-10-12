@@ -1,5 +1,5 @@
 import { ChildProcess } from 'child_process';
-import { copyFile, readFileSync } from 'fs';
+import { copyFile } from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { Utils } from 'vscode-uri';
@@ -203,12 +203,6 @@ export function getValidationSpecPath(fileUri: vscode.Uri): string | undefined {
     if (fileUri.fsPath.endsWith('.tla')) {
         return fileUri.fsPath;
     }
-    if (fileUri.fsPath.endsWith('.cfg')) {
-        const specFromCfg = resolveSpecFromConfig(fileUri.fsPath);
-        if (specFromCfg) {
-            return specFromCfg;
-        }
-    }
     const editor = vscode.window.activeTextEditor;
     if (editor && editor.document.languageId === LANG_TLAPLUS) {
         return editor.document.uri.fsPath;
@@ -216,31 +210,6 @@ export function getValidationSpecPath(fileUri: vscode.Uri): string | undefined {
     if (fileUri.fsPath.endsWith('.cfg')) {
         const companion = replaceExtension(fileUri.fsPath, 'tla');
         return companion;
-    }
-    return undefined;
-}
-
-function resolveSpecFromConfig(cfgPath: string): string | undefined {
-    try {
-        const content = readFileSync(cfgPath, 'utf8');
-        const lines = content.split(/\r?\n/);
-        for (const rawLine of lines) {
-            const line = rawLine.trim();
-            if (line.length === 0) {
-                continue;
-            }
-            if (line.startsWith('\\*') || line.startsWith('\*')) {
-                continue;
-            }
-            const match = /^SPECIFICATION\s+([A-Za-z0-9_]+)/i.exec(line);
-            if (match) {
-                const moduleName = match[1];
-                const dir = path.dirname(cfgPath);
-                return path.join(dir, `${moduleName}.tla`);
-            }
-        }
-    } catch {
-        // Ignore and fall back to other strategies.
     }
     return undefined;
 }

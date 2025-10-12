@@ -6,6 +6,13 @@ import * as vscode from 'vscode';
 import fc from 'fast-check';
 import { getValidationSpecPath } from '../../../src/commands/checkModel';
 
+interface MockTextEditor {
+    document: {
+        languageId: string;
+        uri: vscode.Uri;
+    };
+}
+
 suite('checkModel spec path resolution', () => {
     const originalDescriptor = Object.getOwnPropertyDescriptor(vscode.window, 'activeTextEditor');
 
@@ -43,25 +50,23 @@ suite('checkModel spec path resolution', () => {
         assert.strictEqual(resolved, path.join('/workspace', 'MCSpec.tla'));
     });
 
-    test('resolves SPEC directive from config when no spec editor is active', async () => {
+    test('ignores SPEC directive when no spec editor is active', async () => {
         const workDir = await fs.mkdtemp(path.join(os.tmpdir(), 'tlaplus-spec-path-'));
-        const specPath = path.join(workDir, 'Spec.tla');
         const cfgPath = path.join(workDir, 'MCSpec.cfg');
         await fs.writeFile(cfgPath, 'SPECIFICATION Spec\n');
         setActiveEditor(undefined);
 
         const resolved = getValidationSpecPath(vscode.Uri.file(cfgPath));
-        assert.strictEqual(resolved, specPath);
+        assert.strictEqual(resolved, path.join(workDir, 'MCSpec.tla'));
     });
 
-    test('property: launching from cfg uses SPEC directive regardless of active tab', async () => {
+    test('property: launching from cfg prefers active tlaplus editor when available', async () => {
         const workDir = await fs.mkdtemp(path.join(os.tmpdir(), 'tlaplus-spec-path-prop-'));
-        const specPath = path.join(workDir, 'Spec.tla');
         const cfgPath = path.join(workDir, 'MCSpec.cfg');
         await fs.writeFile(cfgPath, 'SPECIFICATION Spec\n');
         const cfgUri = vscode.Uri.file(cfgPath);
 
-        const activeKinds = fc.constantFrom<'tlaplus' | 'tlaplus_cfg' | 'markdown' | 'undefined'> (
+        const activeKinds = fc.constantFrom<'tlaplus' | 'tlaplus_cfg' | 'markdown' | 'undefined'>(
             'tlaplus', 'tlaplus_cfg', 'markdown', 'undefined'
         );
 
@@ -78,11 +83,14 @@ suite('checkModel spec path resolution', () => {
 
             setActiveEditor(activeEditor);
             const resolved = getValidationSpecPath(cfgUri);
-            assert.strictEqual(resolved, specPath);
+            const expected = activeEditor && activeEditor.document.languageId === 'tlaplus'
+                ? activeEditor.document.uri.fsPath
+                : path.join(workDir, 'MCSpec.tla');
+            assert.strictEqual(resolved, expected);
         }), { numRuns: 20 });
     });
 
-    test('property: random editor focus sequences still resolve config SPEC', async () => {
+    test('property: random editor focus sequences prefer active tlaplus editor when present', async () => {
         const workDir = await fs.mkdtemp(path.join(os.tmpdir(), 'tlaplus-spec-path-seq-'));
         const specPath = path.join(workDir, 'Spec.tla');
         const cfgPath = path.join(workDir, 'MCSpec.cfg');
@@ -92,7 +100,7 @@ suite('checkModel spec path resolution', () => {
         const actions = fc.array(fc.constantFrom('focusSpec', 'focusModel', 'focusOther', 'close'), { minLength: 1, maxLength: 10 });
 
         await fc.assert(fc.asyncProperty(actions, async (sequence) => {
-            let currentEditor: vscode.TextEditor | undefined = undefined;
+            let currentEditor: MockTextEditor | undefined = undefined;
 
             const apply = (action: string) => {
                 switch (action) {
@@ -116,11 +124,18 @@ suite('checkModel spec path resolution', () => {
 
             sequence.forEach(apply);
             const resolved = getValidationSpecPath(cfgUri);
-            assert.strictEqual(resolved, specPath);
+            const activeEditor = currentEditor;
+            let expected: string;
+            if (activeEditor && (activeEditor as MockTextEditor).document.languageId === 'tlaplus') {
+                expected = (activeEditor as MockTextEditor).document.uri.fsPath;
+            } else {
+                expected = path.join(workDir, 'MCSpec.tla');
+            }
+            assert.strictEqual(resolved, expected);
         }), { numRuns: 20 });
     });
 
-    test('property: config variants (SPEC, INIT, none) resolve or return undefined appropriately', async () => {
+    test('property: config variants (SPEC, INIT, none) fall back to companion without active spec', async () => {
         const workDir = await fs.mkdtemp(path.join(os.tmpdir(), 'tlaplus-spec-path-cfg-variants-'));
         const cfgBase = path.join(workDir, 'Model');
 
@@ -136,30 +151,24 @@ suite('checkModel spec path resolution', () => {
             setActiveEditor(undefined);
 
             const resolved = getValidationSpecPath(vscode.Uri.file(cfgPath));
-            if (cfgContent.startsWith('SPECIFICATION')) {
-                assert.strictEqual(resolved, path.join(workDir, 'Spec.tla'));
-            } else if (cfgContent.startsWith('INIT')) {
-                assert.strictEqual(resolved, path.join(workDir, 'Model.tla'));
-            } else {
-                assert.strictEqual(resolved, `${cfgBase}.tla`);
-            }
+            assert.strictEqual(resolved, `${cfgBase}.tla`);
         }), { numRuns: 10 });
     });
 
 
-    function setActiveEditor(editor: vscode.TextEditor | undefined): void {
+    function setActiveEditor(editor: MockTextEditor | undefined): void {
         Object.defineProperty(vscode.window, 'activeTextEditor', {
             configurable: true,
             get: () => editor
         });
     }
 
-    function fakeEditor(uri: vscode.Uri, languageId: string): vscode.TextEditor {
+    function fakeEditor(uri: vscode.Uri, languageId: string): MockTextEditor {
         return {
             document: {
                 languageId,
                 uri
             }
-        } as unknown as vscode.TextEditor;
+        };
     }
 });
