@@ -7,6 +7,7 @@ import {
 import * as React from 'react';
 import { ErrorInfo } from '../../../model/check';
 import { ErrorTraceState } from './errorTraceState';
+import { createTreeItemRegistry, TreeItemRegistry } from './treeItemRegistry';
 
 type TextfieldElement = HTMLElementTagNameMap['vscode-textfield'];
 
@@ -16,8 +17,14 @@ export const ErrorTrace = React.memo(({errorInfo, traceId}: ErrorTraceI) => {
         return (null);
     }
 
-    const {settings, expandedStates, setHideModified, setFilter, collapseAllStates, expandAllStates} =
-        useSettings(errorInfo.errorTrace.length);
+    const {
+        settings,
+        registerStateTreeItem,
+        setHideModified,
+        setFilter,
+        collapseAllStates,
+        expandAllStates
+    } = useSettings();
 
     const handleFilterChange = (event: React.ChangeEvent<TextfieldElement>) => {
         setFilter(event.currentTarget.value);
@@ -71,9 +78,10 @@ export const ErrorTrace = React.memo(({errorInfo, traceId}: ErrorTraceI) => {
                         (v, index) =>
                             <ErrorTraceState
                                 key={index}
+                                stateIndex={index}
                                 errorTraceItem={v}
                                 settings={settings}
-                                expanded={expandedStates[index]}/>)}
+                                registerTreeItem={registerStateTreeItem}/>)}
                 </VscodeTree>
             </VscodeTabPanel>
         </>
@@ -83,10 +91,11 @@ export const ErrorTrace = React.memo(({errorInfo, traceId}: ErrorTraceI) => {
 export interface ErrorTraceSettings {
     readonly hideModified: boolean;
     readonly filter: string[];
-    setExpandValue: (index: number, newValue: boolean) => void;
 }
 
-const useSettings = (numberOfStates: number) => {
+type StateTreeItem = HTMLElementTagNameMap['vscode-tree-item'];
+
+const useSettings = () => {
     function parseFilter(filter: string): string[] {
         return !filter ? [] :
             filter
@@ -98,7 +107,7 @@ const useSettings = (numberOfStates: number) => {
 
     const [hideModified, _setHideModified] = React.useState(false);
     const [filter, _setFilter] = React.useState(parseFilter(''));
-    const [expandedStates, _setExpandStates] = React.useState(new Array(numberOfStates).fill(true));
+    const stateTreeItems = React.useRef<TreeItemRegistry<StateTreeItem>>(createTreeItemRegistry<StateTreeItem>());
 
     const setFilter = (newFilter: string) => {
         _setFilter(parseFilter(newFilter));
@@ -108,22 +117,25 @@ const useSettings = (numberOfStates: number) => {
         _setHideModified(newHideModified);
     };
 
-    const setExpandValue = (index: number, newValue: boolean) => {
-        if (newValue !== expandedStates[index]) {
-            const newValueArray = [...expandedStates];
-            newValueArray[index] = newValue;
-            _setExpandStates(newValueArray);
-        }
-    };
+    const registerStateTreeItem = React.useCallback((index: number, item: StateTreeItem | null) => {
+        stateTreeItems.current.register(index, item);
+    }, []);
 
-    const collapseAllStates = () => {
-        _setExpandStates(new Array(numberOfStates).fill(false));
-    };
+    const collapseAllStates = React.useCallback(() => {
+        stateTreeItems.current.collapseAll();
+    }, []);
 
-    const expandAllStates = () => {
-        _setExpandStates(new Array(numberOfStates).fill(true));
-    };
+    const expandAllStates = React.useCallback(() => {
+        stateTreeItems.current.expandAll();
+    }, []);
 
-    const settings = { hideModified: hideModified, filter: filter, setExpandValue: setExpandValue};
-    return {settings, expandedStates, setHideModified, setFilter, collapseAllStates, expandAllStates};
+    const settings = { hideModified: hideModified, filter: filter };
+    return {
+        settings,
+        registerStateTreeItem,
+        setHideModified,
+        setFilter,
+        collapseAllStates,
+        expandAllStates
+    };
 };
