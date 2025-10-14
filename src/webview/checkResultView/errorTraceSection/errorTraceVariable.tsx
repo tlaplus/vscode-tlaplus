@@ -5,23 +5,8 @@ import { ErrorTraceSettings } from './errorTrace';
 import Ansi from '@cocalc/ansi-to-react';
 import { VscodeTreeItem } from '@vscode-elements/react-elements';
 
-type TreeItemElement = HTMLElementTagNameMap['vscode-tree-item'];
-
 interface ErrorTraceVariableI {value: CollectionValue, stateId: number, settings: ErrorTraceSettings}
 export const ErrorTraceVariable = React.memo(({value, stateId, settings}: ErrorTraceVariableI) => {
-
-    const [expanded, setExpanded] = React.useState(false);
-    const handleClick = (event: React.MouseEvent<TreeItemElement>) => {
-        if ((event.target as HTMLElement).closest('.var-menu')) {
-            return;
-        }
-        setExpanded(event.currentTarget.open);
-    };
-    const handleKeyDown = (event: React.KeyboardEvent<TreeItemElement>) => {
-        if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-            setExpanded(event.currentTarget.open);
-        }
-    };
 
     if (stateId !== 1 && settings.hideModified && value.changeType === 'N') {
         return (null);
@@ -31,17 +16,28 @@ export const ErrorTraceVariable = React.memo(({value, stateId, settings}: ErrorT
         return (null);
     }
 
-    const copyToClipboard = () => {
+    const copyToClipboard = (event: React.MouseEvent<HTMLSpanElement>) => {
+        event.stopPropagation();
         navigator.clipboard.writeText(value.str);
         vscode.showInfoMessage('Value has been copied to clipboard');
     };
 
+    const showVariableValue = (event: React.MouseEvent<HTMLSpanElement>) => {
+        event.stopPropagation();
+        vscode.showVariableValue(value.id);
+    };
+
+    const changeHintKey = value.changeType as keyof typeof changeHints;
+    const changeHint = changeHints[changeHintKey] ?? '';
     const changeTypeClass = 'value-'+value.changeType;
+    const hasValueChildren = hasVariableChildrenToDisplay(value);
+    const hasDeletedChildren = Array.isArray(value.deletedItems) && value.deletedItems.length > 0;
+    const hasChildren = hasValueChildren || hasDeletedChildren;
 
     return (
-        <VscodeTreeItem open={expanded} onClick={handleClick} onKeyDown={handleKeyDown}>
+        <VscodeTreeItem branch={hasChildren}>
             <div className="var-block">
-                <div className="var-name" title={changeHints[value.changeType]}>
+                <div className="var-name" title={changeHint}>
                     <span className={changeTypeClass}> {value.key} </span>
 
                     {value.items &&
@@ -53,7 +49,7 @@ export const ErrorTraceVariable = React.memo(({value, stateId, settings}: ErrorT
                         </span>}
                 </div>
 
-                <div className={'var-value ' + changeTypeClass} title={changeHints[value.changeType]}>
+                <div className={'var-value ' + changeTypeClass} title={changeHint}>
                     <Ansi>{value.str}</Ansi>
                 </div>
 
@@ -61,7 +57,7 @@ export const ErrorTraceVariable = React.memo(({value, stateId, settings}: ErrorT
                     <span
                         hidden={value.changeType !== 'D'}
                         title="Dislpay value"
-                        onClick={() => vscode.showVariableValue(value.id)}
+                        onClick={showVariableValue}
                         className="var-button codicon codicon-link-external"/>
 
                     <span
@@ -72,25 +68,23 @@ export const ErrorTraceVariable = React.memo(({value, stateId, settings}: ErrorT
             </div>
 
 
-            {hasVariableChildrenToDisplay(value) &&
-                (!expanded ? <VscodeTreeItem/> :
-                    (value as CollectionValue).items.map(
-                        (childValue) =>
-                            <ErrorTraceVariable
-                                key={childValue.id}
-                                value={childValue as CollectionValue}
-                                stateId={stateId}
-                                settings={settings}/>))}
+            {hasValueChildren &&
+                (value as CollectionValue).items.map(
+                    (childValue) =>
+                        <ErrorTraceVariable
+                            key={childValue.id}
+                            value={childValue as CollectionValue}
+                            stateId={stateId}
+                            settings={settings}/>)}
 
             {value.deletedItems &&
-                (!expanded ? <VscodeTreeItem/> :
-                    value.deletedItems.map(
-                        (childValue) =>
-                            <ErrorTraceVariable
-                                key={childValue.id}
-                                value={childValue as CollectionValue}
-                                stateId={stateId}
-                                settings={settings}/>))}
+                value.deletedItems.map(
+                    (childValue) =>
+                        <ErrorTraceVariable
+                            key={childValue.id}
+                            value={childValue as CollectionValue}
+                            stateId={stateId}
+                            settings={settings}/>)}
         </VscodeTreeItem>
     );
 });
@@ -102,8 +96,9 @@ function hasVariableChildrenToDisplay(value: CollectionValue) {
 const changeHints = {
     A: 'This item has been added since the previous state',
     M: 'This item has been modified since the previous state',
-    D: 'This item has been deleted since the previous state'
-};
+    D: 'This item has been deleted since the previous state',
+    N: 'This item is unchanged since the previous state'
+} as const;
 
 function checkFilter(str: string, filterItems: string[]): boolean {
     if (filterItems.length === 0) {
