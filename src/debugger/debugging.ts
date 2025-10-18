@@ -2,9 +2,10 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { listFiles } from '../common';
 import {
-    doCheckModel, getSpecFiles, stopModelChecking
+    doCheckModel, getSpecFiles, getValidationSpecPath, stopModelChecking
 } from '../commands/checkModel';
 import { SpecFiles } from '../model/check';
+import { validateModelSpecPair } from '../model/specValidation';
 
 export const TLAPLUS_DEBUG_LAUNCH_SMOKE = 'tlaplus.debugger.smoke';
 export const TLAPLUS_DEBUG_LAUNCH_CHECKNDEBUG = 'tlaplus.debugger.run';
@@ -61,6 +62,18 @@ export async function checkAndDebugSpec(
     if (!specFiles) {
         return;
     }
+    const validationResult = await validateModelSpecPair(
+        specFiles,
+        getValidationSpecPath(targetResource),
+        { retainSnapshot: true }
+    );
+    if (!validationResult.success) {
+        const message = validationResult.message
+            ?? 'Selected model does not reference the active specification.';
+        vscode.window.showWarningMessage(message);
+        await validationResult.snapshot?.dispose();
+        return;
+    }
     // Randomly select a port on which we request the debugger to listen
     const initPort = Math.floor(Math.random() * (DEBUGGER_MAX_PORT - DEBUGGER_MIN_PORT)) + DEBUGGER_MIN_PORT; //NOSONAR
     // This will be called as soon as TLC starts listening on a port or fails to start
@@ -76,7 +89,16 @@ export async function checkAndDebugSpec(
         });
     };
     // Don't await doCheckModel because it only returns after TLC terminates.
-    doCheckModel(specFiles, false, context, diagnostic, true, ['-debugger', `port=${initPort}`], portOpenCallback);
+    doCheckModel(
+        specFiles,
+        false,
+        context,
+        diagnostic,
+        true,
+        ['-debugger', `port=${initPort}`],
+        portOpenCallback,
+        validationResult.snapshot
+    );
 }
 
 export async function checkAndDebugSpecCustom(
@@ -109,6 +131,18 @@ export async function checkAndDebugSpecCustom(
         targetResource.fsPath,
         path.join(path.dirname(targetResource.fsPath), cfgFileName)
     );
+    const validationResult = await validateModelSpecPair(
+        specFiles,
+        targetResource.fsPath,
+        { retainSnapshot: true }
+    );
+    if (!validationResult.success) {
+        const message = validationResult.message
+            ?? 'Selected model does not reference the active specification.';
+        vscode.window.showWarningMessage(message);
+        await validationResult.snapshot?.dispose();
+        return;
+    }
     // Randomly select a port on which we request the debugger to listen
     const initPort = Math.floor(Math.random() * (DEBUGGER_MAX_PORT - DEBUGGER_MIN_PORT)) + DEBUGGER_MIN_PORT; //NOSONAR
     // This will be called as soon as TLC starts listening on a port or fails to start
@@ -124,7 +158,16 @@ export async function checkAndDebugSpecCustom(
         });
     };
     // Don't await doCheckModel because it only returns after TLC terminates.
-    doCheckModel(specFiles, false, context, diagnostic, true, ['-debugger', `port=${initPort}`], portOpenCallback);
+    doCheckModel(
+        specFiles,
+        false,
+        context,
+        diagnostic,
+        true,
+        ['-debugger', `port=${initPort}`],
+        portOpenCallback,
+        validationResult.snapshot
+    );
 }
 
 export async function smokeTestSpec(
@@ -149,6 +192,18 @@ export async function smokeTestSpec(
         // Launch the debugger iff there is a Smoke model. specFiles
         // might be an ordinary model, which we don't want to run in TLC
         // automatically.
+        return;
+    }
+    const validationResult = await validateModelSpecPair(
+        specFiles,
+        getValidationSpecPath(targetResource),
+        { retainSnapshot: true }
+    );
+    if (!validationResult.success) {
+        const message = validationResult.message
+            ?? 'Selected model does not reference the active specification.';
+        vscode.window.showWarningMessage(message);
+        await validationResult.snapshot?.dispose();
         return;
     }
     // Randomly select a port on which we request the debugger to listen
@@ -177,6 +232,14 @@ export async function smokeTestSpec(
     stopModelChecking(terminateLastRun, true);
 
     // Don't await doCheckModel because it only returns after TLC terminates.
-    doCheckModel(specFiles, false, context, diagnostic, false,
-        ['-simulate', '-noTE', '-debugger', `nosuspend,port=${initPort}`], portOpenCallback);
+    doCheckModel(
+        specFiles,
+        false,
+        context,
+        diagnostic,
+        false,
+        ['-simulate', '-noTE', '-debugger', `nosuspend,port=${initPort}`],
+        portOpenCallback,
+        validationResult.snapshot
+    );
 }
