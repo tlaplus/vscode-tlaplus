@@ -172,9 +172,8 @@ async function runTLC(
             }
         };
 
-        // Add event listeners to capture stdout and stderr
-        procInfo.process.stdout?.on('data', stdoutHandler);
-        procInfo.process.stderr?.on('data', stdoutHandler);
+        // Add event listener to capture merged output
+        procInfo.mergedOutput.on('data', stdoutHandler);
 
         // Listen for process completion
         procInfo.process.on('close', (code) => {
