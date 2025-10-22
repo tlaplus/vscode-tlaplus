@@ -122,6 +122,8 @@ export async function validateModelSpecPair(
             }
         }
 
+        pruneUnresolvedExpectedModuleNames(expectedSpecModuleNames, dependencyByName);
+
         if (activeSpecPath) {
             const normalizedActiveSpec = normalizeFsPath(activeSpecPath);
             expectedSpecPaths.delete(normalizedActiveSpec);
@@ -265,6 +267,17 @@ function collectResolvedModules(sanyData: SanyData, snapshot: ModelSnapshot): Re
         });
     }
     return descriptors;
+}
+
+function pruneUnresolvedExpectedModuleNames(
+    expectedNames: Set<string>,
+    resolvedByName: Map<string, ResolvedModuleDescriptor>
+): void {
+    for (const name of Array.from(expectedNames)) {
+        if (!resolvedByName.has(name)) {
+            expectedNames.delete(name);
+        }
+    }
 }
 
 function findSanyError(sanyData: SanyData, snapshot: ModelSnapshot): string | undefined {

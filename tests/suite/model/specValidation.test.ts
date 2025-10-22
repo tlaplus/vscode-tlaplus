@@ -126,6 +126,31 @@ suite('Spec-Model Validation', () => {
         assert.strictEqual(result.success, true);
     });
 
+    test('accepts SPECIFICATION formula names that differ from module name', async () => {
+        await createWorkspace();
+        const specPath = path.join(workDir, 'MRE.tla');
+        await fs.writeFile(specPath, [
+            '---- MODULE MRE ----',
+            'EXTENDS Naturals',
+            'VARIABLE x',
+            'Init == x = 0',
+            'Next == x\' = x + 1',
+            'Spec == Init /\\ [][Next]_x',
+            '===='
+        ].join('\n'));
+        const modelPath = await writeModel('MCSpec', 'MRE');
+        const specFiles = new SpecFiles(modelPath, path.join(workDir, 'MCSpec.cfg'));
+        await writeConfig(specFiles.cfgFilePath, 'Spec');
+
+        const runners = createSanyRunners(specPath, modelPath);
+        const result = await validateModelSpecPair(specFiles, specPath, {
+            dependencyRunner: runners.dependency,
+            validationRunner: runners.validation
+        });
+
+        assert.strictEqual(result.success, true);
+    });
+
     test('fails for unsaved model override when active spec provided', async () => {
         await createWorkspace();
         const specPath = await writeSpec('Spec');
@@ -191,7 +216,7 @@ suite('Spec-Model Validation', () => {
         });
 
         assert.strictEqual(result.success, false);
-        assert.ok(result.message && result.message.includes('Spec'));
+        assert.ok(result.message && result.message.includes('any specification module'));
     });
 
     test('passes without explicit spec path when config module resolved', async () => {
