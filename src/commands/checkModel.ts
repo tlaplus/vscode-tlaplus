@@ -100,9 +100,10 @@ export async function runLastCheckAgain(
     if (!canRunTlc(extContext)) {
         return;
     }
+    const activeSpecPath = getValidationSpecPath(lastCheckFilesAsUri());
     const validationResult = await validateModelSpecPair(
         lastCheckFiles,
-        undefined,
+        activeSpecPath,
         { retainSnapshot: true }
     );
     if (!validationResult.success) {
@@ -113,6 +114,10 @@ export async function runLastCheckAgain(
         return;
     }
     doCheckModel(lastCheckFiles, true, extContext, diagnostic, false, [], undefined, validationResult.snapshot);
+}
+
+function lastCheckFilesAsUri(): vscode.Uri {
+    return vscode.Uri.file(lastCheckFiles!.tlaFilePath);
 }
 
 export async function checkModelCustom(

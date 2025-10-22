@@ -62,6 +62,34 @@ suite('Spec-Model Validation', () => {
         assert.ok(result?.message?.includes('does not EXTEND'));
     });
 
+    test('passes when active spec is the model module itself', async () => {
+        await createWorkspace();
+        const modelPath = path.join(workDir, 'MCSpec.tla');
+        await fs.writeFile(modelPath, [
+            '---- MODULE MCSpec ----',
+            'ASSUME TRUE',
+            '===='
+        ].join('\n'));
+        const specFiles = new SpecFiles(modelPath, path.join(workDir, 'MCSpec.cfg'));
+        await fs.writeFile(specFiles.cfgFilePath, '');
+
+        const runner = async (params: SanyRunnerParams) => {
+            const data = new SanyData();
+            const modelName = await readModuleName(params.snapshotModulePath);
+            if (modelName) {
+                data.modulePaths.set(modelName, params.snapshotModulePath);
+            }
+            return data;
+        };
+
+        const result = await validateModelSpecPair(specFiles, modelPath, {
+            dependencyRunner: runner,
+            validationRunner: runner
+        });
+
+        assert.strictEqual(result.success, true);
+    });
+
     test('fails when model resolves different spec path', async () => {
         await createWorkspace();
         const specPath = await writeSpec('Spec');

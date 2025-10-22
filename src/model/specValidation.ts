@@ -126,7 +126,8 @@ export async function validateModelSpecPair(
 
         if (activeSpecPath) {
             const normalizedActiveSpec = normalizeFsPath(activeSpecPath);
-            expectedSpecPaths.delete(normalizedActiveSpec);
+            expectedSpecPaths.set(normalizedActiveSpec, activeSpecPath);
+
             const snapshotSpecPath = snapshot.getSnapshotPath(activeSpecPath);
             if (snapshotSpecPath) {
                 expectedSpecPaths.set(normalizeFsPath(snapshotSpecPath), activeSpecPath);
