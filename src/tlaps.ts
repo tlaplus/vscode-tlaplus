@@ -63,12 +63,12 @@ export class TlapsClient {
     private configEnabled = false;
     private configCommand = [] as string[];
     private configWholeLine = true;
-    private readonly proofStateDecorationTypes = new Map<string, vscode.TextEditorDecorationType>();
+    private proofStateDecorationTypes = new Map<string, vscode.TextEditorDecorationType>();
 
     constructor(
-        private readonly context: vscode.ExtensionContext,
-        private readonly currentProofStepDetailsListener: ((details: TlapsProofStepDetails) => void),
-        private readonly configChangedListener: ((configChanged: TlapsConfigChanged) => void)
+        private context: vscode.ExtensionContext,
+        private currentProofStepDetailsListener: ((details: TlapsProofStepDetails) => void),
+        private configChangedListener: ((configChanged: TlapsConfigChanged) => void)
     ) {
         const delayedCurrentProofStepSet = new DelayedFn(500);
         context.subscriptions.push(vscode.window.onDidChangeTextEditorSelection(event => {
@@ -189,7 +189,7 @@ export class TlapsClient {
         this.configCommand = configCommand ? configCommand : [];
         this.configWholeLine = !!configWholeLine;
         if (configChanged) {
-            this.configChangedListener({ enabled: this.configEnabled });
+            this.configChangedListener({enabled: this.configEnabled});
         }
         return configChanged;
     }
