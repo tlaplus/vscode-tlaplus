@@ -79,13 +79,12 @@ export class JavaVersion {
     ) {}
 }
 
-function makeTlaLibraryJavaOpt(extraPaths: string[] = []): string {
-    const configuredPaths = paths.moduleSearchPaths
-        .getOtherPaths(paths.TLC)
-        .filter(p => !p.startsWith('jar:')); // TODO: Support archive paths as well.
-    const combined = [...extraPaths, ...configuredPaths];
-    const unique = Array.from(new Set(combined.filter((p) => p && p.length > 0)));
-    return '-DTLA-Library=' + unique.join(path.delimiter);
+function makeTlaLibraryJavaOpt(): string {
+    const libPaths = paths.moduleSearchPaths.
+        getOtherPaths(paths.TLC).
+        filter(p => !p.startsWith('jar:')). // TODO: Support archive paths as well.
+        join(path.delimiter);
+    return '-DTLA-Library=' + libPaths;
 }
 
 export async function runPlusCal(tlaFilePath: string): Promise<ToolProcessInfo> {
@@ -98,21 +97,12 @@ export async function runPlusCal(tlaFilePath: string): Promise<ToolProcessInfo> 
     );
 }
 
-export interface SanyRunOptions {
-    extraLibraryPaths?: string[];
-    extraJavaOpts?: string[];
-}
-
-export async function runSany(tlaFilePath: string, options: SanyRunOptions = {}): Promise<ToolProcessInfo> {
-    const javaOpts = [ makeTlaLibraryJavaOpt(options.extraLibraryPaths ?? []) ];
-    if (options.extraJavaOpts) {
-        javaOpts.push(...options.extraJavaOpts);
-    }
+export async function runSany(tlaFilePath: string): Promise<ToolProcessInfo> {
     return runTool(
         TlaTool.SANY,
         tlaFilePath,
         [ path.basename(tlaFilePath) ],
-        javaOpts
+        [ makeTlaLibraryJavaOpt() ]
     );
 }
 
@@ -191,8 +181,7 @@ export async function runTlc(
     cfgFilePath: string,
     showOptionsPrompt: boolean,
     extraOpts: string[] = [],
-    extraJavaOpts: string[] = [],
-    extraLibraryPaths: string[] = []
+    extraJavaOpts: string[] = []
 ): Promise<ToolProcessInfo | undefined> {
     const promptedOptions = await getTlcOptions(showOptionsPrompt);
     if (promptedOptions === undefined) {
@@ -200,7 +189,7 @@ export async function runTlc(
         return undefined;
     }
     const customOptions = extraOpts.concat(promptedOptions);
-    const javaOptions = [ makeTlaLibraryJavaOpt(extraLibraryPaths) ];
+    const javaOptions = [ makeTlaLibraryJavaOpt() ];
     const shareStats = vscode.workspace.getConfiguration().get<ShareOption>(CFG_TLC_STATISTICS_TYPE);
     if (shareStats !== ShareOption.DoNotShare) {
         javaOptions.push('-Dtlc2.TLC.ide=vscode');

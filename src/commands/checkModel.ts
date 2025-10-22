@@ -6,7 +6,6 @@ import { Utils } from 'vscode-uri';
 import { LANG_TLAPLUS, LANG_TLAPLUS_CFG, exists, listFiles, replaceExtension } from '../common';
 import { applyDCollection } from '../diagnostic';
 import { ModelCheckResult, ModelCheckResultSource, SpecFiles } from '../model/check';
-import { validateModelSpecPair, ValidationSnapshot } from '../model/specValidation';
 import { ToolOutputChannel } from '../outputChannels';
 import { saveStreamToFile } from '../outputSaver';
 import {
@@ -64,29 +63,7 @@ export async function checkModel(
     if (!specFiles) {
         return;
     }
-    const validationPath = getValidationSpecPath(uri);
-    const validationResult = await validateModelSpecPair(
-        specFiles,
-        validationPath,
-        { retainSnapshot: true }
-    );
-    if (!validationResult.success) {
-        const message = validationResult.message
-            ?? 'Selected model does not reference the active specification.';
-        vscode.window.showWarningMessage(message);
-        await validationResult.snapshot?.dispose();
-        return;
-    }
-    doCheckModel(
-        specFiles,
-        true,
-        extContext,
-        diagnostic,
-        true,
-        [],
-        undefined,
-        validationResult.snapshot
-    );
+    doCheckModel(specFiles, true, extContext, diagnostic, true);
 }
 
 export async function runLastCheckAgain(
@@ -100,19 +77,7 @@ export async function runLastCheckAgain(
     if (!canRunTlc(extContext)) {
         return;
     }
-    const validationResult = await validateModelSpecPair(
-        lastCheckFiles,
-        undefined,
-        { retainSnapshot: true }
-    );
-    if (!validationResult.success) {
-        const message = validationResult.message
-            ?? 'Selected model does not reference the active specification.';
-        vscode.window.showWarningMessage(message);
-        await validationResult.snapshot?.dispose();
-        return;
-    }
-    doCheckModel(lastCheckFiles, true, extContext, diagnostic, false, [], undefined, validationResult.snapshot);
+    doCheckModel(lastCheckFiles, true, extContext, diagnostic, false);
 }
 
 export async function checkModelCustom(
@@ -144,19 +109,7 @@ export async function checkModelCustom(
         doc.uri.fsPath,
         path.join(path.dirname(doc.uri.fsPath), cfgFileName)
     );
-    const validationResult = await validateModelSpecPair(
-        specFiles,
-        doc.uri.fsPath,
-        { retainSnapshot: true }
-    );
-    if (!validationResult.success) {
-        const message = validationResult.message
-            ?? 'Selected model does not reference the active specification.';
-        vscode.window.showWarningMessage(message);
-        await validationResult.snapshot?.dispose();
-        return;
-    }
-    doCheckModel(specFiles, true, extContext, diagnostic, true, [], undefined, validationResult.snapshot);
+    doCheckModel(specFiles, true, extContext, diagnostic, true);
 }
 
 /**
@@ -199,21 +152,6 @@ function getActiveEditorFileUri(extContext: vscode.ExtensionContext): vscode.Uri
     return doc.uri;
 }
 
-export function getValidationSpecPath(fileUri: vscode.Uri): string | undefined {
-    if (fileUri.fsPath.endsWith('.tla')) {
-        return fileUri.fsPath;
-    }
-    const editor = vscode.window.activeTextEditor;
-    if (editor && editor.document.languageId === LANG_TLAPLUS) {
-        return editor.document.uri.fsPath;
-    }
-    if (fileUri.fsPath.endsWith('.cfg')) {
-        const companion = replaceExtension(fileUri.fsPath, 'tla');
-        return companion;
-    }
-    return undefined;
-}
-
 export function getEditorIfCanRunTlc(extContext: vscode.ExtensionContext): vscode.TextEditor | undefined {
     if (!canRunTlc(extContext)) {
         return undefined;
@@ -244,35 +182,16 @@ export async function doCheckModel(
     diagnostic: vscode.DiagnosticCollection,
     showOptionsPrompt: boolean,
     extraOpts: string[] = [],
-    debuggerPortCallback?: (port?: number) => void,
-    validationSnapshot?: ValidationSnapshot
+    debuggerPortCallback?: (port?: number) => void
 ): Promise<ModelCheckResult | undefined> {
-    const runTlaPath = validationSnapshot?.modelPath ?? specFiles.tlaFilePath;
-    const runCfgPath = validationSnapshot?.configPath ?? path.basename(specFiles.cfgFilePath);
-    const libraryPaths = validationSnapshot?.libraryPaths ?? [];
-    let snapshotDisposed = false;
-    const disposeSnapshot = async () => {
-        if (snapshotDisposed || !validationSnapshot) {
-            return;
-        }
-        snapshotDisposed = true;
-        await validationSnapshot.dispose();
-    };
     try {
         lastCheckFiles = specFiles;
         vscode.commands.executeCommand('setContext', CTX_TLC_CAN_RUN_AGAIN, true);
         updateStatusBarItem(true, specFiles);
         const procInfo = await runTlc(
-            runTlaPath,
-            runCfgPath,
-            showOptionsPrompt,
-            extraOpts,
-            [],
-            libraryPaths
-        );
+            specFiles.tlaFilePath, path.basename(specFiles.cfgFilePath), showOptionsPrompt, extraOpts);
         if (procInfo === undefined) {
             // Command cancelled by user
-            await disposeSnapshot();
             return undefined;
         }
         outChannel.bindTo(procInfo);
@@ -280,7 +199,6 @@ export async function doCheckModel(
         checkProcess.on('close', () => {
             checkProcess = undefined;
             updateStatusBarItem(false, lastCheckFiles);
-            void disposeSnapshot();
         });
         if (showCheckResultView) {
             attachFileSaver(specFiles.tlaFilePath, checkProcess);
@@ -316,7 +234,6 @@ export async function doCheckModel(
         applyDCollection(dCol, diagnostic);
         return resultHolder.checkResult;
     } catch (err) {
-        await disposeSnapshot();
         statusBarItem.hide();
         vscode.window.showErrorMessage(`Error checking model: ${err}`);
     }
