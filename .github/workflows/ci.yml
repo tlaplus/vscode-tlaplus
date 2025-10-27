@@ -36,4 +36,4 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: vscode-tlaplus-ci.vsix
-        path: ${{ github.workspace }}/vscode-tlaplus-*.vsix
+        path: ${{ github.workspace }}/vscode-ide-*.vsix
