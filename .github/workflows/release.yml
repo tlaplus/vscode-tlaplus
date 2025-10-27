@@ -68,7 +68,7 @@ jobs:
       continue-on-error: true
       uses: actions/upload-artifact@v4
       with:
-          name: vscode-ide-1.7.0.vsix
+          name: vscode-tlaplus-release-1.7.0.vsix
           path: |
             *.vsix
     - name: Publish to Open VSX

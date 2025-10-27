@@ -34,9 +34,12 @@ jobs:
       run: xvfb-run --auto-servernum npm test --silent
     - name: Test TLA+ Grammar
       run: npm run test:tlaplus-grammar
+    - name: Rename artifact
+      if: matrix.os == 'ubuntu-latest'
+      run: mv vscode-ide-*.vsix vscode-tlaplus-$(git log -1 --format=%cd --date="format:%Y.%-m.%-d%H%M").vsix
     - name: Upload artifact
       if: matrix.os == 'ubuntu-latest'
       uses: actions/upload-artifact@v4
       with:
         name: vscode-tlaplus-ci.vsix
-        path: ${{ github.workspace }}/vscode-ide-*.vsix
+        path: ${{ github.workspace }}/vscode-tlaplus-*.vsix
