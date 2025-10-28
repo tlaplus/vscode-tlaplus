@@ -49,7 +49,7 @@ export async function transpilePlusCal(fileUri: vscode.Uri, token?: vscode.Cance
     const procInfo = await runPlusCal(fileUri.fsPath);
     plusCalOutChannel.bindTo(procInfo);
     const cancellationDisposable = registerCancellation(procInfo, token);
-    const stdoutParser = new TranspilerStdoutParser(procInfo.process.stdout, fileUri.fsPath);
+    const stdoutParser = new TranspilerStdoutParser(procInfo.mergedOutput, fileUri.fsPath);
     try {
         const result = await stdoutParser.readAll();
         throwIfCancelled(token);
@@ -67,7 +67,7 @@ export async function parseSpec(fileUri: vscode.Uri, token?: vscode.Cancellation
     const procInfo = await runSany(fileUri.fsPath);
     sanyOutChannel.bindTo(procInfo);
     const cancellationDisposable = registerCancellation(procInfo, token);
-    const stdoutParser = new SanyStdoutParser(procInfo.process.stdout);
+    const stdoutParser = new SanyStdoutParser(procInfo.mergedOutput);
     try {
         const result = await stdoutParser.readAll();
         throwIfCancelled(token);

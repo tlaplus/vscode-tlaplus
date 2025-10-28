@@ -2,6 +2,7 @@ import * as cp from 'child_process';
 import { ChildProcess, spawn } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
+import { PassThrough } from 'stream';
 import * as paths from './paths';
 import * as vscode from 'vscode';
 import { CFG_TLC_STATISTICS_TYPE, ShareOption } from './commands/tlcStatisticsCfg';
@@ -55,10 +56,25 @@ export enum TlaTool {
 }
 
 export class ToolProcessInfo {
+    readonly mergedOutput: PassThrough;
+
     constructor(
         readonly commandLine: string,
         readonly process: ChildProcess
-    ) {}
+    ) {
+        // Merge stdout and stderr into a single stream
+        this.mergedOutput = new PassThrough();
+        if (process.stdout && typeof process.stdout.pipe === 'function') {
+            process.stdout.pipe(this.mergedOutput, { end: false });
+        }
+        if (process.stderr && typeof process.stderr.pipe === 'function') {
+            process.stderr.pipe(this.mergedOutput, { end: false });
+        }
+        // Close merged stream when process ends
+        process.on('exit', () => {
+            this.mergedOutput.end();
+        });
+    }
 }
 
 /**
