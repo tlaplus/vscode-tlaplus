@@ -42,7 +42,7 @@ export class ToolOutputChannel {
         channel.clear();
         channel.appendLine(procInfo.commandLine);
         channel.appendLine('');
-        this.outSender = new OutputToOutChannelSender(procInfo.mergedOutput, channel, this.lineMapper);
+        this.outSender = new OutputToOutChannelSender(procInfo.process.stdout, channel, this.lineMapper);
     }
 
     revealWindow(): void {
