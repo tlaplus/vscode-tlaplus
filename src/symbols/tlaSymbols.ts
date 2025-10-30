@@ -251,17 +251,11 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
             // Run XML exporter
             const processInfo: ToolProcessInfo = await runXMLExporter(uri, false, includeExtendedModules);
 
-            // Create promises to collect stdout and stderr
+            // Collect output from merged stream
             let stdoutData = '';
-            let stderrData = '';
 
-            processInfo.process.stdout?.on('data', (data) => {
+            processInfo.mergedOutput.on('data', (data) => {
                 stdoutData += data.toString();
-            });
-
-            processInfo.process.stderr?.on('data', (data) => {
-                stderrData += data.toString();
-                sanyOutChannel.appendLine(data.toString());
             });
 
             // Wait for process to complete
@@ -273,7 +267,6 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
 
             if (exitCode !== 0) {
                 sanyOutChannel.appendLine(`XML exporter failed with exit code ${exitCode}`);
-                sanyOutChannel.appendLine(stderrData);
                 return undefined;
             }
 
