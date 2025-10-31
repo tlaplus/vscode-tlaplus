@@ -56,6 +56,72 @@ export class TlaSymbolInformation extends vscode.SymbolInformation {
     }
 }
 
+
+/**
+ * Represents a TLA+ symbol optimized for grouped serialization with compressed range format.
+ * URI and container name are factored out at the group level.
+ */
+export interface GroupedSymbol {
+    name: string;
+    kind: vscode.SymbolKind;
+    range: [number, number, number, number]; // [startLine, startChar, endLine, endChar]
+    preComment?: string;
+    level?: number;
+}
+
+/**
+ * Represents a group of symbols that share the same container name and URI
+ */
+export interface SymbolGroup {
+    containerName: string;
+    uri: vscode.Uri;
+    symbols: GroupedSymbol[];
+}
+
+/**
+ * Groups TlaSymbolInformation objects by their containerName and container's location.uri
+ * Removes the URI from individual symbols since it's factored out at the group level.
+ * @param symbols Array of TlaSymbolInformation objects to group
+ * @returns Array of SymbolGroup objects, each representing a unique container-URI combination
+ */
+export function groupSymbolsByContainer(symbols: TlaSymbolInformation[]): SymbolGroup[] {
+    // Use a Map with composite key to group symbols
+    const groupMap = new Map<string, SymbolGroup>();
+    
+    for (const symbol of symbols) {
+        // Create a composite key from containerName and URI
+        const key = `${symbol.containerName}|${symbol.location.uri.toString()}`;
+        
+        // Create grouped symbol (URI and container factored out at group level)
+        const groupedSymbol: GroupedSymbol = {
+            name: symbol.name,
+            kind: symbol.kind,
+            range: [
+                symbol.location.range.start.line,
+                symbol.location.range.start.character,
+                symbol.location.range.end.line,
+                symbol.location.range.end.character
+            ],
+            preComment: symbol.preComment,
+            level: symbol.level
+        };
+        
+        if (groupMap.has(key)) {
+            // Add symbol to existing group
+            groupMap.get(key)!.symbols.push(groupedSymbol);
+        } else {
+            // Create new group
+            groupMap.set(key, {
+                containerName: symbol.containerName,
+                uri: symbol.location.uri,
+                symbols: [groupedSymbol]
+            });
+        }
+    }
+    
+    return Array.from(groupMap.values());
+}
+
 enum SpecialSymbol {
     PlusCalEnd
 }
@@ -160,6 +226,22 @@ export class TLADocumentSymbolProvider implements vscode.DocumentSymbolProvider 
     ): Promise<vscode.SymbolInformation[] | vscode.DocumentSymbol[]> {
         return await this.tlaDocSymbolsProvider.provideDocumentSymbols(document, token, includeExtendedModules);
     }
+
+    /**
+     * Provides grouped TLA+ symbols from the given document.
+     * Groups symbols by their containerName and container's location.uri.
+     * @param document The document to extract symbols from
+     * @param token Cancellation token
+     * @param includeExtendedModules Whether to include symbols from extended modules
+     * @returns Promise that resolves to an array of SymbolGroup objects
+     */
+    async provideGroupedDocumentSymbols(
+        document: vscode.TextDocument,
+        token: vscode.CancellationToken,
+        includeExtendedModules?: boolean
+    ): Promise<SymbolGroup[]> {
+        return await this.tlaDocSymbolsProvider.provideGroupedDocumentSymbols(document, token, includeExtendedModules);
+    }
 }
 
 const sanyOutChannel = new ToolOutputChannel('SANY XML Exporter');
@@ -239,6 +321,30 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
             symbols = symbols.concat(context.plusCal.symbols);
         }
         return symbols;
+    }
+
+    /**
+     * Provides grouped TLA+ symbols from the given document.
+     * Groups symbols by their containerName and container's location.uri.
+     * @param document The document to extract symbols from
+     * @param token Cancellation token
+     * @param includeExtendedModules Whether to include symbols from extended modules
+     * @returns Promise that resolves to an array of SymbolGroup objects
+     */
+    async provideGroupedDocumentSymbols(
+        document: vscode.TextDocument,
+        token: vscode.CancellationToken,
+        includeExtendedModules?: boolean
+    ): Promise<SymbolGroup[]> {
+        // Get the regular symbols first
+        const symbols = await this.provideDocumentSymbols(document, token, includeExtendedModules);
+        
+        // Filter to only TlaSymbolInformation objects and group them
+        const tlaSymbols = symbols.filter((symbol): symbol is TlaSymbolInformation => 
+            symbol instanceof TlaSymbolInformation
+        );
+        
+        return groupSymbolsByContainer(tlaSymbols);
     }
 
     /**

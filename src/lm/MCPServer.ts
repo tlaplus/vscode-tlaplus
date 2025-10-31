@@ -445,7 +445,7 @@ export class MCPServer implements vscode.Disposable {
                     const document = await vscode.workspace.openTextDocument(fileUri);
                     const tdsp = new TLADocumentSymbolProvider(new TlaDocumentInfos());
                     const symbols =
-                        await tdsp.provideDocumentSymbols(
+                        await tdsp.provideGroupedDocumentSymbols(
                             document, new vscode.CancellationTokenSource().token, includeExtendedModules
                         );
 

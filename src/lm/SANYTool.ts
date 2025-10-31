@@ -84,7 +84,7 @@ export class SymbolProviderTool implements vscode.LanguageModelTool<FileParamete
         try {
             const document = await vscode.workspace.openTextDocument(fileUri);
             const tdsp = new TLADocumentSymbolProvider(new TlaDocumentInfos());
-            const symbols = await tdsp.provideDocumentSymbols(document, token);
+            const symbols = await tdsp.provideGroupedDocumentSymbols(document, token);
 
             const newLocal = JSON.stringify(symbols, null, 2);
             return new vscode.LanguageModelToolResult([
