@@ -22,6 +22,17 @@ suite('Check Result View Test Suite', () => {
         );
     }
 
+    async function waitForFocusState(expectedPanelFocused: boolean, timeoutMs = 2000): Promise<boolean> {
+        const startTime = Date.now();
+        while (Date.now() - startTime < timeoutMs) {
+            if (isCheckResultViewPanelFocused() === expectedPanelFocused) {
+                return true;
+            }
+            await new Promise(resolve => setTimeout(resolve, 50));
+        }
+        return false;
+    }
+
     suiteTeardown(async () => {
         await vscode.workspace.getConfiguration().update(
             configKey,
@@ -39,10 +50,8 @@ suite('Check Result View Test Suite', () => {
             extensionUri: vscode.Uri.file(__dirname)
         } as vscode.ExtensionContext);
 
-        // Wait a bit to ensure any potential focus changes would have happened
-        await new Promise(resolve => setTimeout(resolve, 300));
-
-        // Verify the editor is still focused
+        const success = await waitForFocusState(false);
+        assert.ok(success, 'Timed out waiting for editor to remain focused');
         assert.ok(!isCheckResultViewPanelFocused(), 'Expected editor to remain focused');
     });
 
@@ -53,9 +62,8 @@ suite('Check Result View Test Suite', () => {
             extensionUri: vscode.Uri.file(__dirname)
         } as vscode.ExtensionContext);
 
-        // Wait a bit to ensure any potential focus changes would have happened
-        await new Promise(resolve => setTimeout(resolve, 300));
-
+        const success = await waitForFocusState(true);
+        assert.ok(success, 'Timed out waiting for panel to gain focus');
         assert.ok(isCheckResultViewPanelFocused(),
             'Expected editor to lose focus when preserveEditorFocus is disabled');
     });
