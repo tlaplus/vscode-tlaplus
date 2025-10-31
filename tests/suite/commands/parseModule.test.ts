@@ -74,10 +74,7 @@ Spec == Init /\\ Next
         // Verify that mergedOutput captured output
         assert.ok(capturedOutput.length > 0, 'mergedOutput should capture process output');
 
-        // The output should contain either:
-        // 1. SANY error messages about undefined variables (proving stderr is merged)
-        // 2. Java errors from stderr (if classpath issues exist in test environment)
-        // Either way proves that stderr is being merged with stdout
+        // The output should contain SANY error messages (proving stderr is merged with stdout)
         const hasErrorMessage = capturedOutput.includes('line 4, col 9 to line 4, col 9 of module ParseError') &&
                                 capturedOutput.includes('Unknown operator: `x') &&
                                 capturedOutput.includes('Linting of module ParseError') &&
@@ -85,14 +82,12 @@ Spec == Init /\\ Next
 
         assert.ok(hasErrorMessage, `mergedOutput should contain error messages. Got: ${capturedOutput.substring(0, 300)}`);
 
-        // If SANY ran successfully (not a Java classpath error), verify the actual error is captured
-        if (capturedOutput.includes('SANY') && !capturedOutput.includes('ClassNotFoundException')) {
-            const hasUndefinedVarError = capturedOutput.toLowerCase().includes('undefinedvar') ||
-                                        capturedOutput.toLowerCase().includes('unknown') ||
-                                        capturedOutput.toLowerCase().includes('identifier');
-            assert.ok(hasUndefinedVarError,
-                `Should capture SANY semantic errors about undefinedVar. Output: ${capturedOutput.substring(0, 500)}`);
-        }
+        // Verify the semantic errors are captured
+        const hasUndefinedVarError = capturedOutput.toLowerCase().includes('undefinedvar') ||
+                                    capturedOutput.toLowerCase().includes('unknown') ||
+                                    capturedOutput.toLowerCase().includes('identifier');
+        assert.ok(hasUndefinedVarError,
+            `Should capture SANY semantic errors about undefinedVar. Output: ${capturedOutput.substring(0, 500)}`);
     });
 
 });
