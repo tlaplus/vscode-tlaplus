@@ -61,9 +61,14 @@ Spec == Init /\\ Next
 
         // Wait for process to finish
         await new Promise((resolve) => {
-            procInfo.process.on('exit', () => {
-                setTimeout(resolve, 100); // Give streams time to flush
-            });
+            if (procInfo.process.exitCode !== null) {
+                // Process already exited
+                setTimeout(resolve, 100);
+            } else {
+                procInfo.process.on('exit', () => {
+                    setTimeout(resolve, 100);
+                });
+            }
         });
 
         // Verify that mergedOutput captured output
