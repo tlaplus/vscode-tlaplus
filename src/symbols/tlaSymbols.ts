@@ -430,6 +430,8 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
                             const location = opKind.location;
                             const line = parseInt(location.line?.begin || '0') - 1;
                             const col = parseInt(location.column?.begin || '0') - 1;
+                            const endLine = parseInt(location.line?.end || '0') - 1;
+                            const endCol = parseInt(location.column?.end || '0') - 1;
                             const preComments = opKind['pre-comments'] || undefined;
                             const level = parseInt(opKind.level);
                             symbols.push(new TlaSymbolInformation(
@@ -438,7 +440,7 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
                                 opKind.location.filename,
                                 new vscode.Location(
                                     documentUri,
-                                    new vscode.Position(line, col)
+                                    new vscode.Range(line, col, endLine, endCol)
                                 ),
                                 preComments,
                                 level
@@ -453,13 +455,15 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
                             const location = theoremNode.location;
                             const line = parseInt(location.line?.begin || '0') - 1;
                             const col = parseInt(location.column?.begin || '0') - 1;
+                            const endLine = parseInt(location.line?.end || '0') - 1;
+                            const endCol = parseInt(location.column?.end || '0') - 1;
                             symbols.push(new TlaSymbolInformation(
                                 name,
                                 vscode.SymbolKind.Boolean,
                                 theoremNode.location.filename,
                                 new vscode.Location(
                                     documentUri,
-                                    new vscode.Position(line, col)
+                                    new vscode.Range(line, col, endLine, endCol)
                                 )
                             ));
                         }
@@ -472,13 +476,15 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
                             const location = assumeNode.location;
                             const line = parseInt(location.line?.begin || '0') - 1;
                             const col = parseInt(location.column?.begin || '0') - 1;
+                            const endLine = parseInt(location.line?.end || '0') - 1;
+                            const endCol = parseInt(location.column?.end || '0') - 1;
                             symbols.push(new TlaSymbolInformation(
                                 name,
                                 vscode.SymbolKind.Constructor,
                                 assumeNode.location.filename,
                                 new vscode.Location(
                                     documentUri,
-                                    new vscode.Position(line, col)
+                                    new vscode.Range(line, col, endLine, endCol)
                                 )
                             ));
                         }
@@ -491,6 +497,8 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
                             const location = declNode.location;
                             const line = parseInt(location.line?.begin || '0') - 1;
                             const col = parseInt(location.column?.begin || '0') - 1;
+                            const endLine = parseInt(location.line?.end || '0') - 1;
+                            const endCol = parseInt(location.column?.end || '0') - 1;
                             const preComments = declNode['pre-comments'] || undefined;
                             const level = parseInt(declNode.level); // Parse level from declaration
 
@@ -500,7 +508,7 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
                                 declNode.location.filename,
                                 new vscode.Location(
                                     documentUri,
-                                    new vscode.Position(line, col)
+                                    new vscode.Range(line, col, endLine, endCol)
                                 ),
                                 preComments,
                                 level
