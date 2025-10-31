@@ -59,15 +59,19 @@ Spec == Init /\\ Next
             capturedOutput += chunk.toString();
         });
 
-        // Wait for process to finish
+        // Wait for stream to end
         await new Promise((resolve) => {
+            procInfo.mergedOutput.once('end', resolve);
+            if (procInfo.mergedOutput.readableEnded) {
+                resolve(null);
+            }
+        });
+
+        // Wait for 'close' event (ensures all file handles released)
+        await new Promise((resolve) => {
+            procInfo.process.once('close', resolve);
             if (procInfo.process.exitCode !== null) {
-                // Process already exited
-                setTimeout(resolve, 100);
-            } else {
-                procInfo.process.on('exit', () => {
-                    setTimeout(resolve, 100);
-                });
+                resolve(null);
             }
         });
 
