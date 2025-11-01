@@ -71,9 +71,14 @@ export class ToolProcessInfo {
             process.stderr.pipe(this.mergedOutput, { end: false });
         }
         // Close merged stream when process ends
-        process.on('exit', () => {
+        // Attach listener before checking exit status to avoid race
+        process.once('exit', () => {
             this.mergedOutput.end();
         });
+        // If process already exited, end stream now (calling end() twice is safe)
+        if (process.exitCode !== null) {
+            this.mergedOutput.end();
+        }
     }
 }
 
