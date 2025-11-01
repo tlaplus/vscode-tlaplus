@@ -3,7 +3,7 @@ import {
     CMD_CHECK_MODEL_RUN, CMD_CHECK_MODEL_STOP, CMD_CHECK_MODEL_DISPLAY, CMD_SHOW_TLC_OUTPUT,
     CMD_CHECK_MODEL_CUSTOM_RUN, checkModel, displayModelChecking, stopModelChecking,
     showTlcOutput, checkModelCustom, CMD_CHECK_MODEL_RUN_AGAIN, runLastCheckAgain,
-    setCoverageProvider
+    setCoverageProvider, setTlcRunner, resetTlcRunner
 } from './commands/checkModel';
 import { CMD_RUN_REPL, launchRepl, REPLTerminalProfileProvider } from './commands/runRepl';
 import { TLAPLUS_DEBUG_LAUNCH_CHECKNDEBUG, TLAPLUS_DEBUG_LAUNCH_CUSTOMCHECKNDEBUG, TLAPLUS_DEBUG_LAUNCH_DEBUG,
@@ -56,7 +56,9 @@ let tlapsClient: TlapsClient | undefined;
 /**
  * Extension entry point.
  */
-export async function activate(context: vscode.ExtensionContext): Promise<void> {
+export async function activate(
+    context: vscode.ExtensionContext
+): Promise<{ setTlcRunner: typeof setTlcRunner; resetTlcRunner: typeof resetTlcRunner }> {
     moduleSearchPaths.setup(context);
 
     const jarProviderHandle = acquireJarFileSystemProvider();
@@ -279,9 +281,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     syncTlcStatisticsSetting()
         .catch((err) => console.error(err))
         .then(() => listenTlcStatConfigurationChanges(context.subscriptions));
+    return { setTlcRunner, resetTlcRunner };
 }
 
 export function deactivate() {
+    resetTlcRunner();
     if (tlapsClient) {
         tlapsClient.deactivate();
     }

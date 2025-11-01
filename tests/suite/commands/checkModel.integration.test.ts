@@ -4,27 +4,18 @@ import * as vscode from 'vscode';
 import { EventEmitter } from 'events';
 import { PassThrough } from 'stream';
 import { ChildProcess } from 'child_process';
-import type { SpecFiles } from '../../../src/model/check';
+import { promises as fs } from 'fs';
 
-const checkModel = require(path.resolve(
-    __dirname,
-    '../../../..',
-    'out/src/commands/checkModel'
-)) as typeof import('../../../src/commands/checkModel');
-
-const tla2tools = require(path.resolve(
-    __dirname,
-    '../../../..',
-    'out/src/tla2tools'
-)) as typeof import('../../../src/tla2tools');
-
-const { ToolProcessInfo } = tla2tools;
+type CheckModelModule = typeof import('../../../src/commands/checkModel');
+type TlcRunner = Parameters<CheckModelModule['setTlcRunner']>[0];
+type ToolProcessInfoLike = Exclude<Awaited<ReturnType<TlcRunner>>, undefined>;
 
 interface RunTlcCall {
     tlaFilePath: string;
     cfgFileName: string;
     showOptionsPrompt: boolean;
     extraOpts: string[];
+    extraJavaOpts: string[];
 }
 
 class MockChildProcess extends EventEmitter {
@@ -52,70 +43,86 @@ suite('Model check command integration', () => {
         '../../../../tests/fixtures/workspaces/model-suite'
     );
 
+    type ExtensionApi = {
+        setTlcRunner: (runner: TlcRunner) => void;
+        resetTlcRunner: () => void;
+    };
+
+    let extensionApi: ExtensionApi;
+    let previousCreateOutFiles: boolean | undefined;
+
     suiteSetup(async () => {
         const extension = vscode.extensions.getExtension(EXTENSION_ID);
         if (!extension) {
-            throw new Error('TLA+ extension must be available during tests');
+            throw new Error('TLA+ extension should be available during tests');
         }
-        await extension.activate();
+        const exports = await extension.activate() as ExtensionApi | undefined;
+        if (!exports || typeof exports.setTlcRunner !== 'function') {
+            throw new Error('Extension did not expose TLC runner override API');
+        }
+        extensionApi = exports;
     });
 
     setup(async () => {
         await closeAllEditors();
+        const config = vscode.workspace.getConfiguration();
+        previousCreateOutFiles = config.get<boolean>('tlaplus.tlc.modelChecker.createOutFiles') ?? undefined;
+        await config.update(
+            'tlaplus.tlc.modelChecker.createOutFiles',
+            false,
+            vscode.ConfigurationTarget.Global
+        );
+        extensionApi.resetTlcRunner();
     });
 
     teardown(async () => {
+        extensionApi.resetTlcRunner();
+        const config = vscode.workspace.getConfiguration();
+        await config.update(
+            'tlaplus.tlc.modelChecker.createOutFiles',
+            previousCreateOutFiles,
+            vscode.ConfigurationTarget.Global
+        );
+        previousCreateOutFiles = undefined;
+        await deleteIfExists(path.join(modelSuiteRoot, 'MCSpec.out'));
+        await deleteIfExists(path.join(modelSuiteRoot, 'MCAltSpec.out'));
         await closeAllEditors();
     });
 
     test('runs TLC when matching model files exist', async () => {
-    const specUri = vscode.Uri.file(path.join(modelSuiteRoot, 'Spec.tla'));
-    const doc = await vscode.workspace.openTextDocument(specUri);
-    await vscode.window.showTextDocument(doc);
-    const directResult = await checkModel.getSpecFiles(specUri, true);
-    console.log(`direct getSpecFiles: ${directResult?.cfgFilePath ?? 'undefined'}`);
-    const { calls, restore: restoreRunTlc } = stubRunTlc();
-    const { restore: restoreChannel } = stubOutChannel();
-    const invocation = trackDoCheckModel();
-    const specTracker = trackGetSpecFiles();
-    await checkModel.getSpecFiles(specUri, true);
-    console.log(`post-hook getSpecFiles result: ${specTracker.lastResult ? 'ok' : 'undefined'}`);
+        const specUri = vscode.Uri.file(path.join(modelSuiteRoot, 'Spec.tla'));
+        const doc = await vscode.workspace.openTextDocument(specUri);
+        await vscode.window.showTextDocument(doc);
+        const stub = stubRunTlc();
 
-    try {
-        await vscode.commands.executeCommand('tlaplus.model.check.run');
-        console.log(`doCheckModel count: ${invocation.count}`);
-        console.log(`getSpecFiles result: ${specTracker.lastResult ? 'ok' : 'undefined'}`);
-        assert.strictEqual(calls.length, 1, 'Expected TLC to run once');
-        assert.strictEqual(invocation.count, 1, 'doCheckModel should be invoked once');
-        assert.ok(specTracker.lastResult, 'getSpecFiles should succeed');
-        const [call] = calls;
-        assert.strictEqual(path.basename(call.tlaFilePath), 'MCSpec.tla');
-        assert.strictEqual(call.cfgFileName, 'MCSpec.cfg');
-        assert.strictEqual(call.showOptionsPrompt, true);
-    } finally {
-        restoreRunTlc();
-        restoreChannel();
-        invocation.restore();
-        specTracker.restore();
-    }
+        try {
+            await vscode.commands.executeCommand('tlaplus.model.check.run', specUri);
+            assert.strictEqual(stub.calls.length, 1, 'Expected TLC to run once');
+            const [call] = stub.calls;
+            assert.strictEqual(path.basename(call.tlaFilePath), 'MCSpec.tla');
+            assert.strictEqual(call.cfgFileName, 'MCSpec.cfg');
+            assert.strictEqual(call.showOptionsPrompt, true);
+        } finally {
+            stub.restore();
+        }
     });
 
     test('shows warning and aborts when cfg is missing', async () => {
         const orphanUri = vscode.Uri.file(path.join(modelSuiteRoot, 'NoCfgSpec.tla'));
         const doc = await vscode.workspace.openTextDocument(orphanUri);
         await vscode.window.showTextDocument(doc);
-        const { calls, restore: restoreRunTlc } = stubRunTlc();
+        const stub = stubRunTlc();
         const warningStub = stubWarningMessages();
 
         try {
             await vscode.commands.executeCommand('tlaplus.model.check.run', orphanUri);
-            assert.strictEqual(calls.length, 0, 'TLC should not run without a cfg file');
+            assert.strictEqual(stub.calls.length, 0, 'TLC should not run without a cfg file');
             assert.ok(
                 warningStub.messages.some(m => m.includes('Model file NoCfgSpec.cfg')),
                 'Missing cfg warning should be shown'
             );
         } finally {
-            restoreRunTlc();
+            stub.restore();
             warningStub.restore();
         }
     });
@@ -124,23 +131,22 @@ suite('Model check command integration', () => {
         const doc = await vscode.workspace.openTextDocument(path.join(modelSuiteRoot, 'Spec.tla'));
         await vscode.window.showTextDocument(doc);
         const quickPick = stubQuickPick('MCAltSpec.cfg');
-        const { calls, restore: restoreRunTlc } = stubRunTlc();
-        const { restore: restoreChannel } = stubOutChannel();
+        const stub = stubRunTlc();
 
         try {
             await vscode.commands.executeCommand('tlaplus.model.check.customRun');
-            assert.strictEqual(calls.length, 1, 'Custom run should launch TLC once');
-            const [call] = calls;
+            assert.strictEqual(stub.calls.length, 1, 'Custom run should launch TLC once');
+            const [call] = stub.calls;
             assert.strictEqual(path.basename(call.tlaFilePath), 'Spec.tla');
             assert.strictEqual(call.cfgFileName, 'MCAltSpec.cfg');
             assert.strictEqual(call.showOptionsPrompt, true);
             assert.ok(
-                quickPick.lastItems?.includes('MCSpec.cfg') && quickPick.lastItems.includes('MCAltSpec.cfg'),
+                quickPick.lastItems?.includes('MCSpec.cfg') &&
+                quickPick.lastItems.includes('MCAltSpec.cfg'),
                 'Quick pick should list available cfg files'
             );
         } finally {
-            restoreRunTlc();
-            restoreChannel();
+            stub.restore();
             quickPick.restore();
         }
     });
@@ -149,37 +155,33 @@ suite('Model check command integration', () => {
         const specUri = vscode.Uri.file(path.join(modelSuiteRoot, 'Spec.tla'));
         const doc = await vscode.workspace.openTextDocument(specUri);
         await vscode.window.showTextDocument(doc);
-        const { calls, restore: restoreRunTlc } = stubRunTlc();
-        const { restore: restoreChannel } = stubOutChannel();
+        const stub = stubRunTlc();
 
         try {
             await vscode.commands.executeCommand('tlaplus.model.check.run', specUri);
             await vscode.commands.executeCommand('tlaplus.model.check.runAgain');
-            assert.strictEqual(calls.length, 2, 'Expected initial run plus runAgain');
-            const second = calls[1];
+            assert.strictEqual(stub.calls.length, 2, 'Expected initial run plus runAgain');
+            const [, second] = stub.calls;
             assert.strictEqual(second.showOptionsPrompt, false, 'runAgain should skip options prompt');
             assert.strictEqual(path.basename(second.tlaFilePath), 'MCSpec.tla');
         } finally {
-            restoreRunTlc();
-            restoreChannel();
+            stub.restore();
         }
     });
 
-   test('runs TLC against unsaved edits', async () => {
+    test('runs TLC against unsaved edits', async () => {
         const doc = await vscode.workspace.openTextDocument(path.join(modelSuiteRoot, 'MCAltSpec.tla'));
         const editor = await vscode.window.showTextDocument(doc);
         await editor.edit(builder => builder.insert(new vscode.Position(2, 0), '\\* unsaved change\n'));
-        const { calls, restore: restoreRunTlc } = stubRunTlc();
-        const { restore: restoreChannel } = stubOutChannel();
+        const stub = stubRunTlc();
 
         try {
             await vscode.commands.executeCommand('tlaplus.model.check.run');
-            assert.strictEqual(calls.length, 1, 'Unsaved edits should not block TLC run');
-            const [call] = calls;
+            assert.strictEqual(stub.calls.length, 1, 'Unsaved edits should not block TLC run');
+            const [call] = stub.calls;
             assert.strictEqual(path.basename(call.tlaFilePath), 'MCAltSpec.tla');
         } finally {
-            restoreRunTlc();
-            restoreChannel();
+            stub.restore();
         }
     });
 
@@ -187,156 +189,101 @@ suite('Model check command integration', () => {
         const specUri = vscode.Uri.file(path.join(modelSuiteRoot, 'Spec.tla'));
         const doc = await vscode.workspace.openTextDocument(specUri);
         await vscode.window.showTextDocument(doc);
-        const { calls, restore: restoreRunTlc } = stubRunTlc({
+        const stub = stubRunTlc({
             returnProcess: true,
-            stdout: '@!@!@STARTMSG 1000 @!@!@\n@!@!@ENDMSG 1000 @!@!@\n',
+            stdout: '@!@!@STARTMSG 1000 @!@!@\n@!@!@ENDMSG 1000 @!@!@\n*** Errors: 1\n',
             stderr: 'tool-error-line\n'
         });
-        const merged = captureOutChannelMergedOutput();
 
         try {
             await vscode.commands.executeCommand('tlaplus.model.check.run', specUri);
-            assert.strictEqual(calls.length, 1, 'Process should launch once');
+            assert.strictEqual(stub.calls.length, 1, 'Process should launch once');
+            await stub.waitForMerged();
             assert.ok(
-                merged.output.includes('@!@!@STARTMSG') && merged.output.includes('tool-error-line'),
+                stub.mergedOutput.includes('tool-error-line') &&
+                stub.mergedOutput.includes('@!@!@STARTMSG'),
                 'Merged stream should contain stdout and stderr data'
             );
         } finally {
-            restoreRunTlc();
-            merged.restore();
+            stub.restore();
         }
     });
-});
 
-function stubRunTlc(options: {
-    returnProcess?: boolean;
-    stdout?: string;
-    stderr?: string;
-} = {}) {
-    const calls: RunTlcCall[] = [];
-    const original = tla2tools.runTlc;
-    const { returnProcess = false, stdout = '', stderr = '' } = options;
-
-    (tla2tools as unknown as { runTlc: typeof tla2tools.runTlc }).runTlc = async (
-        tlaFilePath: string,
-        cfgFileName: string,
-        showOptionsPrompt: boolean,
-        extraOpts: string[] = [],
-        extraJavaOpts: string[] = []
-    ) => {
-        console.log(`runTlc stub call for ${cfgFileName}`);
-        calls.push({ tlaFilePath, cfgFileName, showOptionsPrompt, extraOpts });
+    function stubRunTlc(options: {
+        returnProcess?: boolean;
+        stdout?: string;
+        stderr?: string;
+    } = {}) {
+        const calls: RunTlcCall[] = [];
+        let mergedBuffer = '';
+        const { returnProcess = false, stdout = '', stderr = '' } = options;
+        let mergedResolve: (() => void) | undefined;
+        const mergedCompleted = new Promise<void>(resolve => {
+            mergedResolve = resolve;
+        });
         if (!returnProcess) {
-            return undefined;
+            mergedResolve?.();
         }
-        const proc = new MockChildProcess();
-        const info = new ToolProcessInfo('tlc', proc as unknown as ChildProcess);
-        setImmediate(() => {
-            if (stdout) {
-                proc.stdout.write(stdout);
+
+        const runner: TlcRunner = async (
+            tlaFilePath: string,
+            cfgFileName: string,
+            showOptionsPrompt: boolean,
+            extraOpts: string[] = [],
+            extraJavaOpts: string[] = []
+        ) => {
+            calls.push({ tlaFilePath, cfgFileName, showOptionsPrompt, extraOpts, extraJavaOpts });
+            if (!returnProcess) {
+                return undefined;
             }
-            proc.stdout.end();
-            if (stderr) {
-                proc.stderr.write(stderr);
-            }
-            proc.stderr.end();
-            proc.emit('exit', 0);
-            proc.emit('close', 0);
-        });
-        return info;
-    };
 
-    return {
-        calls,
-        restore: () => {
-            (tla2tools as unknown as { runTlc: typeof tla2tools.runTlc }).runTlc = original;
-        }
-    };
-}
+            const process = new MockChildProcess();
+            const mergedOutput = new PassThrough();
+            process.stdout.pipe(mergedOutput, { end: false });
+            process.stderr.pipe(mergedOutput, { end: false });
+            process.on('close', () => mergedOutput.end());
+            mergedOutput.on('data', chunk => {
+                mergedBuffer += chunk.toString();
+            });
+            mergedOutput.on('end', () => {
+                mergedResolve?.();
+            });
 
-function stubOutChannel() {
-    const channel = checkModel.outChannel as unknown as { bindTo: typeof checkModel.outChannel.bindTo };
-    const original = channel.bindTo;
-    channel.bindTo = () => { /* no-op during tests */ };
-    return {
-        restore: () => {
-            channel.bindTo = original;
-        }
-    };
-}
+            setImmediate(() => {
+                if (stdout) {
+                    process.stdout.write(stdout);
+                }
+                process.stdout.end();
+                if (stderr) {
+                    process.stderr.write(stderr);
+                }
+                process.stderr.end();
+                process.emit('exit', 0);
+                process.emit('close', 0);
+            });
 
-function captureOutChannelMergedOutput() {
-    const channel = checkModel.outChannel as unknown as { bindTo: typeof checkModel.outChannel.bindTo };
-    const original = channel.bindTo;
-    let output = '';
-    channel.bindTo = (procInfo: InstanceType<typeof ToolProcessInfo>) => {
-        procInfo.mergedOutput.on('data', (chunk: Buffer) => {
-            output += chunk.toString();
-        });
-    };
-    return {
-        get output() {
-            return output;
-        },
-        restore: () => {
-            channel.bindTo = original;
-        }
-    };
-}
+            const info: ToolProcessInfoLike = {
+                commandLine: 'tlc',
+                process: process as unknown as ChildProcess,
+                mergedOutput
+            };
+            return info;
+        };
 
-function trackDoCheckModel() {
-    const original = checkModel.doCheckModel;
-    let count = 0;
-    (checkModel as unknown as { doCheckModel: typeof checkModel.doCheckModel }).doCheckModel = async (
-        specFiles,
-        showCheckResultView,
-        extContext,
-        diagnostic,
-        showOptionsPrompt,
-        extraOpts,
-        debuggerPortCallback
-    ) => {
-        count++;
-        return original.call(
-            checkModel,
-            specFiles,
-            showCheckResultView,
-            extContext,
-            diagnostic,
-            showOptionsPrompt,
-            extraOpts,
-            debuggerPortCallback
-        );
-    };
+        extensionApi.setTlcRunner(runner);
 
-    return {
-        get count() {
-            return count;
-        },
-        restore: () => {
-            (checkModel as unknown as { doCheckModel: typeof checkModel.doCheckModel }).doCheckModel = original;
-        }
-    };
-}
-
-function trackGetSpecFiles() {
-    const original = checkModel.getSpecFiles;
-    let lastResult: SpecFiles | undefined;
-    (checkModel as unknown as { getSpecFiles: typeof checkModel.getSpecFiles }).getSpecFiles = async (...args) => {
-        console.log(`getSpecFiles called with warn=${args[1]} prefix=${args[2]}`);
-        const result = await original(...args);
-        lastResult = result ?? undefined;
-        return result;
-    };
-    return {
-        get lastResult(): SpecFiles | undefined {
-            return lastResult;
-        },
-        restore: () => {
-            (checkModel as unknown as { getSpecFiles: typeof checkModel.getSpecFiles }).getSpecFiles = original;
-        }
-    };
-}
+        return {
+            calls,
+            get mergedOutput(): string {
+                return mergedBuffer;
+            },
+            async waitForMerged(): Promise<void> {
+                await mergedCompleted;
+            },
+            restore: () => extensionApi.resetTlcRunner()
+        };
+    }
+});
 
 function stubWarningMessages() {
     const original = vscode.window.showWarningMessage;
@@ -381,4 +328,15 @@ function stubQuickPick(selection: string) {
 
 async function closeAllEditors(): Promise<void> {
     await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+}
+
+async function deleteIfExists(fsPath: string): Promise<void> {
+    try {
+        await fs.unlink(fsPath);
+    } catch (err) {
+        const error = err as NodeJS.ErrnoException;
+        if (error.code !== 'ENOENT') {
+            throw err;
+        }
+    }
 }

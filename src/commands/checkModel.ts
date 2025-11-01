@@ -14,7 +14,7 @@ import {
     updateCheckResultView
 } from '../panels/checkResultView';
 import { TlcModelCheckerStdoutParser } from '../parsers/tlc';
-import { runTlc, stopProcess } from '../tla2tools';
+import { runTlc, stopProcess, ToolProcessInfo } from '../tla2tools';
 import { TlcCoverageDecorationProvider } from '../tlcCoverage';
 
 export const CMD_CHECK_MODEL_RUN = 'tlaplus.model.check.run';
@@ -34,6 +34,31 @@ let lastCheckFiles: SpecFiles | undefined;
 let coverageProvider: TlcCoverageDecorationProvider | undefined;
 const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);
 export const outChannel = new ToolOutputChannel('TLC', mapTlcOutputLine);
+
+type TlcRunner = (
+    tlaFilePath: string,
+    cfgFilePath: string,
+    showOptionsPrompt: boolean,
+    extraOpts?: string[],
+    extraJavaOpts?: string[]
+) => Promise<ToolProcessInfo | undefined>;
+
+let currentTlcRunner: TlcRunner = runTlc;
+
+/**
+ * Overrides the TLC runner used by model checking commands.
+ * Intended for testing; production code uses the default {@link runTlc}.
+ */
+export function setTlcRunner(runner: TlcRunner): void {
+    currentTlcRunner = runner;
+}
+
+/**
+ * Restores the TLC runner to the default implementation.
+ */
+export function resetTlcRunner(): void {
+    currentTlcRunner = runTlc;
+}
 
 class CheckResultHolder {
     checkResult: ModelCheckResult | undefined;
@@ -188,7 +213,7 @@ export async function doCheckModel(
         lastCheckFiles = specFiles;
         vscode.commands.executeCommand('setContext', CTX_TLC_CAN_RUN_AGAIN, true);
         updateStatusBarItem(true, specFiles);
-        const procInfo = await runTlc(
+        const procInfo = await currentTlcRunner(
             specFiles.tlaFilePath, path.basename(specFiles.cfgFilePath), showOptionsPrompt, extraOpts);
         if (procInfo === undefined) {
             // Command cancelled by user
