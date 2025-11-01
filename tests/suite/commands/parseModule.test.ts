@@ -59,20 +59,9 @@ Spec == Init /\\ Next
             capturedOutput += chunk.toString();
         });
 
-        // Wait for stream to end
-        await new Promise((resolve) => {
+        // Wait for stream to end (production code ensures this happens)
+        await new Promise<void>((resolve) => {
             procInfo.mergedOutput.once('end', resolve);
-            if (procInfo.mergedOutput.readableEnded) {
-                resolve(null);
-            }
-        });
-
-        // Wait for 'close' event (ensures all file handles released)
-        await new Promise((resolve) => {
-            procInfo.process.once('close', resolve);
-            if (procInfo.process.exitCode !== null) {
-                resolve(null);
-            }
         });
 
         // Verify that mergedOutput captured output
