@@ -1,0 +1,4 @@
+---- MODULE MCAltSpec ----
+EXTENDS AltSpec
+
+====

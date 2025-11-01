@@ -1,0 +1,4 @@
+---- MODULE NoCfgSpec ----
+EXTENDS Naturals
+
+====
