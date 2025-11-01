@@ -1,7 +1,6 @@
 import { Range, Position } from 'vscode';
 import * as path from 'path';
 import { DCollection } from '../diagnostic';
-import { isNumber } from 'util';
 import { Moment } from 'moment';
 
 export enum CheckState {
@@ -625,7 +624,7 @@ function dateTimeToStr(dateTime: Moment | undefined): string {
 }
 
 function durationToStr(dur: number | undefined): string {
-    if (!isNumber(dur)) {
+    if (typeof dur !== 'number') {
         return '';
     }
     return `${dur} msec`;
