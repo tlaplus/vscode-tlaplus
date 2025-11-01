@@ -1,0 +1,4 @@
+---- MODULE MCRenamedSpec ----
+EXTENDS RenamedSpec
+
+====

@@ -42,6 +42,18 @@ suite('Model check command integration', () => {
         __dirname,
         '../../../../tests/fixtures/workspaces/model-suite'
     );
+    const matrixRoot = path.resolve(
+        __dirname,
+        '../../../../tests/fixtures/workspaces/model-matrix'
+    );
+    const renamedRoot = path.join(matrixRoot, 'renamed');
+    const libraryRoot = path.join(matrixRoot, 'library');
+    const libraryDepsRoot = path.join(libraryRoot, 'deps');
+    const mismatchRoot = path.join(matrixRoot, 'mismatch');
+    const multiRootBase = path.resolve(
+        __dirname,
+        '../../../../tests/fixtures/workspaces/multi-root'
+    );
 
     type ExtensionApi = {
         setTlcRunner: (runner: TlcRunner) => void;
@@ -93,16 +105,46 @@ suite('Model check command integration', () => {
         const specUri = vscode.Uri.file(path.join(modelSuiteRoot, 'Spec.tla'));
         const doc = await vscode.workspace.openTextDocument(specUri);
         await vscode.window.showTextDocument(doc);
-        const stub = stubRunTlc();
+        const sampleOutputPath = path.resolve(
+            __dirname,
+            '../../../../tests/fixtures/parsers/tlc/override-stdout.out'
+        );
+        const sampleOutput = await fs.readFile(sampleOutputPath, 'utf8');
+        const stub = stubRunTlc({
+            returnProcess: true,
+            stdout: sampleOutput
+        });
+
+        const originalExecuteCommand = vscode.commands.executeCommand;
+        const contextCalls: Array<{ key: unknown; value: unknown }> = [];
+        (vscode.commands.executeCommand as unknown) = (async (command: string, ...args: unknown[]) => {
+            if (command === 'setContext') {
+                contextCalls.push({ key: args[0], value: args[1] });
+            }
+            return originalExecuteCommand(command, ...args);
+        }) as typeof vscode.commands.executeCommand;
 
         try {
             await vscode.commands.executeCommand('tlaplus.model.check.run', specUri);
+            await stub.waitForMerged();
             assert.strictEqual(stub.calls.length, 1, 'Expected TLC to run once');
             const [call] = stub.calls;
             assert.strictEqual(path.basename(call.tlaFilePath), 'MCSpec.tla');
             assert.strictEqual(call.cfgFileName, 'MCSpec.cfg');
             assert.strictEqual(call.showOptionsPrompt, true);
+
+            const canRunAgainCalls = contextCalls
+                .filter(c => c.key === 'tlaplus.tlc.canRunAgain')
+                .map(c => c.value);
+            assert.deepStrictEqual(canRunAgainCalls, [true], 'Expected TLC runAgain context to be enabled');
+
+            const runningStates = contextCalls
+                .filter(c => c.key === 'tlaplus.tlc.isRunning')
+                .map(c => c.value);
+            assert.ok(runningStates.includes(true), 'Expected TLC running context to be set');
+            assert.ok(runningStates.includes(false), 'Expected TLC running context to be cleared');
         } finally {
+            (vscode.commands.executeCommand as unknown) = originalExecuteCommand;
             stub.restore();
         }
     });
@@ -182,6 +224,105 @@ suite('Model check command integration', () => {
             assert.strictEqual(path.basename(call.tlaFilePath), 'MCAltSpec.tla');
         } finally {
             stub.restore();
+        }
+    });
+
+    test('respects SPECIFICATION override in cfg files', async () => {
+        const specUri = vscode.Uri.file(path.join(renamedRoot, 'RenamedSpec.tla'));
+        const doc = await vscode.workspace.openTextDocument(specUri);
+        await vscode.window.showTextDocument(doc);
+        const stub = stubRunTlc();
+
+        try {
+            await vscode.commands.executeCommand('tlaplus.model.check.run', specUri);
+            assert.strictEqual(stub.calls.length, 1, 'Expected TLC to run once with SPECIFICATION override');
+            const [call] = stub.calls;
+            assert.strictEqual(path.basename(call.tlaFilePath), 'MCRenamedSpec.tla');
+            assert.strictEqual(call.cfgFileName, 'MCRenamedSpec.cfg');
+        } finally {
+            stub.restore();
+        }
+    });
+
+    test('runs TLC when module search paths include external libraries', async () => {
+        const specUri = vscode.Uri.file(path.join(libraryRoot, 'LibrarySpec.tla'));
+        const doc = await vscode.workspace.openTextDocument(specUri);
+        await vscode.window.showTextDocument(doc);
+        const config = vscode.workspace.getConfiguration();
+        const previousModuleSearchPaths =
+            config.get<string[]>('tlaplus.moduleSearchPaths') ?? undefined;
+        await config.update(
+            'tlaplus.moduleSearchPaths',
+            [libraryDepsRoot],
+            vscode.ConfigurationTarget.Global
+        );
+        const stub = stubRunTlc();
+
+        try {
+            await vscode.commands.executeCommand('tlaplus.model.check.run', specUri);
+            assert.strictEqual(stub.calls.length, 1, 'Expected TLC to run once with library path override');
+            const [call] = stub.calls;
+            assert.strictEqual(path.basename(call.tlaFilePath), 'MCLibrarySpec.tla');
+        } finally {
+            stub.restore();
+            await config.update(
+                'tlaplus.moduleSearchPaths',
+                previousModuleSearchPaths,
+                vscode.ConfigurationTarget.Global
+            );
+        }
+    });
+
+    test('supports multi-root workspaces when model checking', async () => {
+        const primaryRoot = path.join(multiRootBase, 'rootPrimary');
+        const secondaryRoot = path.join(multiRootBase, 'rootSecondary');
+        const existingFolders = (vscode.workspace.workspaceFolders ?? []).map(folder => ({
+            uri: folder.uri,
+            name: folder.name
+        }));
+        const currentCount = vscode.workspace.workspaceFolders?.length ?? 0;
+        vscode.workspace.updateWorkspaceFolders(
+            0,
+            currentCount,
+            { uri: vscode.Uri.file(primaryRoot) },
+            { uri: vscode.Uri.file(secondaryRoot) }
+        );
+
+        const specUri = vscode.Uri.file(path.join(primaryRoot, 'SpecMulti.tla'));
+        const doc = await vscode.workspace.openTextDocument(specUri);
+        await vscode.window.showTextDocument(doc);
+        const stub = stubRunTlc();
+
+        try {
+            await vscode.commands.executeCommand('tlaplus.model.check.run', specUri);
+            assert.strictEqual(stub.calls.length, 1, 'Expected TLC to run once in multi-root workspace');
+            const [call] = stub.calls;
+            assert.strictEqual(path.basename(call.tlaFilePath), 'MCSpecMulti.tla');
+            assert.strictEqual(call.cfgFileName, 'MCSpecMulti.cfg');
+        } finally {
+            stub.restore();
+            const resetCount = vscode.workspace.workspaceFolders?.length ?? 0;
+            vscode.workspace.updateWorkspaceFolders(0, resetCount, ...existingFolders);
+        }
+    });
+
+    test('skips TLC when model extends a mismatched module', async () => {
+        const specUri = vscode.Uri.file(path.join(mismatchRoot, 'MismatchSpec.tla'));
+        const doc = await vscode.workspace.openTextDocument(specUri);
+        await vscode.window.showTextDocument(doc);
+        const stub = stubRunTlc();
+        const warningStub = stubWarningMessages();
+
+        try {
+            await vscode.commands.executeCommand('tlaplus.model.check.run', specUri);
+            assert.strictEqual(stub.calls.length, 0, 'Mismatched model should not start TLC');
+            assert.ok(
+                warningStub.messages.some(msg => msg.includes('does not extend MismatchSpec')),
+                'Mismatch warning should mention missing extends'
+            );
+        } finally {
+            stub.restore();
+            warningStub.restore();
         }
     });
 

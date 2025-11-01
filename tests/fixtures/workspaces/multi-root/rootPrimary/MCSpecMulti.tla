@@ -1,0 +1,4 @@
+---- MODULE MCSpecMulti ----
+EXTENDS SpecMulti
+
+====

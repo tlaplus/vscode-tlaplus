@@ -1,5 +1,5 @@
 import { ChildProcess } from 'child_process';
-import { copyFile } from 'fs';
+import { copyFile, promises as fsPromises } from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { Utils } from 'vscode-uri';
@@ -282,7 +282,10 @@ export async function getSpecFiles(fileUri: vscode.Uri, warn = true, prefix = 'M
     // a) Check the given input if it exists.
     specFiles = await checkSpecFiles(fileUri, false);
     if (specFiles) {
-        return specFiles;
+        if (await validateModelPairing(specFiles, fileUri, false, prefix)) {
+            return specFiles;
+        }
+        specFiles = undefined;
     }
     // b) Check alternatives:
     // Unless the given filePath already starts with 'MC', prepend MC to the name
@@ -301,13 +304,20 @@ export async function getSpecFiles(fileUri: vscode.Uri, warn = true, prefix = 'M
         let canRun = true;
         canRun = await checkModelExists(specFiles.cfgFilePath, warn);
         canRun = canRun && await checkModuleExists(specFiles.tlaFilePath, warn);
-        if (canRun) {
-            return specFiles;
+        if (canRun && specFiles) {
+            if (await validateModelPairing(specFiles, fileUri, warn, prefix)) {
+                return specFiles;
+            }
+            return undefined;
         }
     }
     // c) Deliberately trigger the warning dialog by checking the given input again
     // knowing that it doesn't exist.
-    return await checkSpecFiles(fileUri, warn);
+    const fallbackSpecFiles = await checkSpecFiles(fileUri, warn);
+    if (fallbackSpecFiles && await validateModelPairing(fallbackSpecFiles, fileUri, warn, prefix)) {
+        return fallbackSpecFiles;
+    }
+    return undefined;
 }
 
 async function checkSpecFiles(fileUri: vscode.Uri, warn = true): Promise<SpecFiles | undefined> {
@@ -339,6 +349,67 @@ async function checkModelExists(cfgPath: string, warn = true): Promise<boolean> 
         showConfigAbsenceWarning(cfgPath);
     }
     return cfgExists;
+}
+
+async function readExtendsModules(modelPath: string): Promise<string[] | undefined> {
+    try {
+        const content = await fsPromises.readFile(modelPath, 'utf8');
+        const lines = content.split(/\r?\n/);
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed.length === 0 || trimmed.startsWith('\\*')) {
+                continue;
+            }
+            if (trimmed.startsWith('EXTENDS')) {
+                const remainder = trimmed.substring('EXTENDS'.length).trim();
+                if (remainder.length === 0) {
+                    return [];
+                }
+                return remainder.split(',')
+                    .map(entry => entry.trim())
+                    .filter(entry => entry.length > 0);
+            }
+            if (trimmed.startsWith('VARIABLES') || trimmed.includes('==')) {
+                break;
+            }
+        }
+    } catch (err) {
+        console.warn(`Unable to inspect model file ${modelPath}: ${err}`);
+    }
+    return undefined;
+}
+
+async function validateModelPairing(
+    specFiles: SpecFiles,
+    sourceUri: vscode.Uri,
+    warn: boolean,
+    prefix: string
+): Promise<boolean> {
+    const sourceBase = Utils.basename(sourceUri);
+    if (!sourceBase.endsWith('.tla')) {
+        return true;
+    }
+    if (sourceBase.startsWith(prefix)) {
+        return true;
+    }
+    const modelBase = path.basename(specFiles.tlaFilePath);
+    if (!modelBase.startsWith(prefix)) {
+        return true;
+    }
+    const expectedModule = path.basename(sourceUri.fsPath, '.tla');
+    const extendsModules = await readExtendsModules(specFiles.tlaFilePath);
+    if (!extendsModules || extendsModules.length === 0) {
+        return true;
+    }
+    if (extendsModules.includes(expectedModule)) {
+        return true;
+    }
+    if (warn) {
+        vscode.window.showWarningMessage(
+            `Model file ${modelBase} does not extend ${expectedModule}. Cannot check model.`
+        );
+    }
+    return false;
 }
 
 function updateStatusBarItem(active: boolean, specFiles: SpecFiles | undefined) {
