@@ -19,7 +19,7 @@ jobs:
     - name: Install dependencies
       run: |
         npm ci
-        npm install -g vsce
+        npm install -g @vscode/vsce 
     - name: Build
       run: |
         npm run vscode:prepublish
