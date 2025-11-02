@@ -276,12 +276,26 @@ suite('Model check command integration', () => {
         const primaryRoot = path.join(multiRootBase, 'rootPrimary');
         const secondaryRoot = path.join(multiRootBase, 'rootSecondary');
         const existingFolders = vscode.workspace.workspaceFolders ?? [];
+        const existingCount = existingFolders.length;
+        const extensionFolderAdded = existingCount === 0;
+        if (extensionFolderAdded) {
+            const extension = vscode.extensions.getExtension(EXTENSION_ID);
+            if (!extension) {
+                throw new Error('Extension must be loaded to run workspace tests');
+            }
+            await updateWorkspaceFoldersAndWait(
+                0,
+                0,
+                { uri: extension.extensionUri }
+            );
+        }
+        const baseCount = (vscode.workspace.workspaceFolders ?? []).length;
         const foldersToAdd = [
             { uri: vscode.Uri.file(primaryRoot) },
             { uri: vscode.Uri.file(secondaryRoot) }
         ];
         await updateWorkspaceFoldersAndWait(
-            existingFolders.length,
+            baseCount,
             0,
             ...foldersToAdd
         );
@@ -299,7 +313,10 @@ suite('Model check command integration', () => {
             assert.strictEqual(call.cfgFileName, 'MCSpecMulti.cfg');
         } finally {
             stub.restore();
-            await updateWorkspaceFoldersAndWait(existingFolders.length, foldersToAdd.length);
+            await updateWorkspaceFoldersAndWait(baseCount, foldersToAdd.length);
+            if (extensionFolderAdded) {
+                await updateWorkspaceFoldersAndWait(0, 1);
+            }
         }
     });
 
