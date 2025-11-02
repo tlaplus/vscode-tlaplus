@@ -365,7 +365,11 @@ async function readExtendsModules(modelPath: string): Promise<string[] | undefin
                 if (remainder.length === 0) {
                     return [];
                 }
-                return remainder.split(',')
+                const uncommented = remainder
+                    .replace(/\(\*[\s\S]*?\*\)/g, ' ') // drop inline block comments
+                    .replace(/\\\*.*$/, ''); // drop trailing line comments
+                return uncommented
+                    .split(',')
                     .map(entry => entry.trim())
                     .filter(entry => entry.length > 0);
             }
