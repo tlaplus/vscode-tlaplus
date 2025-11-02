@@ -79,7 +79,7 @@ suite('Model check command integration', () => {
         await closeAllEditors();
         const config = vscode.workspace.getConfiguration();
         previousCreateOutFiles = config.get<boolean>('tlaplus.tlc.modelChecker.createOutFiles') ?? undefined;
-        await config.update(
+        await updateConfig(
             'tlaplus.tlc.modelChecker.createOutFiles',
             false,
             vscode.ConfigurationTarget.Global
@@ -90,7 +90,7 @@ suite('Model check command integration', () => {
     teardown(async () => {
         extensionApi.resetTlcRunner();
         const config = vscode.workspace.getConfiguration();
-        await config.update(
+        await updateConfig(
             'tlaplus.tlc.modelChecker.createOutFiles',
             previousCreateOutFiles,
             vscode.ConfigurationTarget.Global
@@ -251,7 +251,7 @@ suite('Model check command integration', () => {
         const config = vscode.workspace.getConfiguration();
         const previousModuleSearchPaths =
             config.get<string[]>('tlaplus.moduleSearchPaths') ?? undefined;
-        await config.update(
+        await updateConfig(
             'tlaplus.moduleSearchPaths',
             [libraryDepsRoot],
             vscode.ConfigurationTarget.Global
@@ -265,7 +265,7 @@ suite('Model check command integration', () => {
             assert.strictEqual(path.basename(call.tlaFilePath), 'MCLibrarySpec.tla');
         } finally {
             stub.restore();
-            await config.update(
+            await updateConfig(
                 'tlaplus.moduleSearchPaths',
                 previousModuleSearchPaths,
                 vscode.ConfigurationTarget.Global
@@ -281,7 +281,7 @@ suite('Model check command integration', () => {
             name: folder.name
         }));
         const currentCount = vscode.workspace.workspaceFolders?.length ?? 0;
-        vscode.workspace.updateWorkspaceFolders(
+        await updateWorkspaceFoldersAndWait(
             0,
             currentCount,
             { uri: vscode.Uri.file(primaryRoot) },
@@ -302,7 +302,7 @@ suite('Model check command integration', () => {
         } finally {
             stub.restore();
             const resetCount = vscode.workspace.workspaceFolders?.length ?? 0;
-            vscode.workspace.updateWorkspaceFolders(0, resetCount, ...existingFolders);
+            await updateWorkspaceFoldersAndWait(0, resetCount, ...existingFolders);
         }
     });
 
@@ -350,11 +350,11 @@ suite('Model check command integration', () => {
         }
     });
 
-    function stubRunTlc(options: {
-        returnProcess?: boolean;
-        stdout?: string;
-        stderr?: string;
-    } = {}) {
+function stubRunTlc(options: {
+    returnProcess?: boolean;
+    stdout?: string;
+    stderr?: string;
+} = {}) {
         const calls: RunTlcCall[] = [];
         let mergedBuffer = '';
         const { returnProcess = false, stdout = '', stderr = '' } = options;
@@ -425,6 +425,81 @@ suite('Model check command integration', () => {
         };
     }
 });
+
+async function updateConfig(
+    setting: string,
+    value: unknown,
+    target: vscode.ConfigurationTarget
+): Promise<void> {
+    const config = vscode.workspace.getConfiguration();
+    const previousValue = config.get(setting);
+    if (areConfigValuesEqual(previousValue, value)) {
+        await config.update(setting, value, target);
+        return;
+    }
+    await new Promise<void>((resolve, reject) => {
+        const disposable = vscode.workspace.onDidChangeConfiguration(event => {
+            if (event.affectsConfiguration(setting)) {
+                disposable.dispose();
+                resolve();
+            }
+        });
+        config.update(setting, value, target).then(
+            () => { /* wait for event */ },
+            err => {
+                disposable.dispose();
+                reject(err);
+            }
+        );
+    });
+}
+
+async function updateWorkspaceFoldersAndWait(
+    start: number,
+    deleteCount: number,
+    ...folders: { uri: vscode.Uri; name?: string }[]
+): Promise<void> {
+    const beforeFolders = vscode.workspace.workspaceFolders ?? [];
+    const beforeUris = beforeFolders.map(folder => folder.uri.toString());
+    const insertUris = folders.map(folder => folder.uri.toString());
+    const expectedUris = beforeUris.slice();
+    expectedUris.splice(start, deleteCount, ...insertUris);
+    const expectedCount = expectedUris.length;
+    await new Promise<void>((resolve) => {
+        let timer: NodeJS.Timeout | undefined;
+        const disposable = vscode.workspace.onDidChangeWorkspaceFolders(() => {
+            const currentUris = (vscode.workspace.workspaceFolders ?? []).map(folder => folder.uri.toString());
+            if (currentUris.length === expectedCount && areUriArraysEqual(currentUris, expectedUris)) {
+                disposable.dispose();
+                if (timer) {
+                    clearTimeout(timer);
+                }
+                resolve();
+            }
+        });
+        const success = vscode.workspace.updateWorkspaceFolders(start, deleteCount, ...folders);
+        if (!success) {
+            disposable.dispose();
+            resolve();
+            return;
+        }
+        timer = setTimeout(() => {
+            disposable.dispose();
+            resolve();
+        }, 1000);
+    });
+}
+
+function areConfigValuesEqual(a: unknown, b: unknown): boolean {
+    return JSON.stringify(a) === JSON.stringify(b);
+}
+
+function areUriArraysEqual(left: string[], right: string[]): boolean {
+    if (left.length !== right.length) {
+        return false;
+    }
+    return left.every((value, index) => value === right[index]);
+}
 
 function stubWarningMessages() {
     const original = vscode.window.showWarningMessage;
