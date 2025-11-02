@@ -4,21 +4,18 @@ import path from 'path';
 import { startFixtureServer, FixtureServer } from './support/server';
 
 type Fixtures = {
-	fixtureServer: FixtureServer;
+    fixtureServer: FixtureServer;
 };
 
 const test = base.extend<Fixtures>({
-    fixtureServer: [
-        async (_context, use) => {
-            const server = await startFixtureServer();
-            try {
-                await use(server);
-            } finally {
-                await server.dispose();
-            }
-        },
-        { scope: 'worker' }
-    ]
+    fixtureServer: async (_context, use) => {
+        const server = await startFixtureServer();
+        try {
+            await use(server);
+        } finally {
+            await server.dispose();
+        }
+    }
 });
 
 test.describe('Check Result webview fixture', () => {
