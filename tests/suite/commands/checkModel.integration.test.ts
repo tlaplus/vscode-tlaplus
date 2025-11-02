@@ -89,7 +89,6 @@ suite('Model check command integration', () => {
 
     teardown(async () => {
         extensionApi.resetTlcRunner();
-        const config = vscode.workspace.getConfiguration();
         await updateConfig(
             'tlaplus.tlc.modelChecker.createOutFiles',
             previousCreateOutFiles,
@@ -355,75 +354,75 @@ function stubRunTlc(options: {
     stdout?: string;
     stderr?: string;
 } = {}) {
-        const calls: RunTlcCall[] = [];
-        let mergedBuffer = '';
-        const { returnProcess = false, stdout = '', stderr = '' } = options;
-        let mergedResolve: (() => void) | undefined;
-        const mergedCompleted = new Promise<void>(resolve => {
-            mergedResolve = resolve;
-        });
+    const calls: RunTlcCall[] = [];
+    let mergedBuffer = '';
+    const { returnProcess = false, stdout = '', stderr = '' } = options;
+    let mergedResolve: (() => void) | undefined;
+    const mergedCompleted = new Promise<void>(resolve => {
+        mergedResolve = resolve;
+    });
+    if (!returnProcess) {
+        mergedResolve?.();
+    }
+
+    const runner: TlcRunner = async (
+        tlaFilePath: string,
+        cfgFileName: string,
+        showOptionsPrompt: boolean,
+        extraOpts: string[] = [],
+        extraJavaOpts: string[] = []
+    ) => {
+        calls.push({ tlaFilePath, cfgFileName, showOptionsPrompt, extraOpts, extraJavaOpts });
         if (!returnProcess) {
-            mergedResolve?.();
+            return undefined;
         }
 
-        const runner: TlcRunner = async (
-            tlaFilePath: string,
-            cfgFileName: string,
-            showOptionsPrompt: boolean,
-            extraOpts: string[] = [],
-            extraJavaOpts: string[] = []
-        ) => {
-            calls.push({ tlaFilePath, cfgFileName, showOptionsPrompt, extraOpts, extraJavaOpts });
-            if (!returnProcess) {
-                return undefined;
+        const process = new MockChildProcess();
+        const mergedOutput = new PassThrough();
+        process.stdout.pipe(mergedOutput, { end: false });
+        process.stderr.pipe(mergedOutput, { end: false });
+        process.on('close', () => mergedOutput.end());
+        mergedOutput.on('data', chunk => {
+            mergedBuffer += chunk.toString();
+        });
+        mergedOutput.on('end', () => {
+            mergedResolve?.();
+        });
+
+        setImmediate(() => {
+            if (stdout) {
+                process.stdout.write(stdout);
             }
+            process.stdout.end();
+            if (stderr) {
+                process.stderr.write(stderr);
+            }
+            process.stderr.end();
+            process.emit('exit', 0);
+            process.emit('close', 0);
+        });
 
-            const process = new MockChildProcess();
-            const mergedOutput = new PassThrough();
-            process.stdout.pipe(mergedOutput, { end: false });
-            process.stderr.pipe(mergedOutput, { end: false });
-            process.on('close', () => mergedOutput.end());
-            mergedOutput.on('data', chunk => {
-                mergedBuffer += chunk.toString();
-            });
-            mergedOutput.on('end', () => {
-                mergedResolve?.();
-            });
-
-            setImmediate(() => {
-                if (stdout) {
-                    process.stdout.write(stdout);
-                }
-                process.stdout.end();
-                if (stderr) {
-                    process.stderr.write(stderr);
-                }
-                process.stderr.end();
-                process.emit('exit', 0);
-                process.emit('close', 0);
-            });
-
-            const info: ToolProcessInfoLike = {
-                commandLine: 'tlc',
-                process: process as unknown as ChildProcess,
-                mergedOutput
-            };
-            return info;
+        const info: ToolProcessInfoLike = {
+            commandLine: 'tlc',
+            process: process as unknown as ChildProcess,
+            mergedOutput
         };
+        return info;
+    };
 
-        extensionApi.setTlcRunner(runner);
+    extensionApi.setTlcRunner(runner);
 
-        return {
-            calls,
-            get mergedOutput(): string {
-                return mergedBuffer;
-            },
-            async waitForMerged(): Promise<void> {
-                await mergedCompleted;
-            },
-            restore: () => extensionApi.resetTlcRunner()
-        };
-    }
+    return {
+        calls,
+        get mergedOutput(): string {
+            return mergedBuffer;
+        },
+        async waitForMerged(): Promise<void> {
+            await mergedCompleted;
+        },
+        restore: () => extensionApi.resetTlcRunner()
+    };
+}
 });
 
 async function updateConfig(
@@ -473,6 +472,7 @@ async function updateWorkspaceFoldersAndWait(
                 disposable.dispose();
                 if (timer) {
                     clearTimeout(timer);
+                    timer = undefined;
                 }
                 resolve();
             }
@@ -485,6 +485,7 @@ async function updateWorkspaceFoldersAndWait(
         }
         timer = setTimeout(() => {
             disposable.dispose();
+            timer = undefined;
             resolve();
         }, 1000);
     });

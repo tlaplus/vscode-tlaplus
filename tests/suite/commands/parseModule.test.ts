@@ -84,7 +84,11 @@ Spec == Init /\\ Next
                                 capturedOutput.includes('Linting of module ParseError') &&
                                 capturedOutput.includes('*** Errors: 4');
 
-        assert.ok(hasErrorMessage, `mergedOutput should contain error messages. Got: ${capturedOutput.substring(0, 300)}`);
+        const sampleOutput = capturedOutput.substring(0, 300);
+        assert.ok(
+            hasErrorMessage,
+            `mergedOutput should contain error messages. Got: ${sampleOutput}`
+        );
 
         // Verify the semantic errors are captured
         const hasUndefinedVarError = capturedOutput.toLowerCase().includes('undefinedvar') ||
@@ -95,4 +99,3 @@ Spec == Init /\\ Next
     });
 
 });
-
