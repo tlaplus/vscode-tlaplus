@@ -770,7 +770,7 @@
         "pretest": "tsc -p ./ && node -e \"require('fs').cpSync('tools', 'out/tools', {recursive: true})\"",
         "test": "node ./out/tests/runTest.js",
         "test:tlaplus-grammar": "vscode-tmgrammar-test ./tests/suite/languages/*.tla -g ./languages/tlaplus-grammar.json -g ./languages/pluscal-grammar.json",
-        "prepare:playwright": "playwright install --with-deps",
+        "prepare:playwright": "playwright install --with-deps chromium",
         "test:playwright": "playwright test"
     },
     "devDependencies": {

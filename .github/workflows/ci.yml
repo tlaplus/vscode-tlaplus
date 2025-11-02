@@ -42,11 +42,11 @@ jobs:
         node scripts/playwright-generate-check-result.js
         npm run test:playwright
     - name: Upload Playwright snapshots
-      if: matrix.os == 'ubuntu-latest'
+      if: ${{ matrix.os == 'ubuntu-latest' && failure() }}
       uses: actions/upload-artifact@v4
       with:
         name: playwright-snapshots
-        path: tests/playwright/snapshots
+        path: test-results
     - name: Test TLA+ Grammar
       run: npm run test:tlaplus-grammar
     - name: Rename artifact

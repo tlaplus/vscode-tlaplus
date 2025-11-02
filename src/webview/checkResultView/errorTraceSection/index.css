@@ -52,8 +52,9 @@
 .var-block {
     line-height: 1.4em;
     display: grid;
-    grid-template-columns: minmax(14rem, auto) 1fr;
+    grid-template-columns: minmax(14rem, auto) minmax(0, 1fr) auto;
     column-gap: 0.75em;
+    align-items: flex-start;
     white-space: normal;
     overflow: visible;
 }
@@ -62,6 +63,7 @@
     display: inline-block;
     white-space: normal;
     overflow: visible;
+    overflow-wrap: anywhere;
 }
 
 .var-size {
@@ -74,13 +76,17 @@
     display: inline-block;
     white-space: normal;
     overflow: visible;
+    overflow-wrap: anywhere;
 }
 
 .var-menu {
-    position: absolute;
-    right: 0;
-    top: 0;
-    display: none;
+    display: flex;
+    gap: 0.25em;
+    justify-self: end;
+    align-self: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.1s ease-in-out;
 }
 
 .var-button {
@@ -91,7 +97,8 @@
 }
 
 .var-block:hover .var-menu {
-    display: block;
+    opacity: 1;
+    pointer-events: auto;
 }
 
 .change-marker {

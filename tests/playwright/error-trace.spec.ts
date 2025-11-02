@@ -1,6 +1,4 @@
 import { test as base, expect } from '@playwright/test';
-import fs from 'fs/promises';
-import path from 'path';
 import { startFixtureServer, FixtureServer } from './support/server';
 
 type Fixtures = {
@@ -48,10 +46,6 @@ test.describe('Check Result webview fixture', () => {
         const overflowX = await valueCell.evaluate<string>(el => getComputedStyle(el).overflowX);
         expect(overflowX).toBe('visible');
 
-        const screenshotDir = path.join('tests', 'playwright', 'snapshots');
-        await fs.mkdir(screenshotDir, { recursive: true });
-        await page.locator('vscode-tree').screenshot({
-            path: path.join(screenshotDir, 'error-trace.png')
-        });
+        await expect(page.locator('vscode-tree')).toHaveScreenshot('error-trace.png');
     });
 });
