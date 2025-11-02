@@ -275,16 +275,15 @@ suite('Model check command integration', () => {
     test('supports multi-root workspaces when model checking', async () => {
         const primaryRoot = path.join(multiRootBase, 'rootPrimary');
         const secondaryRoot = path.join(multiRootBase, 'rootSecondary');
-        const existingFolders = (vscode.workspace.workspaceFolders ?? []).map(folder => ({
-            uri: folder.uri,
-            name: folder.name
-        }));
-        const currentCount = vscode.workspace.workspaceFolders?.length ?? 0;
-        await updateWorkspaceFoldersAndWait(
-            0,
-            currentCount,
+        const existingFolders = vscode.workspace.workspaceFolders ?? [];
+        const foldersToAdd = [
             { uri: vscode.Uri.file(primaryRoot) },
             { uri: vscode.Uri.file(secondaryRoot) }
+        ];
+        await updateWorkspaceFoldersAndWait(
+            existingFolders.length,
+            0,
+            ...foldersToAdd
         );
 
         const specUri = vscode.Uri.file(path.join(primaryRoot, 'SpecMulti.tla'));
@@ -300,8 +299,7 @@ suite('Model check command integration', () => {
             assert.strictEqual(call.cfgFileName, 'MCSpecMulti.cfg');
         } finally {
             stub.restore();
-            const resetCount = vscode.workspace.workspaceFolders?.length ?? 0;
-            await updateWorkspaceFoldersAndWait(0, resetCount, ...existingFolders);
+            await updateWorkspaceFoldersAndWait(existingFolders.length, foldersToAdd.length);
         }
     });
 
