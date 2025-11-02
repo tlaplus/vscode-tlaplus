@@ -8,7 +8,7 @@ type Fixtures = {
 };
 
 const test = base.extend<Fixtures>({
-    fixtureServer: async (_context, use) => {
+    fixtureServer: async ({}, use) => {
         const server = await startFixtureServer();
         try {
             await use(server);
