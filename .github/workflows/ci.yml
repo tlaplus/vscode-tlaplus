@@ -32,6 +32,21 @@ jobs:
     - name: Test Linux
       if: matrix.os == 'ubuntu-latest'
       run: xvfb-run --auto-servernum npm test --silent
+    - name: Install Playwright browsers
+      if: matrix.os == 'ubuntu-latest'
+      run: npm run prepare:playwright
+    - name: Playwright regression tests
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        npm run compile
+        node scripts/playwright-generate-check-result.js
+        npm run test:playwright
+    - name: Upload Playwright snapshots
+      if: matrix.os == 'ubuntu-latest'
+      uses: actions/upload-artifact@v4
+      with:
+        name: playwright-snapshots
+        path: tests/playwright/snapshots
     - name: Test TLA+ Grammar
       run: npm run test:tlaplus-grammar
     - name: Rename artifact
