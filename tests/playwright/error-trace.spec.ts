@@ -8,6 +8,7 @@ type Fixtures = {
 };
 
 const test = base.extend<Fixtures>({
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-empty-pattern
     fixtureServer: async ({}, use) => {
         const server = await startFixtureServer();
         try {
