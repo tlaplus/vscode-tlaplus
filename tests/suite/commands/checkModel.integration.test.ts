@@ -275,30 +275,12 @@ suite('Model check command integration', () => {
     test('supports multi-root workspaces when model checking', async () => {
         const primaryRoot = path.join(multiRootBase, 'rootPrimary');
         const secondaryRoot = path.join(multiRootBase, 'rootSecondary');
-        const existingFolders = vscode.workspace.workspaceFolders ?? [];
-        const existingCount = existingFolders.length;
-        const extensionFolderAdded = existingCount === 0;
-        if (extensionFolderAdded) {
-            const extension = vscode.extensions.getExtension(EXTENSION_ID);
-            if (!extension) {
-                throw new Error('Extension must be loaded to run workspace tests');
-            }
-            await updateWorkspaceFoldersAndWait(
-                0,
-                0,
-                { uri: extension.extensionUri }
-            );
+        const workspaceFolders = vscode.workspace.workspaceFolders ?? [];
+        const primaryFolder = workspaceFolders.find(folder => folder.uri.fsPath === primaryRoot);
+        const secondaryFolder = workspaceFolders.find(folder => folder.uri.fsPath === secondaryRoot);
+        if (!primaryFolder || !secondaryFolder) {
+            throw new Error('Multi-root workspace must include rootPrimary and rootSecondary folders');
         }
-        const baseCount = (vscode.workspace.workspaceFolders ?? []).length;
-        const foldersToAdd = [
-            { uri: vscode.Uri.file(primaryRoot) },
-            { uri: vscode.Uri.file(secondaryRoot) }
-        ];
-        await updateWorkspaceFoldersAndWait(
-            baseCount,
-            0,
-            ...foldersToAdd
-        );
 
         const specUri = vscode.Uri.file(path.join(primaryRoot, 'SpecMulti.tla'));
         const doc = await vscode.workspace.openTextDocument(specUri);
@@ -313,10 +295,6 @@ suite('Model check command integration', () => {
             assert.strictEqual(call.cfgFileName, 'MCSpecMulti.cfg');
         } finally {
             stub.restore();
-            await updateWorkspaceFoldersAndWait(baseCount, foldersToAdd.length);
-            if (extensionFolderAdded) {
-                await updateWorkspaceFoldersAndWait(0, 1);
-            }
         }
     });
 
@@ -468,53 +446,8 @@ async function updateConfig(
     });
 }
 
-async function updateWorkspaceFoldersAndWait(
-    start: number,
-    deleteCount: number,
-    ...folders: { uri: vscode.Uri; name?: string }[]
-): Promise<void> {
-    const beforeFolders = vscode.workspace.workspaceFolders ?? [];
-    const beforeUris = beforeFolders.map(folder => folder.uri.toString());
-    const insertUris = folders.map(folder => folder.uri.toString());
-    const expectedUris = beforeUris.slice();
-    expectedUris.splice(start, deleteCount, ...insertUris);
-    const expectedCount = expectedUris.length;
-    await new Promise<void>((resolve) => {
-        let timer: NodeJS.Timeout | undefined;
-        const disposable = vscode.workspace.onDidChangeWorkspaceFolders(() => {
-            const currentUris = (vscode.workspace.workspaceFolders ?? []).map(folder => folder.uri.toString());
-            if (currentUris.length === expectedCount && areUriArraysEqual(currentUris, expectedUris)) {
-                disposable.dispose();
-                if (timer) {
-                    clearTimeout(timer);
-                    timer = undefined;
-                }
-                resolve();
-            }
-        });
-        const success = vscode.workspace.updateWorkspaceFolders(start, deleteCount, ...folders);
-        if (!success) {
-            disposable.dispose();
-            resolve();
-            return;
-        }
-        timer = setTimeout(() => {
-            disposable.dispose();
-            timer = undefined;
-            resolve();
-        }, 1000);
-    });
-}
-
 function areConfigValuesEqual(a: unknown, b: unknown): boolean {
     return JSON.stringify(a) === JSON.stringify(b);
-}
-
-function areUriArraysEqual(left: string[], right: string[]): boolean {
-    if (left.length !== right.length) {
-        return false;
-    }
-    return left.every((value, index) => value === right[index]);
 }
 
 function stubWarningMessages() {
