@@ -36,11 +36,14 @@
 }
 
 .error-trace-title {
-    margin-top: 0.5em;
-    margin-bottom: 0.5em;
+    display: flex;
+    align-items: center;
+    gap: 0.25em;
+    margin: 0;
+    padding: 4px 0;
 }
 
-.error-trace-title span{
+.error-trace-title span {
     font-weight: bold;
     padding-bottom: 0.1em;
     margin-bottom: 0.1em;
@@ -51,13 +54,14 @@
     display: grid;
     grid-template-columns: minmax(14rem, auto) 1fr;
     column-gap: 0.75em;
+    white-space: normal;
+    overflow: visible;
 }
 
 .var-name {
     display: inline-block;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow: visible;
 }
 
 .var-size {
@@ -68,9 +72,8 @@
 
 .var-value {
     display: inline-block;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow: visible;
 }
 
 .var-menu {

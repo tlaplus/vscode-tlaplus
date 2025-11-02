@@ -47,7 +47,11 @@ export const CodePositionLink = React.memo(({line, filepath, position}: CodePosi
     }
 
     const location = {'line': position.line, 'character': position.character};
-    const openFileAtLocation = () => vscode.openFile(filepath, location);
+    const openFileAtLocation = (event: React.MouseEvent<HTMLButtonElement>) => {
+        event.preventDefault();
+        event.stopPropagation();
+        vscode.openFile(filepath, location);
+    };
     return (<VSCodeLink onClick={openFileAtLocation}>{line}</VSCodeLink>);
 });
 
