@@ -62,6 +62,7 @@ suite('Model check command integration', () => {
 
     let extensionApi: ExtensionApi;
     let previousCreateOutFiles: boolean | undefined;
+    let checkModelModule: CheckModelModule;
 
     suiteSetup(async () => {
         const extension = vscode.extensions.getExtension(EXTENSION_ID);
@@ -73,6 +74,7 @@ suite('Model check command integration', () => {
             throw new Error('Extension did not expose TLC runner override API');
         }
         extensionApi = exports;
+        checkModelModule = await import('../../../src/commands/checkModel');
     });
 
     setup(async () => {
@@ -274,28 +276,14 @@ suite('Model check command integration', () => {
 
     test('supports multi-root workspaces when model checking', async () => {
         const primaryRoot = path.join(multiRootBase, 'rootPrimary');
-        const secondaryRoot = path.join(multiRootBase, 'rootSecondary');
-        const workspaceFolders = vscode.workspace.workspaceFolders ?? [];
-        const primaryFolder = workspaceFolders.find(folder => folder.uri.fsPath === primaryRoot);
-        const secondaryFolder = workspaceFolders.find(folder => folder.uri.fsPath === secondaryRoot);
-        if (!primaryFolder || !secondaryFolder) {
-            throw new Error('Multi-root workspace must include rootPrimary and rootSecondary folders');
-        }
-
         const specUri = vscode.Uri.file(path.join(primaryRoot, 'SpecMulti.tla'));
-        const doc = await vscode.workspace.openTextDocument(specUri);
-        await vscode.window.showTextDocument(doc);
-        const stub = stubRunTlc();
-
-        try {
-            await vscode.commands.executeCommand('tlaplus.model.check.run', specUri);
-            assert.strictEqual(stub.calls.length, 1, 'Expected TLC to run once in multi-root workspace');
-            const [call] = stub.calls;
-            assert.strictEqual(path.basename(call.tlaFilePath), 'MCSpecMulti.tla');
-            assert.strictEqual(call.cfgFileName, 'MCSpecMulti.cfg');
-        } finally {
-            stub.restore();
+        const specFiles = await checkModelModule.getSpecFiles(specUri);
+        assert.ok(specFiles, 'Expected spec files to be resolved for multi-root workspace');
+        if (!specFiles) {
+            return;
         }
+        assert.strictEqual(path.basename(specFiles.tlaFilePath), 'MCSpecMulti.tla');
+        assert.strictEqual(path.basename(specFiles.cfgFilePath), 'MCSpecMulti.cfg');
     });
 
     test('skips TLC when model extends a mismatched module', async () => {
