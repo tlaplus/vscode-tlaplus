@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Check Result Webview Fixture</title>
+    <link rel="stylesheet" href="/static/check-result-view.css" />
+    <style>
+      body {
+        margin: 0;
+        background: #1e1e1e;
+        color: #cccccc;
+        font-family: var(--vscode-font-family, sans-serif);
+      }
+      #root {
+        height: 100vh;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      (function () {
+        const messages = [];
+        let state = undefined;
+        window.acquireVsCodeApi = function () {
+          return {
+            postMessage: function (msg) {
+              messages.push(msg);
+            },
+            setState: function (next) {
+              state = next;
+            },
+            getState: function () {
+              return state;
+            }
+          };
+        };
+        fetch('/data/check-result.json')
+          .then(function (response) { return response.json(); })
+          .then(function (data) {
+            state = data;
+            window.dispatchEvent(new MessageEvent('message', { data: { checkResult: data } }));
+          })
+          .catch(function (error) {
+            console.error('Failed to load check result fixture', error);
+          });
+      })();
+    </script>
+    <script type="module" src="/static/check-result-view.js"></script>
+  </body>
+</html>

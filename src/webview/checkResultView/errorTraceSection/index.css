@@ -36,11 +36,14 @@
 }
 
 .error-trace-title {
-    margin-top: 0.5em;
-    margin-bottom: 0.5em;
+    display: flex;
+    align-items: center;
+    gap: 0.25em;
+    margin: 0;
+    padding: 4px 0;
 }
 
-.error-trace-title span{
+.error-trace-title span {
     font-weight: bold;
     padding-bottom: 0.1em;
     margin-bottom: 0.1em;
@@ -49,15 +52,18 @@
 .var-block {
     line-height: 1.4em;
     display: grid;
-    grid-template-columns: minmax(14rem, auto) 1fr;
+    grid-template-columns: minmax(14rem, auto) minmax(0, 1fr) auto;
     column-gap: 0.75em;
+    align-items: flex-start;
+    white-space: normal;
+    overflow: visible;
 }
 
 .var-name {
     display: inline-block;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow: visible;
+    overflow-wrap: anywhere;
 }
 
 .var-size {
@@ -68,16 +74,19 @@
 
 .var-value {
     display: inline-block;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow: visible;
+    overflow-wrap: anywhere;
 }
 
 .var-menu {
-    position: absolute;
-    right: 0;
-    top: 0;
-    display: none;
+    display: flex;
+    gap: 0.25em;
+    justify-self: end;
+    align-self: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.1s ease-in-out;
 }
 
 .var-button {
@@ -88,7 +97,8 @@
 }
 
 .var-block:hover .var-menu {
-    display: block;
+    opacity: 1;
+    pointer-events: auto;
 }
 
 .change-marker {
