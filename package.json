@@ -767,7 +767,7 @@
         "lint": "eslint --ext .ts,.tsx src/ tests/",
         "lint:fix": "eslint --fix --ext .ts,.tsx src/ tests/",
         "watch": "npm run compile -- --watch",
-        "pretest": "tsc -p ./ && node -e \"require('fs').cpSync('tools', 'out/tools', {recursive: true})\"",
+        "pretest": "node -e \"require('fs').rmSync('out/tests', {recursive: true, force: true});\" && tsc -p ./ && node -e \"require('fs').cpSync('tools', 'out/tools', {recursive: true})\" && npm run compile",
         "test": "node ./out/tests/runTest.js",
         "test:tlaplus-grammar": "vscode-tmgrammar-test ./tests/suite/languages/*.tla -g ./languages/tlaplus-grammar.json -g ./languages/pluscal-grammar.json"
     },

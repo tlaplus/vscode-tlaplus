@@ -1,0 +1,4 @@
+---- MODULE MCLibrarySpec ----
+EXTENDS LibrarySpec
+
+====
