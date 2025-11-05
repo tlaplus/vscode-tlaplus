@@ -134,7 +134,7 @@ export async function runXMLExporter(
     // Otherwise, we need to convert it to a file system path.
     const fsPath = uri.scheme === 'jarfile' ? path.basename(uri.fsPath) : uri.fsPath;
 
-    const toolOptions = [ '-o' ]; // -o turns XML schema validation off.
+    const toolOptions = [ '-o', '-u' ]; // -o turns XML schema validation off. -u removes comment markup from pre-comments.
     if (!includeExtendedModules) {
         toolOptions.push('-r'); // -r restricts to current module only
     }
