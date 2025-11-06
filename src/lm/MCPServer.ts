@@ -452,7 +452,7 @@ export class MCPServer implements vscode.Disposable {
                     return {
                         content: [{
                             type: 'text',
-                            text: `Document symbols for ${displayPath}:\n${JSON.stringify(symbols, null, 2)}`
+                            text: `Document symbols for ${displayPath}:\n${JSON.stringify(symbols)}`
                         }]
                     };
                 } catch (error) {
