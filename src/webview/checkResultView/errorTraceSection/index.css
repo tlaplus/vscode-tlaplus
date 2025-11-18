@@ -83,7 +83,7 @@
     display: flex;
     gap: 0.25em;
     justify-self: end;
-    align-self: center;
+    align-self: flex-start;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.1s ease-in-out;
@@ -134,6 +134,8 @@
 }
 
 code {
-    color: inherit; /* Reset the text color */
-    background: inherit; /* Remove the gray-ish background */
+    color: inherit;
+    /* Reset the text color */
+    background: inherit;
+    /* Remove the gray-ish background */
 }

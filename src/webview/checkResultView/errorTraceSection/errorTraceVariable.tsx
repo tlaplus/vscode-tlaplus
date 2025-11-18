@@ -5,8 +5,8 @@ import { ErrorTraceSettings } from './errorTrace';
 import Ansi from '@cocalc/ansi-to-react';
 import { VscodeTreeItem } from '@vscode-elements/react-elements';
 
-interface ErrorTraceVariableI {value: CollectionValue, stateId: number, settings: ErrorTraceSettings}
-export const ErrorTraceVariable = React.memo(({value, stateId, settings}: ErrorTraceVariableI) => {
+interface ErrorTraceVariableI { value: CollectionValue, stateId: number, settings: ErrorTraceSettings }
+export const ErrorTraceVariable = React.memo(({ value, stateId, settings }: ErrorTraceVariableI) => {
 
     if (stateId !== 1 && settings.hideModified && value.changeType === 'N') {
         return (null);
@@ -17,19 +17,23 @@ export const ErrorTraceVariable = React.memo(({value, stateId, settings}: ErrorT
     }
 
     const copyToClipboard = (event: React.MouseEvent<HTMLSpanElement>) => {
+        event.preventDefault();
         event.stopPropagation();
+        event.nativeEvent.stopImmediatePropagation();
         navigator.clipboard.writeText(value.str);
         vscode.showInfoMessage('Value has been copied to clipboard');
     };
 
     const showVariableValue = (event: React.MouseEvent<HTMLSpanElement>) => {
+        event.preventDefault();
         event.stopPropagation();
+        event.nativeEvent.stopImmediatePropagation();
         vscode.showVariableValue(value.id);
     };
 
     const changeHintKey = value.changeType as keyof typeof changeHints;
     const changeHint = changeHints[changeHintKey] ?? '';
-    const changeTypeClass = 'value-'+value.changeType;
+    const changeTypeClass = 'value-' + value.changeType;
     const hasValueChildren = hasVariableChildrenToDisplay(value);
     const hasDeletedChildren = Array.isArray(value.deletedItems) && value.deletedItems.length > 0;
     const hasChildren = hasValueChildren || hasDeletedChildren;
@@ -56,14 +60,14 @@ export const ErrorTraceVariable = React.memo(({value, stateId, settings}: ErrorT
                 <div className="var-menu">
                     <span
                         hidden={value.changeType !== 'D'}
-                        title="Dislpay value"
+                        title="Display value"
                         onClick={showVariableValue}
-                        className="var-button codicon codicon-link-external"/>
+                        className="var-button codicon codicon-link-external" />
 
                     <span
                         title="Copy value to clipboard"
                         onClick={copyToClipboard}
-                        className="var-button codicon codicon-copy"/>
+                        className="var-button codicon codicon-copy" />
                 </div>
             </div>
 
@@ -75,7 +79,7 @@ export const ErrorTraceVariable = React.memo(({value, stateId, settings}: ErrorT
                             key={childValue.id}
                             value={childValue as CollectionValue}
                             stateId={stateId}
-                            settings={settings}/>)}
+                            settings={settings} />)}
 
             {value.deletedItems &&
                 value.deletedItems.map(
@@ -84,7 +88,7 @@ export const ErrorTraceVariable = React.memo(({value, stateId, settings}: ErrorT
                             key={childValue.id}
                             value={childValue as CollectionValue}
                             stateId={stateId}
-                            settings={settings}/>)}
+                            settings={settings} />)}
         </VscodeTreeItem>
     );
 });
