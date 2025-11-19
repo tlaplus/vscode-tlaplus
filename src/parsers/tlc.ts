@@ -639,7 +639,7 @@ class ModelCheckResultBuilder {
         for (let i = 1; i < lines.length; i++) {
             const line = lines[i];
             // Tolerate/ignore ASNI escape sequences around the conjunct symbol.
-            const matches = /^(?:\u001b\[[0-9;]*m)*(?:\/\\(?:\u001b\[[0-9;]*m)* )?([\w.\[\]]+) = (.+)$/g.exec(line);
+            const matches = /^(?:\u001b\[[0-9;]*m)*(?:\/\\(?:\u001b\[[0-9;]*m)* )?([\w.[\]]+) = (.+)$/g.exec(line);
             if (matches) {
                 const name = matches[1];
                 const valueLines = [matches[2]];
