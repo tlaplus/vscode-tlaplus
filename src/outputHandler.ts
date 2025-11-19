@@ -12,12 +12,14 @@ export abstract class ProcessOutputHandler<T> {
     private closed = false;
     private buf: string | null = null;
     private resolve?: (result: T) => void;
+    private reject?: (err: unknown) => void;
     private readonly lines: string[] | undefined;
 
     constructor(source: Readable | string[] | null, initialResult: T) {
         if (source instanceof Readable) {
             source.on('data', chunk => this.handleData(chunk));
             source.on('end', () => this.handleData(null));
+            source.on('error', err => this.handleSourceError(err));
         } else {
             this.lines = source === null ? [] : source;
         }
@@ -28,8 +30,9 @@ export abstract class ProcessOutputHandler<T> {
      * Reads the stream to the end, parsing all the lines.
      */
     async readAll(): Promise<T> {
-        return new Promise(resolve => {
+        return new Promise((resolve, reject) => {
             this.resolve = resolve;
+            this.reject = reject;
         });
     }
 
@@ -59,7 +62,7 @@ export abstract class ProcessOutputHandler<T> {
 
     private handleData(chunk: Buffer | string | null) {
         if (this.closed) {
-            throw new Error('Stream is closed.');
+            return;
         }
         if (chunk === null) {
             this.tryHandleLine(this.buf);
@@ -80,6 +83,17 @@ export abstract class ProcessOutputHandler<T> {
             this.buf = lines.pop() || null;
         }
         lines.forEach(line => this.tryHandleLine(line));
+    }
+
+    private handleSourceError(err: unknown) {
+        if (this.closed) {
+            return;
+        }
+        this.closed = true;
+        this.handleError(err);
+        if (this.reject) {
+            this.reject(err);
+        }
     }
 
     private tryHandleLine(line: string | null) {
