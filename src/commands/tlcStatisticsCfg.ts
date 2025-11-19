@@ -36,10 +36,11 @@ export async function syncTlcStatisticsSetting(): Promise<void> {
     const cfgOption = vscode.workspace.getConfiguration().get<string>(CFG_TLC_STATISTICS_TYPE);
     const fileOption = await readFileOption();
     if (cfgOption === fileOption) {
-        return Promise.reject();
+        // Already synced; nothing to do.
+        return;
     }
     const target = vscode.ConfigurationTarget.Global;
-    return vscode.workspace.getConfiguration().update(CFG_TLC_STATISTICS_TYPE, fileOption, target);
+    await vscode.workspace.getConfiguration().update(CFG_TLC_STATISTICS_TYPE, fileOption, target);
 }
 
 async function readFileOption(): Promise<ShareOption> {
