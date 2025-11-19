@@ -6,6 +6,18 @@
   <title>Check Result Webview Fixture</title>
   <link rel="stylesheet" href="/static/check-result-view.css" />
   <style>
+    @font-face {
+      font-family: 'PlaywrightSnapshot';
+      src: url('./fonts/Inter-Regular.woff2') format('woff2');
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    :root {
+      --vscode-font-family: 'PlaywrightSnapshot', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    }
+
     body {
       margin: 0;
       background: #1e1e1e;

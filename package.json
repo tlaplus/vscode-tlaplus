@@ -771,6 +771,7 @@
         "test": "node ./out/tests/runTest.js",
         "test:tlaplus-grammar": "vscode-tmgrammar-test ./tests/suite/languages/*.tla -g ./languages/tlaplus-grammar.json -g ./languages/pluscal-grammar.json",
         "prepare:playwright": "playwright install --with-deps chromium",
+        "pretest:playwright": "npm run compile && npm run pretest && node scripts/playwright-generate-check-result.js",
         "test:playwright": "playwright test"
     },
     "devDependencies": {
