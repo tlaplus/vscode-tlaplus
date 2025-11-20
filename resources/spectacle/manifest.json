@@ -1,0 +1,238 @@
+{
+  "sourceRepo": "https://github.com/will62794/spectacle.git",
+  "requestedRef": "ff13e9190bd3646eb8296eb87ecffb83cc58df12",
+  "resolvedCommit": "ff13e9190bd3646eb8296eb87ecffb83cc58df12",
+  "generatedAt": "2025-11-20T20:35:38.649Z",
+  "files": [
+    {
+      "path": "assets/css/bootstrap.min.css",
+      "bytes": 232803,
+      "sha256": "3c8f27e6009ccfd710a905e6dcf12d0ee3c6f2ac7da05b0572d3e0d12e736fc8"
+    },
+    {
+      "path": "assets/css/clusterize.min.css",
+      "bytes": 330,
+      "sha256": "9097cfb46cbd6d4229419ba8b2cbd9037acea0d76acb71e73c84175fb2b6c7d0"
+    },
+    {
+      "path": "assets/css/codemirror.min.css",
+      "bytes": 5919,
+      "sha256": "23c3721ace308db32e052504e34a39e56ea4e8feedbbfec6dbcfc9194518088b"
+    },
+    {
+      "path": "assets/css/fonts_JetBrainsMono_SourceCodePro.css",
+      "bytes": 361,
+      "sha256": "4645d9b6e0a230fe6020a681bbbdabd6e18f11f436315c7a159565286c1dbab2"
+    },
+    {
+      "path": "assets/favicon/apple-touch-icon.png",
+      "bytes": 2602,
+      "sha256": "30dae5704fa21b74e649e0c5cbbc7ac781fe2c80df810d195b13b0fc65d50029"
+    },
+    {
+      "path": "assets/favicon/favicon-96x96.png",
+      "bytes": 1152,
+      "sha256": "89a0b0dcdbfc85ac23be4aa3afff76ea3afb2a1bf363e555b046b9387ed86457"
+    },
+    {
+      "path": "assets/favicon/favicon.ico",
+      "bytes": 15086,
+      "sha256": "2a5faab8c313237bd19dbd0622dda4ea8c3cb5c653c6bd08457e170afd0c9563"
+    },
+    {
+      "path": "assets/favicon/favicon.svg",
+      "bytes": 1856,
+      "sha256": "17bf7ffd923728605340ad185ec31f4fcce2ab8ea7dcfd96526f188cd83817e8"
+    },
+    {
+      "path": "assets/favicon/site.webmanifest",
+      "bytes": 436,
+      "sha256": "91a78d4fe16316df93ec91b33a15c7ed84aab2b0de8a9959da40f108dfc2154e"
+    },
+    {
+      "path": "assets/favicon/web-app-manifest-192x192.png",
+      "bytes": 2741,
+      "sha256": "3fb9c516a389a29736612cd86009a057f0812601d975a097a5408e086f6bf5c5"
+    },
+    {
+      "path": "assets/favicon/web-app-manifest-512x512.png",
+      "bytes": 11062,
+      "sha256": "e8a9fada20aee9b5be5af6c50d312290e729cf5c78a2a7333dacdd39cff8c741"
+    },
+    {
+      "path": "assets/fonts/JetBrainsMono-Variable.ttf",
+      "bytes": 112172,
+      "sha256": "44ce4a84f20d60f24539bd0cef11f79c29e38609e0f8adf18551c9794a5d9dc3"
+    },
+    {
+      "path": "assets/fonts/SourceCodePro-Variable.ttf",
+      "bytes": 108004,
+      "sha256": "e5a7faf0f92c1175d81b5796aaed9ba3a3e52484aa62012ea07a19e7acef39a3"
+    },
+    {
+      "path": "assets/gear-spinner.svg",
+      "bytes": 637,
+      "sha256": "fce48485a60b9cc6f053814d6e540ec4346273f7faf57914b7cd7b9825b4e7e4"
+    },
+    {
+      "path": "assets/glasses-svgrepo-com.svg",
+      "bytes": 1672,
+      "sha256": "3a931996497c9b0c66255a9d16c01f3ceeff73656963db5371f5384511c870d4"
+    },
+    {
+      "path": "assets/hide-icon.svg",
+      "bytes": 1122,
+      "sha256": "5ab2e5adf7b6e7e42757165875e8c9bb17d51392f66254a810cf141249e3bb9c"
+    },
+    {
+      "path": "index.html",
+      "bytes": 5279,
+      "sha256": "a3af742121d7c8ff740149252e2e675f19e33572d7924ba1958a05b3e603a2fb"
+    },
+    {
+      "path": "js/addon/mode/simple.js",
+      "bytes": 8497,
+      "sha256": "4e9ed8b17d32e75d4541c65c68e323f65e7ca2439238a29b507ef368727da6d2"
+    },
+    {
+      "path": "js/app.js",
+      "bytes": 171364,
+      "sha256": "255939c18839a1ec79634677d7918d22c0099a1d784123e764b3264b634d1cb3"
+    },
+    {
+      "path": "js/eval.js",
+      "bytes": 219356,
+      "sha256": "80503c68ee1d627ed369ca3e5a5c6016ca467f997bdaa03ff793e9f10fc7df76"
+    },
+    {
+      "path": "js/hash-sum/hash-sum.js",
+      "bytes": 1588,
+      "sha256": "1173797d0ed0c3a8c5976c0e65c2dd09fd2331d3447a1f4911b0dc7536299015"
+    },
+    {
+      "path": "js/hash-sum/license",
+      "bytes": 1082,
+      "sha256": "8e07dd904e9341d592acf2a11b34ee64ef559773bc77e89a51f509eae654a6cc"
+    },
+    {
+      "path": "js/hash-sum/readme.md",
+      "bytes": 1834,
+      "sha256": "1ee2932a4a7b78fc326a0386d5808dd668e5dd8f1579f5b87ce44af6868863d3"
+    },
+    {
+      "path": "js/lib/bootstrap.bundle.min.js",
+      "bytes": 80721,
+      "sha256": "0833b2e9c3a26c258476c46266e6877fc75218625162e0460be9a3a098a61c6c"
+    },
+    {
+      "path": "js/lib/clusterize.min.js",
+      "bytes": 6408,
+      "sha256": "8f67d25174b1eda69be8b33d46192dc22d3c2804de41e62a7eb2eb512ddce7a6"
+    },
+    {
+      "path": "js/lib/codemirror.min.js",
+      "bytes": 168532,
+      "sha256": "f5ae9591d844cbaed33983ebd0c08e7804a834c7c18a27e9b99b18ecfcd51d38"
+    },
+    {
+      "path": "js/lib/cytoscape-dagre.min.js",
+      "bytes": 4550,
+      "sha256": "5f1c447826ccc2e9a693fb1fb97e3d3cd733ac5a75904d31f3d7968ee7d81e40"
+    },
+    {
+      "path": "js/lib/cytoscape.min.js",
+      "bytes": 352063,
+      "sha256": "48a75a1b4d4fcdf743c457d83089e0e9efcc7f75f8f428e0e221e41d9db6fe54"
+    },
+    {
+      "path": "js/lib/dagre.js",
+      "bytes": 520050,
+      "sha256": "dac27af60831b48ec88289b5f10d5367ca99db5e4c1521d5edd271875db8b52f"
+    },
+    {
+      "path": "js/lib/immutable.min.js",
+      "bytes": 65767,
+      "sha256": "175f72e9b39d5116d6f4cabf0e83e27b9186cb5a0221a032d88fa1512857f357"
+    },
+    {
+      "path": "js/lib/jquery-3.3.1.min.js",
+      "bytes": 86927,
+      "sha256": "160a426ff2894252cd7cebbdd6d6b7da8fcd319c65b70468f10b6690c45d02ef"
+    },
+    {
+      "path": "js/lib/jquery-ui.min.js",
+      "bytes": 255084,
+      "sha256": "9528ca634fecad433d044ddd3e6f9ce1f068d5d932dafdbb19d8e6daea1968bd"
+    },
+    {
+      "path": "js/lib/lodash.js",
+      "bytes": 574715,
+      "sha256": "21d33ce24e2236371f62003abdcd550991e55bbcb897cedc07c092ee8ee7d198"
+    },
+    {
+      "path": "js/lib/lodash.min.js",
+      "bytes": 73015,
+      "sha256": "a9705dfc47c0763380d851ab1801be6f76019f6b67e40e9b873f8b4a0603f7a9"
+    },
+    {
+      "path": "js/lib/mithril.min.js",
+      "bytes": 24614,
+      "sha256": "7b9a1cbe4348d0992c915f65c74f04c4c8353f237a59c27322fcd1fc49359492"
+    },
+    {
+      "path": "js/lib/popper.min.js",
+      "bytes": 20122,
+      "sha256": "c212f4b505a86352aed62b24a8f16f999f821ecbe6456c7f3c8a04bc87968782"
+    },
+    {
+      "path": "js/lib/viz-standalone.js",
+      "bytes": 1391673,
+      "sha256": "778ee778bfee78fc6cb7b5a59c04d955ecf1169e6be60843c8a252848218238e"
+    },
+    {
+      "path": "js/main.js",
+      "bytes": 1159,
+      "sha256": "89a8619ae4067600b24d7f308a318e3a1e5e20495d91e2913db34589f806371d"
+    },
+    {
+      "path": "js/object_hash.js",
+      "bytes": 34984,
+      "sha256": "3c5b71eed027ff80e089ce770826e4ee336aa72c3b427e9d84fc6c8cf262808d"
+    },
+    {
+      "path": "js/test_spec.js",
+      "bytes": 347,
+      "sha256": "d885127e255f3c41082c3615b445a85630aaf3b5d6cd65c3df8a55f815be15d5"
+    },
+    {
+      "path": "js/tlamode.js",
+      "bytes": 3790,
+      "sha256": "61efde6924b5a9c701f3127093314359cc918c87ed989422ac5855f91e6b167f"
+    },
+    {
+      "path": "js/tree-sitter-tlaplus.wasm",
+      "bytes": 4983108,
+      "sha256": "729b5b9ada1f2d49613b4436d2f345f1bbf239edf1cb2d0a616c89fca82a0cac"
+    },
+    {
+      "path": "js/tree-sitter.js",
+      "bytes": 72563,
+      "sha256": "faaefedb1c182eb51cad866a0a82cce6787f0e5a90110e3ca9ec048842a84423"
+    },
+    {
+      "path": "js/tree-sitter.wasm",
+      "bytes": 186526,
+      "sha256": "17382e1a69bd628107e8dfe37d31d57f7ba948e5f2da77e56a8aa010488dc5ae"
+    },
+    {
+      "path": "js/worker.js",
+      "bytes": 13249,
+      "sha256": "ff4738774a2b71edb556cb11c31f6d3e4aa4faa6261a2e312495d175df06a550"
+    },
+    {
+      "path": "style.css",
+      "bytes": 21449,
+      "sha256": "d0f89830301991ddfbb4a795d63a929712e2d8aef85758dfd779e01f8b521a75"
+    }
+  ]
+}

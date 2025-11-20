@@ -35,7 +35,8 @@
         "Modeling"
     ],
     "activationEvents": [
-        "workspaceContains:**/*.tla"
+        "workspaceContains:**/*.tla",
+        "onCommand:tlaSpectacle.open"
     ],
     "main": "./out/main.js",
     "browser": "./out/main.browser.js",
@@ -390,6 +391,11 @@
             {
                 "command": "tlaplus.tlc.profiler.clear",
                 "title": "Clear Coverage Data",
+                "category": "TLA+"
+            },
+            {
+                "command": "tlaSpectacle.open",
+                "title": "Open in Spectacle",
                 "category": "TLA+"
             }
         ],
@@ -775,9 +781,11 @@
         "watch": "npm run compile -- --watch",
         "pretest": "tsc -p ./ && node -e \"require('fs').cpSync('tools', 'out/tools', {recursive: true})\"",
         "test": "node ./out/tests/runTest.js",
-        "test:tlaplus-grammar": "vscode-tmgrammar-test ./tests/suite/languages/*.tla -g ./languages/tlaplus-grammar.json -g ./languages/pluscal-grammar.json"
+        "test:tlaplus-grammar": "vscode-tmgrammar-test ./tests/suite/languages/*.tla -g ./languages/tlaplus-grammar.json -g ./languages/pluscal-grammar.json",
+        "test:playwright": "playwright test"
     },
     "devDependencies": {
+        "@playwright/test": "^1.56.1",
         "@types/adm-zip": "^0.5.7",
         "@types/express": "^5.0.2",
         "@types/glob": "^8.1.0",
@@ -803,10 +811,10 @@
     "dependencies": {
         "@cocalc/ansi-to-react": "^7.0.0",
         "@modelcontextprotocol/sdk": "^1.17.2",
-        "@vscode/codicons": "^0.0.33",
-        "@vscode/debugadapter": "^1.63.0",
         "@vscode-elements/elements": "^2.3.1",
         "@vscode-elements/react-elements": "^2.3.1",
+        "@vscode/codicons": "^0.0.33",
+        "@vscode/debugadapter": "^1.63.0",
         "adm-zip": "^0.5.16",
         "await-notify": "^1.0.1",
         "chart.js": "^4.4.1",
