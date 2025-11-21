@@ -63,7 +63,7 @@ export async function checkModel(
     if (!specFiles) {
         return;
     }
-    doCheckModel(specFiles, true, extContext, diagnostic, true);
+    await doCheckModel(specFiles, true, extContext, diagnostic, true);
 }
 
 export async function runLastCheckAgain(
@@ -77,7 +77,7 @@ export async function runLastCheckAgain(
     if (!canRunTlc(extContext)) {
         return;
     }
-    doCheckModel(lastCheckFiles, true, extContext, diagnostic, false);
+    await doCheckModel(lastCheckFiles, true, extContext, diagnostic, false);
 }
 
 export async function checkModelCustom(
@@ -109,7 +109,7 @@ export async function checkModelCustom(
         doc.uri.fsPath,
         path.join(path.dirname(doc.uri.fsPath), cfgFileName)
     );
-    doCheckModel(specFiles, true, extContext, diagnostic, true);
+    await doCheckModel(specFiles, true, extContext, diagnostic, true);
 }
 
 /**
@@ -192,6 +192,7 @@ export async function doCheckModel(
             specFiles.tlaFilePath, path.basename(specFiles.cfgFilePath), showOptionsPrompt, extraOpts);
         if (procInfo === undefined) {
             // Command cancelled by user
+            updateStatusBarItem(false, lastCheckFiles);
             return undefined;
         }
         outChannel.bindTo(procInfo);

@@ -4,7 +4,7 @@ import { runReplTerminal, getJavaPath, buildConfigJavaOptions, TlaTool } from '.
 export const CMD_RUN_REPL = 'tlaplus.repl.run';
 
 export async function launchRepl(): Promise<void> {
-    runReplTerminal();
+    return runReplTerminal();
 }
 
 export class REPLTerminalProfileProvider implements TerminalProfileProvider {
