@@ -40,11 +40,22 @@
         "body": [
             "if ${1:condition} then",
             "\t${2:body}",
-            "elseif",
+            "else",
             "\t${0:body}",
             "end if;"
         ],
         "description": "If-else block"
+    },
+    "If-Elsif": {
+        "prefix": "ifel",
+        "body": [
+            "if ${1:condition} then",
+            "\t${2:body}",
+            "elsif ${3:condition} then",
+            "\t${0:body}",
+            "end if;"
+        ],
+        "description": "If-elsif block"
     },
     "With": {
         "prefix": "with",
