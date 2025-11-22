@@ -60,8 +60,16 @@ Spec == Init /\\ Next
         });
 
         // Wait for stream to end (production code ensures this happens)
-        await new Promise<void>((resolve) => {
-            procInfo.mergedOutput.once('end', resolve);
+        await new Promise<void>((resolve, reject) => {
+            if (procInfo.mergedOutput.readableEnded) {
+                resolve();
+                return;
+            }
+            const timer = setTimeout(() => reject(new Error('mergedOutput did not end in time')), 5000);
+            procInfo.mergedOutput.once('end', () => {
+                clearTimeout(timer);
+                resolve();
+            });
         });
 
         // Verify that mergedOutput captured output
@@ -84,4 +92,3 @@ Spec == Init /\\ Next
     });
 
 });
-
