@@ -35,6 +35,22 @@
         ],
         "description": "If block"
     },
+    "Elsif": {
+        "prefix": "elsif",
+        "body": [
+            "elsif ${1:condition} then",
+            "\t${0:body}"
+        ],
+        "description": "Elsif clause"
+    },
+    "Else": {
+        "prefix": "else",
+        "body": [
+            "else",
+            "\t${0:body}"
+        ],
+        "description": "Else clause"
+    },
     "If-Else": {
         "prefix": "ifel",
         "body": [
