@@ -185,15 +185,17 @@ export async function doCheckModel(
     debuggerPortCallback?: (port?: number) => void
 ): Promise<ModelCheckResult | undefined> {
     try {
-        lastCheckFiles = specFiles;
-        vscode.commands.executeCommand('setContext', CTX_TLC_CAN_RUN_AGAIN, true);
-        updateStatusBarItem(true, specFiles);
         const procInfo = await runTlc(
             specFiles.tlaFilePath, path.basename(specFiles.cfgFilePath), showOptionsPrompt, extraOpts);
         if (procInfo === undefined) {
-            // Command cancelled by user
+            // Command cancelled by user, make sure UI state is reset
+            vscode.commands.executeCommand('setContext', CTX_TLC_CAN_RUN_AGAIN, !!lastCheckFiles);
+            updateStatusBarItem(false, lastCheckFiles);
             return undefined;
         }
+        lastCheckFiles = specFiles;
+        vscode.commands.executeCommand('setContext', CTX_TLC_CAN_RUN_AGAIN, true);
+        updateStatusBarItem(true, specFiles);
         outChannel.bindTo(procInfo);
         checkProcess = procInfo.process;
         checkProcess.on('close', () => {
