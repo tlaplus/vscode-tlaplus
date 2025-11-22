@@ -1,0 +1,51 @@
+import { test as base, expect } from '@playwright/test';
+import { startFixtureServer, FixtureServer } from './support/server';
+
+type Fixtures = {
+    fixtureServer: FixtureServer;
+};
+
+const test = base.extend<Fixtures>({
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-empty-pattern
+    fixtureServer: async ({}, use) => {
+        const server = await startFixtureServer();
+        try {
+            await use(server);
+        } finally {
+            await server.dispose();
+        }
+    }
+});
+
+test.describe('Check Result webview fixture', () => {
+    test('error trace tree wraps text and link does not collapse state', async ({ page, fixtureServer }) => {
+        page.on('console', msg => {
+            if (msg.type() === 'error') {
+                console.error(`[fixture:${msg.type()}] ${msg.text()}`);
+            }
+        });
+
+        await page.goto(fixtureServer.endpoint, { waitUntil: 'networkidle' });
+        await page.addStyleTag({
+            content: '* { transition-duration: 0s !important; animation-duration: 0s !important; }'
+        });
+
+        const state = page.locator('vscode-tree-item#state-1');
+        await state.waitFor({ state: 'visible' });
+        await expect(state).toHaveAttribute('open', '');
+        const before = await state.evaluate(el => el.hasAttribute('open'));
+        const stateLink = page.locator('vscode-tree-item#state-1 .error-trace-title button');
+        await expect(stateLink).toHaveCount(1);
+        await stateLink.click();
+        const after = await state.evaluate(el => el.hasAttribute('open'));
+        expect(after).toBe(before);
+
+        const valueCell = page.locator('vscode-tree-item#state-1 .var-block .var-value').first();
+        const whiteSpace = await valueCell.evaluate<string>(el => getComputedStyle(el).whiteSpace);
+        expect(whiteSpace).toBe('normal');
+        const overflowX = await valueCell.evaluate<string>(el => getComputedStyle(el).overflowX);
+        expect(overflowX).toBe('visible');
+
+        await expect(page.locator('vscode-tree')).toHaveScreenshot('error-trace.png');
+    });
+});

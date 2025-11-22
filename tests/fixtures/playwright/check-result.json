@@ -1,0 +1,242 @@
+{
+  "source": 1,
+  "showFullOutput": false,
+  "state": "E",
+  "status": 11,
+  "processInfo": "Running breadth-first search Model-Checking with fp 6 and seed -9020681683977717109.",
+  "initialStatesStat": [
+    {
+      "timeStamp": "00:00:00",
+      "diameter": 0,
+      "total": 1,
+      "distinct": 1,
+      "queueSize": 1
+    },
+    {
+      "timeStamp": "00:00:01",
+      "diameter": 3,
+      "total": 4,
+      "distinct": 4,
+      "queueSize": 1
+    }
+  ],
+  "coverageStat": [
+    {
+      "module": "error_trace",
+      "action": "Init",
+      "filePath": "/Users/bob/error_trace.tla",
+      "range": {
+        "start": 7,
+        "end": 0
+      },
+      "total": 2,
+      "distinct": 2
+    },
+    {
+      "module": "error_trace",
+      "action": "SomeFunc",
+      "filePath": "/Users/bob/error_trace.tla",
+      "range": {
+        "start": 11,
+        "end": 0
+      },
+      "total": 5,
+      "distinct": 3
+    }
+  ],
+  "warnings": [],
+  "errors": [
+    {
+      "lines": [
+        {
+          "spans": [
+            {
+              "type": "T",
+              "text": "Invariant FooInvariant is violated."
+            }
+          ]
+        }
+      ],
+      "errorTrace": [
+        {
+          "num": 1,
+          "title": "Initial predicate",
+          "module": "",
+          "action": "",
+          "filePath": "Spec.tla",
+          "range": [
+            {
+              "line": 0,
+              "character": 0
+            },
+            {
+              "line": 0,
+              "character": 0
+            }
+          ],
+          "variables": {
+            "key": "",
+            "str": "[FooVar |-> 1..2, BarVar |-> -1]",
+            "changeType": "N",
+            "id": 3,
+            "items": [
+              {
+                "key": "BarVar",
+                "str": "-1",
+                "changeType": "N",
+                "id": 2
+              },
+              {
+                "key": "FooVar",
+                "str": "1..2",
+                "changeType": "N",
+                "id": 1
+              }
+            ],
+            "prefix": "[",
+            "postfix": "]",
+            "delim": ", ",
+            "expandSingle": true,
+            "itemSep": " |-> "
+          }
+        },
+        {
+          "num": 2,
+          "title": "SomeFunc in error_trace",
+          "module": "error_trace",
+          "action": "SomeFunc",
+          "filePath": "Spec.tla",
+          "range": [
+            {
+              "line": 0,
+              "character": 0
+            },
+            {
+              "line": 0,
+              "character": 0
+            }
+          ],
+          "variables": {
+            "key": "",
+            "str": "[FooVar |-> {1}, BarVar |-> 1]",
+            "changeType": "M",
+            "id": 7,
+            "items": [
+              {
+                "key": "BarVar",
+                "str": "1",
+                "changeType": "M",
+                "id": 6
+              },
+              {
+                "key": "FooVar",
+                "str": "{1}",
+                "changeType": "M",
+                "id": 5,
+                "items": [
+                  {
+                    "key": 1,
+                    "str": "1",
+                    "changeType": "N",
+                    "id": 4
+                  }
+                ],
+                "prefix": "{",
+                "postfix": "}",
+                "delim": ", ",
+                "expandSingle": true
+              }
+            ],
+            "prefix": "[",
+            "postfix": "]",
+            "delim": ", ",
+            "expandSingle": true,
+            "itemSep": " |-> "
+          }
+        },
+        {
+          "num": 3,
+          "title": "SomeFunc in error_trace",
+          "module": "error_trace",
+          "action": "SomeFunc",
+          "filePath": "Spec.tla",
+          "range": [
+            {
+              "line": 0,
+              "character": 0
+            },
+            {
+              "line": 0,
+              "character": 0
+            }
+          ],
+          "variables": {
+            "key": "",
+            "str": "[FooVar |-> {4, TRUE}, BarVar |-> 40]",
+            "changeType": "M",
+            "id": 12,
+            "items": [
+              {
+                "key": "BarVar",
+                "str": "40",
+                "changeType": "M",
+                "id": 11
+              },
+              {
+                "key": "FooVar",
+                "str": "{4, TRUE}",
+                "changeType": "M",
+                "id": 10,
+                "items": [
+                  {
+                    "key": 1,
+                    "str": "4",
+                    "changeType": "A",
+                    "id": 8
+                  },
+                  {
+                    "key": 2,
+                    "str": "TRUE",
+                    "changeType": "A",
+                    "id": 9
+                  }
+                ],
+                "prefix": "{",
+                "postfix": "}",
+                "delim": ", ",
+                "expandSingle": true,
+                "deletedItems": [
+                  {
+                    "key": 1,
+                    "str": "1",
+                    "changeType": "D",
+                    "id": 13
+                  }
+                ]
+              }
+            ],
+            "prefix": "[",
+            "postfix": "]",
+            "delim": ", ",
+            "expandSingle": true,
+            "itemSep": " |-> "
+          }
+        }
+      ]
+    }
+  ],
+  "sanyMessages": {
+    "modules": {},
+    "messages": []
+  },
+  "startDateTime": "2019-08-17T00:37:50.000Z",
+  "endDateTime": "2019-08-17T00:37:51.000Z",
+  "duration": 1041,
+  "workersCount": 0,
+  "outputLines": [],
+  "stateName": "Errors",
+  "startDateTimeStr": "02:37:50 (Aug 17)",
+  "endDateTimeStr": "02:37:51 (Aug 17)",
+  "durationStr": "1041 msec",
+  "statusDetails": "1 error(s)"
+}
