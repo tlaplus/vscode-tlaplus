@@ -47,7 +47,7 @@
         "description": "If-else block"
     },
     "If-Elsif": {
-        "prefix": "ifel",
+        "prefix": "ifelsif",
         "body": [
             "if ${1:condition} then",
             "\t${2:body}",
