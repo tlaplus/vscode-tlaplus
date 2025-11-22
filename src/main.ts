@@ -29,6 +29,7 @@ import { TlaDocumentInfos } from './model/documentInfo';
 import { syncTlcStatisticsSetting, listenTlcStatConfigurationChanges } from './commands/tlcStatisticsCfg';
 import { TlapsClient } from './tlaps';
 import { CurrentProofStepWebviewViewProvider } from './panels/currentProofStepWebviewViewProvider';
+import { openSpectacle, CMD_OPEN_SPECTACLE } from './commands/openSpectacle';
 import { moduleSearchPaths } from './paths';
 import { ModuleSearchPathsTreeDataProvider } from './panels/moduleSearchPathsTreeDataProvider';
 import { CheckModuleTool, ExploreModuleTool, SmokeModuleTool } from './lm/TLCTool';
@@ -136,6 +137,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         vscode.commands.registerCommand(
             CMD_EVALUATE_EXPRESSION,
             () => evaluateExpression(diagnostic, context)),
+        vscode.commands.registerCommand(
+            CMD_OPEN_SPECTACLE,
+            () => openSpectacle(context)),
         vscode.commands.registerCommand(
             CMD_RUN_REPL,
             () => launchRepl()),
