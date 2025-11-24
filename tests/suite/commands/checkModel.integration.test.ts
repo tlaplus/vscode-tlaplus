@@ -36,7 +36,10 @@ class MockChildProcess extends EventEmitter {
     }
 }
 
-suite('Model check command integration', () => {
+suite('Model check command integration', function () {
+    // CI (especially Windows) needs a bit more time for extension activation
+    // and VS Code command plumbing than Mocha's 2s default.
+    this.timeout(20000);
     const EXTENSION_ID = 'tlaplus.vscode-ide';
     const modelSuiteRoot = path.resolve(
         __dirname,
