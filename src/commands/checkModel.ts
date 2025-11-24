@@ -1,5 +1,5 @@
 import { ChildProcess } from 'child_process';
-import { copyFile, promises as fsPromises } from 'fs';
+import { copyFile } from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { Utils } from 'vscode-uri';
@@ -14,6 +14,7 @@ import {
     updateCheckResultView
 } from '../panels/checkResultView';
 import { TlcModelCheckerStdoutParser } from '../parsers/tlc';
+import { getModuleReferences } from './modelReferences';
 import { runTlc, stopProcess, ToolProcessInfo } from '../tla2tools';
 import { TlcCoverageDecorationProvider } from '../tlcCoverage';
 
@@ -351,38 +352,6 @@ async function checkModelExists(cfgPath: string, warn = true): Promise<boolean> 
     return cfgExists;
 }
 
-async function readExtendsModules(modelPath: string): Promise<string[] | undefined> {
-    try {
-        const content = await fsPromises.readFile(modelPath, 'utf8');
-        const lines = content.split(/\r?\n/);
-        for (const line of lines) {
-            const trimmed = line.trim();
-            if (trimmed.length === 0 || trimmed.startsWith('\\*')) {
-                continue;
-            }
-            if (trimmed.startsWith('EXTENDS')) {
-                const remainder = trimmed.substring('EXTENDS'.length).trim();
-                if (remainder.length === 0) {
-                    return [];
-                }
-                const uncommented = remainder
-                    .replace(/\(\*[\s\S]*?\*\)/g, ' ') // drop inline block comments
-                    .replace(/\\\*.*$/, ''); // drop trailing line comments
-                return uncommented
-                    .split(',')
-                    .map(entry => entry.trim())
-                    .filter(entry => entry.length > 0);
-            }
-            if (trimmed.startsWith('VARIABLES') || trimmed.includes('==')) {
-                break;
-            }
-        }
-    } catch (err) {
-        console.warn(`Unable to inspect model file ${modelPath}: ${err}`);
-    }
-    return undefined;
-}
-
 async function validateModelPairing(
     specFiles: SpecFiles,
     sourceUri: vscode.Uri,
@@ -401,16 +370,27 @@ async function validateModelPairing(
         return true;
     }
     const expectedModule = path.basename(sourceUri.fsPath, '.tla');
-    const extendsModules = await readExtendsModules(specFiles.tlaFilePath);
-    if (!extendsModules || extendsModules.length === 0) {
+    const references = await getModuleReferences(vscode.Uri.file(specFiles.tlaFilePath));
+    if (!references) {
         return true;
     }
-    if (extendsModules.includes(expectedModule)) {
+    const extendsModules = references.extends;
+    const instanceModules = references.instances;
+    const hasEvidence =
+        (extendsModules !== undefined && extendsModules.size > 0) ||
+        (instanceModules !== undefined && instanceModules.size > 0);
+
+    if (instanceModules?.has(expectedModule) || extendsModules?.has(expectedModule)) {
         return true;
     }
+
+    if (!hasEvidence) {
+        return true;
+    }
+
     if (warn) {
         vscode.window.showWarningMessage(
-            `Model file ${modelBase} does not extend ${expectedModule}. Cannot check model.`
+            `Model file ${modelBase} does not reference ${expectedModule} via EXTENDS or INSTANCE. Cannot check model.`
         );
     }
     return false;

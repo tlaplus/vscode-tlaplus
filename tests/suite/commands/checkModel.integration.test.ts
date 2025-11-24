@@ -47,6 +47,7 @@ suite('Model check command integration', () => {
         '../../../../tests/fixtures/workspaces/model-matrix'
     );
     const renamedRoot = path.join(matrixRoot, 'renamed');
+    const instanceRoot = path.join(matrixRoot, 'instance');
     const libraryRoot = path.join(matrixRoot, 'library');
     const libraryDepsRoot = path.join(libraryRoot, 'deps');
     const mismatchRoot = path.join(matrixRoot, 'mismatch');
@@ -274,6 +275,26 @@ suite('Model check command integration', () => {
         }
     });
 
+    test('accepts models that INSTANCE the spec module', async () => {
+        const specUri = vscode.Uri.file(path.join(instanceRoot, 'Counter.tla'));
+        const doc = await vscode.workspace.openTextDocument(specUri);
+        await vscode.window.showTextDocument(doc);
+        const stub = stubRunTlc();
+        const warningStub = stubWarningMessages();
+
+        try {
+            await vscode.commands.executeCommand('tlaplus.model.check.run', specUri);
+            assert.strictEqual(stub.calls.length, 1, 'INSTANCE-based model should start TLC');
+            const [call] = stub.calls;
+            assert.strictEqual(path.basename(call.tlaFilePath), 'MCCounter.tla');
+            assert.strictEqual(path.basename(call.cfgFileName), 'MCCounter.cfg');
+            assert.deepStrictEqual(warningStub.messages, [], 'INSTANCE model should not raise warnings');
+        } finally {
+            stub.restore();
+            warningStub.restore();
+        }
+    });
+
     test('supports multi-root workspaces when model checking', async () => {
         const primaryRoot = path.join(multiRootBase, 'rootPrimary');
         const specUri = vscode.Uri.file(path.join(primaryRoot, 'SpecMulti.tla'));
@@ -297,8 +318,8 @@ suite('Model check command integration', () => {
             await vscode.commands.executeCommand('tlaplus.model.check.run', specUri);
             assert.strictEqual(stub.calls.length, 0, 'Mismatched model should not start TLC');
             assert.ok(
-                warningStub.messages.some(msg => msg.includes('does not extend MismatchSpec')),
-                'Mismatch warning should mention missing extends'
+                warningStub.messages.some(msg => msg.includes('does not reference MismatchSpec')),
+                'Mismatch warning should mention missing reference'
             );
         } finally {
             stub.restore();
