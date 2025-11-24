@@ -139,7 +139,7 @@ async function readExtendsModules(modelPath: string): Promise<Set<string> | unde
             continue;
         }
         if (trimmed.startsWith('EXTENDS')) {
-            let remainder = trimmed.substring('EXTENDS'.length).trim();
+            const remainder = trimmed.substring('EXTENDS'.length).trim();
             if (remainder.length === 0) {
                 return new Set();
             }
