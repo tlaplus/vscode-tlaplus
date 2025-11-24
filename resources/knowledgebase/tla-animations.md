@@ -232,9 +232,18 @@ Legend == Group(<<
         ("font-size" :> "12px" @@ "fill" :> "#666"))
 >>, <<>>)
 
+\* Step number display
+StepNumber == 
+    Text(90 + Cardinality(Nodes) * NodeSpacing, 190, 
+         "Step " \o ToString(TLCGet("level")), 
+         ("text-anchor" :> "end" @@ 
+          "font-size" :> "12px" @@ 
+          "font-family" :> "monospace" @@ 
+          "fill" :> "#666"))
+
 \* Main animation view
 AnimView == 
-    Group(<<Legend>> \o [i \in 1..Len(NodeSeq) |-> NodeVis(NodeSeq[i])], <<>>)
+    Group(<<Legend, StepNumber>> \o [i \in 1..Len(NodeSeq) |-> NodeVis(NodeSeq[i])], <<>>)
 
 \* TLC animation export
 AnimAlias ==
@@ -625,6 +634,32 @@ When creating TLA+ animations composed of multiple SVG frames, **it is essential
 
 If the `viewBox` cannot be determined in advance, perform an initial pass to measure the maximum extents across all frames, then use those dimensions consistently for the final rendering.
 
+### 6. Always Display Step Numbers
+
+**Every animation frame must include a step number** to help track progression through the state space. The step number should appear in a consistent location across all frames, similar to how page numbers appear in documents.
+
+```tla
+\* Add step number in bottom-right corner
+StepNumber == 
+    Text(viewBoxWidth - 30, viewBoxHeight - 10, 
+         "Step " \o ToString(TLCGet("level")), 
+         ("text-anchor" :> "end" @@ 
+          "font-size" :> "12px" @@ 
+          "font-family" :> "monospace" @@ 
+          "fill" :> "#666"))
+
+\* Include in your AnimView
+AnimView == 
+    Group(<<YourMainVisualization, StepNumber>>, <<>>)
+```
+
+**Best practices for step numbers:**
+- Position consistently (typically bottom-right or top-right corner)
+- Use monospace font for alignment
+- Choose subtle color that doesn't interfere with main content
+- Include "Step" prefix for clarity
+- Ensure adequate padding from frame edges
+
 ## Troubleshooting
 
 ### Common Issues and Solutions
@@ -859,7 +894,13 @@ Empty ==
    Image(13, 20, 140, 140, "assets/battery-empty-symbolic-svgrepo-com.svg",
          IF batteryLevel < 0 THEN <<>> ELSE [hidden |-> "true"])
 
-AnimView == Group(<<Left, Right, Battery, Chargers, Empty>>, [i \in {} |-> {}])
+\* Step number in bottom-right corner
+StepNumber == 
+    Text(220, 190, "Step " \o ToString(TLCGet("level")), 
+         ("text-anchor" :> "end" @@ "font-size" :> "12px" @@ 
+          "font-family" :> "monospace" @@ "fill" :> "#666"))
+
+AnimView == Group(<<Left, Right, Battery, Chargers, Empty, StepNumber>>, [i \in {} |-> {}])
 
 AnimAlias ==
     [left |-> left, right |-> right, 
@@ -1011,8 +1052,14 @@ FlowArrows ==
                        "fill" :> "#6c757d"))
     IN Group(<<arrow1, arrow2>>, <<>>)
 
+\* Step number in bottom-right corner
+StepNumber == 
+    Text(550, 340, "Step " \o ToString(TLCGet("level")), 
+         ("text-anchor" :> "end" @@ "font-size" :> "12px" @@ 
+          "font-family" :> "monospace" @@ "fill" :> "#666"))
+
 AnimView == 
-    Group(<<ProducerLabel, BufferLabel, ConsumerLabel, BufferStatus, FlowArrows>> \o 
+    Group(<<ProducerLabel, BufferLabel, ConsumerLabel, BufferStatus, FlowArrows, StepNumber>> \o 
           Prod \o Buffer \o Conss, <<>>)
 
 AnimAlias ==
@@ -1412,5 +1459,6 @@ AnimAlias ==
 5. **Layout Calculations**: Mathematical positioning for organized displays
 6. **Grouped Elements**: Logical grouping of related visual components
 7. **Text Overlays**: State information displayed as text labels
+8. **Step Number Display**: Every frame includes `TLCGet("level")` for progression tracking
 
 These examples demonstrate the full range of TLA+ animation capabilities, from simple state indicators to complex distributed system visualizations.

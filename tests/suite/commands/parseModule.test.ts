@@ -59,20 +59,17 @@ Spec == Init /\\ Next
             capturedOutput += chunk.toString();
         });
 
-        // Wait for stream to end
-        await new Promise((resolve) => {
-            procInfo.mergedOutput.once('end', resolve);
+        // Wait for stream to end (production code ensures this happens)
+        await new Promise<void>((resolve, reject) => {
             if (procInfo.mergedOutput.readableEnded) {
-                resolve(null);
+                resolve();
+                return;
             }
-        });
-
-        // Wait for 'close' event (ensures all file handles released)
-        await new Promise((resolve) => {
-            procInfo.process.once('close', resolve);
-            if (procInfo.process.exitCode !== null) {
-                resolve(null);
-            }
+            const timer = setTimeout(() => reject(new Error('mergedOutput did not end in time')), 5000);
+            procInfo.mergedOutput.once('end', () => {
+                clearTimeout(timer);
+                resolve();
+            });
         });
 
         // Verify that mergedOutput captured output

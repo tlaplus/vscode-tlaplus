@@ -578,6 +578,12 @@
                     "default": false,
                     "markdownDescription": "Enable filesystem tools (list_directory, read_file, write_file) in the MCP server. These tools allow reading and writing files within the workspace. Restart VSCode to apply changes. It is unlikely that you will want to enable this, because VSCode and Cursor already provide filesystem operations."
                 },
+                "tlaplus.mcp.enableKnowledgeBaseTools": {
+                    "type": "boolean",
+                    "scope": "window",
+                    "default": false,
+                    "markdownDescription": "Enable the knowledge-base *tools* in the MCP server in addition to the knowledge-base *resources*. The two tools tlaplus_mcp_knowledge_list and tlaplus_mcp_knowledge_get allow you to search and read TLA+ knowledge-base articles as MCP tools. Restart VSCode to apply the changes. You’ll rarely need to enable this option, since both VSCode and Cursor already support MCP resources."
+                },
                 "tlaplus.pdf.convertCommand": {
                     "default": "pdflatex",
                     "type": "string",

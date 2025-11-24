@@ -71,9 +71,14 @@ export class ToolProcessInfo {
             process.stderr.pipe(this.mergedOutput, { end: false });
         }
         // Close merged stream when process ends
-        process.on('exit', () => {
+        // Attach listener before checking exit status to avoid race
+        const endMerged = () => this.mergedOutput.end();
+        process.once('exit', endMerged);
+        process.once('close', endMerged);
+        // If process already exited, end stream now (calling end() twice is safe)
+        if (process.exitCode !== null) {
             this.mergedOutput.end();
-        });
+        }
     }
 }
 
@@ -129,7 +134,7 @@ export async function runXMLExporter(
     // Otherwise, we need to convert it to a file system path.
     const fsPath = uri.scheme === 'jarfile' ? path.basename(uri.fsPath) : uri.fsPath;
 
-    const toolOptions = [ '-o' ]; // -o turns XML schema validation off.
+    const toolOptions = [ '-o', '-u' ]; // -o turns XML schema validation off. -u removes comment markup from pre-comments.
     if (!includeExtendedModules) {
         toolOptions.push('-r'); // -r restricts to current module only
     }
@@ -233,11 +238,30 @@ async function runTool(
     const args = buildJavaOptions(cfgOptions, toolsJarPath).concat(javaOptions);
     args.push(toolName);
     toolOptions.forEach(opt => args.push(opt));
-    const proc = spawn(javaPath, args, { cwd: path.dirname(filePath) });
-    if (addRetCodeHandler) {
-        addReturnCodeHandler(proc, toolName);
-    }
-    return new ToolProcessInfo(buildCommandLine(javaPath, args), proc);
+    return await new Promise<ToolProcessInfo>((resolve, reject) => {
+        const proc = spawn(javaPath, args, { cwd: path.dirname(filePath) });
+
+        const cleanup = () => {
+            proc.removeListener('error', onError);
+            proc.removeListener('spawn', onSpawn);
+        };
+
+        const onError = (err: Error) => {
+            cleanup();
+            reject(new ToolingError(`Failed to launch ${toolName} using "${javaPath}": ${err.message}`));
+        };
+
+        const onSpawn = () => {
+            cleanup();
+            if (addRetCodeHandler) {
+                addReturnCodeHandler(proc, toolName);
+            }
+            resolve(new ToolProcessInfo(buildCommandLine(javaPath, args), proc));
+        };
+
+        proc.once('error', onError);
+        proc.once('spawn', onSpawn);
+    });
 }
 
 export function moduleSearchPaths(): string[] {
@@ -281,16 +305,60 @@ async function obtainJavaPath(): Promise<string> {
  * Builds path to the Java executable based on the configuration.
  */
 function buildJavaPath(): string {
-    let javaPath = javaCmd;
     const javaHome = vscode.workspace.getConfiguration().get<string>(CFG_JAVA_HOME);
     if (javaHome) {
-        const homeUri = pathToUri(javaHome);
-        javaPath = homeUri.fsPath + path.sep + 'bin' + path.sep + javaCmd;
-        if (!fs.existsSync(javaPath)) {
-            throw new ToolingError(`Java executable not found in "${javaPath}". Check the Java Home setting.`);
+        const javaExec = buildJavaPathFromHome(javaHome);
+        if (!javaExec) {
+            throw new ToolingError(`Java executable not found in "${javaHome}". Check the Java Home setting.`);
+        }
+        return javaExec;
+    }
+
+    const envHomes = collectJavaHomesFromEnv();
+    for (const envHome of envHomes) {
+        const javaExec = buildJavaPathFromHome(envHome);
+        if (javaExec) {
+            return javaExec;
         }
     }
-    return javaPath;
+
+    // Fall back to resolving java from PATH
+    return javaCmd;
+}
+
+/**
+ * Builds a full path to the Java executable given a JAVA_HOME-like path.
+ * Returns undefined when the computed path does not exist.
+ */
+function buildJavaPathFromHome(javaHome: string): string | undefined {
+    const homeUri = pathToUri(javaHome);
+    const candidate = path.join(homeUri.fsPath, 'bin', javaCmd);
+    return fs.existsSync(candidate) ? candidate : undefined;
+}
+
+/**
+ * Collects possible Java home locations from environment variables commonly
+ * set on CI machines (including GitHub Actions on Windows).
+ */
+function collectJavaHomesFromEnv(): string[] {
+    const envVars = [
+        'JAVA_HOME',
+        'JDK_HOME',
+        'JAVA_HOME_21_X64',
+        'JAVA_HOME_17_X64',
+        'JAVA_HOME_11_X64',
+        'JAVA_HOME_8_X64'
+    ];
+    const seen = new Set<string>();
+    const homes: string[] = [];
+    envVars.forEach((name) => {
+        const val = process.env[name];
+        if (val && !seen.has(val)) {
+            homes.push(val);
+            seen.add(val);
+        }
+    });
+    return homes;
 }
 
 /**
@@ -355,7 +423,14 @@ export function splitArguments(str: string): string[] {
 async function checkJavaVersion(javaPath: string) {
     const proc = spawn(javaPath, ['-version']);
     const parser = new JavaVersionParser(proc.stderr);
-    const ver = await parser.readAll();
+    const ver = await Promise.race([
+        parser.readAll(),
+        new Promise<JavaVersion>((_, reject) => {
+            proc.once('error', (err) => {
+                reject(new ToolingError(`Failed to start Java at "${javaPath}": ${err.message}`));
+            });
+        })
+    ]);
     if (ver.version === JavaVersion.UNKNOWN_VERSION) {
         ver.fullOutput.forEach(line => console.debug(line));
         throw new ToolingError('Error while obtaining Java version. Check the Java Home setting.');

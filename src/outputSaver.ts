@@ -22,6 +22,10 @@ export function saveStreamToFile(src: Readable | null, filePath: string): void {
         const sw = new StreamWriter(fd);
         src?.on('data', (data) => writeToFile(sw, data));
         src?.on('end', () => closeFile(sw));
+        src?.on('error', (err) => {
+            vscode.window.showWarningMessage(`Error reading process output: ${err}`);
+            closeFile(sw);
+        });
     });
 }
 

@@ -35,16 +35,43 @@
         ],
         "description": "If block"
     },
+    "Elsif": {
+        "prefix": "elsif",
+        "body": [
+            "elsif ${1:condition} then",
+            "\t${0:body}"
+        ],
+        "description": "Elsif clause"
+    },
+    "Else": {
+        "prefix": "else",
+        "body": [
+            "else",
+            "\t${0:body}"
+        ],
+        "description": "Else clause"
+    },
     "If-Else": {
         "prefix": "ifel",
         "body": [
             "if ${1:condition} then",
             "\t${2:body}",
-            "elseif",
+            "else",
             "\t${0:body}",
             "end if;"
         ],
         "description": "If-else block"
+    },
+    "If-Elsif": {
+        "prefix": "ifelsif",
+        "body": [
+            "if ${1:condition} then",
+            "\t${2:body}",
+            "elsif ${3:condition} then",
+            "\t${0:body}",
+            "end if;"
+        ],
+        "description": "If-elsif block"
     },
     "With": {
         "prefix": "with",
@@ -73,6 +100,16 @@
             "begin",
             "\t${0:body}",
             "end process;"
-        ]
+        ],
+        "description": "Create new process"
+    },
+    "Procedure": {
+        "prefix": "procedure",
+        "body": [
+            "procedure ${1:name}(${2:params}) begin",
+            "\t${0:body}",
+            "end procedure;"
+        ],
+        "description": "Create new procedure"
     }
 }
