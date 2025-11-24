@@ -16,20 +16,36 @@ export const ErrorTraceVariable = React.memo(({ value, stateId, settings }: Erro
         return (null);
     }
 
-    const copyToClipboard = (event: React.MouseEvent<HTMLSpanElement>) => {
-        event.preventDefault();
-        event.stopPropagation();
-        event.nativeEvent.stopImmediatePropagation();
-        navigator.clipboard.writeText(value.str);
-        vscode.showInfoMessage('Value has been copied to clipboard');
-    };
+    const copyButtonRef = React.useRef<HTMLElement>(null);
+    const showButtonRef = React.useRef<HTMLElement>(null);
 
-    const showVariableValue = (event: React.MouseEvent<HTMLSpanElement>) => {
-        event.preventDefault();
-        event.stopPropagation();
-        event.nativeEvent.stopImmediatePropagation();
-        vscode.showVariableValue(value.id);
-    };
+    React.useEffect(() => {
+        const copyBtn = copyButtonRef.current;
+        const showBtn = showButtonRef.current;
+
+        const handleCopy = (event: MouseEvent) => {
+            event.stopPropagation();
+            event.stopImmediatePropagation();
+            navigator.clipboard.writeText(value.str).then(
+                () => vscode.showInfoMessage('Value has been copied to clipboard'),
+                (err) => vscode.showErrorMessage('Failed to copy value: ' + err)
+            );
+        };
+
+        const handleShow = (event: MouseEvent) => {
+            event.stopPropagation();
+            event.stopImmediatePropagation();
+            vscode.showVariableValue(value.id);
+        };
+
+        copyBtn?.addEventListener('click', handleCopy);
+        showBtn?.addEventListener('click', handleShow);
+
+        return () => {
+            copyBtn?.removeEventListener('click', handleCopy);
+            showBtn?.removeEventListener('click', handleShow);
+        };
+    }, [value.id, value.str]);
 
     const changeHintKey = value.changeType as keyof typeof changeHints;
     const changeHint = changeHints[changeHintKey] ?? '';
@@ -61,12 +77,12 @@ export const ErrorTraceVariable = React.memo(({ value, stateId, settings }: Erro
                     <span
                         hidden={value.changeType !== 'D'}
                         title="Display value"
-                        onClick={showVariableValue}
+                        ref={showButtonRef}
                         className="var-button codicon codicon-link-external" />
 
                     <span
                         title="Copy value to clipboard"
-                        onClick={copyToClipboard}
+                        ref={copyButtonRef}
                         className="var-button codicon codicon-copy" />
                 </div>
             </div>

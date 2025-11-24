@@ -46,6 +46,24 @@ test.describe('Check Result webview fixture', () => {
         const overflowX = await valueCell.evaluate<string>(el => getComputedStyle(el).overflowX);
         expect(overflowX).toBe('visible');
 
+        // Verify copy button click does not toggle the tree item
+        const variableItem = page.locator('vscode-tree-item#state-1 vscode-tree-item').first();
+        if (await variableItem.count() > 0) {
+            const varBlock = variableItem.locator('.var-block');
+            await varBlock.hover();
+            const copyBtn = variableItem.locator('.codicon-copy');
+            await expect(copyBtn).toBeVisible();
+            
+            // Ensure we don't toggle the item
+            const wasOpen = await variableItem.evaluate(el => el.hasAttribute('open'));
+            await copyBtn.click();
+            const isOpen = await variableItem.evaluate(el => el.hasAttribute('open'));
+            expect(isOpen).toBe(wasOpen);
+        }
+
+        // Move mouse away to ensure hover state is cleared (buttons hidden) before screenshot
+        await page.mouse.move(0, 0);
+
         await expect(page.locator('vscode-tree')).toHaveScreenshot('error-trace.png');
     });
 });

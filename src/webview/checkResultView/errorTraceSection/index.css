@@ -51,10 +51,9 @@
 
 .var-block {
     line-height: 1.4em;
-    display: grid;
-    grid-template-columns: minmax(14rem, auto) minmax(0, 1fr) auto;
+    display: flex;
     column-gap: 0.75em;
-    align-items: flex-start;
+    align-items: baseline;
     white-space: normal;
     overflow: visible;
 }
@@ -64,6 +63,8 @@
     white-space: normal;
     overflow: visible;
     overflow-wrap: anywhere;
+    min-width: 14rem;
+    flex-shrink: 0;
 }
 
 .var-size {
@@ -77,13 +78,12 @@
     white-space: normal;
     overflow: visible;
     overflow-wrap: anywhere;
+    flex: 0 1 auto;
 }
 
 .var-menu {
     display: flex;
     gap: 0.25em;
-    justify-self: end;
-    align-self: flex-start;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.1s ease-in-out;
