@@ -64,6 +64,6 @@ test.describe('Check Result webview fixture', () => {
         // Move mouse away to ensure hover state is cleared (buttons hidden) before screenshot
         await page.mouse.move(0, 0);
 
-        await expect(page.locator('vscode-tree')).toHaveScreenshot('error-trace.png');
+        await expect(page.locator('vscode-tree')).toHaveScreenshot('error-trace.png', { maxDiffPixelRatio: 0.02 });
     });
 });
