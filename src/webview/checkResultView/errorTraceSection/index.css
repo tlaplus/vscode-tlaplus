@@ -40,13 +40,14 @@
     align-items: center;
     gap: 0.25em;
     margin: 0;
-    padding: 4px 0;
+    padding: 0;
+    line-height: 22px;
 }
 
 .error-trace-title span {
     font-weight: bold;
-    padding-bottom: 0.1em;
-    margin-bottom: 0.1em;
+    padding-bottom: 0;
+    margin-bottom: 0;
 }
 
 .var-block {
