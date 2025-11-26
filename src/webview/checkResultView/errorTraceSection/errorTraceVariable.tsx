@@ -5,8 +5,8 @@ import { ErrorTraceSettings } from './errorTrace';
 import Ansi from '@cocalc/ansi-to-react';
 import { VscodeTreeItem } from '@vscode-elements/react-elements';
 
-interface ErrorTraceVariableI {value: CollectionValue, stateId: number, settings: ErrorTraceSettings}
-export const ErrorTraceVariable = React.memo(({value, stateId, settings}: ErrorTraceVariableI) => {
+interface ErrorTraceVariableI { value: CollectionValue, stateId: number, settings: ErrorTraceSettings }
+export const ErrorTraceVariable = React.memo(({ value, stateId, settings }: ErrorTraceVariableI) => {
 
     if (stateId !== 1 && settings.hideModified && value.changeType === 'N') {
         return (null);
@@ -16,20 +16,40 @@ export const ErrorTraceVariable = React.memo(({value, stateId, settings}: ErrorT
         return (null);
     }
 
-    const copyToClipboard = (event: React.MouseEvent<HTMLSpanElement>) => {
-        event.stopPropagation();
-        navigator.clipboard.writeText(value.str);
-        vscode.showInfoMessage('Value has been copied to clipboard');
-    };
+    const copyButtonRef = React.useRef<HTMLElement>(null);
+    const showButtonRef = React.useRef<HTMLElement>(null);
 
-    const showVariableValue = (event: React.MouseEvent<HTMLSpanElement>) => {
-        event.stopPropagation();
-        vscode.showVariableValue(value.id);
-    };
+    React.useEffect(() => {
+        const copyBtn = copyButtonRef.current;
+        const showBtn = showButtonRef.current;
+
+        const handleCopy = (event: MouseEvent) => {
+            event.stopPropagation();
+            event.stopImmediatePropagation();
+            navigator.clipboard.writeText(value.str).then(
+                () => vscode.showInfoMessage('Value has been copied to clipboard'),
+                (err) => vscode.showErrorMessage('Failed to copy value: ' + err)
+            );
+        };
+
+        const handleShow = (event: MouseEvent) => {
+            event.stopPropagation();
+            event.stopImmediatePropagation();
+            vscode.showVariableValue(value.id);
+        };
+
+        copyBtn?.addEventListener('click', handleCopy);
+        showBtn?.addEventListener('click', handleShow);
+
+        return () => {
+            copyBtn?.removeEventListener('click', handleCopy);
+            showBtn?.removeEventListener('click', handleShow);
+        };
+    }, [value.id, value.str]);
 
     const changeHintKey = value.changeType as keyof typeof changeHints;
     const changeHint = changeHints[changeHintKey] ?? '';
-    const changeTypeClass = 'value-'+value.changeType;
+    const changeTypeClass = 'value-' + value.changeType;
     const hasValueChildren = hasVariableChildrenToDisplay(value);
     const hasDeletedChildren = Array.isArray(value.deletedItems) && value.deletedItems.length > 0;
     const hasChildren = hasValueChildren || hasDeletedChildren;
@@ -56,14 +76,14 @@ export const ErrorTraceVariable = React.memo(({value, stateId, settings}: ErrorT
                 <div className="var-menu">
                     <span
                         hidden={value.changeType !== 'D'}
-                        title="Dislpay value"
-                        onClick={showVariableValue}
-                        className="var-button codicon codicon-link-external"/>
+                        title="Display value"
+                        ref={showButtonRef}
+                        className="var-button codicon codicon-link-external" />
 
                     <span
                         title="Copy value to clipboard"
-                        onClick={copyToClipboard}
-                        className="var-button codicon codicon-copy"/>
+                        ref={copyButtonRef}
+                        className="var-button codicon codicon-copy" />
                 </div>
             </div>
 
@@ -75,7 +95,7 @@ export const ErrorTraceVariable = React.memo(({value, stateId, settings}: ErrorT
                             key={childValue.id}
                             value={childValue as CollectionValue}
                             stateId={stateId}
-                            settings={settings}/>)}
+                            settings={settings} />)}
 
             {value.deletedItems &&
                 value.deletedItems.map(
@@ -84,7 +104,7 @@ export const ErrorTraceVariable = React.memo(({value, stateId, settings}: ErrorT
                             key={childValue.id}
                             value={childValue as CollectionValue}
                             stateId={stateId}
-                            settings={settings}/>)}
+                            settings={settings} />)}
         </VscodeTreeItem>
     );
 });

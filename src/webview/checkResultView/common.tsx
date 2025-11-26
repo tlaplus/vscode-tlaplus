@@ -47,8 +47,36 @@ export const CodePositionLink = React.memo(({line, filepath, position}: CodePosi
     }
 
     const location = {'line': position.line, 'character': position.character};
-    const openFileAtLocation = () => vscode.openFile(filepath, location);
-    return (<VSCodeLink onClick={openFileAtLocation}>{line}</VSCodeLink>);
+    const stopEvent = (event: React.MouseEvent<HTMLButtonElement>) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const nativeEvent = event.nativeEvent as {stopImmediatePropagation?: () => void};
+        nativeEvent.stopImmediatePropagation?.();
+    };
+
+    const openFileAtLocation = (event: React.MouseEvent<HTMLButtonElement>) => {
+        stopEvent(event);
+        const treeItem = event.currentTarget.closest('vscode-tree-item') as HTMLElement & {open?: boolean} | null;
+        if (treeItem) {
+            if (typeof treeItem.open === 'boolean') {
+                treeItem.open = true;
+            } else {
+                treeItem.setAttribute('open', '');
+            }
+        }
+        vscode.openFile(filepath, location);
+    };
+    const handleMouseDown = (event: React.MouseEvent<HTMLButtonElement>) => stopEvent(event);
+    const handleClickCapture = (event: React.MouseEvent<HTMLButtonElement>) => stopEvent(event);
+    return (
+        <VSCodeLink
+            onClick={openFileAtLocation}
+            onClickCapture={handleClickCapture}
+            onMouseDown={handleMouseDown}
+            onPointerDown={handleMouseDown}>
+            {line}
+        </VSCodeLink>
+    );
 });
 
 interface DataGridCellI {

@@ -36,28 +36,36 @@
 }
 
 .error-trace-title {
-    margin-top: 0.5em;
-    margin-bottom: 0.5em;
+    display: flex;
+    align-items: center;
+    gap: 0.25em;
+    margin: 0;
+    padding: 0;
+    line-height: 22px;
 }
 
-.error-trace-title span{
+.error-trace-title span {
     font-weight: bold;
-    padding-bottom: 0.1em;
-    margin-bottom: 0.1em;
+    padding-bottom: 0;
+    margin-bottom: 0;
 }
 
 .var-block {
     line-height: 1.4em;
-    display: grid;
-    grid-template-columns: minmax(14rem, auto) 1fr;
+    display: flex;
     column-gap: 0.75em;
+    align-items: baseline;
+    white-space: normal;
+    overflow: visible;
 }
 
 .var-name {
     display: inline-block;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow: visible;
+    overflow-wrap: anywhere;
+    min-width: 14rem;
+    flex-shrink: 0;
 }
 
 .var-size {
@@ -68,16 +76,18 @@
 
 .var-value {
     display: inline-block;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow: visible;
+    overflow-wrap: anywhere;
+    flex: 0 1 auto;
 }
 
 .var-menu {
-    position: absolute;
-    right: 0;
-    top: 0;
-    display: none;
+    display: flex;
+    gap: 0.25em;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.1s ease-in-out;
 }
 
 .var-button {
@@ -88,7 +98,8 @@
 }
 
 .var-block:hover .var-menu {
-    display: block;
+    opacity: 1;
+    pointer-events: auto;
 }
 
 .change-marker {
@@ -124,6 +135,8 @@
 }
 
 code {
-    color: inherit; /* Reset the text color */
-    background: inherit; /* Remove the gray-ish background */
+    color: inherit;
+    /* Reset the text color */
+    background: inherit;
+    /* Remove the gray-ish background */
 }
