@@ -75,9 +75,11 @@ export class ToolProcessInfo {
         process.once('exit', () => {
             this.mergedOutput.end();
         });
-        // If process already exited, end stream now (calling end() twice is safe)
+        // If the process already exited before listeners are attached, end the merged
+        // stream on the next tick so late subscribers still observe the `end` event.
+        // Calling end() twice is safe because PassThrough ignores subsequent calls.
         if (process.exitCode !== null) {
-            this.mergedOutput.end();
+            setImmediate(() => this.mergedOutput.end());
         }
     }
 }
