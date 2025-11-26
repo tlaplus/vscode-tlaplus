@@ -75,9 +75,13 @@ export class ToolProcessInfo {
         const endMerged = () => this.mergedOutput.end();
         process.once('exit', endMerged);
         process.once('close', endMerged);
-        // If process already exited, end stream now (calling end() twice is safe)
+        // If the process already exited before listeners are attached, defer to the
+        // next event-loop "check" phase (setImmediate) so the current stack finishes
+        // and late subscribers can still observe the merged stream's `end` event.
+        // Calling end() twice is safe because PassThrough ignores subsequent calls.
+        // cf. https://nodejs.org/en/learn/asynchronous-work/event-loop-timers-and-nexttick#processnexttick-vs-setimmediate
         if (process.exitCode !== null) {
-            this.mergedOutput.end();
+            setImmediate(endMerged);
         }
     }
 }
@@ -97,7 +101,7 @@ export class JavaVersion {
     constructor(
         readonly version: string,
         readonly fullOutput: string[]
-    ) {}
+    ) { }
 }
 
 function makeTlaLibraryJavaOpt(): string {
@@ -122,8 +126,8 @@ export async function runSany(tlaFilePath: string): Promise<ToolProcessInfo> {
     return runTool(
         TlaTool.SANY,
         tlaFilePath,
-        [ path.basename(tlaFilePath) ],
-        [ makeTlaLibraryJavaOpt() ]
+        [path.basename(tlaFilePath)],
+        [makeTlaLibraryJavaOpt()]
     );
 }
 
@@ -134,7 +138,7 @@ export async function runXMLExporter(
     // Otherwise, we need to convert it to a file system path.
     const fsPath = uri.scheme === 'jarfile' ? path.basename(uri.fsPath) : uri.fsPath;
 
-    const toolOptions = [ '-o', '-u' ]; // -o turns XML schema validation off. -u removes comment markup from pre-comments.
+    const toolOptions = ['-o', '-u']; // -o turns XML schema validation off. -u removes comment markup from pre-comments.
     if (!includeExtendedModules) {
         toolOptions.push('-r'); // -r restricts to current module only
     }
@@ -144,7 +148,7 @@ export async function runXMLExporter(
         TlaTool.XMLExporter,
         fsPath,
         toolOptions,
-        [ makeTlaLibraryJavaOpt() ],
+        [makeTlaLibraryJavaOpt()],
         addRetCodeHandler
     );
 }
@@ -194,7 +198,7 @@ export async function runReplTerminal(): Promise<void> {
     const javaPath = await obtainJavaPath();
     const args = buildJavaOptions(getConfigOptions(CFG_JAVA_OPTIONS), toolsJarPath);
     args.push(TlaTool.REPL);
-    vscode.window.createTerminal({shellPath: javaPath, shellArgs: args}).show();
+    vscode.window.createTerminal({ shellPath: javaPath, shellArgs: args }).show();
 }
 
 export async function runTlc(
@@ -210,7 +214,7 @@ export async function runTlc(
         return undefined;
     }
     const customOptions = extraOpts.concat(promptedOptions);
-    const javaOptions = [ makeTlaLibraryJavaOpt() ];
+    const javaOptions = [makeTlaLibraryJavaOpt()];
     const shareStats = vscode.workspace.getConfiguration().get<ShareOption>(CFG_TLC_STATISTICS_TYPE);
     if (shareStats !== ShareOption.DoNotShare) {
         javaOptions.push('-Dtlc2.TLC.ide=vscode');
@@ -479,7 +483,7 @@ function getConfigOptions(cfgName: string, defaultValue: string = ''): string[] 
         vscode.window
             .showWarningMessage(
                 `Both workspace and global configurations found for ${cfgName}. Only the workspace configuration `
-                    + 'will be used.',
+                + 'will be used.',
                 'ok',
                 'hide warnings',
                 'open settings')
@@ -545,7 +549,7 @@ export async function getTlcOptions(showPrompt: boolean): Promise<string[] | und
 }
 
 function buildCommandLine(programName: string, args: string[]): string {
-    const line = [ programName ];
+    const line = [programName];
     args
         .map(arg => arg.indexOf(' ') >= 0 ? '"' + arg + '"' : arg)
         .forEach(arg => line.push(arg));
