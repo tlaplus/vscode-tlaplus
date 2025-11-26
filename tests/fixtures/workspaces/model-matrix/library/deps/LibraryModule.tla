@@ -1,0 +1,4 @@
+---- MODULE LibraryModule ----
+CONSTANT Dummy
+
+====

@@ -14,7 +14,8 @@ import {
     updateCheckResultView
 } from '../panels/checkResultView';
 import { TlcModelCheckerStdoutParser } from '../parsers/tlc';
-import { runTlc, stopProcess } from '../tla2tools';
+import { getModuleReferences } from './modelReferences';
+import { runTlc, stopProcess, ToolProcessInfo } from '../tla2tools';
 import { TlcCoverageDecorationProvider } from '../tlcCoverage';
 
 export const CMD_CHECK_MODEL_RUN = 'tlaplus.model.check.run';
@@ -34,6 +35,31 @@ let lastCheckFiles: SpecFiles | undefined;
 let coverageProvider: TlcCoverageDecorationProvider | undefined;
 const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);
 export const outChannel = new ToolOutputChannel('TLC', mapTlcOutputLine);
+
+type TlcRunner = (
+    tlaFilePath: string,
+    cfgFilePath: string,
+    showOptionsPrompt: boolean,
+    extraOpts?: string[],
+    extraJavaOpts?: string[]
+) => Promise<ToolProcessInfo | undefined>;
+
+let currentTlcRunner: TlcRunner = runTlc;
+
+/**
+ * Overrides the TLC runner used by model checking commands.
+ * Intended for testing; production code uses the default {@link runTlc}.
+ */
+export function setTlcRunner(runner: TlcRunner): void {
+    currentTlcRunner = runner;
+}
+
+/**
+ * Restores the TLC runner to the default implementation.
+ */
+export function resetTlcRunner(): void {
+    currentTlcRunner = runTlc;
+}
 
 class CheckResultHolder {
     checkResult: ModelCheckResult | undefined;
@@ -185,7 +211,7 @@ export async function doCheckModel(
     debuggerPortCallback?: (port?: number) => void
 ): Promise<ModelCheckResult | undefined> {
     try {
-        const procInfo = await runTlc(
+        const procInfo = await currentTlcRunner(
             specFiles.tlaFilePath, path.basename(specFiles.cfgFilePath), showOptionsPrompt, extraOpts);
         if (procInfo === undefined) {
             // Command cancelled by user, make sure UI state is reset
@@ -259,7 +285,10 @@ export async function getSpecFiles(fileUri: vscode.Uri, warn = true, prefix = 'M
     // a) Check the given input if it exists.
     specFiles = await checkSpecFiles(fileUri, false);
     if (specFiles) {
-        return specFiles;
+        if (await validateModelPairing(specFiles, fileUri, false, prefix)) {
+            return specFiles;
+        }
+        specFiles = undefined;
     }
     // b) Check alternatives:
     // Unless the given filePath already starts with 'MC', prepend MC to the name
@@ -278,13 +307,20 @@ export async function getSpecFiles(fileUri: vscode.Uri, warn = true, prefix = 'M
         let canRun = true;
         canRun = await checkModelExists(specFiles.cfgFilePath, warn);
         canRun = canRun && await checkModuleExists(specFiles.tlaFilePath, warn);
-        if (canRun) {
-            return specFiles;
+        if (canRun && specFiles) {
+            if (await validateModelPairing(specFiles, fileUri, warn, prefix)) {
+                return specFiles;
+            }
+            return undefined;
         }
     }
     // c) Deliberately trigger the warning dialog by checking the given input again
     // knowing that it doesn't exist.
-    return await checkSpecFiles(fileUri, warn);
+    const fallbackSpecFiles = await checkSpecFiles(fileUri, warn);
+    if (fallbackSpecFiles && await validateModelPairing(fallbackSpecFiles, fileUri, warn, prefix)) {
+        return fallbackSpecFiles;
+    }
+    return undefined;
 }
 
 async function checkSpecFiles(fileUri: vscode.Uri, warn = true): Promise<SpecFiles | undefined> {
@@ -316,6 +352,50 @@ async function checkModelExists(cfgPath: string, warn = true): Promise<boolean> 
         showConfigAbsenceWarning(cfgPath);
     }
     return cfgExists;
+}
+
+async function validateModelPairing(
+    specFiles: SpecFiles,
+    sourceUri: vscode.Uri,
+    warn: boolean,
+    prefix: string
+): Promise<boolean> {
+    const sourceBase = Utils.basename(sourceUri);
+    if (!sourceBase.endsWith('.tla')) {
+        return true;
+    }
+    if (sourceBase.startsWith(prefix)) {
+        return true;
+    }
+    const modelBase = path.basename(specFiles.tlaFilePath);
+    if (!modelBase.startsWith(prefix)) {
+        return true;
+    }
+    const expectedModule = path.basename(sourceUri.fsPath, '.tla');
+    const references = await getModuleReferences(vscode.Uri.file(specFiles.tlaFilePath));
+    if (!references) {
+        return true;
+    }
+    const extendsModules = references.extends;
+    const instanceModules = references.instances;
+    const hasEvidence =
+        (extendsModules !== undefined && extendsModules.size > 0) ||
+        (instanceModules !== undefined && instanceModules.size > 0);
+
+    if (instanceModules?.has(expectedModule) || extendsModules?.has(expectedModule)) {
+        return true;
+    }
+
+    if (!hasEvidence) {
+        return true;
+    }
+
+    if (warn) {
+        vscode.window.showWarningMessage(
+            `Model file ${modelBase} does not reference ${expectedModule} via EXTENDS or INSTANCE. Cannot check model.`
+        );
+    }
+    return false;
 }
 
 function updateStatusBarItem(active: boolean, specFiles: SpecFiles | undefined) {
