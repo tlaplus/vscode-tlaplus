@@ -2,12 +2,13 @@ import { z } from 'zod';
 import * as http from 'http';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as os from 'os';
 import express from 'express';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import * as vscode from 'vscode';
 import { exists } from '../common';
-import { applyDCollection } from '../diagnostic';
+import { DCollection } from '../diagnostic';
 import { TLADocumentSymbolProvider } from '../symbols/tlaSymbols';
 import { parseSpec, transpilePlusCal } from '../commands/parseModule';
 import { TlaDocumentInfos } from '../model/documentInfo';
@@ -15,7 +16,6 @@ import { JarFileSystemProviderHandle, acquireJarFileSystemProvider } from '../Ja
 import { getSpecFiles, mapTlcOutputLine, outChannel } from '../commands/checkModel';
 import { runTlc } from '../tla2tools';
 import { CFG_TLC_STATISTICS_TYPE, ShareOption } from '../commands/tlcStatisticsCfg';
-import { getDiagnostic } from '../main';
 import { moduleSearchPaths } from '../paths';
 
 /**
@@ -374,14 +374,24 @@ export class MCPServer implements vscode.Disposable {
                         };
                     }
 
-                    // Transpile PlusCal to TLA+ (if any), and parse the resulting TLA+ spec
-                    const messages = await transpilePlusCal(fileUri);
-                    const specData = await parseSpec(fileUri);
+                    // Use a temp copy so the MCP tool never mutates user files
+                    const originalDir = path.dirname(fileUri.fsPath);
+                    const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'tlaplus-mcp-sany-'));
+                    await copyLocalTlaModules(originalDir, tmpDir);
+                    const tmpUri = vscode.Uri.file(path.join(tmpDir, path.basename(fileUri.fsPath)));
 
-                    // Post-process SANY's parse results
-                    messages.addAll(specData.dCollection);
-                    const diagnostic = getDiagnostic();
-                    applyDCollection(messages, diagnostic);
+                    let messages: DCollection;
+                    try {
+                        // Transpile PlusCal on the temp copy, but attribute diagnostics to the original file
+                        messages = await transpilePlusCal(tmpUri, undefined, { diagnosticFilePath: fileUri.fsPath });
+                        const specData = await parseSpec(tmpUri);
+
+                        // Remap SANY diagnostics back to the original directory and merge
+                        const sanyMessages = remapDiagnostics(specData.dCollection, tmpDir, originalDir);
+                        messages.addAll(sanyMessages);
+                    } finally {
+                        fs.promises.rm(tmpDir, { recursive: true, force: true }).catch(() => { /* ignore */ });
+                    }
 
                     // Format the result based on whether there were any errors
                     if (messages.messages.length === 0) {
@@ -1494,4 +1504,37 @@ export class MCPServer implements vscode.Disposable {
             };
         }
     }
+}
+
+async function copyLocalTlaModules(srcDir: string, dstDir: string): Promise<void> {
+    await fs.promises.mkdir(dstDir, { recursive: true });
+    const entries = await fs.promises.readdir(srcDir, { withFileTypes: true });
+    await Promise.all(entries
+        .filter((e) => e.isFile() && e.name.toLowerCase().endsWith('.tla'))
+        .map(async (e) => {
+            const src = path.join(srcDir, e.name);
+            const dst = path.join(dstDir, e.name);
+            await fs.promises.copyFile(src, dst);
+        }));
+}
+
+function remapDiagnostics(dCol: DCollection, fromDir: string, toDir: string) {
+    const newCol = new DCollection();
+    const fromPrefix = path.resolve(fromDir) + path.sep;
+    const toPrefix = path.resolve(toDir) + path.sep;
+
+    const remapPath = (p: string) => p.startsWith(fromPrefix)
+        ? path.join(toPrefix, path.relative(fromPrefix, p))
+        : p;
+
+    dCol.getMessages().forEach((msg) => {
+        newCol.addMessage(
+            remapPath(msg.filePath),
+            msg.diagnostic.range,
+            msg.diagnostic.message,
+            msg.diagnostic.severity
+        );
+    });
+    dCol.getModules().forEach((p) => newCol.addFilePath(remapPath(p)));
+    return newCol;
 }
