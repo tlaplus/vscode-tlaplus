@@ -48,7 +48,8 @@ export class ParseModuleTool implements vscode.LanguageModelTool<FileParameter> 
             let sanyMessages: DCollection; // SANY diagnostics with remapped paths
             try {
                 // Transpile PlusCal on the temp copy, but attribute diagnostics to the original file
-                messages = await transpilePlusCal(tmpUri, token, { diagnosticFilePath: fileUri.fsPath });
+                // Preserve the caller-provided path casing for diagnostics (important on Windows)
+                messages = await transpilePlusCal(tmpUri, token, { diagnosticFilePath: options.input.fileName });
                 throwIfCancelled();
 
                 // Parse the translated temp file with SANY
