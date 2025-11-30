@@ -44,12 +44,19 @@ async function doParseFile(doc: vscode.TextDocument, diagnostic: vscode.Diagnost
 /**
  * Transpiles PlusCal code in the current .tla file to TLA+ code in the same file.
  */
-export async function transpilePlusCal(fileUri: vscode.Uri, token?: vscode.CancellationToken): Promise<DCollection> {
+export async function transpilePlusCal(
+    fileUri: vscode.Uri,
+    token?: vscode.CancellationToken,
+    options?: { diagnosticFilePath?: string }
+): Promise<DCollection> {
     throwIfCancelled(token);
     const procInfo = await runPlusCal(fileUri.fsPath);
     plusCalOutChannel.bindTo(procInfo);
     const cancellationDisposable = registerCancellation(procInfo, token);
-    const stdoutParser = new TranspilerStdoutParser(procInfo.mergedOutput, fileUri.fsPath);
+    const stdoutParser = new TranspilerStdoutParser(
+        procInfo.mergedOutput,
+        options?.diagnosticFilePath ?? fileUri.fsPath
+    );
     try {
         const result = await stdoutParser.readAll();
         throwIfCancelled(token);
