@@ -117,11 +117,13 @@ suite('SANY Tool cancellation handling', () => {
 
             // Returned messages should reference the original path, not the temp copy
             assert.strictEqual(result.content.length, 2, 'Should surface both PlusCal and SANY diagnostics');
+            const normalize = (p: string) => process.platform === 'win32' ? p.toLowerCase() : p;
             result.content.forEach(part => {
                 assert.ok(part instanceof vscode.LanguageModelTextPart, 'Each result should be a text part');
                 const val = (part as vscode.LanguageModelTextPart).value;
-                assert.ok(val.includes(originalPath), 'Diagnostics should point to the original file path');
-                assert.ok(!val.includes(transpilePath!), 'Diagnostics should not leak temp file paths');
+                const nVal = normalize(val);
+                assert.ok(nVal.includes(normalize(originalPath)), 'Diagnostics should point to the original file path');
+                assert.ok(!nVal.includes(normalize(transpilePath!)), 'Diagnostics should not leak temp file paths');
             });
 
             // Original file should remain unchanged on disk
