@@ -1,9 +1,11 @@
 import * as vscode from 'vscode';
 import { parseSpec, transpilePlusCal } from '../commands/parseModule';
-import { applyDCollection } from '../diagnostic';
+import { DCollection } from '../diagnostic';
 import { TLADocumentSymbolProvider } from '../symbols/tlaSymbols';
 import { TlaDocumentInfos } from '../model/documentInfo';
-import { getDiagnostic } from '../main';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 
 export interface FileParameter {
 	fileName: string;
@@ -34,15 +36,36 @@ export class ParseModuleTool implements vscode.LanguageModelTool<FileParameter> 
 
         try {
             throwIfCancelled();
-            // Transpile PlusCal to TLA+ (if any), and parse the resulting TLA+ spec.
-            const messages = await transpilePlusCal(fileUri, token);
-            throwIfCancelled();
-            const specData = await parseSpec(fileUri, token);
-            throwIfCancelled();
-            // Post-process SANY's parse results.
-            messages.addAll(specData.dCollection);
-            const diagnostic = getDiagnostic();
-            applyDCollection(messages, diagnostic);
+
+            // Work on a temporary copy to avoid mutating the user's file. We copy all *.tla files
+            // in the source directory so that intra-directory imports still resolve
+            const originalDir = path.dirname(fileUri.fsPath);
+            const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'tlaplus-sany-'));
+            await copyLocalTlaModules(originalDir, tmpDir);
+            const tmpUri = vscode.Uri.file(path.join(tmpDir, path.basename(fileUri.fsPath)));
+
+            let messages: DCollection; // PlusCal diagnostics
+            let sanyMessages: DCollection; // SANY diagnostics with remapped paths
+            try {
+                // Transpile PlusCal on the temp copy, but attribute diagnostics to the original file
+                messages = await transpilePlusCal(tmpUri, token, { diagnosticFilePath: fileUri.fsPath });
+                throwIfCancelled();
+
+                // Parse the translated temp file with SANY
+                const specData = await parseSpec(tmpUri, token);
+                throwIfCancelled();
+
+                // Remap diagnostics back to the original folder so the user sees their paths, without
+                // writing anything to disk
+                sanyMessages = remapDiagnostics(specData.dCollection, tmpDir, originalDir);
+                messages.addAll(sanyMessages);
+            } finally {
+                // Always clean up the temp directory
+                fs.promises.rm(tmpDir, { recursive: true, force: true }).catch(() => { /* ignore */ });
+            }
+
+            // Return summary text; we intentionally avoid touching the workspace diagnostic collection
+            // to keep this LM tool side-effect free
             // We are happy if SANY is happy.
             if (messages.messages.length === 0) {
                 // If there are no parse failures, return a success message.
@@ -67,6 +90,39 @@ export class ParseModuleTool implements vscode.LanguageModelTool<FileParameter> 
             return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart(`Parsing failed: ${err}`)]);
         }
     }
+}
+
+async function copyLocalTlaModules(srcDir: string, dstDir: string): Promise<void> {
+    await fs.promises.mkdir(dstDir, { recursive: true });
+    const entries = await fs.promises.readdir(srcDir, { withFileTypes: true });
+    await Promise.all(entries
+        .filter((e) => e.isFile() && e.name.toLowerCase().endsWith('.tla'))
+        .map(async (e) => {
+            const src = path.join(srcDir, e.name);
+            const dst = path.join(dstDir, e.name);
+            await fs.promises.copyFile(src, dst);
+        }));
+}
+
+function remapDiagnostics(dCol: DCollection, fromDir: string, toDir: string) {
+    const newCol = new DCollection();
+    const fromPrefix = path.resolve(fromDir) + path.sep;
+    const toPrefix = path.resolve(toDir) + path.sep;
+
+    const remapPath = (p: string) => p.startsWith(fromPrefix)
+        ? path.join(toPrefix, path.relative(fromPrefix, p))
+        : p;
+
+    dCol.getMessages().forEach((msg) => {
+        newCol.addMessage(
+            remapPath(msg.filePath),
+            msg.diagnostic.range,
+            msg.diagnostic.message,
+            msg.diagnostic.severity
+        );
+    });
+    dCol.getModules().forEach((p) => newCol.addFilePath(remapPath(p)));
+    return newCol;
 }
 
 export class SymbolProviderTool implements vscode.LanguageModelTool<FileParameter> {
