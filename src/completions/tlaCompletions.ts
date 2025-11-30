@@ -6,6 +6,12 @@ export const TLA_OPERATORS = [
     'E', 'A', 'X', 'lnot', 'land', 'lor', 'cdot', 'equiv', 'subseteq', 'in', 'notin', 'intersect',
     'union', 'leq', 'geq', 'cup', 'cap'
 ];
+const TLA_UNICODE_OPERATORS: Map<string, string> = new Map([
+    ['E', '∃'], ['A', '∀'], ['X', '◊'], ['lnot', '¬'], ['land', '∧'], ['lor', '∨'], ['cdot', '·'],
+    ['equiv', '≡'], ['subseteq', '⊆'], ['in', '∈'], ['notin', '∉'], ['intersect', '∩'],
+    ['union', '∪'], ['leq', '≤'], ['geq', '≥'], ['cup', '∪'], ['cap', '∩']
+]);
+
 export const TLA_STARTING_KEYWORDS = [  // These keywords start blocks, and should not be in the middle of an expression
     'EXTENDS', 'VARIABLE', 'VARIABLES', 'CONSTANT', 'CONSTANTS', 'ASSUME', 'ASSUMPTION', 'AXIOM', 'THEOREM',
     'PROOF', 'LEMMA', 'PROPOSITION', 'COROLLARY', 'RECURSIVE'
@@ -95,7 +101,7 @@ export class TlaCompletionItemProvider implements vscode.CompletionItemProvider 
                 item.insertText = item.label + ' ';
                 break;
             case vscode.CompletionItemKind.Operator:
-                item.insertText = item.label.toString().substring(1) + ' ';
+                item.insertText = TLA_UNICODE_OPERATORS.get(item.label.toString().substring(1)) + ' ';
                 break;
         }
         return item;
