@@ -108,11 +108,18 @@ async function copyLocalTlaModules(srcDir: string, dstDir: string): Promise<void
 function remapDiagnostics(dCol: DCollection, fromDir: string, toDir: string) {
     const newCol = new DCollection();
     const fromPrefix = path.resolve(fromDir) + path.sep;
+    const fromPrefixCmp = process.platform === 'win32' ? fromPrefix.toLowerCase() : fromPrefix;
     const toPrefix = path.resolve(toDir) + path.sep;
 
-    const remapPath = (p: string) => p.startsWith(fromPrefix)
-        ? path.join(toPrefix, path.relative(fromPrefix, p))
-        : p;
+    const remapPath = (p: string) => {
+        const abs = path.resolve(p);
+        const absCmp = process.platform === 'win32' ? abs.toLowerCase() : abs;
+        if (absCmp.startsWith(fromPrefixCmp)) {
+            const rel = abs.substring(fromPrefix.length);
+            return path.join(toPrefix, rel);
+        }
+        return p;
+    };
 
     dCol.getMessages().forEach((msg) => {
         newCol.addMessage(
