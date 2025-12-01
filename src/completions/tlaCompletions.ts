@@ -3,17 +3,62 @@ import { TlaDocumentInfos } from '../model/documentInfo';
 import { getPrevText } from './completions';
 
 export const TLA_OPERATORS = [
-    'E', 'A', 'X', 'lnot', 'land', 'lor', 'cdot', 'equiv', 'subseteq', 'in', 'notin', 'intersect',
-    'union', 'leq', 'geq', 'cup', 'cap'
+    'land',                    'lor',                 'implies',
+    'lnot',                    'equiv',               'equiv',
+    'in',                      'notin',               'ne',
+    'll',                      'gg',                  '[]',
+    'leq',                     'geq',                 '<>',
+    'll',                      'gg',                  '~>',
+    'prec',                    'succ',                '-+->',
+    'preceq',                  'succeq',              'div',
+    'subseteq',                'supseteq',            'cdot',
+    'subset',                  'supset',              'o',
+    'sqsubset',                'sqsupset',            'bullet',
+    'sqsubseteq',              'sqsupseteq',          'star',
+    'vdash',                   'dashv',               'bigcirc',
+    'models',                  'vDash',               'sim',
+    'maps',                    'leftarrow',           'simeq',
+    'cap',                     'cup',                 'asymp',
+    'sqcap',                   'sqcup',               'approx',
+    'oplus',                   'uplus',               'cong',
+    'ominus',                  'X',                   'doteq',
+    'odot',                    'wr',
+    'otimes',                  'propto',
+    'oslash',                  's',
+    'E',                       'A',
+    'EE',                      'AA'
 ];
 
 const enableUnicodeAutocomplete = vscode.workspace.getConfiguration()
     .get<boolean>('tlaplus.unicode.autocomplete', false);
 
 const TLA_UNICODE_OPERATORS: Map<string, string> = new Map([
-    ['E', '∃'], ['A', '∀'], ['X', '◊'], ['lnot', '¬'], ['land', '∧'], ['lor', '∨'], ['cdot', '·'],
-    ['equiv', '≡'], ['subseteq', '⊆'], ['in', '∈'], ['notin', '∉'], ['intersect', '∩'],
-    ['union', '∪'], ['leq', '≤'], ['geq', '≥'], ['cup', '∪'], ['cap', '∩']
+    ['land', '∧'],           ['lor', '∨'],            ['implies', '⇒'],
+    ['lnot', '¬'],           ['equiv', '≡'],          ['triangleq', '≜'],
+    ['in', '∈'],             ['notin', '∉'],          ['ne', '≠'],
+    ['ll', '≪'],             ['gg', '≫'],             ['[]', '□'],
+    ['leq', '≤'],            ['geq', '≥'],            ['<>', '◊'],
+    ['ll', '≪'],             ['gg', '≫'],             ['~>', '↝'],
+    ['prec', '≺'],           ['succ', '≻'],           ['-+->', '⇸'],
+    ['preceq', '⪯'],         ['succeq', '⪰'],         ['div', '÷'],
+    ['subseteq', '⊆'],       ['supseteq', '⊇'],       ['cdot', '·'],
+    ['subset', '⊂'],         ['supset', '⊃'],         ['o', '○'],
+    ['sqsubset', '⊏'],       ['sqsupset', '⊐'],       ['bullet', '•'],
+    ['sqsubseteq', '⊑'],     ['sqsupseteq', '⊒'],     ['star', '⋆'],
+    ['vdash', '⊢'],          ['dashv', '⊣'],          ['bigcirc', '◯'],
+    ['models', '⊨'],         ['vDash', '=|'],             ['sim', '∼'],
+    ['maps', '→'],           ['leftarrow', '←'],      ['simeq', '≃'],
+    ['cap', '∩'],            ['cup', '∪'],            ['asymp', '≍'],
+    ['sqcap', '⊓'],          ['sqcup', '⊔'],          ['approx', '≈'],
+    ['oplus', '⊕'],          ['uplus', '⊎'],          ['cong', '≅'],
+    ['ominus', '⊖'],         ['X', '×'],              ['doteq', '≐'],
+    ['odot', '⊙'],           ['wr', '≀'],
+    ['otimes', '⊗'],         ['propto', '∝'],
+    ['oslash', '⊘'],
+    ['E', '∃'],              ['A', '∀'],
+    ['EE', '∃'],             ['AA', '∀'],
+    // Repeats
+    ['times', '×'], ['circ', '∘'], ['intersect', '∩'], ['union', '∪'],
 ]);
 
 export const TLA_STARTING_KEYWORDS = [  // These keywords start blocks, and should not be in the middle of an expression
