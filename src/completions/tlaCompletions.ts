@@ -6,6 +6,10 @@ export const TLA_OPERATORS = [
     'E', 'A', 'X', 'lnot', 'land', 'lor', 'cdot', 'equiv', 'subseteq', 'in', 'notin', 'intersect',
     'union', 'leq', 'geq', 'cup', 'cap'
 ];
+
+const enableUnicodeAutocomplete = vscode.workspace.getConfiguration()
+    .get<boolean>('tlaplus.unicode.autocomplete', false);
+
 const TLA_UNICODE_OPERATORS: Map<string, string> = new Map([
     ['E', '∃'], ['A', '∀'], ['X', '◊'], ['lnot', '¬'], ['land', '∧'], ['lor', '∨'], ['cdot', '·'],
     ['equiv', '≡'], ['subseteq', '⊆'], ['in', '∈'], ['notin', '∉'], ['intersect', '∩'],
@@ -101,7 +105,9 @@ export class TlaCompletionItemProvider implements vscode.CompletionItemProvider 
                 item.insertText = item.label + ' ';
                 break;
             case vscode.CompletionItemKind.Operator:
-                item.insertText = TLA_UNICODE_OPERATORS.get(item.label.toString().substring(1)) + ' ';
+                item.insertText = enableUnicodeAutocomplete ?
+                    TLA_UNICODE_OPERATORS.get(item.label.toString().substring(1)) + ' ' :
+                    item.label.toString().substring(1) + ' ';
                 break;
         }
         return item;
