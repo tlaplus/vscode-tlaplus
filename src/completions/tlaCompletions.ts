@@ -46,7 +46,7 @@ const TLA_UNICODE_OPERATORS: Map<string, string> = new Map([
     ['sqsubset', '⊏'],       ['sqsupset', '⊐'],       ['bullet', '•'],
     ['sqsubseteq', '⊑'],     ['sqsupseteq', '⊒'],     ['star', '⋆'],
     ['vdash', '⊢'],          ['dashv', '⊣'],          ['bigcirc', '◯'],
-    ['models', '⊨'],         ['vDash', '=|'],             ['sim', '∼'],
+    ['models', '⊨'],         ['vDash', '=|'],         ['sim', '∼'],
     ['maps', '→'],           ['leftarrow', '←'],      ['simeq', '≃'],
     ['cap', '∩'],            ['cup', '∪'],            ['asymp', '≍'],
     ['sqcap', '⊓'],          ['sqcup', '⊔'],          ['approx', '≈'],
