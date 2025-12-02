@@ -54,6 +54,7 @@ export class MCPServer implements vscode.Disposable {
 
     private mcpServer: http.Server | undefined;
     private jarProviderHandle: JarFileSystemProviderHandle;
+    private vscodeRegistrationDisposable: vscode.Disposable | undefined;
 
     constructor(port: number) {
         // Initialize JAR file system provider
@@ -305,6 +306,8 @@ export class MCPServer implements vscode.Disposable {
 
                 console.log(`TLA+ MCP server listening at http://localhost:${actualPort}/mcp`);
 
+                // TODO: Migrate to https://github.com/modelcontextprotocol/modelcontextprotocol/discussions/1160 if it finds widespread adoption.
+
                 // Programmatically register the MCP server in Cursor using the extension API
                 const isCursor = vscode.env.appName?.toLowerCase().includes('cursor');
                 if (isCursor && (vscode as any).cursor?.mcp?.registerServer) {
@@ -317,7 +320,35 @@ export class MCPServer implements vscode.Disposable {
                         });
                         console.log(`TLA+ MCP server registered programmatically in Cursor at http://localhost:${actualPort}/mcp`);
                     } catch (error) {
-                        console.warn('Failed to register TLA+ MCP server programmatically:', error);
+                        console.warn('Failed to register TLA+ MCP server programmatically in Cursor:', error);
+                    }
+                }
+
+                // Register the MCP server definition provider for VS Code
+                // This API is available in VS Code 1.96+
+                if (vscode.lm && (vscode.lm as any).registerMcpServerDefinitionProvider) {
+                    const provider = {
+                        provideMcpServerDefinitions(token: vscode.CancellationToken) {
+                            // Use 'any' casting to work with the MCP API that may not be in current type definitions
+                            const McpHttpServerDefinition = (vscode as any).McpHttpServerDefinition;
+                            if (McpHttpServerDefinition) {
+                                const serverDef = new McpHttpServerDefinition(
+                                    'TLA+ MCP Server',
+                                    vscode.Uri.parse(`http://localhost:${actualPort}/mcp`),
+                                    {},
+                                    '1.0.0'
+                                );
+                                return [serverDef];
+                            }
+                            return [];
+                        }
+                    };
+
+                    try {
+                        this.vscodeRegistrationDisposable = (vscode.lm as any).registerMcpServerDefinitionProvider('tlaplus.mcp-server', provider);
+                        console.log(`TLA+ MCP server registered programmatically with VS Code at http://localhost:${actualPort}/mcp`);
+                    } catch (error) {
+                        console.warn('Failed to register TLA+ MCP server programmatically in VS Code:', error);
                     }
                 }
             }).on('error', (err) => {
@@ -343,6 +374,17 @@ export class MCPServer implements vscode.Disposable {
             } catch (error) {
                 console.warn('Failed to unregister TLA+ MCP server from Cursor:', error);
             }
+        }
+
+        // Unregister from VS Code
+        if (this.vscodeRegistrationDisposable) {
+            try {
+                this.vscodeRegistrationDisposable.dispose();
+                console.log('TLA+ MCP server unregistered from VSCode');
+            } catch (error) {
+                console.warn('Failed to unregister TLA+ MCP server from VSCode:', error);
+            }
+            this.vscodeRegistrationDisposable = undefined;
         }
 
         if (this.mcpServer) {
