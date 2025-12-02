@@ -260,13 +260,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     // Register coverage commands
     registerCoverageCommands(context, coverageProvider);
 
-    // Start MCP server - unconditionally in Cursor (AI-first IDE), or based on port configuration in VSCode
-    if (vscode.env.appName?.toLowerCase().includes('cursor')) {
-        const p = vscode.workspace.getConfiguration().get<number>('tlaplus.mcp.port');
-        if (typeof p === 'number' && p === -1) {
-            await vscode.workspace.getConfiguration().update('tlaplus.mcp.port', 0, vscode.ConfigurationTarget.Global);
-        }
-    }
     const mcpPort = vscode.workspace.getConfiguration().get<number>('tlaplus.mcp.port');
     if (typeof mcpPort === 'number' && (mcpPort >= 1024 && mcpPort <= 65535 || mcpPort === 0)) {
         const tlaMcpServer = new MCPServer(mcpPort);

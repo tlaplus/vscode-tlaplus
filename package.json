@@ -9,7 +9,7 @@
         "name": "TLA+ Community"
     },
     "engines": {
-        "vscode": "^1.95.0"
+        "vscode": "^1.96.0"
     },
     "categories": [
         "Programming Languages",
@@ -40,6 +40,12 @@
     "main": "./out/main.js",
     "browser": "./out/main.browser.js",
     "contributes": {
+        "mcpServerDefinitionProviders": [
+            {
+                "id": "tlaplus.mcp-server",
+                "label": "TLA+ MCP Server"
+            }
+        ],
         "terminal": {
             "profiles": [
                 {
@@ -569,8 +575,8 @@
                 "tlaplus.mcp.port": {
                     "type": "number",
                     "scope": "window",
-                    "default": -1,
-                    "markdownDescription": "Listening port for TLA+ MCP server. If set to -1, MCP server will be disabled. Restart VSCode to apply changes."
+                    "default": 0,
+                    "markdownDescription": "Listening port for TLA+ MCP server. If set to -1, MCP server will be disabled. Set to 0 to have the server listen on a non-deterministically assigned available port. Restart VSCode to apply changes."
                 },
                 "tlaplus.mcp.enableFilesystemTools": {
                     "type": "boolean",
