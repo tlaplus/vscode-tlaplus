@@ -271,10 +271,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     if (typeof mcpPort === 'number' && (mcpPort >= 1024 && mcpPort <= 65535 || mcpPort === 0)) {
         const tlaMcpServer = new MCPServer(mcpPort);
         context.subscriptions.push(tlaMcpServer);
-
-        // TODO : At this point, we would like to programmatically register the MCP server in Cursor
-        // without creating a permanent file.  A permanent file, i.e., static configuration makes sense for
-        // an external MCP server, but not for the transient MCP server that is started by the extension.
     }
     syncTlcStatisticsSetting()
         .catch((err) => console.error(err))
