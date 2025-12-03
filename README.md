@@ -1,4 +1,4 @@
-# TLA<sup>+</sup> for Visual Studio Code
+# TLA<sup>+</sup> for Visual Studio Code and Cursor
 
 [![Build Status](https://img.shields.io/github/actions/workflow/status/tlaplus/vscode-tlaplus/ci.yml?branch=master)](https://github.com/tlaplus/vscode-tlaplus/actions?query=workflow%3ARelease) [![VS Code extension version](https://img.shields.io/visual-studio-marketplace/i/tlaplus.vscode-ide?color=blue&label=Stable%20Release&style=flat-square)](https://marketplace.visualstudio.com/items?itemName=tlaplus.vscode-ide)
 
