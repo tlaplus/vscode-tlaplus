@@ -633,15 +633,18 @@ export class MCPServer implements vscode.Disposable {
                 fileName: z.string().describe('The full path to the file containing the TLA+ module to parse.'),
                 cfgFile: z.string().optional().describe('Optional path to a custom TLC configuration file.'),
                 // eslint-disable-next-line max-len
-                extraOpts: z.array(z.string()).optional().describe('Optional array of additional command-line options to pass to TLC beyond [-modelcheck].')
+                extraOpts: z.array(z.string()).optional().describe('Optional array of additional command-line options to pass to TLC beyond [-modelcheck].'),
+                // eslint-disable-next-line max-len
+                extraJavaOpts: z.array(z.string()).optional().describe('Optional array of additional Java options to pass to the JVM (e.g., ["-Xmx4g", "-Dtlc2.TLC.stopAfter=60"]).')
             },
-            async ({ fileName, cfgFile, extraOpts }) => {
+            async ({ fileName, cfgFile, extraOpts, extraJavaOpts }) => {
                 const absolutePath = this.resolveFilePath(fileName);
                 const validatedPath = this.validateWorkspacePath(absolutePath);
                 const cfgFilePath = cfgFile ? this.validateWorkspacePath(this.resolveFilePath(cfgFile)) : undefined;
                 // Prepend the command line argument ['-modelcheck'] to extra opts.
                 const options = extraOpts ? ['-cleanup', '-modelcheck', ...extraOpts] : ['-cleanup', '-modelcheck'];
-                return this.runTLCInMCP(validatedPath, options, [], cfgFilePath);
+                const javaOpts = extraJavaOpts || [];
+                return this.runTLCInMCP(validatedPath, options, javaOpts, cfgFilePath);
             }
         );
 
@@ -653,15 +656,18 @@ export class MCPServer implements vscode.Disposable {
                 fileName: z.string().describe('The full path to the file containing the TLA+ module to parse.'),
                 cfgFile: z.string().optional().describe('Optional path to a custom TLC configuration file.'),
                 // eslint-disable-next-line max-len
-                extraOpts: z.array(z.string()).optional().describe('Optional array of additional command-line options to pass to TLC beyond [-simulate].')
+                extraOpts: z.array(z.string()).optional().describe('Optional array of additional command-line options to pass to TLC beyond [-simulate].'),
+                // eslint-disable-next-line max-len
+                extraJavaOpts: z.array(z.string()).optional().describe('Optional array of additional Java options to pass to the JVM (e.g., ["-Xmx4g"]). Note: -Dtlc2.TLC.stopAfter=3 is set by default.')
             },
-            async ({ fileName, cfgFile, extraOpts }) => {
+            async ({ fileName, cfgFile, extraOpts, extraJavaOpts }) => {
                 const absolutePath = this.resolveFilePath(fileName);
                 const validatedPath = this.validateWorkspacePath(absolutePath);
                 const cfgFilePath = cfgFile ? this.validateWorkspacePath(this.resolveFilePath(cfgFile)) : undefined;
                 // Prepend the command line argument ['-modelcheck'] to extra opts.
                 const options = extraOpts ? ['-cleanup', '-simulate', ...extraOpts] : ['-cleanup', '-simulate'];
-                return this.runTLCInMCP(validatedPath, options, ['-Dtlc2.TLC.stopAfter=3'], cfgFilePath);
+                const javaOpts = ['-Dtlc2.TLC.stopAfter=3', ...(extraJavaOpts || [])];
+                return this.runTLCInMCP(validatedPath, options, javaOpts, cfgFilePath);
             }
         );
 
@@ -674,9 +680,11 @@ export class MCPServer implements vscode.Disposable {
                 cfgFile: z.string().optional().describe('Optional path to a custom TLC configuration file.'),
                 // eslint-disable-next-line max-len
                 extraOpts: z.array(z.string()).optional().describe('Optional array of additional command-line options to pass to TLC beyond [-simulate, -invlevel].'),
+                // eslint-disable-next-line max-len
+                extraJavaOpts: z.array(z.string()).optional().describe('Optional array of additional Java options to pass to the JVM (e.g., ["-Xmx4g"]). Note: -Dtlc2.TLC.stopAfter=3 is set by default.'),
                 behaviorLength: z.number().min(1).describe('The length of the behavior to generate.')
             },
-            async ({ fileName, behaviorLength, cfgFile, extraOpts }) => {
+            async ({ fileName, behaviorLength, cfgFile, extraOpts, extraJavaOpts }) => {
                 const absolutePath = this.resolveFilePath(fileName);
                 const validatedPath = this.validateWorkspacePath(absolutePath);
                 const cfgFilePath = cfgFile ? this.validateWorkspacePath(this.resolveFilePath(cfgFile)) : undefined;
@@ -684,10 +692,11 @@ export class MCPServer implements vscode.Disposable {
                 const options = extraOpts ?
                     ['-cleanup', '-simulate', '-invlevel', behaviorLength.toString(), ...extraOpts] :
                     ['-cleanup', '-simulate', '-invlevel', behaviorLength.toString()];
+                const javaOpts = ['-Dtlc2.TLC.stopAfter=3', ...(extraJavaOpts || [])];
                 return this.runTLCInMCP(
                     validatedPath,
                     options,
-                    ['-Dtlc2.TLC.stopAfter=3'],
+                    javaOpts,
                     cfgFilePath
                 );
             }
