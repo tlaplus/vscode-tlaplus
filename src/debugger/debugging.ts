@@ -10,6 +10,7 @@ export const TLAPLUS_DEBUG_LAUNCH_SMOKE = 'tlaplus.debugger.smoke';
 export const TLAPLUS_DEBUG_LAUNCH_CHECKNDEBUG = 'tlaplus.debugger.run';
 export const TLAPLUS_DEBUG_LAUNCH_CUSTOMCHECKNDEBUG = 'tlaplus.debugger.customRun';
 export const TLAPLUS_DEBUG_LAUNCH_DEBUG = 'tlaplus.debugger.attach';
+export const TLAPLUS_DEBUG_GOTO_STATE = 'tlaplus.debugger.gotoState';
 
 const DEFAULT_DEBUGGER_PORT = 4712;
 const DEBUGGER_MIN_PORT = 5001;         // BSD uses ports up to 5000 as ephemeral
@@ -179,4 +180,58 @@ export async function smokeTestSpec(
     // Don't await doCheckModel because it only returns after TLC terminates.
     doCheckModel(specFiles, false, context, diagnostic, false,
         ['-simulate', '-noTE', '-debugger', `nosuspend,port=${initPort}`], portOpenCallback);
+}
+
+/**
+ * Context passed to commands invoked from the debug/variables/context menu.
+ */
+interface DebugVariableContext {
+    container: {
+        name: string;
+        value: string;
+        variablesReference: number;
+    };
+    variable: {
+        name: string;
+        value: string;
+        variablesReference: number;
+        evaluateName?: string;
+    };
+}
+
+/**
+ * Goes to a specific state in the TLA+ debugger by sending a custom DAP request.
+ * This command is triggered from the variables view context menu or keyboard shortcut.
+ *
+ * @param context The debug variable context from the variables view (may be undefined if triggered via keyboard)
+ */
+export async function gotoState(context: DebugVariableContext | undefined): Promise<void> {
+    // Context is undefined when triggered via keyboard shortcut without a selection
+    if (!context?.variable) {
+        vscode.window.showInformationMessage('Please select a state in the variables view.');
+        return;
+    }
+
+    const session = vscode.debug.activeDebugSession;
+    if (!session) {
+        vscode.window.showWarningMessage('No active debug session');
+        return;
+    }
+
+    if (session.type !== 'tlaplus') {
+        vscode.window.showWarningMessage('This command is only available for TLA+ debug sessions');
+        return;
+    }
+
+    const variable = context.variable;
+
+    try {
+        // Send a custom DAP request to the TLC debugger
+        // The 'tlaplus/gotoState' request is a custom extension to the DAP protocol
+        // Arguments wrapped in object for JSON-RPC named parameter binding (LSP4J)
+        await session.customRequest('tlaplus/gotoState', { variablesReference: variable.variablesReference });
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        vscode.window.showErrorMessage(`Failed to go to state: ${errorMessage}`);
+    }
 }

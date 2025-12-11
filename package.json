@@ -397,6 +397,12 @@
                 "command": "tlaplus.tlc.profiler.clear",
                 "title": "Clear Coverage Data",
                 "category": "TLA+"
+            },
+            {
+                "command": "tlaplus.debugger.gotoState",
+                "title": "Go to State",
+                "category": "TLA+",
+                "icon": "$(debug-step-over)"
             }
         ],
         "snippets": [
@@ -462,6 +468,10 @@
                 },
                 {
                     "command": "tlaplus.repl.run"
+                },
+                {
+                    "command": "tlaplus.debugger.gotoState",
+                    "when": "false"
                 }
             ],
             "explorer/context": [
@@ -504,8 +514,23 @@
                     "when": "resourceExtname == .tla",
                     "group": "navigation"
                 }
+            ],
+            "debug/variables/context": [
+                {
+                    "command": "tlaplus.debugger.gotoState",
+                    "when": "debugType == tlaplus",
+                    "group": "3_modifications"
+                }
             ]
         },
+        "keybindings": [
+            {
+                "command": "tlaplus.debugger.gotoState",
+                "key": "ctrl+shift+g",
+                "mac": "cmd+shift+g",
+                "when": "debugType == tlaplus && focusedView == workbench.debug.variablesView"
+            }
+        ],
         "configuration": {
             "type": "object",
             "title": "TLA+",
