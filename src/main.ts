@@ -7,8 +7,8 @@ import {
 } from './commands/checkModel';
 import { CMD_RUN_REPL, launchRepl, REPLTerminalProfileProvider } from './commands/runRepl';
 import { TLAPLUS_DEBUG_LAUNCH_CHECKNDEBUG, TLAPLUS_DEBUG_LAUNCH_CUSTOMCHECKNDEBUG, TLAPLUS_DEBUG_LAUNCH_DEBUG,
-    TLAPLUS_DEBUG_LAUNCH_SMOKE,TLADebugAdapterServerDescriptorFactory, checkAndDebugSpec,
-    checkAndDebugSpecCustom, attachDebugger, smokeTestSpec
+    TLAPLUS_DEBUG_LAUNCH_SMOKE, TLAPLUS_DEBUG_GOTO_STATE, TLADebugAdapterServerDescriptorFactory,
+    checkAndDebugSpec, checkAndDebugSpecCustom, attachDebugger, smokeTestSpec, gotoState
 } from './debugger/debugging';
 import { CMD_EVALUATE_SELECTION, evaluateSelection, CMD_EVALUATE_EXPRESSION,
     evaluateExpression } from './commands/evaluateExpression';
@@ -190,6 +190,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         vscode.commands.registerCommand(
             TLAPLUS_DEBUG_LAUNCH_DEBUG,
             (uri) => attachDebugger()
+        ),
+        vscode.commands.registerCommand(
+            TLAPLUS_DEBUG_GOTO_STATE,
+            (debugContext) => gotoState(debugContext)
         ),
         vscode.languages.registerEvaluatableExpressionProvider(
             TLAPLUS_FILE_SELECTOR, {
