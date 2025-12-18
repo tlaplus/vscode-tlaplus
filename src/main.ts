@@ -8,7 +8,7 @@ import {
 import { CMD_RUN_REPL, launchRepl, REPLTerminalProfileProvider } from './commands/runRepl';
 import { TLAPLUS_DEBUG_LAUNCH_CHECKNDEBUG, TLAPLUS_DEBUG_LAUNCH_CUSTOMCHECKNDEBUG, TLAPLUS_DEBUG_LAUNCH_DEBUG,
     TLAPLUS_DEBUG_LAUNCH_SMOKE, TLAPLUS_DEBUG_GOTO_STATE, TLADebugAdapterServerDescriptorFactory,
-    checkAndDebugSpec, checkAndDebugSpecCustom, attachDebugger, smokeTestSpec, gotoState
+    TLADebugAdapterTrackerFactory, checkAndDebugSpec, checkAndDebugSpecCustom, attachDebugger, smokeTestSpec, gotoState
 } from './debugger/debugging';
 import { CMD_EVALUATE_SELECTION, evaluateSelection, CMD_EVALUATE_EXPRESSION,
     evaluateExpression } from './commands/evaluateExpression';
@@ -149,6 +149,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         vscode.debug.registerDebugAdapterDescriptorFactory(
             LANG_TLAPLUS,
             new TLADebugAdapterServerDescriptorFactory()),
+        vscode.debug.registerDebugAdapterTrackerFactory(
+            LANG_TLAPLUS,
+            new TLADebugAdapterTrackerFactory()),
         vscode.languages.registerOnTypeFormattingEditProvider(
             TLAPLUS_FILE_SELECTOR,
             new TlaOnTypeFormattingEditProvider(),
