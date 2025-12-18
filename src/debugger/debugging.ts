@@ -15,12 +15,50 @@ export const TLAPLUS_DEBUG_GOTO_STATE = 'tlaplus.debugger.gotoState';
 const DEFAULT_DEBUGGER_PORT = 4712;
 const DEBUGGER_MIN_PORT = 5001;         // BSD uses ports up to 5000 as ephemeral
 const DEBUGGER_MAX_PORT = 49151;        // Ports above 49152 are suggested as ephemeral by IANA
+const CTX_DEBUGGER_SUPPORTS_GOTO_STATE = 'tlaplus.debugger.supportsGotoState';
 
 export class TLADebugAdapterServerDescriptorFactory implements vscode.DebugAdapterDescriptorFactory {
 
     createDebugAdapterDescriptor(session: vscode.DebugSession, executable: vscode.DebugAdapterExecutable | undefined):
         vscode.ProviderResult<vscode.DebugAdapterDescriptor> {
         return new vscode.DebugAdapterServer(session.configuration['port']);
+    }
+}
+
+/**
+ * Tracks debug adapter protocol messages to detect capabilities from the debugger backend.
+ */
+export class TLADebugAdapterTrackerFactory implements vscode.DebugAdapterTrackerFactory {
+
+    createDebugAdapterTracker(session: vscode.DebugSession): vscode.ProviderResult<vscode.DebugAdapterTracker> {
+        if (session.type !== 'tlaplus') {
+            return;
+        }
+
+        return {
+            onDidSendMessage: (message: unknown) => {
+                // Listen for the initialize response from the debug adapter
+                if (this.isInitializeResponse(message)) {
+                    const supportsGotoState = message.body?.supportsGotoState === true;
+                    vscode.commands.executeCommand('setContext', CTX_DEBUGGER_SUPPORTS_GOTO_STATE, supportsGotoState);
+                }
+            },
+            onWillStopSession: () => {
+                // Clear the context when the debug session ends
+                vscode.commands.executeCommand('setContext', CTX_DEBUGGER_SUPPORTS_GOTO_STATE, false);
+            }
+        };
+    }
+
+    private isInitializeResponse(message: unknown): message is { type: string; command: string; body?: { supportsGotoState?: boolean } } {
+        return typeof message === 'object' &&
+               message !== null &&
+               'type' in message &&
+               typeof (message as any).type === 'string' &&
+               (message as any).type === 'response' &&
+               'command' in message &&
+               typeof (message as any).command === 'string' &&
+               (message as any).command === 'initialize';
     }
 }
 

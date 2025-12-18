@@ -518,7 +518,7 @@
             "debug/variables/context": [
                 {
                     "command": "tlaplus.debugger.gotoState",
-                    "when": "debugType == tlaplus",
+                    "when": "debugType == tlaplus && tlaplus.debugger.supportsGotoState",
                     "group": "3_modifications"
                 }
             ]
@@ -528,7 +528,7 @@
                 "command": "tlaplus.debugger.gotoState",
                 "key": "ctrl+shift+g",
                 "mac": "cmd+shift+g",
-                "when": "debugType == tlaplus && focusedView == workbench.debug.variablesView"
+                "when": "debugType == tlaplus && tlaplus.debugger.supportsGotoState && focusedView == workbench.debug.variablesView"
             }
         ],
         "configuration": {
