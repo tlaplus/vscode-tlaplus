@@ -518,7 +518,7 @@
             "debug/variables/context": [
                 {
                     "command": "tlaplus.debugger.gotoState",
-                    "when": "debugType == tlaplus && tlaplus.debugger.supportsGotoState",
+                    "when": "debugType == tlaplus && tlaplus.debugger.supportsGotoState && debugProtocolVariableMenuContext == 'state'",
                     "group": "3_modifications"
                 }
             ]
