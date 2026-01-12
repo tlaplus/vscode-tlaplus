@@ -38,23 +38,26 @@ TLA+ animations transform behaviors of abstract specifications into visual SVG r
 
 ### 1. Create Animation File
 
-For a specification `MySystem.tla`, create `MySystem_anim.tla`:
+For a specification `MySpec.tla`, create `MySpec_anim.tla`:
 
 ```tla
----- MODULE MySystem_anim ----
-EXTENDS TLC, SVG, IOUtils, MySystem
+---- MODULE MySpec_anim ----
+EXTENDS TLC, SVG, IOUtils, MySpec
 
 \* Define visual representation
 AnimView == Circle(50, 50, 20, ("fill" :> "blue"))
 
-\* Enable SVG file generation
+\* Wrap view in SVG document (single source of truth for viewBox)
+AnimDoc == SVGDoc(AnimView, 0, 0, 100, 100, <<>>)
+
+\* Enable SVG file generation (for TLC model checking)
 AnimAlias ==
     [state |-> state] @@  \* Include state variables for debugging
-    [ _anim |-> SVGSerialize(
-        SVGDoc(AnimView, 0, 0, 100, 100, <<>>),
-        "MySystem_anim_", 
-        TLCGet("level")
-    )]
+    [_anim |-> SVGSerialize(AnimDoc, "MySpec_anim_", TLCGet("level"))]
+
+\* Alternative: For interactive debugging in TLA+ Debugger
+AnimWatch ==
+    SVGSerialize(AnimDoc, "MySpec_anim", 0)
 ====
 ```
 
@@ -62,14 +65,14 @@ AnimAlias ==
 
 Use the MCP server to check syntax:
 ```
-tlaplus_mcp_sany_parse MySystem_anim.tla
+tlaplus_mcp_sany_parse MySpec_anim.tla
 ```
 
 ### 3. Generate Animation SVGs
 
 Create configuration file and use MCP to explore states:
 ```
-tlaplus_mcp_tlc_explore MySystem_anim.tla -depth 10
+tlaplus_mcp_tlc_explore MySpec_anim.tla -depth 10
 ```
 
 ## Animation File Structure
@@ -88,18 +91,88 @@ EXTENDS TLC,        \* TLC built-ins (@@, :>, etc.)
 \* Visual representation logic
 AnimView == \* Returns SVG elements based on current state
 
-\* File generation configuration
-AnimAlias == \* Configures SVG file output
+\* File generation configuration (choose one approach)
+AnimAlias == \* For TLC model checking (generates numbered frames)
+AnimWatch == \* For TLA+ Debugger (live preview)
 ====
 ```
 
 ### Key Components Explained
 
-1. **AnimView**: The main operator that creates SVG elements based on the current state
-2. **AnimAlias**: Configures how SVG files are generated and named
-3. **SVG Module**: Provides constructors for visual elements (Circle, Rect, Text, etc.)
-4. **IOUtils Module**: Handles file writing operations
-5. **State Mapping**: Your logic that transforms state variables into visual properties
+1. **AnimView**: The main operator that creates SVG elements based on the current state. This is the core of your animation - it defines how state variables map to visual properties.
+2. **AnimDoc**: Wraps `AnimView` in an SVG document with viewBox parameters. This provides a single source of truth for document dimensions, eliminating duplication between `AnimAlias` and `AnimWatch`.
+3. **AnimAlias** or **AnimWatch**: Two different approaches for serializing SVG to disk (detailed below)
+4. **SVG Module**: Provides constructors for visual elements (Circle, Rect, Text, etc.)
+5. **IOUtils Module**: Handles file writing operations
+6. **State Mapping**: Your logic that transforms state variables into visual properties
+
+## Serialization Approaches: AnimAlias vs AnimWatch
+
+While `AnimView` defines *what* to visualize, you need a serialization mechanism to *output* the SVG frames. TLA+ animations support two approaches, each suited to different workflows:
+
+### AnimAlias: For Screencasts and Animation Sequences
+
+**Use Case**: Creating animation sequences for documentation, presentations, or screencasts.
+
+**How it works**:
+- Add `ALIAS AnimAlias` to your TLC configuration file (`.cfg`)
+- TLC automatically evaluates `AnimAlias` at each state during counterexample generation
+- Each state generates a **unique numbered SVG file**
+- Frame numbering uses `TLCGet("level")` to create sequential files
+
+**Example**:
+```tla
+AnimDoc == SVGDoc(AnimView, 0, 0, 760, 420, <<>>)
+
+AnimAlias ==
+    [active |-> active, color |-> color, counter |-> counter] @@
+    [_anim |-> SVGSerialize(
+        AnimDoc,                  \* Reusable document
+        "MySpec_anim_",           \* Filename prefix
+        TLCGet("level"))]         \* Unique frame number
+```
+
+**Generated files**: `MySpec_anim_0.svg`, `MySpec_anim_1.svg`, `MySpec_anim_2.svg`, ...
+
+**Configuration file**:
+```
+INIT Init
+NEXT Next
+ALIAS AnimAlias
+```
+
+### AnimWatch: For Interactive Debugging
+
+**Use Case**: Live visualization during step-by-step debugging sessions.
+
+**How it works**:
+- Use as a Watch expression in the TLA+ Debugger
+- Each evaluation **overwrites the same SVG file** (frame number 0)
+- Pair with a live SVG viewer that auto-refreshes (e.g., [SVG extension](https://open-vsx.org/extension/jock/svg))
+- See animation update in real-time as you step through execution
+
+**Example**:
+```tla
+AnimDoc == SVGDoc(AnimView, 0, 0, 760, 420, <<>>)
+
+AnimWatch ==
+    SVGSerialize(
+        AnimDoc,                  \* Reusable document
+        "MySpec_anim",     \* Filename prefix
+        0)                        \* Frame 0 (overwrites each time)
+```
+
+**Generated file**: `MySpec_anim00.svg` (single file, continuously updated)
+
+**Debugger usage**:
+When debugging `MySpec.tla`, add this watch expression:
+```
+LET A == INSTANCE MySpec_anim IN A!AnimWatch
+```
+
+### Choosing Between AnimAlias and AnimWatch
+
+You don't need to choose—include *both* in your animation file! Use `AnimAlias` for documentation and `AnimWatch` for development/debugging.
 
 ## Creating Your First Animation
 
@@ -146,18 +219,21 @@ AnimView == Group([n \in 1..Len(NodeSeq) |-> NodeElement(NodeSeq[n])],
                   ("transform" :> "scale(1.2)"))
 ```
 
-### Step 3: Add AnimAlias for TLC
+### Step 3: Add Serialization Operators
 
 Enable file generation:
 
 ```tla
-AnimAlias ==
-    [ _anim |-> SVGSerialize(
-        SVGDoc(AnimView, 0, 0, 400, 200, <<>>),
-        "DistributedSystem_anim_", 
-        TLCGet("level")
-    )]
+\* Wrap view in SVG document
+AnimDoc == SVGDoc(AnimView, 0, 0, 400, 200, <<>>)
 
+\* For TLC model checking (generates numbered frames)
+AnimAlias ==
+    [_anim |-> SVGSerialize(AnimDoc, "DistributedSystem_anim_", TLCGet("level"))]
+
+\* For interactive debugging (live preview)
+AnimWatch ==
+    SVGSerialize(AnimDoc, "DistributedSystem_anim", 0)
 ```
 
 ## Complete Example
@@ -245,18 +321,21 @@ StepNumber ==
 AnimView == 
     Group(<<Legend, StepNumber>> \o [i \in 1..Len(NodeSeq) |-> NodeVis(NodeSeq[i])], <<>>)
 
-\* TLC animation export
+\* Wrap view in document structure
+AnimDoc == SVGDoc(AnimView, 0, 0, 100 + Cardinality(Nodes) * NodeSpacing, 200, <<>>)
+
+\* TLC animation export (for screencasts)
 AnimAlias ==
-    [ counter |-> counter ] @@
-    [ _anim |-> SVGSerialize(
-        SVGDoc(AnimView, 0, 0, 100 + Cardinality(Nodes) * NodeSpacing, 200, <<>>),
-        "CounterSystem_anim_", 
-        TLCGet("level")
-    )]
+    [counter |-> counter] @@
+    [_anim |-> SVGSerialize(AnimDoc, "CounterSystem_anim_", TLCGet("level"))]
+
+\* Interactive debugging (for live preview)
+AnimWatch ==
+    SVGSerialize(AnimDoc, "CounterSystem_anim", 0)
 ====
 ```
 
-### 3. Configuration File
+### 3. Configuration File (for AnimAlias)
 
 ```
 CONSTANT Nodes = {n1, n2, n3}
@@ -902,13 +981,15 @@ StepNumber ==
 
 AnimView == Group(<<Left, Right, Battery, Chargers, Empty, StepNumber>>, [i \in {} |-> {}])
 
+AnimDoc == SVGDoc(AnimView, 0, 0, 230, 200, <<>>)
+
 AnimAlias ==
     [left |-> left, right |-> right, 
      batteryLeft |-> batteryLeft, batteryLevel |-> batteryLevel] @@ 
-    [ _anim |-> SVGSerialize(
-        SVGDoc(AnimView, 0, 0, 230, 200, <<>>),
-        "BatteryRelay_anim_", 
-        TLCGet("level"))]
+    [_anim |-> SVGSerialize(AnimDoc, "BatteryRelay_anim_", TLCGet("level"))]
+
+AnimWatch ==
+    SVGSerialize(AnimDoc, "BatteryRelay_anim", 0)
 ====
 ```
 
@@ -1062,12 +1143,14 @@ AnimView ==
     Group(<<ProducerLabel, BufferLabel, ConsumerLabel, BufferStatus, FlowArrows, StepNumber>> \o 
           Prod \o Buffer \o Conss, <<>>)
 
+AnimDoc == SVGDoc(AnimView, 0, 0, 560, 350, <<>>)
+
 AnimAlias ==
     [buffer |-> buffer, waitSet |-> waitSet] @@
-    [ _anim |-> SVGSerialize(
-        SVGDoc(AnimView, 0, 0, 560, 350, <<>>),
-        "BlockingQueue_anim_", 
-        TLCGet("level"))]
+    [_anim |-> SVGSerialize(AnimDoc, "BlockingQueue_anim_", TLCGet("level"))]
+
+AnimWatch ==
+    SVGSerialize(AnimDoc, "BlockingQueue_anim", 0)
 ====
 ```
 
@@ -1142,12 +1225,14 @@ RiverElem ==
 AnimView == 
     Group(<<SideElem(1), SideElem(2), SuccessElem(2), RiverElem, BoatElem>>, <<>>)
 
+AnimDoc == SVGDoc(AnimView, 0, 0, 530, 420, <<>>)
+
 AnimAlias ==
     [banks |-> banks, boat |-> boat] @@
-    [ _anim |-> SVGSerialize(
-        SVGDoc(AnimView, 0, 0, 530, 420, <<>>),
-        "CabbageGoatWolf_anim_", 
-        TLCGet("level"))]
+    [_anim |-> SVGSerialize(AnimDoc, "CabbageGoatWolf_anim_", TLCGet("level"))]
+
+AnimWatch ==
+    SVGSerialize(AnimDoc, "CabbageGoatWolf_anim", 0)
 ====
 ```
 
@@ -1216,12 +1301,14 @@ RingFork ==
 AnimView ==
     Group(RingPhil \o RingFork, <<>>)
 
+AnimDoc == SVGDoc(AnimView, 0, 0, 270, 270, <<>>)
+
 AnimAlias ==
     [philosophers |-> philosophers, forks |-> forks] @@
-    [ _anim |-> SVGSerialize(
-        SVGDoc(AnimView, 0, 0, 270, 270, <<>>),
-        "DiningPhilosophers_anim_", 
-        TLCGet("level"))]
+    [_anim |-> SVGSerialize(AnimDoc, "DiningPhilosophers_anim_", TLCGet("level"))]
+
+AnimWatch ==
+    SVGSerialize(AnimDoc, "DiningPhilosophers_anim", 0)
 ====
 ```
 
@@ -1292,13 +1379,15 @@ TextElems == RMTextElems \o TMTextElems
 AnimView == 
     Group(RMElems \o <<TMElem>> \o TextElems, <<>>)
 
+AnimDoc == SVGDoc(AnimView, 0, 0, 180, 200, <<>>)
+
 AnimAlias ==
     [rmState |-> rmState, tmState |-> tmState, 
      tmPrepared |-> tmPrepared, msgs |-> msgs] @@
-    [ _anim |-> SVGSerialize(
-        SVGDoc(AnimView, 0, 0, 180, 200, <<>>),
-        "TwoPhase_anim_", 
-        TLCGet("level"))]
+    [_anim |-> SVGSerialize(AnimDoc, "TwoPhase_anim_", TLCGet("level"))]
+
+AnimWatch ==
+    SVGSerialize(AnimDoc, "TwoPhase_anim", 0)
 =============================================================================
 ```
 
@@ -1429,14 +1518,16 @@ AnimView ==
     Group(cs \o labels \o termLabels \o logElems \o 
           safetyViolationElems \o configVersionTermTitleLabel, <<>>)
 
+AnimDoc == SVGDoc(AnimView, 0, 0, 720, 350, <<>>)
+
 AnimAlias ==
     [currentTerm |-> currentTerm, state |-> state, log |-> log, 
      immediatelyCommitted |-> immediatelyCommitted, config |-> config, 
      configVersion |-> configVersion, configTerm |-> configTerm] @@
-    [ _anim |-> SVGSerialize(
-        SVGDoc(AnimView, 0, 0, 720, 350, <<>>),
-        "MongoRaftReconfig_anim_", 
-        TLCGet("level"))]
+    [_anim |-> SVGSerialize(AnimDoc, "MongoRaftReconfig_anim_", TLCGet("level"))]
+
+AnimWatch ==
+    SVGSerialize(AnimDoc, "MongoRaftReconfig_anim", 0)
 =============================================================================
 ```
 
