@@ -21,15 +21,18 @@ const tableCellClass = (alignRight: boolean) =>
 
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement>;
 
-export const VSCodeLink = React.memo(({children, style, className, ...rest}: ButtonProps) => (
-    <button
-        type="button"
-        className={className}
-        style={{...baseLinkStyle, ...style}}
-        {...rest}>
-        {children}
-    </button>
-));
+export const VSCodeLink = React.forwardRef<HTMLButtonElement, ButtonProps>(
+    ({children, style, className, ...rest}: ButtonProps, ref) => (
+        <button
+            ref={ref}
+            type="button"
+            className={className}
+            style={{...baseLinkStyle, ...style}}
+            {...rest}>
+            {children}
+        </button>
+    )
+);
 
 export const EmptyLine = () => <div style={{marginTop: '1em'}}/>;
 
@@ -47,33 +50,35 @@ export const CodePositionLink = React.memo(({line, filepath, position}: CodePosi
     }
 
     const location = {'line': position.line, 'character': position.character};
-    const stopEvent = (event: React.MouseEvent<HTMLButtonElement>) => {
-        event.preventDefault();
-        event.stopPropagation();
-        const nativeEvent = event.nativeEvent as {stopImmediatePropagation?: () => void};
-        nativeEvent.stopImmediatePropagation?.();
-    };
+    const buttonRef = React.useRef<HTMLButtonElement>(null);
 
-    const openFileAtLocation = (event: React.MouseEvent<HTMLButtonElement>) => {
-        stopEvent(event);
-        const treeItem = event.currentTarget.closest('vscode-tree-item') as HTMLElement & {open?: boolean} | null;
-        if (treeItem) {
-            if (typeof treeItem.open === 'boolean') {
-                treeItem.open = true;
-            } else {
-                treeItem.setAttribute('open', '');
-            }
+    React.useEffect(() => {
+        const button = buttonRef.current;
+        if (!button) {
+            return;
         }
-        vscode.openFile(filepath, location);
-    };
-    const handleMouseDown = (event: React.MouseEvent<HTMLButtonElement>) => stopEvent(event);
-    const handleClickCapture = (event: React.MouseEvent<HTMLButtonElement>) => stopEvent(event);
+
+        const handleNativeClick = (event: MouseEvent) => {
+            event.preventDefault();
+            event.stopPropagation();
+
+            const treeItem = button.closest('vscode-tree-item') as HTMLElement & {open?: boolean} | null;
+            if (treeItem) {
+                if (typeof treeItem.open === 'boolean') {
+                    treeItem.open = true;
+                } else {
+                    treeItem.setAttribute('open', '');
+                }
+            }
+            vscode.openFile(filepath, location);
+        };
+
+        button.addEventListener('click', handleNativeClick, true);
+        return () => button.removeEventListener('click', handleNativeClick, true);
+    }, [filepath, position.line, position.character]);
+
     return (
-        <VSCodeLink
-            onClick={openFileAtLocation}
-            onClickCapture={handleClickCapture}
-            onMouseDown={handleMouseDown}
-            onPointerDown={handleMouseDown}>
+        <VSCodeLink ref={buttonRef}>
             {line}
         </VSCodeLink>
     );
