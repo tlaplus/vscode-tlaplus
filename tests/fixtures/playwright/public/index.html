@@ -36,6 +36,7 @@
   <script>
     (function () {
       const messages = [];
+      window.__testMessages = messages; // Expose for Playwright tests
       let state = undefined;
       window.acquireVsCodeApi = function () {
         return {

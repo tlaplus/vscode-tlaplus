@@ -18,6 +18,41 @@ const test = base.extend<Fixtures>({
 });
 
 test.describe('Check Result webview fixture', () => {
+    test('action link click posts openFile message without toggling tree-item', async ({ page, fixtureServer }) => {
+        await page.goto(fixtureServer.endpoint, { waitUntil: 'networkidle' });
+        await page.addStyleTag({
+            content: '* { transition-duration: 0s !important; animation-duration: 0s !important; }'
+        });
+
+        const state = page.locator('vscode-tree-item#state-1');
+        await state.waitFor({ state: 'visible' });
+
+        // Clear any existing messages and record the initial state
+        await page.evaluate(() => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (window as any).__testMessages.length = 0;
+        });
+        const openBefore = await state.evaluate((el: Element) => el.hasAttribute('open'));
+        expect(openBefore).toBe(true);
+
+        // Click the action link (">>" button)
+        const actionLink = page.locator('vscode-tree-item#state-1 .error-trace-title button');
+        await expect(actionLink).toHaveCount(1);
+        await actionLink.click();
+
+        // Verify: openFile message was posted
+        const messages = await page.evaluate(() => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            return (window as any).__testMessages as Array<{ command: string }>;
+        });
+        const openFileMsg = messages.find((m: { command: string }) => m.command === 'openFile');
+        expect(openFileMsg).toBeDefined();
+
+        // Verify: Tree-item should still be open (not toggled/collapsed)
+        const openAfter = await state.evaluate((el: Element) => el.hasAttribute('open'));
+        expect(openAfter).toBe(openBefore);
+    });
+
     test('error trace tree wraps text and link does not collapse state', async ({ page, fixtureServer }) => {
         page.on('console', msg => {
             if (msg.type() === 'error') {
