@@ -3,60 +3,54 @@ import { TlaDocumentInfos } from '../model/documentInfo';
 import { getPrevText } from './completions';
 
 export const TLA_OPERATORS = [
-    'land',                    'lor',                 'implies',
-    'lnot',                    'equiv',               'equiv',
-    'in',                      'notin',               'ne',
-    'll',                      'gg',                  '[]',
-    'leq',                     'geq',                 '<>',
-    'll',                      'gg',                  '~>',
-    'prec',                    'succ',                '-+->',
-    'preceq',                  'succeq',              'div',
-    'subseteq',                'supseteq',            'cdot',
-    'subset',                  'supset',              'o',
-    'sqsubset',                'sqsupset',            'bullet',
-    'sqsubseteq',              'sqsupseteq',          'star',
-    'vdash',                   'dashv',               'bigcirc',
-    'models',                  'vDash',               'sim',
-    'maps',                    'leftarrow',           'simeq',
-    'cap',                     'cup',                 'asymp',
-    'sqcap',                   'sqcup',               'approx',
-    'oplus',                   'uplus',               'cong',
-    'ominus',                  'X',                   'doteq',
-    'odot',                    'wr',
-    'otimes',                  'propto',
-    'oslash',                  's',
-    'E',                       'A',
-    'EE',                      'AA'
+    'land', 'lor', 'implies',
+    'lnot', 'equiv', 'triangleq',
+    'in', 'notin', 'ne',
+    'll', 'gg', '[]',
+    'leq', 'geq', '<>',
+    '~>', 'prec', 'succ',
+    '-+->', 'preceq', 'succeq',
+    'div', 'subseteq', 'supseteq',
+    'cdot', 'subset', 'supset',
+    'o', 'sqsubset', 'sqsupset',
+    'bullet', 'sqsubseteq', 'sqsupseteq',
+    'star', 'vdash', 'dashv',
+    'bigcirc', 'models', 'vDash',
+    'sim', 'maps', 'leftarrow',
+    'simeq', 'cap', 'cup',
+    'asymp', 'sqcap', 'sqcup',
+    'approx', 'oplus', 'uplus',
+    'cong', 'ominus', 'X',
+    'doteq', 'odot', 'wr',
+    'otimes', 'propto', 'oslash',
+    'E', 'A', 'EE', 'AA'
 ];
 
 const enableUnicodeAutocomplete = vscode.workspace.getConfiguration()
     .get<boolean>('tlaplus.unicode.autocomplete', false);
 
-const TLA_UNICODE_OPERATORS: Map<string, string> = new Map([
-    ['land', '∧'],           ['lor', '∨'],            ['implies', '⇒'],
-    ['lnot', '¬'],           ['equiv', '≡'],          ['triangleq', '≜'],
-    ['in', '∈'],             ['notin', '∉'],          ['ne', '≠'],
-    ['ll', '≪'],             ['gg', '≫'],             ['[]', '□'],
-    ['leq', '≤'],            ['geq', '≥'],            ['<>', '◊'],
-    ['ll', '≪'],             ['gg', '≫'],             ['~>', '↝'],
-    ['prec', '≺'],           ['succ', '≻'],           ['-+->', '⇸'],
-    ['preceq', '⪯'],         ['succeq', '⪰'],         ['div', '÷'],
-    ['subseteq', '⊆'],       ['supseteq', '⊇'],       ['cdot', '·'],
-    ['subset', '⊂'],         ['supset', '⊃'],         ['o', '○'],
-    ['sqsubset', '⊏'],       ['sqsupset', '⊐'],       ['bullet', '•'],
-    ['sqsubseteq', '⊑'],     ['sqsupseteq', '⊒'],     ['star', '⋆'],
-    ['vdash', '⊢'],          ['dashv', '⊣'],          ['bigcirc', '◯'],
-    ['models', '⊨'],         ['vDash', '=|'],         ['sim', '∼'],
-    ['maps', '→'],           ['leftarrow', '←'],      ['simeq', '≃'],
-    ['cap', '∩'],            ['cup', '∪'],            ['asymp', '≍'],
-    ['sqcap', '⊓'],          ['sqcup', '⊔'],          ['approx', '≈'],
-    ['oplus', '⊕'],          ['uplus', '⊎'],          ['cong', '≅'],
-    ['ominus', '⊖'],         ['X', '×'],              ['doteq', '≐'],
-    ['odot', '⊙'],           ['wr', '≀'],
-    ['otimes', '⊗'],         ['propto', '∝'],
-    ['oslash', '⊘'],
-    ['E', '∃'],              ['A', '∀'],
-    ['EE', '∃'],             ['AA', '∀'],
+export const TLA_UNICODE_OPERATORS: Map<string, string> = new Map([
+    ['land', '∧'], ['lor', '∨'], ['implies', '⇒'],
+    ['lnot', '¬'], ['equiv', '≡'], ['triangleq', '≜'],
+    ['in', '∈'], ['notin', '∉'], ['ne', '≠'],
+    ['ll', '≪'], ['gg', '≫'], ['[]', '□'],
+    ['leq', '≤'], ['geq', '≥'], ['<>', '◊'],
+    ['~>', '↝'], ['prec', '≺'], ['succ', '≻'],
+    ['-+->', '⇸'], ['preceq', '⪯'], ['succeq', '⪰'],
+    ['div', '÷'], ['subseteq', '⊆'], ['supseteq', '⊇'],
+    ['cdot', '·'], ['subset', '⊂'], ['supset', '⊃'],
+    ['o', '○'], ['sqsubset', '⊏'], ['sqsupset', '⊐'],
+    ['bullet', '•'], ['sqsubseteq', '⊑'], ['sqsupseteq', '⊒'],
+    ['star', '⋆'], ['vdash', '⊢'], ['dashv', '⊣'],
+    ['bigcirc', '◯'], ['models', '⊨'], ['vDash', '=|'],
+    ['sim', '∼'], ['maps', '→'], ['leftarrow', '←'],
+    ['simeq', '≃'], ['cap', '∩'], ['cup', '∪'],
+    ['asymp', '≍'], ['sqcap', '⊓'], ['sqcup', '⊔'],
+    ['approx', '≈'], ['oplus', '⊕'], ['uplus', '⊎'],
+    ['cong', '≅'], ['ominus', '⊖'], ['X', '×'],
+    ['doteq', '≐'], ['odot', '⊙'], ['wr', '≀'],
+    ['otimes', '⊗'], ['propto', '∝'], ['oslash', '⊘'],
+    ['E', '∃'], ['A', '∀'], ['EE', '∃'], ['AA', '∀'],
     // Repeats
     ['times', '×'], ['circ', '∘'], ['intersect', '∩'], ['union', '∪'],
 ]);
@@ -77,7 +71,7 @@ export const TLA_OTHER_KEYWORDS = [     // These keywords can be found pretty ev
     // -- other
     'BOOLEAN'
 ];
-export const TLA_CONSTANTS = [ 'TRUE', 'FALSE' ];
+export const TLA_CONSTANTS = ['TRUE', 'FALSE'];
 export const TLA_STD_MODULES = [
     'Bags', 'FiniteSets', 'Integers', 'Naturals', 'Randomization', 'Reals', 'RealTime', 'Sequences', 'TLC'
 ];
@@ -101,12 +95,26 @@ const TLA_STD_MODULE_ITEMS = TLA_STD_MODULES.map(m => {
 });
 
 /**
+ * Resolves an operator completion item, setting the appropriate insertText.
+ * Exported for testing purposes.
+ */
+export function resolveOperatorCompletion(
+    item: vscode.CompletionItem,
+    useUnicode: boolean
+): vscode.CompletionItem {
+    const operatorName = item.label.toString().substring(1); // Remove leading backslash
+    const unicodeSymbol = TLA_UNICODE_OPERATORS.get(operatorName);
+    item.insertText = (useUnicode && unicodeSymbol ? unicodeSymbol : '\\' + operatorName);
+    return item;
+}
+
+/**
  * Completes TLA+ text.
  */
 export class TlaCompletionItemProvider implements vscode.CompletionItemProvider {
     constructor(
         private readonly docInfos: TlaDocumentInfos
-    ) {}
+    ) { }
 
     provideCompletionItems(
         document: vscode.TextDocument,
@@ -123,6 +131,24 @@ export class TlaCompletionItemProvider implements vscode.CompletionItemProvider 
         }
         const isOperator = /^.*(?<!\/)\\\w*$/g.test(prevText);  // contains \ before the trailing letters, but not /\
         if (isOperator) {
+            // Set an explicit replacement range that includes the backslash.
+            // Without this, VS Code uses word-based replacement which doesn't consider '\'
+            // part of a word, so typing '\in' and selecting a completion would only replace
+            // 'in', leaving the backslash behind (e.g., '\in' -> '\∈' instead of '∈').
+            const match = prevText.match(/\\(\w*)$/);
+            if (match) {
+                const backslashCol = prevText.length - match[0].length;
+                const range = new vscode.Range(
+                    new vscode.Position(position.line, backslashCol),
+                    position
+                );
+                const items = TLA_OPERATORS.map(op => {
+                    const item = new vscode.CompletionItem('\\' + op, vscode.CompletionItemKind.Operator);
+                    item.range = range;
+                    return item;
+                });
+                return new vscode.CompletionList(items, false);
+            }
             return new vscode.CompletionList(TLA_OPERATOR_ITEMS, false);
         }
         const docInfo = this.docInfos.get(document.uri);
@@ -150,10 +176,7 @@ export class TlaCompletionItemProvider implements vscode.CompletionItemProvider 
                 item.insertText = item.label + ' ';
                 break;
             case vscode.CompletionItemKind.Operator:
-                item.insertText = enableUnicodeAutocomplete ?
-                    TLA_UNICODE_OPERATORS.get(item.label.toString().substring(1)) + ' ' :
-                    item.label.toString().substring(1) + ' ';
-                break;
+                return resolveOperatorCompletion(item, enableUnicodeAutocomplete);
         }
         return item;
     }
