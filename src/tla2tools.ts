@@ -393,6 +393,19 @@ export function buildTlcOptions(tlaFilePath: string, cfgFilePath: string, custom
     });
     const opts = [path.basename(tlaFilePath), '-tool', '-modelcheck'];
     addValueOrDefault('-config', cfgFilePath, custOpts, opts);
+    
+    // For BFS mode (not -simulate), always set -fp to a random value between 0 and 130
+    const isSimulateMode = custOpts.some(opt => opt === '-simulate');
+    if (!isSimulateMode) {
+        // Check if -fp is already present in custom options
+        const fpIndex = custOpts.indexOf('-fp');
+        if (fpIndex === -1) {
+            // Generate random value between 0 and 130 (inclusive)
+            const randomFp = Math.floor(Math.random() * 131);
+            opts.push('-fp', String(randomFp));
+        }
+    }
+    
     return opts.concat(custOpts);
 }
 
