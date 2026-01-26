@@ -19,70 +19,88 @@ suite('TLA+ Tools Test Suite', () => {
     });
 
     test('Provides default TLC options', () => {
-        assert.deepEqual(
-            buildTlcOptions('/path/to/module.tla', '/path/to/module.cfg', []),
-            ['module.tla', '-tool', '-modelcheck', '-config', '/path/to/module.cfg']
-        );
+        const result = buildTlcOptions('/path/to/module.tla', '/path/to/module.cfg', []);
+        assert.strictEqual(result[0], 'module.tla');
+        assert.strictEqual(result[1], '-tool');
+        assert.strictEqual(result[2], '-modelcheck');
+        assert.strictEqual(result[3], '-config');
+        assert.strictEqual(result[4], '/path/to/module.cfg');
+        // -fp and -dumptrace are automatically added in BFS mode
+        assert.ok(result.includes('-fp'));
+        assert.ok(result.includes('-dumptrace'));
     });
 
     test('Adds custom TLC options', () => {
-        assert.deepEqual(
-            buildTlcOptions('/path/to/module.tla', '/path/to/module.cfg', ['-deadlock', '-checkpoint', '5']),
-            ['module.tla', '-tool', '-modelcheck', '-config', '/path/to/module.cfg',
-                '-deadlock', '-checkpoint', '5']
-        );
+        const result = buildTlcOptions('/path/to/module.tla', '/path/to/module.cfg', ['-deadlock', '-checkpoint', '5']);
+        assert.strictEqual(result[0], 'module.tla');
+        assert.strictEqual(result[1], '-tool');
+        assert.strictEqual(result[2], '-modelcheck');
+        assert.strictEqual(result[3], '-config');
+        assert.strictEqual(result[4], '/path/to/module.cfg');
+        // Custom options should be present
+        assert.ok(result.includes('-deadlock'));
+        assert.ok(result.includes('-checkpoint'));
+        const checkpointIdx = result.indexOf('-checkpoint');
+        assert.strictEqual(result[checkpointIdx + 1], '5');
     });
 
     test('Allows to change module .cfg in TLC options', () => {
-        assert.deepEqual(
-            buildTlcOptions(
-                '/path/to/module.tla',
-                '/path/to/module.cfg',
-                ['-deadlock', '-config', '/path/to/another.cfg', '-nowarning']
-            ), [
-                'module.tla', '-tool', '-modelcheck', '-config', '/path/to/another.cfg',
-                '-deadlock', '-nowarning'
-            ]
+        const result = buildTlcOptions(
+            '/path/to/module.tla',
+            '/path/to/module.cfg',
+            ['-deadlock', '-config', '/path/to/another.cfg', '-nowarning']
         );
+        assert.strictEqual(result[0], 'module.tla');
+        assert.strictEqual(result[1], '-tool');
+        assert.strictEqual(result[2], '-modelcheck');
+        assert.strictEqual(result[3], '-config');
+        assert.strictEqual(result[4], '/path/to/another.cfg');
+        assert.ok(result.includes('-deadlock'));
+        assert.ok(result.includes('-nowarning'));
     });
 
     test('Allows to change coverage in TLC options', () => {
-        assert.deepEqual(
-            buildTlcOptions(
-                '/path/to/module.tla',
-                '/path/to/module.cfg',
-                ['-deadlock', '-coverage', '2', '-nowarning']
-            ), [
-                'module.tla', '-tool', '-modelcheck', '-config', '/path/to/module.cfg',
-                '-deadlock', '-coverage', '2', '-nowarning'
-            ]
+        const result = buildTlcOptions(
+            '/path/to/module.tla',
+            '/path/to/module.cfg',
+            ['-deadlock', '-coverage', '2', '-nowarning']
         );
+        assert.strictEqual(result[0], 'module.tla');
+        assert.strictEqual(result[1], '-tool');
+        assert.strictEqual(result[2], '-modelcheck');
+        assert.strictEqual(result[3], '-config');
+        assert.strictEqual(result[4], '/path/to/module.cfg');
+        assert.ok(result.includes('-deadlock'));
+        assert.ok(result.includes('-coverage'));
+        const coverageIdx = result.indexOf('-coverage');
+        assert.strictEqual(result[coverageIdx + 1], '2');
+        assert.ok(result.includes('-nowarning'));
     });
 
     test('Supports the specName variable in TLC options', () => {
-        assert.deepEqual(
-            buildTlcOptions(
-                '/path/to/foo.tla',
-                '/path/to/bar.cfg',
-                ['-dump', 'dot', '${specName}.dot']
-            ), [
-                'foo.tla', '-tool', '-modelcheck', '-config', '/path/to/bar.cfg',
-                '-dump', 'dot', 'foo.dot'
-            ]
+        const result = buildTlcOptions(
+            '/path/to/foo.tla',
+            '/path/to/bar.cfg',
+            ['-dump', 'dot', '${specName}.dot']
         );
+        assert.strictEqual(result[0], 'foo.tla');
+        assert.ok(result.includes('-dump'));
+        const dumpIdx = result.indexOf('-dump');
+        assert.strictEqual(result[dumpIdx + 1], 'dot');
+        assert.strictEqual(result[dumpIdx + 2], 'foo.dot');
     });
 
     test('Supports the modelName variable in TLC options', () => {
-        assert.deepEqual(
-            buildTlcOptions(
-                '/path/to/foo.tla',
-                '/path/to/bar.cfg',
-                ['-dump', 'dot', '${modelName}.dot']
-            ), [
-                'foo.tla', '-tool', '-modelcheck', '-config', '/path/to/bar.cfg',
-                '-dump', 'dot', 'bar.dot'
-            ]
+        const result = buildTlcOptions(
+            '/path/to/foo.tla',
+            '/path/to/bar.cfg',
+            ['-dump', 'dot', '${modelName}.dot']
         );
+        assert.strictEqual(result[0], 'foo.tla');
+        assert.ok(result.includes('-dump'));
+        const dumpIdx = result.indexOf('-dump');
+        assert.strictEqual(result[dumpIdx + 1], 'dot');
+        assert.strictEqual(result[dumpIdx + 2], 'bar.dot');
     });
 
     test('Provides default classpath and GC in Java options', () => {
@@ -272,5 +290,63 @@ suite('TLA+ Tools Test Suite', () => {
             splitArguments('-foo "     " \'   \''),
             ['-foo', '     ', '   ']
         );
+    });
+
+    test('Adds -dumptrace for BFS mode', () => {
+        const result = buildTlcOptions('/path/to/module.tla', '/path/to/module.cfg', []);
+        const dumpIndex = result.indexOf('-dumptrace');
+        assert.notStrictEqual(dumpIndex, -1, '-dumptrace should be present for BFS mode');
+        assert.strictEqual(result[dumpIndex + 1], 'tlc', 'dumptrace format should be tlc');
+        const traceFilePath = result[dumpIndex + 2];
+        assert.ok(traceFilePath.includes('module_trace_'), 'trace filename should contain module_trace_');
+        assert.ok(traceFilePath.includes('_Mbfs.tlc'), 'trace filename should end with _Mbfs.tlc');
+        assert.ok(traceFilePath.includes('_F'), 'trace filename should include fingerprint');
+        assert.ok(traceFilePath.includes('_W'), 'trace filename should include workers');
+        assert.ok(traceFilePath.includes('_T'), 'trace filename should include timestamp');
+    });
+
+    test('Does not add -dumptrace for simulation mode', () => {
+        const result = buildTlcOptions('/path/to/module.tla', '/path/to/module.cfg', ['-simulate']);
+        assert.strictEqual(result.indexOf('-dumptrace'), -1, '-dumptrace should not be present for simulation mode');
+    });
+
+    test('Does not add -dumptrace when loading trace', () => {
+        const result = buildTlcOptions('/path/to/module.tla', '/path/to/module.cfg', ['-loadtrace', '/path/to/trace.tlc']);
+        assert.strictEqual(result.indexOf('-dumptrace'), -1, '-dumptrace should not be present when loading trace');
+    });
+
+    test('Does not add -dumptrace when loading trace with capital letters', () => {
+        const result = buildTlcOptions('/path/to/module.tla', '/path/to/module.cfg', ['-loadTrace', '/path/to/trace.tlc']);
+        assert.strictEqual(result.indexOf('-dumptrace'), -1, '-dumptrace should not be present when loading trace (case insensitive)');
+    });
+
+    test('Does not add -dumptrace for simulation mode with capital letters', () => {
+        const result = buildTlcOptions('/path/to/module.tla', '/path/to/module.cfg', ['-Simulate']);
+        assert.strictEqual(result.indexOf('-dumptrace'), -1, '-dumptrace should not be present for simulation mode (case insensitive)');
+    });
+
+    test('Uses custom -fp value in trace filename', () => {
+        const result = buildTlcOptions('/path/to/module.tla', '/path/to/module.cfg', ['-fp', '42']);
+        const dumpIndex = result.indexOf('-dumptrace');
+        assert.notStrictEqual(dumpIndex, -1, '-dumptrace should be present');
+        const traceFilePath = result[dumpIndex + 2];
+        assert.ok(traceFilePath.includes('_F42_'), 'trace filename should contain custom fp value');
+    });
+
+
+    test('Uses custom -workers value in trace filename', () => {
+        const result = buildTlcOptions('/path/to/module.tla', '/path/to/module.cfg', ['-workers', '4']);
+        const dumpIndex = result.indexOf('-dumptrace');
+        assert.notStrictEqual(dumpIndex, -1, '-dumptrace should be present');
+        const traceFilePath = result[dumpIndex + 2];
+        assert.ok(traceFilePath.includes('_W4_'), 'trace filename should contain custom workers value');
+    });
+
+    test('Trace filename includes spec name', () => {
+        const result = buildTlcOptions('/path/to/MySpec.tla', '/path/to/MySpec.cfg', []);
+        const dumpIndex = result.indexOf('-dumptrace');
+        assert.notStrictEqual(dumpIndex, -1, '-dumptrace should be present');
+        const traceFilePath = result[dumpIndex + 2];
+        assert.ok(traceFilePath.includes('MySpec_trace_'), 'trace filename should start with spec name');
     });
 });
