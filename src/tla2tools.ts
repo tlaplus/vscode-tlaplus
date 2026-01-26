@@ -383,6 +383,49 @@ export function buildConfigJavaOptions(): string[] {
 }
 
 /**
+ * Builds the trace file path for TLC dump with structured filename.
+ * Pattern: {specName}_trace_T{timestamp}_F{fp}_W{workers}_M{mode}.tlc
+ */
+function buildTraceFilePath(tlaFilePath: string, customOptions: string[], fpValue: number | undefined): string {
+    const specName = path.basename(tlaFilePath, '.tla');
+    const specDir = path.dirname(tlaFilePath);
+    const traceDir = path.join(specDir, '.vscode', 'tlc');
+    
+    // Try to create .vscode/tlc directory if it doesn't exist
+    // This is a best-effort attempt - if it fails, TLC might still be able to create the file
+    try {
+        if (!fs.existsSync(path.join(specDir, '.vscode'))) {
+            fs.mkdirSync(path.join(specDir, '.vscode'));
+        }
+        if (!fs.existsSync(traceDir)) {
+            fs.mkdirSync(traceDir);
+        }
+    } catch (err) {
+        // Silently ignore directory creation errors - TLC will report if it can't write the trace
+        console.debug(`Could not create trace directory: ${err}`);
+    }
+    
+    // Extract parameters from options
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').replace('T', '_').substring(0, 19);
+    const fp = fpValue !== undefined ? fpValue : 0;
+    
+    // Extract workers from options (default to 1 if not present)
+    const workersIndex = customOptions.indexOf('-workers');
+    const workers = (workersIndex >= 0 && workersIndex < customOptions.length - 1) 
+        ? customOptions[workersIndex + 1] 
+        : '1';
+    
+    // Mode is always 'bfs' for non-simulation mode
+    const mode = 'bfs';
+    
+    // Build filename: {specName}_trace_T{timestamp}_F{fp}_W{workers}_M{mode}.tlc
+    const traceFileName = `${specName}_trace_T${timestamp}_F${fp}_W${workers}_M${mode}.tlc`;
+    const traceFilePath = path.join(traceDir, traceFileName);
+    
+    return traceFilePath;
+}
+
+/**
  * Builds an array of options to pass to the TLC tool.
  */
 export function buildTlcOptions(tlaFilePath: string, cfgFilePath: string, customOptions: string[]): string[] {
@@ -395,15 +438,27 @@ export function buildTlcOptions(tlaFilePath: string, cfgFilePath: string, custom
     addValueOrDefault('-config', cfgFilePath, custOpts, opts);
     
     // For BFS mode (not -simulate), always set -fp to a random value between 0 and 130
-    const isSimulateMode = custOpts.some(opt => opt === '-simulate');
+    const isSimulateMode = custOpts.some(opt => opt.toLowerCase() === '-simulate');
+    const isLoadTrace = custOpts.some(opt => opt.toLowerCase() === '-loadtrace');
+    let fpValue: number | undefined;
+    
     if (!isSimulateMode) {
         // Check if -fp is already present in custom options
         const fpIndex = custOpts.indexOf('-fp');
         if (fpIndex === -1) {
             // Generate random value between 0 and 130 (inclusive)
-            const randomFp = Math.floor(Math.random() * 131);
-            opts.push('-fp', String(randomFp));
+            fpValue = Math.floor(Math.random() * 131);
+            opts.push('-fp', String(fpValue));
+        } else if (fpIndex < custOpts.length - 1) {
+            // Extract the fp value from custom options
+            fpValue = parseInt(custOpts[fpIndex + 1], 10);
         }
+    }
+    
+    // Add -dumptrace for BFS mode (not simulation) when not loading a trace
+    if (!isSimulateMode && !isLoadTrace) {
+        const traceFilePath = buildTraceFilePath(tlaFilePath, custOpts, fpValue);
+        opts.push('-dumptrace', 'tlc', traceFilePath);
     }
     
     return opts.concat(custOpts);
