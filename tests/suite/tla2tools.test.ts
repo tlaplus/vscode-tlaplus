@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import * as path from 'path';
-import { buildJavaOptions, buildTlcOptions, buildPlusCalOptions, splitArguments } from '../../src/tla2tools';
+import { buildJavaOptions, buildTlcOptions, buildPlusCalOptions, splitArguments, extractFingerprintFromTrace } from '../../src/tla2tools';
 
 suite('TLA+ Tools Test Suite', () => {
 
@@ -325,6 +325,11 @@ suite('TLA+ Tools Test Suite', () => {
         assert.strictEqual(result.indexOf('-dumptrace'), -1, '-dumptrace should not be present for simulation mode (case insensitive)');
     });
 
+    test('Does not add -dumptrace for simulation mode with -SIMULATE', () => {
+        const result = buildTlcOptions('/path/to/module.tla', '/path/to/module.cfg', ['-SIMULATE']);
+        assert.strictEqual(result.indexOf('-dumptrace'), -1, '-dumptrace should not be present for simulation mode (all caps)');
+    });
+
     test('Uses custom -fp value in trace filename', () => {
         const result = buildTlcOptions('/path/to/module.tla', '/path/to/module.cfg', ['-fp', '42']);
         const dumpIndex = result.indexOf('-dumptrace');
@@ -348,5 +353,29 @@ suite('TLA+ Tools Test Suite', () => {
         assert.notStrictEqual(dumpIndex, -1, '-dumptrace should be present');
         const traceFilePath = result[dumpIndex + 2];
         assert.ok(traceFilePath.includes('MySpec_trace_'), 'trace filename should start with spec name');
+    });
+
+    test('Extracts fingerprint from trace filename', () => {
+        const traceFile = '/path/to/.vscode/tlc/MySpec_trace_T2024-01-15_10-30-00_F42_W1_Mbfs.tlc';
+        const fp = extractFingerprintFromTrace(traceFile);
+        assert.strictEqual(fp, 42, 'Should extract fingerprint 42');
+    });
+
+    test('Extracts fingerprint from trace filename with different values', () => {
+        const traceFile = '/path/to/.vscode/tlc/Spec_trace_T2024-12-31_23-59-59_F127_W4_Mbfs.tlc';
+        const fp = extractFingerprintFromTrace(traceFile);
+        assert.strictEqual(fp, 127, 'Should extract fingerprint 127');
+    });
+
+    test('Returns undefined for invalid trace filename', () => {
+        const traceFile = '/path/to/invalid_file.tlc';
+        const fp = extractFingerprintFromTrace(traceFile);
+        assert.strictEqual(fp, undefined, 'Should return undefined for invalid filename');
+    });
+
+    test('Returns undefined for trace filename without fingerprint', () => {
+        const traceFile = '/path/to/.vscode/tlc/MySpec_trace_T2024-01-15_10-30-00_W1_Mbfs.tlc';
+        const fp = extractFingerprintFromTrace(traceFile);
+        assert.strictEqual(fp, undefined, 'Should return undefined when fingerprint is missing');
     });
 });

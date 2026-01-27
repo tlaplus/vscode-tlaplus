@@ -29,6 +29,12 @@ class VSCodeWrapper {
         });
     }
 
+    public debugCounterexample() {
+        vsCodeApi.postMessage({
+            command: 'debugCounterexample'
+        });
+    }
+
     public showVariableValue(id: number) {
         vsCodeApi.postMessage({
             command: 'showVariableValue',

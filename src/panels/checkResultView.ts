@@ -4,6 +4,7 @@ import { ModelCheckResult, ModelCheckResultSource } from '../model/check';
 import { getNonce } from './utilities/getNonce';
 import { getUri } from './utilities/getUri';
 import { createDocument, revealFile } from './utilities/workspace';
+import { TLAPLUS_DEBUG_LOAD_TRACE } from '../debugger/debugging';
 
 export function updateCheckResultView(checkResult: ModelCheckResult): void {
     CheckResultViewPanel.updateCheckResult(checkResult);
@@ -139,6 +140,14 @@ class CheckResultViewPanel {
             vscode.commands.executeCommand(CMD_SHOW_TLC_OUTPUT);
         } else if (message.command === 'runAgain') {
             vscode.commands.executeCommand(CMD_CHECK_MODEL_RUN_AGAIN);
+        } else if (message.command === 'debugCounterexample') {
+            // Get the TLA file path from the current check result
+            const specFiles = this.checkResult?.specFiles;
+            if (specFiles && typeof specFiles === 'object' && 'tlaFilePath' in specFiles) {
+                vscode.commands.executeCommand(TLAPLUS_DEBUG_LOAD_TRACE, specFiles.tlaFilePath);
+            } else {
+                vscode.window.showWarningMessage('No specification file available for debugging');
+            }
         } else if (message.command === 'openFile') {
             // `One` is used here because at the moment, VSCode doesn't provide API
             // for revealing existing document, so we're speculating here to reduce open documents duplication.
