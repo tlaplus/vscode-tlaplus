@@ -302,7 +302,7 @@ export async function debugCounterexample(
     }
 
     // Find the latest trace file
-    const traceFilePath = findLatestTraceFile(targetTlaFilePath);
+    const traceFilePath = await findLatestTraceFile(targetTlaFilePath);
     if (!traceFilePath) {
         vscode.window.showWarningMessage(
             'No trace file found. Run model checking in BFS mode to generate a trace file.'

@@ -4,22 +4,22 @@ import { buildJavaOptions, buildTlcOptions, buildPlusCalOptions, splitArguments,
 
 suite('TLA+ Tools Test Suite', () => {
 
-    test('Builds PlusCal options with no custom settings', () => {
+    test('Builds PlusCal options with no custom settings', async () => {
         assert.deepEqual(
             buildPlusCalOptions('/path/to/module.tla', []),
             ['-nocfg', 'module.tla']
         );
     });
 
-    test('Puts PlusCal custom options before module name', () => {
+    test('Puts PlusCal custom options before module name', async () => {
         assert.deepEqual(
             buildPlusCalOptions('/path/to/module.tla', ['-lineWidth', '100']),
             ['-lineWidth', '100', '-nocfg', 'module.tla']
         );
     });
 
-    test('Provides default TLC options', () => {
-        const result = buildTlcOptions('/path/to/module.tla', '/path/to/module.cfg', []);
+    test('Provides default TLC options', async () => {
+        const result = await buildTlcOptions('/path/to/module.tla', '/path/to/module.cfg', []);
         assert.strictEqual(result[0], 'module.tla');
         assert.strictEqual(result[1], '-tool');
         assert.strictEqual(result[2], '-modelcheck');
@@ -30,8 +30,8 @@ suite('TLA+ Tools Test Suite', () => {
         assert.ok(result.includes('-dumptrace'));
     });
 
-    test('Adds custom TLC options', () => {
-        const result = buildTlcOptions('/path/to/module.tla', '/path/to/module.cfg', ['-deadlock', '-checkpoint', '5']);
+    test('Adds custom TLC options', async () => {
+        const result = await buildTlcOptions('/path/to/module.tla', '/path/to/module.cfg', ['-deadlock', '-checkpoint', '5']);
         assert.strictEqual(result[0], 'module.tla');
         assert.strictEqual(result[1], '-tool');
         assert.strictEqual(result[2], '-modelcheck');
@@ -44,8 +44,8 @@ suite('TLA+ Tools Test Suite', () => {
         assert.strictEqual(result[checkpointIdx + 1], '5');
     });
 
-    test('Allows to change module .cfg in TLC options', () => {
-        const result = buildTlcOptions(
+    test('Allows to change module .cfg in TLC options', async () => {
+        const result = await buildTlcOptions(
             '/path/to/module.tla',
             '/path/to/module.cfg',
             ['-deadlock', '-config', '/path/to/another.cfg', '-nowarning']
@@ -59,8 +59,8 @@ suite('TLA+ Tools Test Suite', () => {
         assert.ok(result.includes('-nowarning'));
     });
 
-    test('Allows to change coverage in TLC options', () => {
-        const result = buildTlcOptions(
+    test('Allows to change coverage in TLC options', async () => {
+        const result = await buildTlcOptions(
             '/path/to/module.tla',
             '/path/to/module.cfg',
             ['-deadlock', '-coverage', '2', '-nowarning']
@@ -77,8 +77,8 @@ suite('TLA+ Tools Test Suite', () => {
         assert.ok(result.includes('-nowarning'));
     });
 
-    test('Supports the specName variable in TLC options', () => {
-        const result = buildTlcOptions(
+    test('Supports the specName variable in TLC options', async () => {
+        const result = await buildTlcOptions(
             '/path/to/foo.tla',
             '/path/to/bar.cfg',
             ['-dump', 'dot', '${specName}.dot']
@@ -90,8 +90,8 @@ suite('TLA+ Tools Test Suite', () => {
         assert.strictEqual(result[dumpIdx + 2], 'foo.dot');
     });
 
-    test('Supports the modelName variable in TLC options', () => {
-        const result = buildTlcOptions(
+    test('Supports the modelName variable in TLC options', async () => {
+        const result = await buildTlcOptions(
             '/path/to/foo.tla',
             '/path/to/bar.cfg',
             ['-dump', 'dot', '${modelName}.dot']
@@ -103,7 +103,7 @@ suite('TLA+ Tools Test Suite', () => {
         assert.strictEqual(result[dumpIdx + 2], 'bar.dot');
     });
 
-    test('Provides default classpath and GC in Java options', () => {
+    test('Provides default classpath and GC in Java options', async () => {
         assert.deepEqual(
             buildJavaOptions(
                 [], '/path/tla2tools.jar'
@@ -114,7 +114,7 @@ suite('TLA+ Tools Test Suite', () => {
             ]);
     });
 
-    test('Adds custom Java options', () => {
+    test('Adds custom Java options', async () => {
         assert.deepEqual(
             buildJavaOptions(
                 ['-Xmx2048M', '-Xms512M'],
@@ -129,7 +129,7 @@ suite('TLA+ Tools Test Suite', () => {
         );
     });
 
-    test('Allows to change default GC via Java options', () => {
+    test('Allows to change default GC via Java options', async () => {
         assert.deepEqual(
             buildJavaOptions(
                 ['-Xmx2048M', '-XX:+UseG1GC', '-Xms512M'],
@@ -144,7 +144,7 @@ suite('TLA+ Tools Test Suite', () => {
         );
     });
 
-    test('Allows to add custom libraries to classpath via -cp', () => {
+    test('Allows to add custom libraries to classpath via -cp', async () => {
         assert.deepEqual(
             buildJavaOptions(
                 ['-cp', 'CommunityModules.jar' + path.delimiter + 'Foo.jar'],
@@ -157,7 +157,7 @@ suite('TLA+ Tools Test Suite', () => {
         );
     });
 
-    test('Allows to add custom libraries to classpath via -classpath', () => {
+    test('Allows to add custom libraries to classpath via -classpath', async () => {
         assert.deepEqual(
             buildJavaOptions(
                 ['-classpath', 'Foo.jar' + path.delimiter + 'Bar.jar'],
@@ -170,7 +170,7 @@ suite('TLA+ Tools Test Suite', () => {
         );
     });
 
-    test('Substitutes path to tla2tools.jar if a custom one is provided', () => {
+    test('Substitutes path to tla2tools.jar if a custom one is provided', async () => {
         assert.deepEqual(
             buildJavaOptions(
                 ['-cp', 'Foo.jar' + path.delimiter + '/custom/tla2tools.jar' + path.delimiter + 'Bar.jar'],
@@ -183,7 +183,7 @@ suite('TLA+ Tools Test Suite', () => {
         );
     });
 
-    test('Merges classpath when many custom options are provided', () => {
+    test('Merges classpath when many custom options are provided', async () => {
         assert.deepEqual(
             buildJavaOptions(
                 [
@@ -202,7 +202,7 @@ suite('TLA+ Tools Test Suite', () => {
         );
     });
 
-    test('Doesn\'t treat any library with a similar name as a tla2tool.jar reference', () => {
+    test('Doesn\'t treat any library with a similar name as a tla2tool.jar reference', async () => {
         assert.deepEqual(
             buildJavaOptions(
                 ['-cp', 'not_tla2tools.jar'],
@@ -215,7 +215,7 @@ suite('TLA+ Tools Test Suite', () => {
         );
     });
 
-    test('Finds tla2tools.jar in classpath when no full path is provided', () => {
+    test('Finds tla2tools.jar in classpath when no full path is provided', async () => {
         assert.deepEqual(
             buildJavaOptions(
                 ['-cp', 'tla2tools.jar'],
@@ -228,7 +228,7 @@ suite('TLA+ Tools Test Suite', () => {
         );
     });
 
-    test('Ignores classpath option without value', () => {
+    test('Ignores classpath option without value', async () => {
         assert.deepEqual(
             buildJavaOptions(
                 ['-cp'],
@@ -242,58 +242,58 @@ suite('TLA+ Tools Test Suite', () => {
         );
     });
 
-    test('Splits empty command line into an empty array', () => {
+    test('Splits empty command line into an empty array', async () => {
         assert.deepEqual(splitArguments(''), []);
     });
 
-    test('Splits blank command line into an empty array', () => {
+    test('Splits blank command line into an empty array', async () => {
         assert.deepEqual(splitArguments('   '), []);
     });
 
-    test('Splits simple command line with extra spaces', () => {
+    test('Splits simple command line with extra spaces', async () => {
         assert.deepEqual(
             splitArguments('-a b'),
             ['-a', 'b']
         );
     });
 
-    test('Splits command line with extra spaces', () => {
+    test('Splits command line with extra spaces', async () => {
         assert.deepEqual(
             splitArguments('  -foo   -bar    value   '),
             ['-foo', '-bar', 'value']
         );
     });
 
-    test('Handles empty strings as command line arguments', () => {
+    test('Handles empty strings as command line arguments', async () => {
         assert.deepEqual(
             splitArguments('-foo ""'),
             ['-foo', '']
         );
     });
 
-    test('Handles arguments with spaces', () => {
+    test('Handles arguments with spaces', async () => {
         assert.deepEqual(
             splitArguments('-cp "c:\\Program Files\\MyApp\\my.jar"'),
             ['-cp', 'c:\\Program Files\\MyApp\\my.jar']
         );
     });
 
-    test('Handles single-quoted arguments', () => {
+    test('Handles single-quoted arguments', async () => {
         assert.deepEqual(
             splitArguments("-cp 'c:\\Program Files\\My App\\my.jar' '-foo'"),
             ['-cp', 'c:\\Program Files\\My App\\my.jar', '-foo']
         );
     });
 
-    test('Preserves spaces in command line arguments', () => {
+    test('Preserves spaces in command line arguments', async () => {
         assert.deepEqual(
             splitArguments('-foo "     " \'   \''),
             ['-foo', '     ', '   ']
         );
     });
 
-    test('Adds -dumptrace for BFS mode', () => {
-        const result = buildTlcOptions('/path/to/module.tla', '/path/to/module.cfg', []);
+    test('Adds -dumptrace for BFS mode', async () => {
+        const result = await buildTlcOptions('/path/to/module.tla', '/path/to/module.cfg', []);
         const dumpIndex = result.indexOf('-dumptrace');
         assert.notStrictEqual(dumpIndex, -1, '-dumptrace should be present for BFS mode');
         assert.strictEqual(result[dumpIndex + 1], 'tlc', 'dumptrace format should be tlc');
@@ -305,33 +305,33 @@ suite('TLA+ Tools Test Suite', () => {
         assert.ok(traceFilePath.includes('_T'), 'trace filename should include timestamp');
     });
 
-    test('Does not add -dumptrace for simulation mode', () => {
-        const result = buildTlcOptions('/path/to/module.tla', '/path/to/module.cfg', ['-simulate']);
+    test('Does not add -dumptrace for simulation mode', async () => {
+        const result = await buildTlcOptions('/path/to/module.tla', '/path/to/module.cfg', ['-simulate']);
         assert.strictEqual(result.indexOf('-dumptrace'), -1, '-dumptrace should not be present for simulation mode');
     });
 
-    test('Does not add -dumptrace when loading trace', () => {
-        const result = buildTlcOptions('/path/to/module.tla', '/path/to/module.cfg', ['-loadtrace', '/path/to/trace.tlc']);
+    test('Does not add -dumptrace when loading trace', async () => {
+        const result = await buildTlcOptions('/path/to/module.tla', '/path/to/module.cfg', ['-loadtrace', '/path/to/trace.tlc']);
         assert.strictEqual(result.indexOf('-dumptrace'), -1, '-dumptrace should not be present when loading trace');
     });
 
-    test('Does not add -dumptrace when loading trace with capital letters', () => {
-        const result = buildTlcOptions('/path/to/module.tla', '/path/to/module.cfg', ['-loadTrace', '/path/to/trace.tlc']);
+    test('Does not add -dumptrace when loading trace with capital letters', async () => {
+        const result = await buildTlcOptions('/path/to/module.tla', '/path/to/module.cfg', ['-loadTrace', '/path/to/trace.tlc']);
         assert.strictEqual(result.indexOf('-dumptrace'), -1, '-dumptrace should not be present when loading trace (case insensitive)');
     });
 
-    test('Does not add -dumptrace for simulation mode with capital letters', () => {
-        const result = buildTlcOptions('/path/to/module.tla', '/path/to/module.cfg', ['-Simulate']);
+    test('Does not add -dumptrace for simulation mode with capital letters', async () => {
+        const result = await buildTlcOptions('/path/to/module.tla', '/path/to/module.cfg', ['-Simulate']);
         assert.strictEqual(result.indexOf('-dumptrace'), -1, '-dumptrace should not be present for simulation mode (case insensitive)');
     });
 
-    test('Does not add -dumptrace for simulation mode with -SIMULATE', () => {
-        const result = buildTlcOptions('/path/to/module.tla', '/path/to/module.cfg', ['-SIMULATE']);
+    test('Does not add -dumptrace for simulation mode with -SIMULATE', async () => {
+        const result = await buildTlcOptions('/path/to/module.tla', '/path/to/module.cfg', ['-SIMULATE']);
         assert.strictEqual(result.indexOf('-dumptrace'), -1, '-dumptrace should not be present for simulation mode (all caps)');
     });
 
-    test('Uses custom -fp value in trace filename', () => {
-        const result = buildTlcOptions('/path/to/module.tla', '/path/to/module.cfg', ['-fp', '42']);
+    test('Uses custom -fp value in trace filename', async () => {
+        const result = await buildTlcOptions('/path/to/module.tla', '/path/to/module.cfg', ['-fp', '42']);
         const dumpIndex = result.indexOf('-dumptrace');
         assert.notStrictEqual(dumpIndex, -1, '-dumptrace should be present');
         const traceFilePath = result[dumpIndex + 2];
@@ -339,41 +339,41 @@ suite('TLA+ Tools Test Suite', () => {
     });
 
 
-    test('Uses custom -workers value in trace filename', () => {
-        const result = buildTlcOptions('/path/to/module.tla', '/path/to/module.cfg', ['-workers', '4']);
+    test('Uses custom -workers value in trace filename', async () => {
+        const result = await buildTlcOptions('/path/to/module.tla', '/path/to/module.cfg', ['-workers', '4']);
         const dumpIndex = result.indexOf('-dumptrace');
         assert.notStrictEqual(dumpIndex, -1, '-dumptrace should be present');
         const traceFilePath = result[dumpIndex + 2];
         assert.ok(traceFilePath.includes('_W4_'), 'trace filename should contain custom workers value');
     });
 
-    test('Trace filename includes spec name', () => {
-        const result = buildTlcOptions('/path/to/MySpec.tla', '/path/to/MySpec.cfg', []);
+    test('Trace filename includes spec name', async () => {
+        const result = await buildTlcOptions('/path/to/MySpec.tla', '/path/to/MySpec.cfg', []);
         const dumpIndex = result.indexOf('-dumptrace');
         assert.notStrictEqual(dumpIndex, -1, '-dumptrace should be present');
         const traceFilePath = result[dumpIndex + 2];
         assert.ok(traceFilePath.includes('MySpec_trace_'), 'trace filename should start with spec name');
     });
 
-    test('Extracts fingerprint from trace filename', () => {
+    test('Extracts fingerprint from trace filename', async () => {
         const traceFile = '/path/to/.vscode/tlc/MySpec_trace_T2024-01-15_10-30-00_F42_W1_Mbfs.tlc';
         const fp = extractFingerprintFromTrace(traceFile);
         assert.strictEqual(fp, 42, 'Should extract fingerprint 42');
     });
 
-    test('Extracts fingerprint from trace filename with different values', () => {
+    test('Extracts fingerprint from trace filename with different values', async () => {
         const traceFile = '/path/to/.vscode/tlc/Spec_trace_T2024-12-31_23-59-59_F127_W4_Mbfs.tlc';
         const fp = extractFingerprintFromTrace(traceFile);
         assert.strictEqual(fp, 127, 'Should extract fingerprint 127');
     });
 
-    test('Returns undefined for invalid trace filename', () => {
+    test('Returns undefined for invalid trace filename', async () => {
         const traceFile = '/path/to/invalid_file.tlc';
         const fp = extractFingerprintFromTrace(traceFile);
         assert.strictEqual(fp, undefined, 'Should return undefined for invalid filename');
     });
 
-    test('Returns undefined for trace filename without fingerprint', () => {
+    test('Returns undefined for trace filename without fingerprint', async () => {
         const traceFile = '/path/to/.vscode/tlc/MySpec_trace_T2024-01-15_10-30-00_W1_Mbfs.tlc';
         const fp = extractFingerprintFromTrace(traceFile);
         assert.strictEqual(fp, undefined, 'Should return undefined when fingerprint is missing');

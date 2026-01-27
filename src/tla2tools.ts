@@ -1,6 +1,7 @@
 import * as cp from 'child_process';
 import { ChildProcess, spawn } from 'child_process';
 import * as fs from 'fs';
+import * as fsp from 'fs/promises';
 import * as path from 'path';
 import { PassThrough } from 'stream';
 import * as paths from './paths';
@@ -222,7 +223,7 @@ export async function runTlc(
     return runTool(
         TlaTool.TLC,
         tlaFilePath,
-        buildTlcOptions(tlaFilePath, cfgFilePath, customOptions),
+        await buildTlcOptions(tlaFilePath, cfgFilePath, customOptions),
         javaOptions.concat(extraJavaOpts)
     );
 }
@@ -386,20 +387,15 @@ export function buildConfigJavaOptions(): string[] {
  * Builds the trace file path for TLC dump with structured filename.
  * Pattern: {specName}_trace_T{timestamp}_F{fp}_W{workers}_M{mode}.tlc
  */
-function buildTraceFilePath(tlaFilePath: string, customOptions: string[], fpValue: number | undefined): string {
+async function buildTraceFilePath(tlaFilePath: string, customOptions: string[], fpValue: number | undefined): Promise<string> {
     const specName = path.basename(tlaFilePath, '.tla');
     const specDir = path.dirname(tlaFilePath);
     const traceDir = path.join(specDir, '.vscode', 'tlc');
 
     // Try to create .vscode/tlc directory if it doesn't exist
-    // This is a best-effort attempt - if it fails, TLC might still be able to create the file
+    // Using recursive: true creates parent directories and doesn't fail if already exists
     try {
-        if (!fs.existsSync(path.join(specDir, '.vscode'))) {
-            fs.mkdirSync(path.join(specDir, '.vscode'));
-        }
-        if (!fs.existsSync(traceDir)) {
-            fs.mkdirSync(traceDir);
-        }
+        await fsp.mkdir(traceDir, { recursive: true });
     } catch (err) {
         // Silently ignore directory creation errors - TLC will report if it can't write the trace
         console.debug(`Could not create trace directory: ${err}`);
@@ -429,42 +425,45 @@ function buildTraceFilePath(tlaFilePath: string, customOptions: string[], fpValu
  * Finds the latest trace file for a given TLA+ specification.
  * Trace files are stored in .vscode/tlc/ and follow the naming pattern:
  * {specName}_trace_T{timestamp}_F{fp}_W{workers}_M{mode}.tlc
- *
+ * 
  * @param tlaFilePath Path to the TLA+ specification file
  * @returns Path to the latest trace file, or undefined if none exists
  */
-export function findLatestTraceFile(tlaFilePath: string): string | undefined {
+export async function findLatestTraceFile(tlaFilePath: string): Promise<string | undefined> {
     const specName = path.basename(tlaFilePath, '.tla');
     const specDir = path.dirname(tlaFilePath);
     const traceDir = path.join(specDir, '.vscode', 'tlc');
-
-    if (!fs.existsSync(traceDir)) {
-        return undefined;
-    }
-
+    
     try {
-        const files = fs.readdirSync(traceDir);
-        const traceFiles = files.filter(file =>
-            file.startsWith(`${specName}_trace_`) &&
+        const files = await fsp.readdir(traceDir);
+        const traceFiles = files.filter(file => 
+            file.startsWith(`${specName}_trace_`) && 
             file.endsWith('_Mbfs.tlc')
         );
-
+        
         if (traceFiles.length === 0) {
             return undefined;
         }
-
+        
         // Sort by modification time, newest first
-        const sortedFiles = traceFiles
-            .map(file => ({
-                name: file,
-                path: path.join(traceDir, file),
-                mtime: fs.statSync(path.join(traceDir, file)).mtime
-            }))
-            .sort((a, b) => b.mtime.getTime() - a.mtime.getTime());
-
-        return sortedFiles[0].path;
+        const fileStats = await Promise.all(
+            traceFiles.map(async file => {
+                const filePath = path.join(traceDir, file);
+                const stats = await fsp.stat(filePath);
+                return {
+                    name: file,
+                    path: filePath,
+                    mtime: stats.mtime
+                };
+            })
+        );
+        
+        fileStats.sort((a, b) => b.mtime.getTime() - a.mtime.getTime());
+        
+        return fileStats[0].path;
     } catch (err) {
-        console.error(`Error finding trace files: ${err}`);
+        // Directory doesn't exist or other error - return undefined
+        console.debug(`Could not find trace files: ${err}`);
         return undefined;
     }
 }
@@ -489,7 +488,7 @@ export function extractFingerprintFromTrace(traceFilePath: string): number | und
 /**
  * Builds an array of options to pass to the TLC tool.
  */
-export function buildTlcOptions(tlaFilePath: string, cfgFilePath: string, customOptions: string[]): string[] {
+export async function buildTlcOptions(tlaFilePath: string, cfgFilePath: string, customOptions: string[]): Promise<string[]> {
     const custOpts = customOptions.map((opt) => {
         return opt
             .replace(VAR_TLC_SPEC_NAME, path.basename(tlaFilePath, '.tla'))
@@ -497,12 +496,12 @@ export function buildTlcOptions(tlaFilePath: string, cfgFilePath: string, custom
     });
     const opts = [path.basename(tlaFilePath), '-tool', '-modelcheck'];
     addValueOrDefault('-config', cfgFilePath, custOpts, opts);
-
+    
     // For BFS mode (not -simulate), always set -fp to a random value between 0 and 130
     const isSimulateMode = custOpts.some(opt => opt.toLowerCase() === '-simulate');
     const isLoadTrace = custOpts.some(opt => opt.toLowerCase() === '-loadtrace');
     let fpValue: number | undefined;
-
+    
     if (!isSimulateMode) {
         // Check if -fp is already present in custom options
         const fpIndex = custOpts.indexOf('-fp');
@@ -515,13 +514,13 @@ export function buildTlcOptions(tlaFilePath: string, cfgFilePath: string, custom
             fpValue = parseInt(custOpts[fpIndex + 1], 10);
         }
     }
-
+    
     // Add -dumptrace for BFS mode (not simulation) when not loading a trace
     if (!isSimulateMode && !isLoadTrace) {
-        const traceFilePath = buildTraceFilePath(tlaFilePath, custOpts, fpValue);
+        const traceFilePath = await buildTraceFilePath(tlaFilePath, custOpts, fpValue);
         opts.push('-dumptrace', 'tlc', traceFilePath);
     }
-
+    
     return opts.concat(custOpts);
 }
 
