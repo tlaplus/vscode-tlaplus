@@ -8,11 +8,17 @@ import * as React from 'react';
 import { ErrorInfo } from '../../../model/check';
 import { ErrorTraceState } from './errorTraceState';
 import { createTreeItemRegistry, TreeItemRegistry } from './treeItemRegistry';
+import { vscode } from '../vscode';
 
 type TextfieldElement = HTMLElementTagNameMap['vscode-textfield'];
 
-interface ErrorTraceI {errorInfo: ErrorInfo, traceId: number}
-export const ErrorTrace = React.memo(({errorInfo, traceId}: ErrorTraceI) => {
+interface ErrorTraceI {
+    errorInfo: ErrorInfo;
+    traceId: number;
+    state: string;
+    traceFilePath: string | undefined;
+}
+export const ErrorTrace = React.memo(({errorInfo, traceId, state, traceFilePath}: ErrorTraceI) => {
     if (!errorInfo.errorTrace || errorInfo.errorTrace.length === 0) {
         return (null);
     }
@@ -70,6 +76,11 @@ export const ErrorTrace = React.memo(({errorInfo, traceId}: ErrorTraceI) => {
                         title="Expand all states"
                         onClick={expandAllStates}
                         className="codicon codicon-unfold cursor-pointer option-button"/>
+
+                    <span
+                        title={getDebugTooltip(state, traceFilePath)}
+                        onClick={isDebugDisabled(state, traceFilePath) ? undefined : vscode.debugCounterexample}
+                        className={`codicon codicon-debug-alt cursor-pointer option-button${isDebugDisabled(state, traceFilePath) ? ' disabled' : ''}`}/>
 
                 </div>
 
@@ -138,4 +149,23 @@ const useSettings = () => {
         collapseAllStates,
         expandAllStates
     };
+};
+
+const isDebugDisabled = (state: string, traceFilePath: string | undefined): boolean => {
+    const stillRunning = state === 'R';
+    const hasTraceFile = traceFilePath !== undefined;
+    return stillRunning || !hasTraceFile;
+};
+
+const getDebugTooltip = (state: string, traceFilePath: string | undefined): string => {
+    const hasTraceFile = traceFilePath !== undefined;
+    const stillRunning = state === 'R';
+    
+    if (!hasTraceFile) {
+        return 'No trace file available. Run model checking in BFS mode to generate a trace.';
+    }
+    if (stillRunning) {
+        return 'Cannot debug trace while model checking is running';
+    }
+    return 'Debug the counterexample in the TLA+ Debugger';
 };

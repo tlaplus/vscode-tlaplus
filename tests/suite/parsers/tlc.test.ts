@@ -486,6 +486,7 @@ function assertEquals(actual: ModelCheckResult, expected: ModelCheckResult) {
     assert.equal(actual.startDateTimeStr, expected.startDateTimeStr, "Start date/time doesn't match");
     assert.equal(actual.endDateTimeStr, expected.endDateTimeStr, "End date/time doesn't match");
     assert.equal(actual.duration, expected.duration, "Duration doesn't match");
+    assert.equal(actual.traceFilePath, expected.traceFilePath, "Trace file path doesn't match");
     assert.deepEqual(actual.outputLines, expected.outputLines, "Output lines don't match");
     assert.deepEqual(actual.initialStatesStat, expected.initialStatesStat, "Initial states statistics doesn't match");
     assert.deepEqual(actual.coverageStat, expected.coverageStat, "Coverage statistics doesn't match");
@@ -494,9 +495,18 @@ function assertEquals(actual: ModelCheckResult, expected: ModelCheckResult) {
     assert.deepEqual(actual.errors, expected.errors, "Erros don't match");
 }
 
-async function assertOutput(fileName: string, specFiles: SpecFiles, expected: ModelCheckResult): Promise<void> {
-    const filePath = path.join(FIXTURES_PATH, fileName);
-    const buffer = fs.readFileSync(filePath);
+async function assertOutput(
+    fileNameOrLines: string | string[],
+    specFiles: SpecFiles,
+    expected: ModelCheckResult
+): Promise<void> {
+    let buffer: Buffer;
+    if (typeof fileNameOrLines === 'string') {
+        const filePath = path.join(FIXTURES_PATH, fileNameOrLines);
+        buffer = fs.readFileSync(filePath);
+    } else {
+        buffer = Buffer.from(fileNameOrLines.join('\n'));
+    }
     const stream = new PassThrough();
     stream.end(buffer);
     const crh = new CheckResultHolder();

@@ -206,6 +206,7 @@ class ModelCheckResultBuilder {
     private workersCount = 0;
     private firstStatTime: moment.Moment | undefined;
     private fingerprintCollisionProbability: string | undefined;
+    private traceFilePathFromOutput: string | undefined;
 
     constructor(
         private readonly source: ModelCheckResultSource,
@@ -256,6 +257,10 @@ class ModelCheckResultBuilder {
     }
 
     build(): ModelCheckResult {
+        // Use the trace file path that TLC reported in its output (most reliable)
+        // This will only be set if TLC actually wrote a trace file in this run
+        const traceFilePath = this.traceFilePathFromOutput;
+
         return new ModelCheckResult(
             this.source,
             this.specFiles,
@@ -273,7 +278,8 @@ class ModelCheckResultBuilder {
             this.duration,
             this.workersCount,
             this.fingerprintCollisionProbability,
-            this.outputLines
+            this.outputLines,
+            traceFilePath
         );
     }
 
@@ -691,6 +697,14 @@ class ModelCheckResultBuilder {
             prevLine.increment();
         } else {
             this.outputLines.push(new OutputLine(line));
+        }
+
+        // Parse trace file path from TLC output
+        // TLC outputs messages like: "CounterExample written: /path/to/trace.tlc"
+        // The message may be wrapped in quotes
+        const traceMatch = /^"?(?:CounterExample|Counterexample)\s+written:\s*(.+\.tlc)"?\s*$/i.exec(line);
+        if (traceMatch && traceMatch[1]) {
+            this.traceFilePathFromOutput = traceMatch[1].trim();
         }
     }
 

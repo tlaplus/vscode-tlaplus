@@ -5,12 +5,14 @@ import {
     doCheckModel, getSpecFiles, stopModelChecking
 } from '../commands/checkModel';
 import { SpecFiles } from '../model/check';
+import { extractFingerprintFromTrace, findLatestTraceFile } from '../tla2tools';
 
 export const TLAPLUS_DEBUG_LAUNCH_SMOKE = 'tlaplus.debugger.smoke';
 export const TLAPLUS_DEBUG_LAUNCH_CHECKNDEBUG = 'tlaplus.debugger.run';
 export const TLAPLUS_DEBUG_LAUNCH_CUSTOMCHECKNDEBUG = 'tlaplus.debugger.customRun';
 export const TLAPLUS_DEBUG_LAUNCH_DEBUG = 'tlaplus.debugger.attach';
 export const TLAPLUS_DEBUG_GOTO_STATE = 'tlaplus.debugger.gotoState';
+export const TLAPLUS_DEBUG_LOAD_TRACE = 'tlaplus.debugger.loadTrace';
 
 const DEFAULT_DEBUGGER_PORT = 4712;
 const DEBUGGER_MIN_PORT = 5001;         // BSD uses ports up to 5000 as ephemeral
@@ -272,4 +274,81 @@ export async function gotoState(context: DebugVariableContext | undefined): Prom
         const errorMessage = error instanceof Error ? error.message : String(error);
         vscode.window.showErrorMessage(`Failed to go to state: ${errorMessage}`);
     }
+}
+
+/**
+ * Debugs a counterexample by loading the most recent trace file.
+ * The trace file is loaded using TLC's -loadtrace option with the appropriate -fp index.
+ * This allows stepping through the exact execution that was previously captured.
+ *
+ * @param tlaFilePath Path to the TLA+ specification file (optional, will use active editor if not provided)
+ * @param diagnostic Diagnostic collection for error reporting
+ * @param context Extension context
+ */
+export async function debugCounterexample(
+    tlaFilePath: string | undefined,
+    diagnostic: vscode.DiagnosticCollection,
+    context: vscode.ExtensionContext
+): Promise<void> {
+    // If no path provided, try to get it from the active editor
+    let targetTlaFilePath = tlaFilePath;
+    if (!targetTlaFilePath) {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) {
+            vscode.window.showWarningMessage('No TLA+ file specified and no active editor found');
+            return;
+        }
+        targetTlaFilePath = editor.document.uri.fsPath;
+    }
+
+    // Find the latest trace file
+    const traceFilePath = findLatestTraceFile(targetTlaFilePath);
+    if (!traceFilePath) {
+        vscode.window.showWarningMessage(
+            'No trace file found. Run model checking in BFS mode to generate a trace file.'
+        );
+        return;
+    }
+
+    // Extract the fingerprint from the trace filename
+    const fpValue = extractFingerprintFromTrace(traceFilePath);
+    if (fpValue === undefined) {
+        vscode.window.showErrorMessage(
+            `Could not extract fingerprint index from trace file: ${path.basename(traceFilePath)}`
+        );
+        return;
+    }
+
+    // Get the spec files
+    const specFiles = await getSpecFiles(vscode.Uri.file(targetTlaFilePath), false);
+    if (!specFiles) {
+        vscode.window.showWarningMessage('Could not determine specification files');
+        return;
+    }
+
+    // Randomly select a port for the debugger
+    const initPort = Math.floor(Math.random() * (DEBUGGER_MAX_PORT - DEBUGGER_MIN_PORT)) + DEBUGGER_MIN_PORT; //NOSONAR
+
+    // Callback when the debugger port is opened
+    const portOpenCallback = (port?: number) => {
+        if (!port) {
+            return;
+        }
+        vscode.debug.startDebugging(undefined, {
+            type: 'tlaplus',
+            name: 'Debug Trace',
+            request: 'launch',
+            port: port
+        });
+    };
+
+    // Build the TLC options with -loadtrace (format first, then file path)
+    const debugOptions = [
+        '-fp', String(fpValue),
+        '-loadtrace', 'tlc', traceFilePath,
+        '-debugger', `port=${initPort}`
+    ];
+
+    // Don't await doCheckModel because it only returns after TLC terminates
+    doCheckModel(specFiles, false, context, diagnostic, false, debugOptions, portOpenCallback);
 }

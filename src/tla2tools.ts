@@ -390,7 +390,7 @@ function buildTraceFilePath(tlaFilePath: string, customOptions: string[], fpValu
     const specName = path.basename(tlaFilePath, '.tla');
     const specDir = path.dirname(tlaFilePath);
     const traceDir = path.join(specDir, '.vscode', 'tlc');
-    
+
     // Try to create .vscode/tlc directory if it doesn't exist
     // This is a best-effort attempt - if it fails, TLC might still be able to create the file
     try {
@@ -404,25 +404,86 @@ function buildTraceFilePath(tlaFilePath: string, customOptions: string[], fpValu
         // Silently ignore directory creation errors - TLC will report if it can't write the trace
         console.debug(`Could not create trace directory: ${err}`);
     }
-    
+
     // Extract parameters from options
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').replace('T', '_').substring(0, 19);
     const fp = fpValue !== undefined ? fpValue : 0;
-    
+
     // Extract workers from options (default to 1 if not present)
     const workersIndex = customOptions.indexOf('-workers');
-    const workers = (workersIndex >= 0 && workersIndex < customOptions.length - 1) 
-        ? customOptions[workersIndex + 1] 
+    const workers = (workersIndex >= 0 && workersIndex < customOptions.length - 1)
+        ? customOptions[workersIndex + 1]
         : '1';
-    
+
     // Mode is always 'bfs' for non-simulation mode
     const mode = 'bfs';
-    
+
     // Build filename: {specName}_trace_T{timestamp}_F{fp}_W{workers}_M{mode}.tlc
     const traceFileName = `${specName}_trace_T${timestamp}_F${fp}_W${workers}_M${mode}.tlc`;
     const traceFilePath = path.join(traceDir, traceFileName);
-    
+
     return traceFilePath;
+}
+
+/**
+ * Finds the latest trace file for a given TLA+ specification.
+ * Trace files are stored in .vscode/tlc/ and follow the naming pattern:
+ * {specName}_trace_T{timestamp}_F{fp}_W{workers}_M{mode}.tlc
+ *
+ * @param tlaFilePath Path to the TLA+ specification file
+ * @returns Path to the latest trace file, or undefined if none exists
+ */
+export function findLatestTraceFile(tlaFilePath: string): string | undefined {
+    const specName = path.basename(tlaFilePath, '.tla');
+    const specDir = path.dirname(tlaFilePath);
+    const traceDir = path.join(specDir, '.vscode', 'tlc');
+
+    if (!fs.existsSync(traceDir)) {
+        return undefined;
+    }
+
+    try {
+        const files = fs.readdirSync(traceDir);
+        const traceFiles = files.filter(file =>
+            file.startsWith(`${specName}_trace_`) &&
+            file.endsWith('_Mbfs.tlc')
+        );
+
+        if (traceFiles.length === 0) {
+            return undefined;
+        }
+
+        // Sort by modification time, newest first
+        const sortedFiles = traceFiles
+            .map(file => ({
+                name: file,
+                path: path.join(traceDir, file),
+                mtime: fs.statSync(path.join(traceDir, file)).mtime
+            }))
+            .sort((a, b) => b.mtime.getTime() - a.mtime.getTime());
+
+        return sortedFiles[0].path;
+    } catch (err) {
+        console.error(`Error finding trace files: ${err}`);
+        return undefined;
+    }
+}
+
+/**
+ * Extracts the fingerprint index from a trace file name.
+ * Trace files follow the naming pattern: {specName}_trace_T{timestamp}_F{fp}_W{workers}_M{mode}.tlc
+ *
+ * @param traceFilePath Path to the trace file
+ * @returns The fingerprint index, or undefined if it cannot be extracted
+ */
+export function extractFingerprintFromTrace(traceFilePath: string): number | undefined {
+    const fileName = path.basename(traceFilePath);
+    // Match the pattern _F{number}_
+    const fpMatch = fileName.match(/_F(\d+)_/);
+    if (fpMatch && fpMatch[1]) {
+        return parseInt(fpMatch[1], 10);
+    }
+    return undefined;
 }
 
 /**
@@ -436,12 +497,12 @@ export function buildTlcOptions(tlaFilePath: string, cfgFilePath: string, custom
     });
     const opts = [path.basename(tlaFilePath), '-tool', '-modelcheck'];
     addValueOrDefault('-config', cfgFilePath, custOpts, opts);
-    
+
     // For BFS mode (not -simulate), always set -fp to a random value between 0 and 130
     const isSimulateMode = custOpts.some(opt => opt.toLowerCase() === '-simulate');
     const isLoadTrace = custOpts.some(opt => opt.toLowerCase() === '-loadtrace');
     let fpValue: number | undefined;
-    
+
     if (!isSimulateMode) {
         // Check if -fp is already present in custom options
         const fpIndex = custOpts.indexOf('-fp');
@@ -454,13 +515,13 @@ export function buildTlcOptions(tlaFilePath: string, cfgFilePath: string, custom
             fpValue = parseInt(custOpts[fpIndex + 1], 10);
         }
     }
-    
+
     // Add -dumptrace for BFS mode (not simulation) when not loading a trace
     if (!isSimulateMode && !isLoadTrace) {
         const traceFilePath = buildTraceFilePath(tlaFilePath, custOpts, fpValue);
         opts.push('-dumptrace', 'tlc', traceFilePath);
     }
-    
+
     return opts.concat(custOpts);
 }
 

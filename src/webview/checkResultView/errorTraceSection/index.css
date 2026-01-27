@@ -12,6 +12,15 @@
     background-color: var(--vscode-list-hoverBackground);
 }
 
+.option-button.disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.option-button.disabled:hover {
+    background-color: transparent;
+}
+
 .flex-direction-column {
     display: flex;
     flex-direction: column;
