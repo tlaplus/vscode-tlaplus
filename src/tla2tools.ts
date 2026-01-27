@@ -436,31 +436,24 @@ export async function findLatestTraceFile(tlaFilePath: string): Promise<string |
     
     try {
         const files = await fsp.readdir(traceDir);
-        const traceFiles = files.filter(file => 
-            file.startsWith(`${specName}_trace_`) && 
-            file.endsWith('_Mbfs.tlc')
-        );
+        // Match files with pattern: {specName}_trace_T{timestamp}_F{fp}_W{workers}_Mbfs.tlc
+        // Timestamp format YYYY-MM-DD_HH-MM-SS comes from buildTraceFilePath()
+        const tracePattern = new RegExp(`^${specName}_trace_T(\\d{4}-\\d{2}-\\d{2}_\\d{2}-\\d{2}-\\d{2})_F\\d+_W\\d+_Mbfs\\.tlc$`);
+        const traceFiles = files
+            .map(file => ({ file, match: file.match(tracePattern) }))
+            .filter(({ match }) => match !== null)
+            .sort((a, b) => {
+                // Sort by timestamp (captured in group 1) - newest first
+                const timestampA = a.match![1];
+                const timestampB = b.match![1];
+                return timestampB.localeCompare(timestampA);
+            });
         
         if (traceFiles.length === 0) {
             return undefined;
         }
         
-        // Sort by modification time, newest first
-        const fileStats = await Promise.all(
-            traceFiles.map(async file => {
-                const filePath = path.join(traceDir, file);
-                const stats = await fsp.stat(filePath);
-                return {
-                    name: file,
-                    path: filePath,
-                    mtime: stats.mtime
-                };
-            })
-        );
-        
-        fileStats.sort((a, b) => b.mtime.getTime() - a.mtime.getTime());
-        
-        return fileStats[0].path;
+        return path.join(traceDir, traceFiles[0].file);
     } catch (err) {
         // Directory doesn't exist or other error - return undefined
         console.debug(`Could not find trace files: ${err}`);
