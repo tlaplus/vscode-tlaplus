@@ -37,6 +37,9 @@ import { runTlc } from '../tla2tools';
 import { CFG_TLC_STATISTICS_TYPE, ShareOption } from '../commands/tlcStatisticsCfg';
 import { getDiagnostic } from '../main';
 import { moduleSearchPaths } from '../paths';
+import { TlcModelCheckerStdoutParser } from '../parsers/tlc';
+import { updateCheckResultView } from '../panels/checkResultView';
+import { ModelCheckResultSource } from '../model/check';
 
 /**
  * Custom error class for article validation errors.
@@ -1519,10 +1522,32 @@ export class MCPServer implements vscode.Disposable {
             return await new Promise<{
                 content: { type: 'text'; text: string; }[];
             }>(resolve => {
-                // Create output collector
+                // Create output collector for MCP response
                 const outputLines: string[] = [];
 
-                // Custom handler for capturing output
+                // Create parser to update the webview with structured results
+                const stdoutParser = new TlcModelCheckerStdoutParser(
+                    ModelCheckResultSource.Process,
+                    procInfo.mergedOutput,
+                    specFiles,
+                    true,
+                    (checkResult) => {
+                        // Update the webview so users can see counterexamples
+                        updateCheckResultView(checkResult);
+                    }
+                );
+
+                // Start parsing in background - this will handle SANY messages and update webview
+                stdoutParser.readAll().then(dCol => {
+                    // Apply SANY diagnostics if any
+                    const diagnostic = getDiagnostic();
+                    applyDCollection(dCol, diagnostic);
+                }).catch(error => {
+                    console.warn('Error parsing TLC output for webview:', error);
+                });
+
+                // Also collect text output for the MCP response
+                // Note: Multiple listeners on the same stream work fine in Node.js
                 const stdoutHandler = (data: Buffer) => {
                     const str = data.toString();
                     const lines = str.split('\n');
