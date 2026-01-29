@@ -132,6 +132,41 @@ class CheckResultViewPanel {
         }
     }
 
+    private formatErrorTrace(): string {
+        if (!this.checkResult || !this.checkResult.errors || this.checkResult.errors.length === 0) {
+            return 'No counterexample available.';
+        }
+
+        const traces: string[] = [];
+        
+        for (const error of this.checkResult.errors) {
+            if (!error.errorTrace || error.errorTrace.length === 0) {
+                continue;
+            }
+
+            const stateLines: string[] = [];
+            for (const traceItem of error.errorTrace) {
+                // Format state number and title
+                stateLines.push(`${traceItem.num}: <${traceItem.title}>`);
+                
+                // Format variables - use format('') for better multi-line formatting
+                if (traceItem.variables && traceItem.variables.items) {
+                    for (const variable of traceItem.variables.items) {
+                        const formattedValue = variable.format('');
+                        stateLines.push(`/\\ ${variable.key} = ${formattedValue}`);
+                    }
+                }
+                
+                // Add empty line between states
+                stateLines.push('');
+            }
+            
+            traces.push(stateLines.join('\n'));
+        }
+        
+        return traces.join('\n---\n\n') || 'No counterexample available.';
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private handleWebviewMessage(message: any) {
         if (message.command === 'stop') {
@@ -148,6 +183,38 @@ class CheckResultViewPanel {
             } else {
                 vscode.window.showWarningMessage('No specification file available for debugging');
             }
+        } else if (message.command === 'openAIChat') {
+            const traceText = this.formatErrorTrace();
+            const prompt = `Help me analyze this TLA+ counterexample/trace.
+
+**Counterexample:**
+\`\`\`
+${traceText}
+\`\`\`
+
+**Available TLA+ MCP Tools & Resources:**
+
+1. **tlaplus_mcp_tlc_trace** - Load and replay the counterexample stored in the trace file with custom ALIAS expressions to:
+   - Filter or rename variables for clarity
+   - Compute derived values that help explain the behavior
+   - Trace files are in .vscode/tlc/ with pattern: {specName}_trace_T{timestamp}_F{fp}_W{workers}_M{mode}.tlc
+
+2. **Knowledge Resources:**
+   - tlaplus://knowledge/tla-diagnose-property-violations.md - Strategies for debugging invariant and property violations
+   - tlaplus://knowledge/tlc-alias-expressions.md - Comprehensive guide on using ALIAS expressions for trace analysis
+
+3. **Other Useful Tools:**
+   - tlaplus_mcp_tlc_check - Re-run model checking with modified configuration
+   - tlaplus_mcp_tlc_explore - Generate example behaviors to understand expected traces
+   - tlaplus_mcp_sany_symbol - Extract specification symbols to understand the model structure
+
+**Please help me:**
+1. Understand what went wrong in this counterexample
+2. Identify which invariant or property was violated and why
+3. Suggest ALIAS expressions to make the trace more readable
+4. Recommend next steps for fixing the specification or finding the root cause`;
+            
+            vscode.commands.executeCommand('workbench.action.chat.open', { query: prompt });
         } else if (message.command === 'openFile') {
             // `One` is used here because at the moment, VSCode doesn't provide API
             // for revealing existing document, so we're speculating here to reduce open documents duplication.
