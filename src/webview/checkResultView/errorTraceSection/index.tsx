@@ -14,7 +14,12 @@ export const ErrorTraceSection = React.memo(({checkResult}: ErrorTraceSectionI) 
     return (
         <section>
             <VscodeTabs id="error-trace-tabs" panel>
-                {checkResult.errors.map((error, index) => <ErrorTrace key={index} errorInfo={error} traceId={index}/>)}
+                {checkResult.errors.map((error, index) => <ErrorTrace 
+                    key={index} 
+                    errorInfo={error} 
+                    traceId={index}
+                    state={checkResult.state}
+                    traceFilePath={checkResult.traceFilePath}/>)}
             </VscodeTabs>
         </section>
     );

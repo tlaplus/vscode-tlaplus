@@ -499,6 +499,7 @@ export class ModelCheckResult {
         readonly workersCount: number,
         readonly collisionProbability: string | undefined,
         readonly outputLines: OutputLine[],
+        readonly traceFilePath: string | undefined,
     ) {
         this.stateName = getStateName(this.state);
         this.startDateTimeStr = dateTimeToStr(startDateTime);
@@ -524,7 +525,7 @@ export class ModelCheckResult {
     static createEmpty(source: ModelCheckResultSource): ModelCheckResult {
         return new ModelCheckResult(
             source, undefined, false, CheckState.Running, CheckStatus.Starting, undefined, [], [], [], [],
-            undefined, undefined, undefined, undefined, 0, undefined, []);
+            undefined, undefined, undefined, undefined, 0, undefined, [], undefined);
     }
 
     formatValue(valueId: number): string | undefined {

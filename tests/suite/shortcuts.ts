@@ -115,6 +115,7 @@ export class CheckResultBuilder {
     private workersCount = 0;
     private collisionProbability: string | undefined;
     private outputLines: OutputLine[] = [];
+    private traceFilePath: string | undefined;
 
     constructor(
         readonly outFilePath: string,
@@ -140,7 +141,8 @@ export class CheckResultBuilder {
             this.duration,
             this.workersCount,
             this.collisionProbability,
-            this.outputLines
+            this.outputLines,
+            this.traceFilePath
         );
     }
 
@@ -166,6 +168,11 @@ export class CheckResultBuilder {
 
     setWorkersCount(wc: number): CheckResultBuilder {
         this.workersCount = wc;
+        return this;
+    }
+
+    setTraceFilePath(path: string): CheckResultBuilder {
+        this.traceFilePath = path;
         return this;
     }
 
