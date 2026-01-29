@@ -35,6 +35,12 @@ class VSCodeWrapper {
         });
     }
 
+    public openAIChat() {
+        vsCodeApi.postMessage({
+            command: 'openAIChat'
+        });
+    }
+
     public showVariableValue(id: number) {
         vsCodeApi.postMessage({
             command: 'showVariableValue',

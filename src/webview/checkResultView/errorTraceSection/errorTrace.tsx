@@ -82,6 +82,11 @@ export const ErrorTrace = React.memo(({errorInfo, traceId, state, traceFilePath}
                         onClick={isDebugDisabled(state, traceFilePath) ? undefined : vscode.debugCounterexample}
                         className={`codicon codicon-debug-alt cursor-pointer option-button${isDebugDisabled(state, traceFilePath) ? ' disabled' : ''}`}/>
 
+                    <span
+                        title="Ask AI about this counterexample"
+                        onClick={vscode.openAIChat}
+                        className="codicon codicon-sparkle cursor-pointer option-button"/>
+
                 </div>
 
                 <VscodeTree>
