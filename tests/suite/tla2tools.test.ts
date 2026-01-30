@@ -103,6 +103,34 @@ suite('TLA+ Tools Test Suite', () => {
         assert.strictEqual(result[dumpIdx + 2], 'bar.dot');
     });
 
+    test('Strips .tla extension from modelName when CONFIG is embedded (regression for #483)', async () => {
+        const result = await buildTlcOptions(
+            '/path/to/HourClock.tla',
+            '/path/to/HourClock.tla',
+            ['-dump', 'dot,colorize,actionlabels', '${modelName}.dot']
+        );
+        assert.strictEqual(result[0], 'HourClock.tla');
+        assert.ok(result.includes('-dump'));
+        const dumpIdx = result.indexOf('-dump');
+        assert.strictEqual(result[dumpIdx + 1], 'dot,colorize,actionlabels');
+        assert.strictEqual(result[dumpIdx + 2], 'HourClock.dot',
+            'modelName should expand to HourClock.dot, not HourClock.tla.dot');
+    });
+
+    test('Strips .tla extension from specName when CONFIG is embedded', async () => {
+        const result = await buildTlcOptions(
+            '/path/to/HourClock.tla',
+            '/path/to/HourClock.tla',
+            ['-dump', 'dot', '${specName}.dot']
+        );
+        assert.strictEqual(result[0], 'HourClock.tla');
+        assert.ok(result.includes('-dump'));
+        const dumpIdx = result.indexOf('-dump');
+        assert.strictEqual(result[dumpIdx + 1], 'dot');
+        assert.strictEqual(result[dumpIdx + 2], 'HourClock.dot',
+            'specName should expand to HourClock.dot, not HourClock.tla.dot');
+    });
+
     test('Provides default classpath and GC in Java options', async () => {
         assert.deepEqual(
             buildJavaOptions(

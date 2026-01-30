@@ -484,8 +484,8 @@ export function extractFingerprintFromTrace(traceFilePath: string): number | und
 export async function buildTlcOptions(tlaFilePath: string, cfgFilePath: string, customOptions: string[]): Promise<string[]> {
     const custOpts = customOptions.map((opt) => {
         return opt
-            .replace(VAR_TLC_SPEC_NAME, path.basename(tlaFilePath, '.tla'))
-            .replace(VAR_TLC_MODEL_NAME, path.basename(cfgFilePath, '.cfg'));
+            .replace(VAR_TLC_SPEC_NAME, path.parse(tlaFilePath).name)
+            .replace(VAR_TLC_MODEL_NAME, path.parse(cfgFilePath).name);
     });
     const opts = [path.basename(tlaFilePath), '-tool', '-modelcheck'];
     addValueOrDefault('-config', cfgFilePath, custOpts, opts);
