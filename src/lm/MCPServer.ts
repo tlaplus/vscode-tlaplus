@@ -58,10 +58,14 @@ export class MCPServer implements vscode.Disposable {
     private mcpServer: http.Server | undefined;
     private jarProviderHandle: JarFileSystemProviderHandle;
     private vscodeRegistrationDisposable: vscode.Disposable | undefined;
+    private mcpOutputChannel: vscode.OutputChannel;
 
     constructor(port: number) {
         // Initialize JAR file system provider
         this.jarProviderHandle = acquireJarFileSystemProvider();
+
+        // Create dedicated output channel for MCP server messages
+        this.mcpOutputChannel = vscode.window.createOutputChannel('TLA+ MCP');
 
         this.startServer(port);
     }
@@ -257,7 +261,9 @@ export class MCPServer implements vscode.Disposable {
                         });
                         serverInstance = undefined;
                     }
+                    const errorMessage = error instanceof Error ? error.message : String(error);
                     console.error('Error handling MCP request:', error);
+                    this.mcpOutputChannel.appendLine(`Error handling MCP request: ${errorMessage}`);
                     if (!res.headersSent) {
                         res.status(500).json({
                             jsonrpc: '2.0',
@@ -307,7 +313,14 @@ export class MCPServer implements vscode.Disposable {
                 // Get the actual port that was assigned (important when port is 0)
                 const actualPort = (this.mcpServer?.address() as { port: number })?.port || port;
 
-                console.log(`TLA+ MCP server listening at http://localhost:${actualPort}/mcp`);
+                const serverUrl = `http://localhost:${actualPort}/mcp`;
+                const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || 'no workspace';
+                const message = `TLA+ MCP server listening at ${serverUrl} for workspace ${workspaceRoot}`;
+
+                // Log to multiple destinations so users can easily find the URL if they want to
+                // use this MCP server from another IDE or MCP client
+                console.log(message);
+                this.mcpOutputChannel.appendLine(message);
 
                 // TODO: Migrate to https://github.com/modelcontextprotocol/modelcontextprotocol/discussions/1160 if it finds widespread adoption.
 
@@ -322,8 +335,10 @@ export class MCPServer implements vscode.Disposable {
                             }
                         });
                         console.log(`TLA+ MCP server registered programmatically in Cursor at http://localhost:${actualPort}/mcp`);
+                        this.mcpOutputChannel.appendLine('TLA+ MCP server registered programmatically in Cursor');
                     } catch (error) {
                         console.warn('Failed to register TLA+ MCP server programmatically in Cursor:', error);
+                        this.mcpOutputChannel.appendLine(`Failed to register TLA+ MCP server programmatically in Cursor: ${error}`);
                     }
                 }
 
@@ -350,32 +365,42 @@ export class MCPServer implements vscode.Disposable {
                     try {
                         this.vscodeRegistrationDisposable = (vscode.lm as any).registerMcpServerDefinitionProvider('tlaplus.mcp-server', provider);
                         console.log(`TLA+ MCP server registered programmatically with VS Code at http://localhost:${actualPort}/mcp`);
+                        this.mcpOutputChannel.appendLine('TLA+ MCP server registered programmatically with VS Code');
                     } catch (error) {
                         console.warn('Failed to register TLA+ MCP server programmatically in VS Code:', error);
+                        this.mcpOutputChannel.appendLine(`Failed to register TLA+ MCP server programmatically in VS Code: ${error}`);
                     }
                 }
             }).on('error', (err) => {
-                vscode.window.showErrorMessage(
-                    `Failed to start TLA+ MCP server: ${err instanceof Error ? err.message : String(err)
-                    }`
-                );
+                const errorMessage = err instanceof Error ? err.message : String(err);
                 console.error('Error starting TLA+ MCP server:', err);
+                this.mcpOutputChannel.appendLine(`Error starting TLA+ MCP server: ${errorMessage}`);
+                vscode.window.showErrorMessage(
+                    `Failed to start TLA+ MCP server: ${errorMessage}`
+                );
             });
         } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : String(err);
+            console.error('Failed to start TLA+ MCP server:', err);
+            this.mcpOutputChannel.appendLine(`Failed to start TLA+ MCP server: ${errorMessage}`);
             // eslint-disable-next-line max-len
-            vscode.window.showErrorMessage(`Failed to start TLA+ MCP server: ${err instanceof Error ? err.message : String(err)}`);
+            vscode.window.showErrorMessage(`Failed to start TLA+ MCP server: ${errorMessage}`);
         }
     }
 
     public dispose(): void {
+        this.mcpOutputChannel.appendLine('TLA+ MCP server shutting down...');
+
         // Unregister from Cursor
         const isCursor = vscode.env.appName?.toLowerCase().includes('cursor');
         if (isCursor && (vscode as any).cursor?.mcp?.unregisterServer) {
             try {
                 (vscode as any).cursor.mcp.unregisterServer('TLA+ MCP Server');
                 console.log('TLA+ MCP server unregistered from Cursor');
+                this.mcpOutputChannel.appendLine('TLA+ MCP server unregistered from Cursor');
             } catch (error) {
                 console.warn('Failed to unregister TLA+ MCP server from Cursor:', error);
+                this.mcpOutputChannel.appendLine(`Failed to unregister TLA+ MCP server from Cursor: ${error}`);
             }
         }
 
@@ -384,16 +409,26 @@ export class MCPServer implements vscode.Disposable {
             try {
                 this.vscodeRegistrationDisposable.dispose();
                 console.log('TLA+ MCP server unregistered from VSCode');
+                this.mcpOutputChannel.appendLine('TLA+ MCP server unregistered from VSCode');
             } catch (error) {
                 console.warn('Failed to unregister TLA+ MCP server from VSCode:', error);
+                this.mcpOutputChannel.appendLine(`Failed to unregister TLA+ MCP server from VSCode: ${error}`);
             }
             this.vscodeRegistrationDisposable = undefined;
         }
 
         if (this.mcpServer) {
             this.mcpServer.close();
+            this.mcpOutputChannel.appendLine('HTTP server closed');
             this.mcpServer = undefined;
         }
+
+        this.mcpOutputChannel.appendLine('TLA+ MCP server shutdown complete');
+        
+        // Note: We intentionally don't dispose the output channel here.
+        // Its lifecycle is aligned with the extension's lifecycle, and VS Code
+        // will clean it up on extension deactivation. Disposing it here could
+        // prevent in-flight HTTP handlers from logging messages.
 
         // Clean up JAR file system provider
         this.jarProviderHandle.dispose();
@@ -721,12 +756,12 @@ export class MCPServer implements vscode.Disposable {
             async ({ fileName, traceFile, cfgFile, extraOpts, extraJavaOpts }) => {
                 const absolutePath = this.resolveFilePath(fileName);
                 const validatedPath = this.validateWorkspacePath(absolutePath);
-                
+
                 const absoluteTracePath = this.resolveFilePath(traceFile);
                 const validatedTracePath = this.validateWorkspacePath(absoluteTracePath);
-                
+
                 const cfgFilePath = cfgFile ? this.validateWorkspacePath(this.resolveFilePath(cfgFile)) : undefined;
-                
+
                 // Check if trace file exists
                 if (!(await exists(validatedTracePath))) {
                     return {
@@ -736,24 +771,24 @@ export class MCPServer implements vscode.Disposable {
                         }]
                     };
                 }
-                
+
                 // Extract the fingerprint from the trace filename
                 const fpValue = extractFingerprintFromTrace(validatedTracePath);
-                
+
                 // Build TLC options with -fp to match the fingerprint used when the trace was generated
                 // This ensures TLC uses the same fingerprint index encoded in the trace filename
                 let options: string[];
                 if (fpValue === undefined) {
                     // Log warning but continue anyway - the fingerprint mismatch might not break the replay
-                    outChannel.appendLine(`WARNING: Could not extract fingerprint index from trace file: ${path.basename(validatedTracePath)}. ` +
-                                         `Trace files should follow the naming pattern: {specName}_trace_T{timestamp}_F{fp}_W{workers}_M{mode}.tlc. ` +
-                                         `Running TLC without -fp option, which may cause fingerprint mismatch.`);
-                    options = extraOpts ? 
-                        ['-cleanup', '-loadtrace', 'tlc', validatedTracePath, ...extraOpts] : 
+                    this.mcpOutputChannel.appendLine(`WARNING: Could not extract fingerprint index from trace file: ${path.basename(validatedTracePath)}. ` +
+                                         'Trace files should follow the naming pattern: {specName}_trace_T{timestamp}_F{fp}_W{workers}_M{mode}.tlc. ' +
+                                         'Running TLC without -fp option, which may cause fingerprint mismatch.');
+                    options = extraOpts ?
+                        ['-cleanup', '-loadtrace', 'tlc', validatedTracePath, ...extraOpts] :
                         ['-cleanup', '-loadtrace', 'tlc', validatedTracePath];
                 } else {
-                    options = extraOpts ? 
-                        ['-cleanup', '-fp', String(fpValue), '-loadtrace', 'tlc', validatedTracePath, ...extraOpts] : 
+                    options = extraOpts ?
+                        ['-cleanup', '-fp', String(fpValue), '-loadtrace', 'tlc', validatedTracePath, ...extraOpts] :
                         ['-cleanup', '-fp', String(fpValue), '-loadtrace', 'tlc', validatedTracePath];
                 }
                 const javaOpts = extraJavaOpts || [];
