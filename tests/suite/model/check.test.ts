@@ -160,6 +160,11 @@ suite('Check Model Test Suite', () => {
         );
     });
 
+    test('Marks deleted values as deleted', () => {
+        const value = v(1, 'one').setDeleted();
+        assert.equal(value.changeType, Change.DELETED);
+    });
+
     test('Finds subitem by ID', () => {
         Value.switchIdsOn();
         const varOne = v(1, 'one');
@@ -186,6 +191,21 @@ suite('Check Model Test Suite', () => {
                 v(2, 'two')));
         const found = root.findItem(varOne.id);
         assert.equal(typeof found, 'undefined');
+    });
+
+    test('Finds deleted items from deletedItems list', () => {
+        Value.switchIdsOn();
+        const seqValue = seq('foo', v(1, 'one'));
+        seqValue.addDeletedItems([v(2, 'two')]);
+        const root = struct(ROOT,
+            v('bar', 'BAR'),
+            seqValue);
+        const deleted = seqValue.deletedItems ? seqValue.deletedItems[0] : undefined;
+        assert.ok(deleted);
+        const found = root.findItem(deleted!.id);
+        assert.ok(found);
+        assert.equal(found?.id, deleted!.id);
+        assert.equal(found?.changeType, Change.DELETED);
     });
 });
 
