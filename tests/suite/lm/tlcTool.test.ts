@@ -30,6 +30,48 @@ class MockProcess extends EventEmitter {
 }
 
 suite('TLC Tool cancellation handling', () => {
+    test('CheckModuleTool rejects missing input file', async () => {
+        const checkModelMutable = checkModel as unknown as {
+            getSpecFiles: typeof checkModel.getSpecFiles;
+        };
+        const commonMutable = common as unknown as {
+            exists: typeof common.exists;
+        };
+        const originalGetSpecFiles = checkModelMutable.getSpecFiles;
+        const originalExists = commonMutable.exists;
+        let getSpecFilesCalled = 0;
+
+        checkModelMutable.getSpecFiles = async () => {
+            getSpecFilesCalled++;
+            return undefined;
+        };
+        commonMutable.exists = async () => false;
+
+        try {
+            const tool = new CheckModuleTool();
+            const cts = new vscode.CancellationTokenSource();
+
+            const filePath = path.join(__dirname, 'Missing.tla');
+            const options = {
+                toolInvocationToken: undefined,
+                input: {
+                    fileName: filePath
+                }
+            } as unknown as LanguageModelToolInvocationOptions<FileParameter>;
+
+            const result = await tool.invoke(options, cts.token);
+            assert.strictEqual(getSpecFilesCalled, 0, 'getSpecFiles should not run when file is missing');
+            assert.strictEqual(result.content.length, 1);
+            const [part] = result.content;
+            assert.ok(part instanceof vscode.LanguageModelTextPart, 'Result should be a text part');
+            assert.strictEqual((part as vscode.LanguageModelTextPart).value,
+                `File ${filePath} does not exist`);
+        } finally {
+            checkModelMutable.getSpecFiles = originalGetSpecFiles;
+            commonMutable.exists = originalExists;
+        }
+    });
+
     test('CheckModuleTool respects pre-cancelled token', async () => {
         const checkModelMutable = checkModel as unknown as {
             getSpecFiles: typeof checkModel.getSpecFiles;
