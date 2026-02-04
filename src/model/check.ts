@@ -565,16 +565,14 @@ function findSetChanges(prev: SetValue, state: SetValue): boolean {
     return prev.diff(state);
 }
 
+function valuesMatchForSequence(prevValue: Value, stateValue: Value): boolean {
+    return prevValue.constructor === stateValue.constructor && prevValue.str === stateValue.str;
+}
+
 /**
  * Recursively finds and marks all the changes between two collections.
  */
-export function findChanges(prev: CollectionValue, state: CollectionValue): boolean {
-    // Special handling for sets - they are unordered collections
-    if (prev instanceof SetValue && state instanceof SetValue) {
-        return findSetChanges(prev, state);
-    }
-
-    // For other collections (sequences, structures), use ordered comparison
+function findOrderedChanges(prev: CollectionValue, state: CollectionValue): boolean {
     let pi = 0;
     let si = 0;
     let modified = false;
@@ -615,6 +613,91 @@ export function findChanges(prev: CollectionValue, state: CollectionValue): bool
         state.changeType = Change.MODIFIED;
     }
     return modified;
+}
+
+function findSequenceChanges(prev: SequenceValue, state: SequenceValue): boolean {
+    const prevItems = prev.items;
+    const stateItems = state.items;
+    const prevLen = prevItems.length;
+    const stateLen = stateItems.length;
+
+    const dp: number[][] = Array.from({ length: prevLen + 1 }, () => new Array(stateLen + 1).fill(0));
+    for (let i = 1; i <= prevLen; i++) {
+        for (let j = 1; j <= stateLen; j++) {
+            if (valuesMatchForSequence(prevItems[i - 1], stateItems[j - 1])) {
+                dp[i][j] = dp[i - 1][j - 1] + 1;
+            } else {
+                dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+            }
+        }
+    }
+
+    let modified = false;
+    const matchedPrev = new Array(prevLen).fill(false);
+    const matchedState = new Array(stateLen).fill(false);
+
+    let i = prevLen;
+    let j = stateLen;
+    while (i > 0 && j > 0) {
+        const prevValue = prevItems[i - 1];
+        const stateValue = stateItems[j - 1];
+        if (valuesMatchForSequence(prevValue, stateValue)) {
+            matchedPrev[i - 1] = true;
+            matchedState[j - 1] = true;
+            if (prevValue instanceof SetValue && stateValue instanceof SetValue) {
+                modified = prevValue.diff(stateValue) || modified;
+            } else if (prevValue instanceof CollectionValue && stateValue instanceof CollectionValue) {
+                modified = findChanges(prevValue, stateValue) || modified;
+            }
+            i -= 1;
+            j -= 1;
+        } else if (dp[i - 1][j] >= dp[i][j - 1]) {
+            i -= 1;
+        } else {
+            j -= 1;
+        }
+    }
+
+    const deletedItems: Value[] = [];
+    for (let pi = 0; pi < prevLen; pi++) {
+        if (!matchedPrev[pi]) {
+            deletedItems.push(prevItems[pi]);
+        }
+    }
+    for (let si = 0; si < stateLen; si++) {
+        if (!matchedState[si]) {
+            stateItems[si].changeType = Change.ADDED;
+            modified = true;
+        }
+    }
+    if (deletedItems.length > 0) {
+        state.addDeletedItems(deletedItems);
+        modified = true;
+    }
+    if (modified) {
+        state.changeType = Change.MODIFIED;
+    }
+    return modified;
+}
+
+/**
+ * Recursively finds and marks all the changes between two collections.
+ */
+export function findChanges(prev: CollectionValue, state: CollectionValue): boolean {
+    // Special handling for sets - they are unordered collections
+    if (prev instanceof SetValue && state instanceof SetValue) {
+        return findSetChanges(prev, state);
+    }
+
+    if (prev instanceof SequenceValue && state instanceof SequenceValue) {
+        if (prev.items.length === state.items.length) {
+            return findOrderedChanges(prev, state);
+        }
+        return findSequenceChanges(prev, state);
+    }
+
+    // For other collections (structures, functions), use ordered comparison
+    return findOrderedChanges(prev, state);
 }
 
 function dateTimeToStr(dateTime: Moment | undefined): string {

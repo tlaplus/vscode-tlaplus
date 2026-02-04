@@ -93,6 +93,46 @@ suite('Check Model Test Suite', () => {
         );
     });
 
+    test('Sequence diff treats head deletion as deletion only (value-based)', () => {
+        const expected = seqX(ROOT, Change.MODIFIED,
+            vX(1, Change.NOT_CHANGED, '2'),
+            vX(2, Change.NOT_CHANGED, '3')
+        );
+        expected.addDeletedItems([v(1, '1')]);
+        assertChanges(
+            seq(ROOT, v(1, '1'), v(2, '2'), v(3, '3')),
+            seq(ROOT, v(1, '2'), v(2, '3')),
+            expected
+        );
+    });
+
+    test('Sequence diff treats middle deletion as deletion only (value-based)', () => {
+        const expected = seqX(ROOT, Change.MODIFIED,
+            vX(1, Change.NOT_CHANGED, '1'),
+            vX(2, Change.NOT_CHANGED, '3'),
+            vX(3, Change.NOT_CHANGED, '4')
+        );
+        expected.addDeletedItems([v(2, '2')]);
+        assertChanges(
+            seq(ROOT, v(1, '1'), v(2, '2'), v(3, '3'), v(4, '4')),
+            seq(ROOT, v(1, '1'), v(2, '3'), v(3, '4')),
+            expected
+        );
+    });
+
+    test('Sequence diff treats head insertion as addition only (value-based)', () => {
+        const expected = seqX(ROOT, Change.MODIFIED,
+            vX(1, Change.ADDED, '1'),
+            vX(2, Change.NOT_CHANGED, '2'),
+            vX(3, Change.NOT_CHANGED, '3')
+        );
+        assertChanges(
+            seq(ROOT, v(1, '2'), v(2, '3')),
+            seq(ROOT, v(1, '1'), v(2, '2'), v(3, '3')),
+            expected
+        );
+    });
+
     test('Handles unchanged set', () => {
         assertChanges(
             set(ROOT, v(1, 'foo'), v(2, 'bar')),
