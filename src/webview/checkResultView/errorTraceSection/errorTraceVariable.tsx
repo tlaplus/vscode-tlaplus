@@ -50,8 +50,9 @@ export const ErrorTraceVariable = React.memo(({ value, stateId, settings }: Erro
     const changeHintKey = value.changeType as keyof typeof changeHints;
     const changeHint = changeHints[changeHintKey] ?? '';
     const changeTypeClass = 'value-' + value.changeType;
+    const isSequence = value.prefix === '<<' && value.postfix === '>>';
     const hasValueChildren = hasVariableChildrenToDisplay(value);
-    const hasDeletedChildren = Array.isArray(value.deletedItems) && value.deletedItems.length > 0;
+    const hasDeletedChildren = !isSequence && Array.isArray(value.deletedItems) && value.deletedItems.length > 0;
     const hasChildren = hasValueChildren || hasDeletedChildren;
 
     return (
@@ -97,7 +98,7 @@ export const ErrorTraceVariable = React.memo(({ value, stateId, settings }: Erro
                             stateId={stateId}
                             settings={settings} />)}
 
-            {value.deletedItems &&
+            {!isSequence && value.deletedItems &&
                 value.deletedItems.map(
                     (childValue) =>
                         <ErrorTraceVariable

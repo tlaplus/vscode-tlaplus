@@ -106,13 +106,13 @@ suite('Check Model Test Suite', () => {
         );
     });
 
-    test('Sequence diff treats middle deletion as deletion only (value-based)', () => {
+    test('Sequence diff treats middle deletion as function diff when not prefix/suffix', () => {
         const expected = seqX(ROOT, Change.MODIFIED,
             vX(1, Change.NOT_CHANGED, '1'),
-            vX(2, Change.NOT_CHANGED, '3'),
-            vX(3, Change.NOT_CHANGED, '4')
+            vX(2, Change.MODIFIED, '3'),
+            vX(3, Change.MODIFIED, '4')
         );
-        expected.addDeletedItems([v(2, '2')]);
+        expected.addDeletedItems([v(4, '4')]);
         assertChanges(
             seq(ROOT, v(1, '1'), v(2, '2'), v(3, '3'), v(4, '4')),
             seq(ROOT, v(1, '1'), v(2, '3'), v(3, '4')),

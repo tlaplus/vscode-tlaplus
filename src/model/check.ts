@@ -565,10 +565,6 @@ function findSetChanges(prev: SetValue, state: SetValue): boolean {
     return prev.diff(state);
 }
 
-function valuesMatchForSequence(prevValue: Value, stateValue: Value): boolean {
-    return prevValue.constructor === stateValue.constructor && prevValue.str === stateValue.str;
-}
-
 /**
  * Recursively finds and marks all the changes between two collections.
  */
@@ -618,61 +614,62 @@ function findOrderedChanges(prev: CollectionValue, state: CollectionValue): bool
 function findSequenceChanges(prev: SequenceValue, state: SequenceValue): boolean {
     const prevItems = prev.items;
     const stateItems = state.items;
-    const prevLen = prevItems.length;
-    const stateLen = stateItems.length;
+    if (prevItems.length === stateItems.length) {
+        return findOrderedChanges(prev, state);
+    }
 
-    const dp: number[][] = Array.from({ length: prevLen + 1 }, () => new Array(stateLen + 1).fill(0));
-    for (let i = 1; i <= prevLen; i++) {
-        for (let j = 1; j <= stateLen; j++) {
-            if (valuesMatchForSequence(prevItems[i - 1], stateItems[j - 1])) {
-                dp[i][j] = dp[i - 1][j - 1] + 1;
-            } else {
-                dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
-            }
+    let shorter = prevItems;
+    let longer = stateItems;
+    let firstShorter = true;
+    if (prevItems.length > stateItems.length) {
+        shorter = stateItems;
+        longer = prevItems;
+        firstShorter = false;
+    }
+
+    let isPrefix = true;
+    for (let i = 0; i < shorter.length; i++) {
+        if (shorter[i].str !== longer[i].str) {
+            isPrefix = false;
+            break;
         }
+    }
+
+    let isSuffix = true;
+    for (let i = 0; i < shorter.length; i++) {
+        if (shorter[i].str !== longer[i + longer.length - shorter.length].str) {
+            isSuffix = false;
+            break;
+        }
+    }
+
+    if (isPrefix && isSuffix) {
+        if (firstShorter) {
+            isSuffix = false;
+        } else {
+            isPrefix = false;
+        }
+    } else if (!(isPrefix || isSuffix)) {
+        return findOrderedChanges(prev, state);
     }
 
     let modified = false;
-    const matchedPrev = new Array(prevLen).fill(false);
-    const matchedState = new Array(stateLen).fill(false);
-
-    let i = prevLen;
-    let j = stateLen;
-    while (i > 0 && j > 0) {
-        const prevValue = prevItems[i - 1];
-        const stateValue = stateItems[j - 1];
-        if (valuesMatchForSequence(prevValue, stateValue)) {
-            matchedPrev[i - 1] = true;
-            matchedState[j - 1] = true;
-            if (prevValue instanceof SetValue && stateValue instanceof SetValue) {
-                modified = prevValue.diff(stateValue) || modified;
-            } else if (prevValue instanceof CollectionValue && stateValue instanceof CollectionValue) {
-                modified = findChanges(prevValue, stateValue) || modified;
-            }
-            i -= 1;
-            j -= 1;
-        } else if (dp[i - 1][j] >= dp[i][j - 1]) {
-            i -= 1;
-        } else {
-            j -= 1;
-        }
-    }
-
-    const deletedItems: Value[] = [];
-    for (let pi = 0; pi < prevLen; pi++) {
-        if (!matchedPrev[pi]) {
-            deletedItems.push(prevItems[pi]);
-        }
-    }
-    for (let si = 0; si < stateLen; si++) {
-        if (!matchedState[si]) {
-            stateItems[si].changeType = Change.ADDED;
+    const firstEltToMark = isPrefix ? shorter.length : 0;
+    const diffCount = longer.length - shorter.length;
+    if (firstShorter) {
+        for (let i = 0; i < diffCount; i++) {
+            stateItems[firstEltToMark + i].changeType = Change.ADDED;
             modified = true;
         }
-    }
-    if (deletedItems.length > 0) {
-        state.addDeletedItems(deletedItems);
-        modified = true;
+    } else {
+        const deletedItems: Value[] = [];
+        for (let i = 0; i < diffCount; i++) {
+            deletedItems.push(prevItems[firstEltToMark + i]);
+        }
+        if (deletedItems.length > 0) {
+            state.addDeletedItems(deletedItems);
+            modified = true;
+        }
     }
     if (modified) {
         state.changeType = Change.MODIFIED;
