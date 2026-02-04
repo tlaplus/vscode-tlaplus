@@ -375,22 +375,22 @@ suite('TLA+ Tools Test Suite', () => {
         assert.ok(traceFilePath.includes('_W4_'), 'trace filename should contain custom workers value');
     });
 
-    test('Trace filename includes spec name', async () => {
+    test('Trace filename includes model name', async () => {
         const result = await buildTlcOptions('/path/to/MySpec.tla', '/path/to/MySpec.cfg', []);
         const dumpIndex = result.indexOf('-dumptrace');
         assert.notStrictEqual(dumpIndex, -1, '-dumptrace should be present');
         const traceFilePath = result[dumpIndex + 2];
-        assert.ok(traceFilePath.includes('MySpec_trace_'), 'trace filename should start with spec name');
+        assert.ok(traceFilePath.includes('MySpec_trace_'), 'trace filename should start with model name');
     });
 
     test('Extracts fingerprint from trace filename', async () => {
-        const traceFile = '/path/to/.vscode/tlc/MySpec_trace_T2024-01-15_10-30-00_F42_W1_Mbfs.tlc';
+        const traceFile = '/path/to/MySpec_trace_T2024-01-15_10-30-00_F42_W1_Mbfs.tlc';
         const fp = extractFingerprintFromTrace(traceFile);
         assert.strictEqual(fp, 42, 'Should extract fingerprint 42');
     });
 
     test('Extracts fingerprint from trace filename with different values', async () => {
-        const traceFile = '/path/to/.vscode/tlc/Spec_trace_T2024-12-31_23-59-59_F127_W4_Mbfs.tlc';
+        const traceFile = '/path/to/Spec_trace_T2024-12-31_23-59-59_F127_W4_Mbfs.tlc';
         const fp = extractFingerprintFromTrace(traceFile);
         assert.strictEqual(fp, 127, 'Should extract fingerprint 127');
     });
@@ -402,7 +402,7 @@ suite('TLA+ Tools Test Suite', () => {
     });
 
     test('Returns undefined for trace filename without fingerprint', async () => {
-        const traceFile = '/path/to/.vscode/tlc/MySpec_trace_T2024-01-15_10-30-00_W1_Mbfs.tlc';
+        const traceFile = '/path/to/MySpec_trace_T2024-01-15_10-30-00_W1_Mbfs.tlc';
         const fp = extractFingerprintFromTrace(traceFile);
         assert.strictEqual(fp, undefined, 'Should return undefined when fingerprint is missing');
     });

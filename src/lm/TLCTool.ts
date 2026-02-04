@@ -88,7 +88,7 @@ async function runTLC(
         return cancelBeforeStart;
     }
 
-    const specFiles = await getSpecFiles(fileUri, false);
+    const specFiles = await getSpecFiles(fileUri, false, false);
     const cancelAfterSpecLookup = maybeReturnOnCancel();
     if (cancelAfterSpecLookup) {
         return cancelAfterSpecLookup;
@@ -123,9 +123,10 @@ async function runTLC(
     if (shareStats !== ShareOption.DoNotShare) {
         extraJavaOpts.push('-Dtlc2.TLC.ide=TLAiVSCode');
     }
+    const cfgFilePath = input.configFileName ? input.configFileName : specFiles.cfgFilePath;
     const procInfo = await runTlc(
         specFiles.tlaFilePath,
-        path.basename(input.configFileName ? input.configFileName : specFiles.cfgFilePath),
+        cfgFilePath,
         false,
         extraOps,
         extraJavaOpts

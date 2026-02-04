@@ -22,51 +22,64 @@ suite('Debugging Test Suite', () => {
     suite('findLatestTraceFile', () => {
         test('Returns undefined when trace directory does not exist', async () => {
             const tlaFilePath = path.join(testDir, 'NonExistent.tla');
-            const result = await findLatestTraceFile(tlaFilePath);
+            const cfgFilePath = path.join(testDir, 'missing', 'NonExistent.cfg');
+            const result = await findLatestTraceFile(tlaFilePath, cfgFilePath);
             assert.strictEqual(result, undefined, 'Should return undefined when directory does not exist');
         });
 
         test('Returns undefined when trace directory is empty', async () => {
             const tlaFilePath = path.join(testDir, 'Empty.tla');
-            const traceDir = path.join(testDir, '.vscode', 'tlc');
-            fs.mkdirSync(traceDir, { recursive: true });
-            
-            const result = await findLatestTraceFile(tlaFilePath);
+            const cfgFilePath = path.join(testDir, 'Empty.cfg');
+
+            const result = await findLatestTraceFile(tlaFilePath, cfgFilePath);
             assert.strictEqual(result, undefined, 'Should return undefined when no trace files exist');
         });
 
         test('Returns undefined when no matching trace files exist', async () => {
             const tlaFilePath = path.join(testDir, 'MySpec.tla');
-            const traceDir = path.join(testDir, '.vscode', 'tlc');
-            fs.mkdirSync(traceDir, { recursive: true });
-            
+            const cfgFilePath = path.join(testDir, 'MySpec.cfg');
+            const traceDir = path.dirname(cfgFilePath);
+
             // Create a file that doesn't match the pattern
             fs.writeFileSync(path.join(traceDir, 'other_file.txt'), '');
             // Create a trace file for a different spec
             fs.writeFileSync(path.join(traceDir, 'OtherSpec_trace_T2024-01-15_10-30-00_F0_W1_Mbfs.tlc'), '');
-            
-            const result = await findLatestTraceFile(tlaFilePath);
+
+            const result = await findLatestTraceFile(tlaFilePath, cfgFilePath);
             assert.strictEqual(result, undefined, 'Should return undefined when no matching trace files exist');
         });
 
         test('Finds single trace file', async () => {
             const tlaFilePath = path.join(testDir, 'MySpec.tla');
-            const traceDir = path.join(testDir, '.vscode', 'tlc');
-            fs.mkdirSync(traceDir, { recursive: true });
-            
+            const cfgFilePath = path.join(testDir, 'MySpec.cfg');
+            const traceDir = path.dirname(cfgFilePath);
+
             const traceFileName = 'MySpec_trace_T2024-01-15_10-30-00_F42_W1_Mbfs.tlc';
             const traceFilePath = path.join(traceDir, traceFileName);
             fs.writeFileSync(traceFilePath, 'test trace content');
-            
-            const result = await findLatestTraceFile(tlaFilePath);
+
+            const result = await findLatestTraceFile(tlaFilePath, cfgFilePath);
             assert.strictEqual(result, traceFilePath, 'Should find the single trace file');
+        });
+
+        test('Finds trace file when cfg path is a .tla (embedded config)', async () => {
+            const tlaFilePath = path.join(testDir, 'MySpec.tla');
+            const cfgFilePath = path.join(testDir, 'Embedded.tla');
+            const traceDir = path.dirname(cfgFilePath);
+
+            const traceFileName = 'Embedded_trace_T2024-01-15_10-30-00_F42_W1_Mbfs.tlc';
+            const traceFilePath = path.join(traceDir, traceFileName);
+            fs.writeFileSync(traceFilePath, 'test trace content');
+
+            const result = await findLatestTraceFile(tlaFilePath, cfgFilePath);
+            assert.strictEqual(result, traceFilePath, 'Should use the .tla config basename for trace matching');
         });
 
         test('Returns latest trace file when multiple exist', async () => {
             const tlaFilePath = path.join(testDir, 'MySpec.tla');
-            const traceDir = path.join(testDir, '.vscode', 'tlc');
-            fs.mkdirSync(traceDir, { recursive: true });
-            
+            const cfgFilePath = path.join(testDir, 'MySpec.cfg');
+            const traceDir = path.dirname(cfgFilePath);
+
             // Create multiple trace files with different timestamps
             const oldTrace = path.join(traceDir, 'MySpec_trace_T2024-01-15_10-30-00_F42_W1_Mbfs.tlc');
             const middleTrace = path.join(traceDir, 'MySpec_trace_T2024-01-16_14-20-00_F43_W2_Mbfs.tlc');
@@ -76,14 +89,14 @@ suite('Debugging Test Suite', () => {
             fs.writeFileSync(middleTrace, 'middle trace');
             fs.writeFileSync(latestTrace, 'latest trace');
             
-            const result = await findLatestTraceFile(tlaFilePath);
+            const result = await findLatestTraceFile(tlaFilePath, cfgFilePath);
             assert.strictEqual(result, latestTrace, 'Should return the trace file with the latest timestamp');
         });
 
         test('Sorts by timestamp correctly across different dates', async () => {
             const tlaFilePath = path.join(testDir, 'Test.tla');
-            const traceDir = path.join(testDir, '.vscode', 'tlc');
-            fs.mkdirSync(traceDir, { recursive: true });
+            const cfgFilePath = path.join(testDir, 'Test.cfg');
+            const traceDir = path.dirname(cfgFilePath);
             
             // Create traces with timestamps in different months and years
             const trace2023 = path.join(traceDir, 'Test_trace_T2023-12-31_23-59-59_F0_W1_Mbfs.tlc');
@@ -94,14 +107,14 @@ suite('Debugging Test Suite', () => {
             fs.writeFileSync(trace2024Jan, '2024 jan trace');
             fs.writeFileSync(trace2024Feb, '2024 feb trace');
             
-            const result = await findLatestTraceFile(tlaFilePath);
+            const result = await findLatestTraceFile(tlaFilePath, cfgFilePath);
             assert.strictEqual(result, trace2024Feb, 'Should return the trace with the most recent timestamp');
         });
 
         test('Ignores files that do not match the trace pattern', async () => {
             const tlaFilePath = path.join(testDir, 'MySpec.tla');
-            const traceDir = path.join(testDir, '.vscode', 'tlc');
-            fs.mkdirSync(traceDir, { recursive: true });
+            const cfgFilePath = path.join(testDir, 'MySpec.cfg');
+            const traceDir = path.dirname(cfgFilePath);
             
             // Create a valid trace file
             const validTrace = path.join(traceDir, 'MySpec_trace_T2024-01-15_10-30-00_F42_W1_Mbfs.tlc');
@@ -113,27 +126,27 @@ suite('Debugging Test Suite', () => {
             fs.writeFileSync(path.join(traceDir, 'MySpec_T2024-01-15_10-30-00_F42_W1_Mbfs.tlc'), 'missing trace');
             fs.writeFileSync(path.join(traceDir, 'random_file.txt'), 'random');
             
-            const result = await findLatestTraceFile(tlaFilePath);
+            const result = await findLatestTraceFile(tlaFilePath, cfgFilePath);
             assert.strictEqual(result, validTrace, 'Should find only the valid trace file');
         });
 
         test('Handles spec names with underscores', async () => {
             const tlaFilePath = path.join(testDir, 'My_Complex_Spec.tla');
-            const traceDir = path.join(testDir, '.vscode', 'tlc');
-            fs.mkdirSync(traceDir, { recursive: true });
+            const cfgFilePath = path.join(testDir, 'My_Complex_Spec.cfg');
+            const traceDir = path.dirname(cfgFilePath);
             
             const traceFileName = 'My_Complex_Spec_trace_T2024-01-15_10-30-00_F5_W1_Mbfs.tlc';
             const traceFilePath = path.join(traceDir, traceFileName);
             fs.writeFileSync(traceFilePath, 'trace with underscore spec');
             
-            const result = await findLatestTraceFile(tlaFilePath);
+            const result = await findLatestTraceFile(tlaFilePath, cfgFilePath);
             assert.strictEqual(result, traceFilePath, 'Should handle spec names with underscores');
         });
 
         test('Only matches BFS mode traces', async () => {
             const tlaFilePath = path.join(testDir, 'MySpec.tla');
-            const traceDir = path.join(testDir, '.vscode', 'tlc');
-            fs.mkdirSync(traceDir, { recursive: true });
+            const cfgFilePath = path.join(testDir, 'MySpec.cfg');
+            const traceDir = path.dirname(cfgFilePath);
             
             // Create a valid BFS trace
             const bfsTrace = path.join(traceDir, 'MySpec_trace_T2024-01-15_10-30-00_F42_W1_Mbfs.tlc');
@@ -143,7 +156,7 @@ suite('Debugging Test Suite', () => {
             const otherModeTrace = path.join(traceDir, 'MySpec_trace_T2024-01-16_10-30-00_F42_W1_Msimulation.tlc');
             fs.writeFileSync(otherModeTrace, 'simulation trace');
             
-            const result = await findLatestTraceFile(tlaFilePath);
+            const result = await findLatestTraceFile(tlaFilePath, cfgFilePath);
             assert.strictEqual(result, bfsTrace, 'Should only match BFS mode traces');
         });
     });
@@ -191,7 +204,7 @@ suite('Debugging Test Suite', () => {
     suite('debugCounterexample TLC options construction', () => {
         test('Constructs correct -loadtrace and -fp options from trace filename', () => {
             // Simulate what debugCounterexample should produce
-            const traceFilePath = '/path/to/.vscode/tlc/MySpec_trace_T2024-01-15_10-30-00_F42_W1_Mbfs.tlc';
+            const traceFilePath = '/path/to/MySpec_trace_T2024-01-15_10-30-00_F42_W1_Mbfs.tlc';
             const fpValue = extractFingerprintFromTrace(traceFilePath);
             
             assert.strictEqual(fpValue, 42, 'Should extract correct fingerprint');
@@ -213,7 +226,7 @@ suite('Debugging Test Suite', () => {
         });
 
         test('Handles trace with different fingerprint value', () => {
-            const traceFilePath = '/path/to/.vscode/tlc/Test_trace_T2024-01-15_10-30-00_F0_W1_Mbfs.tlc';
+            const traceFilePath = '/path/to/Test_trace_T2024-01-15_10-30-00_F0_W1_Mbfs.tlc';
             const fpValue = extractFingerprintFromTrace(traceFilePath);
             
             assert.strictEqual(fpValue, 0, 'Should extract fingerprint value of 0');
@@ -224,7 +237,7 @@ suite('Debugging Test Suite', () => {
         });
 
         test('Handles trace with maximum fingerprint value', () => {
-            const traceFilePath = '/path/to/.vscode/tlc/Test_trace_T2024-01-15_10-30-00_F130_W8_Mbfs.tlc';
+            const traceFilePath = '/path/to/Test_trace_T2024-01-15_10-30-00_F130_W8_Mbfs.tlc';
             const fpValue = extractFingerprintFromTrace(traceFilePath);
             
             assert.strictEqual(fpValue, 130, 'Should extract maximum fingerprint value');
@@ -234,7 +247,7 @@ suite('Debugging Test Suite', () => {
         });
 
         test('Verifies warning path: missing fingerprint in trace filename', () => {
-            const invalidTraceFile = '/path/to/.vscode/tlc/MySpec_trace_T2024-01-15_10-30-00_W1_Mbfs.tlc';
+            const invalidTraceFile = '/path/to/MySpec_trace_T2024-01-15_10-30-00_W1_Mbfs.tlc';
             const fpValue = extractFingerprintFromTrace(invalidTraceFile);
             
             // This should trigger the warning path in debugCounterexample
@@ -252,7 +265,7 @@ suite('Debugging Test Suite', () => {
         test('Options format is compatible with TLC', () => {
             // Verify that the options constructed match TLC's expected format:
             // -fp <value> -loadtrace <format> <file>
-            const traceFile = '/spec/.vscode/tlc/Spec_trace_T2024-01-15_10-30-00_F73_W4_Mbfs.tlc';
+            const traceFile = '/spec/Spec_trace_T2024-01-15_10-30-00_F73_W4_Mbfs.tlc';
             const fp = extractFingerprintFromTrace(traceFile);
             
             const options = [

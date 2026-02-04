@@ -1,6 +1,6 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { listFiles } from '../common';
+import { exists, replaceExtension } from '../common';
 import {
     doCheckModel, getSpecFiles, stopModelChecking
 } from '../commands/checkModel';
@@ -134,22 +134,10 @@ export async function checkAndDebugSpecCustom(
     if (!targetResource) {
         return;
     }
-    // Accept .tla files here because TLC configs and TLA+ modules can share the same file:
-    // https://github.com/tlaplus/vscode-tlaplus/issues/220
-    const configFiles = await listFiles(path.dirname(targetResource.fsPath),
-        (fName) => fName.endsWith('.cfg') || fName.endsWith('.tla'));
-    configFiles.sort();
-    const cfgFileName = await vscode.window.showQuickPick(
-        configFiles,
-        { canPickMany: false, placeHolder: 'Select a model config file', matchOnDetail: true }
-    );
-    if (!cfgFileName || cfgFileName.length === 0) {
+    const specFiles = await getSpecFiles(targetResource, true, true, 'customPick');
+    if (!specFiles) {
         return;
     }
-    const specFiles = new SpecFiles(
-        targetResource.fsPath,
-        path.join(path.dirname(targetResource.fsPath), cfgFileName)
-    );
     // Randomly select a port on which we request the debugger to listen
     const initPort = Math.floor(Math.random() * (DEBUGGER_MAX_PORT - DEBUGGER_MIN_PORT)) + DEBUGGER_MIN_PORT; //NOSONAR
     // This will be called as soon as TLC starts listening on a port or fails to start
@@ -185,13 +173,16 @@ export async function smokeTestSpec(
 
     const prefixPath = vscode.workspace.getConfiguration().get<string>('tlaplus.smoke.prefix.path', '');
     const prefixName = vscode.workspace.getConfiguration().get<string>('tlaplus.smoke.prefix.name', 'Smoke');
-    const specFiles = await getSpecFiles(targetResource, false, prefixPath + prefixName);
-    if (!specFiles || !specFiles.cfgFileName.startsWith(prefixName)) {
-        // Launch the debugger iff there is a Smoke model. specFiles
-        // might be an ordinary model, which we don't want to run in TLC
-        // automatically.
+    const baseName = path.basename(targetResource.fsPath);
+    const smokePrefix = `${prefixPath}${prefixName}`;
+    const smokeTlaPath = path.join(path.dirname(targetResource.fsPath), `${smokePrefix}${baseName}`);
+    const smokeCfgPath = replaceExtension(smokeTlaPath, 'cfg');
+    const smokeTlaExists = await exists(smokeTlaPath);
+    const smokeCfgExists = await exists(smokeCfgPath);
+    if (!smokeTlaExists || !smokeCfgExists) {
         return;
     }
+    const specFiles = new SpecFiles(smokeTlaPath, smokeCfgPath);
     // Randomly select a port on which we request the debugger to listen
     const initPort = Math.floor(Math.random() * (DEBUGGER_MAX_PORT - DEBUGGER_MIN_PORT)) + DEBUGGER_MIN_PORT; //NOSONAR
     // This will be called as soon as TLC starts listening on a port or fails to start
@@ -301,8 +292,15 @@ export async function debugCounterexample(
         targetTlaFilePath = editor.document.uri.fsPath;
     }
 
+    // Get the spec files
+    const specFiles = await getSpecFiles(vscode.Uri.file(targetTlaFilePath), false, true);
+    if (!specFiles) {
+        vscode.window.showWarningMessage('Could not determine specification files');
+        return;
+    }
+
     // Find the latest trace file
-    const traceFilePath = await findLatestTraceFile(targetTlaFilePath);
+    const traceFilePath = await findLatestTraceFile(specFiles.tlaFilePath, specFiles.cfgFilePath);
     if (!traceFilePath) {
         vscode.window.showWarningMessage(
             'No trace file found. Run model checking in BFS mode to generate a trace file.'
@@ -316,13 +314,6 @@ export async function debugCounterexample(
         vscode.window.showErrorMessage(
             `Could not extract fingerprint index from trace file: ${path.basename(traceFilePath)}`
         );
-        return;
-    }
-
-    // Get the spec files
-    const specFiles = await getSpecFiles(vscode.Uri.file(targetTlaFilePath), false);
-    if (!specFiles) {
-        vscode.window.showWarningMessage('Could not determine specification files');
         return;
     }
 
