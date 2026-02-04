@@ -467,13 +467,19 @@ export enum ModelCheckResultSource {
 export class SpecFiles {
     readonly tlaFileName: string;
     readonly cfgFileName: string;
+    readonly modelName: string;
+    readonly outputDir: string;
 
     constructor(
         readonly tlaFilePath: string,
-        readonly cfgFilePath: string
+        readonly cfgFilePath: string,
+        modelName?: string,
+        outputDir?: string
     ) {
         this.tlaFileName = path.basename(tlaFilePath);
         this.cfgFileName = path.basename(cfgFilePath);
+        this.modelName = modelName ?? path.parse(cfgFilePath).name;
+        this.outputDir = outputDir ?? path.dirname(cfgFilePath);
     }
 }
 
