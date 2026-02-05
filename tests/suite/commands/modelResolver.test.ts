@@ -120,6 +120,6 @@ suite('Model Resolver', () => {
         assert.strictEqual(result?.tlaPath, vscode.Uri.file(tlaPath).fsPath);
         assert.strictEqual(result?.cfgPath, vscode.Uri.file(altTlaPath).fsPath);
         assert.strictEqual(result?.modelName, 'Alt');
-        assert.strictEqual(result?.outputDir, testDir);
+        assert.strictEqual(result?.outputDir, vscode.Uri.file(testDir).fsPath);
     });
 });
