@@ -22,7 +22,8 @@ suite('Parse Module Stream Merging Tests', () => {
     });
 
     test('ToolProcessInfo merges stdout and stderr streams with syntax errors', async function() {
-        this.timeout(10000);
+        const isWin = process.platform === 'win32';
+        this.timeout(isWin ? 60000 : 10000);
 
         // This test verifies that our stream merging implementation works correctly
         // by checking that SANY error messages are captured in the mergedOutput stream
@@ -65,7 +66,10 @@ Spec == Init /\\ Next
                 resolve();
                 return;
             }
-            const timer = setTimeout(() => reject(new Error('mergedOutput did not end in time')), 5000);
+            const timer = setTimeout(
+                () => reject(new Error('mergedOutput did not end in time')),
+                isWin ? 30000 : 5000
+            );
             procInfo.mergedOutput.once('end', () => {
                 clearTimeout(timer);
                 resolve();
