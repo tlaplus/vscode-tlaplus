@@ -77,15 +77,22 @@ async function runTLC(
     // create an URI from the file name
     const input = options.input;
     const fileUri = vscode.Uri.file(input.fileName);
-    // check if the file exists
-    if (!fileUri) {
-        return new vscode.LanguageModelToolResult(
-            [new vscode.LanguageModelTextPart(`File ${input.fileName} does not exist`)]);
-    }
 
     const cancelBeforeStart = maybeReturnOnCancel();
     if (cancelBeforeStart) {
         return cancelBeforeStart;
+    }
+
+    // check if the file exists
+    const inputFileExists = await exists(fileUri.fsPath);
+    const cancelAfterExistenceCheck = maybeReturnOnCancel();
+    if (cancelAfterExistenceCheck) {
+        return cancelAfterExistenceCheck;
+    }
+    if (!inputFileExists) {
+        return new vscode.LanguageModelToolResult(
+            [new vscode.LanguageModelTextPart(`File ${input.fileName} does not exist`)]
+        );
     }
 
     const specFiles = await getSpecFiles(fileUri, false, false);

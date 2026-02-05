@@ -167,7 +167,7 @@ export class Value {
     }
 
     setDeleted(): Value {
-        this.changeType = Change.MODIFIED;
+        this.changeType = Change.DELETED;
         return this;
     }
 
@@ -234,6 +234,13 @@ export abstract class CollectionValue extends Value {
                 const subItem = item.findItem(id);
                 if (subItem) {
                     return subItem;
+                }
+            }
+        }
+        if (this.deletedItems) {
+            for (const item of this.deletedItems) {
+                if (item.id === id) {
+                    return item;
                 }
             }
         }

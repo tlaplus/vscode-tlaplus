@@ -403,7 +403,7 @@ class ModelCheckResultBuilder {
         }
         const code = parseInt(matches[2]);
         let forcedType;
-        if (matches[3] !== '') {
+        if (matches[3]) {
             const severity = parseInt(matches[3].substring(1));
             if (severity === SEVERITY_ERROR || severity === SEVERITY_TLC_BUG) {
                 forcedType = TlcCodeType.Error;
