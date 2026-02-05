@@ -385,14 +385,17 @@ export function buildConfigJavaOptions(): string[] {
 
 /**
  * Builds the trace file path for TLC dump with structured filename.
- * Pattern: {specName}_trace_T{timestamp}_F{fp}_W{workers}_M{mode}.tlc
+ * Pattern: {modelName}_trace_T{timestamp}_F{fp}_W{workers}_M{mode}.tlc
  */
-async function buildTraceFilePath(tlaFilePath: string, customOptions: string[], fpValue: number | undefined): Promise<string> {
-    const specName = path.basename(tlaFilePath, '.tla');
-    const specDir = path.dirname(tlaFilePath);
-    const traceDir = path.join(specDir, '.vscode', 'tlc');
+async function buildTraceFilePath(
+    cfgFilePath: string,
+    customOptions: string[],
+    fpValue: number | undefined
+): Promise<string> {
+    const modelName = path.parse(cfgFilePath).name;
+    const traceDir = path.dirname(cfgFilePath);
 
-    // Try to create .vscode/tlc directory if it doesn't exist
+    // Try to create the trace directory if it doesn't exist
     // Using recursive: true creates parent directories and doesn't fail if already exists
     try {
         await fsp.mkdir(traceDir, { recursive: true });
@@ -414,8 +417,8 @@ async function buildTraceFilePath(tlaFilePath: string, customOptions: string[], 
     // Mode is always 'bfs' for non-simulation mode
     const mode = 'bfs';
 
-    // Build filename: {specName}_trace_T{timestamp}_F{fp}_W{workers}_M{mode}.tlc
-    const traceFileName = `${specName}_trace_T${timestamp}_F${fp}_W${workers}_M${mode}.tlc`;
+    // Build filename: {modelName}_trace_T{timestamp}_F{fp}_W{workers}_M{mode}.tlc
+    const traceFileName = `${modelName}_trace_T${timestamp}_F${fp}_W${workers}_M${mode}.tlc`;
     const traceFilePath = path.join(traceDir, traceFileName);
 
     return traceFilePath;
@@ -423,22 +426,24 @@ async function buildTraceFilePath(tlaFilePath: string, customOptions: string[], 
 
 /**
  * Finds the latest trace file for a given TLA+ specification.
- * Trace files are stored in .vscode/tlc/ and follow the naming pattern:
- * {specName}_trace_T{timestamp}_F{fp}_W{workers}_M{mode}.tlc
+ * Trace files are stored alongside the model config and follow the naming pattern:
+ * {modelName}_trace_T{timestamp}_F{fp}_W{workers}_M{mode}.tlc
  * 
  * @param tlaFilePath Path to the TLA+ specification file
  * @returns Path to the latest trace file, or undefined if none exists
  */
-export async function findLatestTraceFile(tlaFilePath: string): Promise<string | undefined> {
-    const specName = path.basename(tlaFilePath, '.tla');
-    const specDir = path.dirname(tlaFilePath);
-    const traceDir = path.join(specDir, '.vscode', 'tlc');
+export async function findLatestTraceFile(
+    tlaFilePath: string,
+    cfgFilePath?: string
+): Promise<string | undefined> {
+    const modelName = cfgFilePath ? path.parse(cfgFilePath).name : path.basename(tlaFilePath, '.tla');
+    const traceDir = cfgFilePath ? path.dirname(cfgFilePath) : path.join(path.dirname(tlaFilePath), '.vscode', 'tlc');
     
     try {
         const files = await fsp.readdir(traceDir);
-        // Match files with pattern: {specName}_trace_T{timestamp}_F{fp}_W{workers}_Mbfs.tlc
+        // Match files with pattern: {modelName}_trace_T{timestamp}_F{fp}_W{workers}_Mbfs.tlc
         // Timestamp format YYYY-MM-DD_HH-MM-SS comes from buildTraceFilePath()
-        const tracePattern = new RegExp(`^${specName}_trace_T(\\d{4}-\\d{2}-\\d{2}_\\d{2}-\\d{2}-\\d{2})_F\\d+_W\\d+_Mbfs\\.tlc$`);
+        const tracePattern = new RegExp(`^${modelName}_trace_T(\\d{4}-\\d{2}-\\d{2}_\\d{2}-\\d{2}-\\d{2})_F\\d+_W\\d+_Mbfs\\.tlc$`);
         const traceFiles = files
             .map(file => ({ file, match: file.match(tracePattern) }))
             .filter(({ match }) => match !== null)
@@ -510,7 +515,7 @@ export async function buildTlcOptions(tlaFilePath: string, cfgFilePath: string, 
     
     // Add -dumptrace for BFS mode (not simulation) when not loading a trace
     if (!isSimulateMode && !isLoadTrace) {
-        const traceFilePath = await buildTraceFilePath(tlaFilePath, custOpts, fpValue);
+        const traceFilePath = await buildTraceFilePath(cfgFilePath, custOpts, fpValue);
         opts.push('-dumptrace', 'tlc', traceFilePath);
     }
     

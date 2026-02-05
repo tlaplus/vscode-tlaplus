@@ -1567,7 +1567,7 @@ export class MCPServer implements vscode.Disposable {
         }
 
         try {
-            const specFiles = await getSpecFiles(fileUri, false);
+            const specFiles = await getSpecFiles(fileUri, false, false);
             if (!specFiles) {
                 // Extract the spec name from the file name.
                 const specName = path.basename(fileName, path.extname(fileName));
@@ -1596,7 +1596,7 @@ export class MCPServer implements vscode.Disposable {
             const configFilePath = cfgFilePath || specFiles.cfgFilePath;
 
             const procInfo = await runTlc(
-                specFiles.tlaFilePath, path.basename(configFilePath), false, extraOps, extraJavaOpts);
+                specFiles.tlaFilePath, configFilePath, false, extraOps, extraJavaOpts);
             if (procInfo === undefined) {
                 return {
                     content: [{
