@@ -35,8 +35,8 @@ suite('Model Resolver', () => {
 
         const result = await resolveModelForUri(vscode.Uri.file(tlaPath), true, false);
         assert.ok(result, 'Expected resolved model');
-        assert.strictEqual(result?.tlaPath, tlaPath);
-        assert.strictEqual(result?.cfgPath, cfgPath);
+        assert.strictEqual(result?.tlaPath, vscode.Uri.file(tlaPath).fsPath);
+        assert.strictEqual(result?.cfgPath, vscode.Uri.file(cfgPath).fsPath);
         assert.strictEqual(result?.modelName, 'Spec');
     });
 
@@ -50,8 +50,8 @@ suite('Model Resolver', () => {
 
         const result = await resolveModelForUri(vscode.Uri.file(tlaPath), true, false);
         assert.ok(result, 'Expected resolved model');
-        assert.strictEqual(result?.tlaPath, mcTlaPath);
-        assert.strictEqual(result?.cfgPath, mcCfgPath);
+        assert.strictEqual(result?.tlaPath, vscode.Uri.file(mcTlaPath).fsPath);
+        assert.strictEqual(result?.cfgPath, vscode.Uri.file(mcCfgPath).fsPath);
         assert.strictEqual(result?.modelName, 'MCSpec');
     });
 
@@ -71,7 +71,7 @@ suite('Model Resolver', () => {
 
         const result = await resolveModelForUri(vscode.Uri.file(tlaPath), true, true);
         assert.ok(result, 'Expected resolved model');
-        assert.strictEqual(result?.cfgPath, mcCfgPath);
+        assert.strictEqual(result?.cfgPath, vscode.Uri.file(mcCfgPath).fsPath);
     });
 
     test('Non-interactive selection prefers Spec.cfg when multiple exist', async () => {
@@ -86,7 +86,7 @@ suite('Model Resolver', () => {
 
         const result = await resolveModelForUri(vscode.Uri.file(tlaPath), true, false);
         assert.ok(result, 'Expected resolved model');
-        assert.strictEqual(result?.cfgPath, cfgPath);
+        assert.strictEqual(result?.cfgPath, vscode.Uri.file(cfgPath).fsPath);
     });
 
     test('Returns undefined when cfg has no matching tla', async () => {
@@ -117,8 +117,8 @@ suite('Model Resolver', () => {
 
         const result = await resolveModelForUri(vscode.Uri.file(tlaPath), true, true, 'customPick');
         assert.ok(result, 'Expected resolved model');
-        assert.strictEqual(result?.tlaPath, tlaPath);
-        assert.strictEqual(result?.cfgPath, altTlaPath);
+        assert.strictEqual(result?.tlaPath, vscode.Uri.file(tlaPath).fsPath);
+        assert.strictEqual(result?.cfgPath, vscode.Uri.file(altTlaPath).fsPath);
         assert.strictEqual(result?.modelName, 'Alt');
         assert.strictEqual(result?.outputDir, testDir);
     });
