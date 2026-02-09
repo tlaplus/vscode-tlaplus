@@ -581,13 +581,7 @@ function findSetChanges(prev: SetValue, state: SetValue): boolean {
 /**
  * Recursively finds and marks all the changes between two collections.
  */
-export function findChanges(prev: CollectionValue, state: CollectionValue): boolean {
-    // Special handling for sets - they are unordered collections
-    if (prev instanceof SetValue && state instanceof SetValue) {
-        return findSetChanges(prev, state);
-    }
-
-    // For other collections (sequences, structures), use ordered comparison
+function findOrderedChanges(prev: CollectionValue, state: CollectionValue): boolean {
     let pi = 0;
     let si = 0;
     let modified = false;
@@ -628,6 +622,92 @@ export function findChanges(prev: CollectionValue, state: CollectionValue): bool
         state.changeType = Change.MODIFIED;
     }
     return modified;
+}
+
+function findSequenceChanges(prev: SequenceValue, state: SequenceValue): boolean {
+    const prevItems = prev.items;
+    const stateItems = state.items;
+    if (prevItems.length === stateItems.length) {
+        return findOrderedChanges(prev, state);
+    }
+
+    let shorter = prevItems;
+    let longer = stateItems;
+    let firstShorter = true;
+    if (prevItems.length > stateItems.length) {
+        shorter = stateItems;
+        longer = prevItems;
+        firstShorter = false;
+    }
+
+    let isPrefix = true;
+    for (let i = 0; i < shorter.length; i++) {
+        if (shorter[i].str !== longer[i].str) {
+            isPrefix = false;
+            break;
+        }
+    }
+
+    let isSuffix = true;
+    for (let i = 0; i < shorter.length; i++) {
+        if (shorter[i].str !== longer[i + longer.length - shorter.length].str) {
+            isSuffix = false;
+            break;
+        }
+    }
+
+    if (isPrefix && isSuffix) {
+        if (firstShorter) {
+            isSuffix = false;
+        } else {
+            isPrefix = false;
+        }
+    } else if (!(isPrefix || isSuffix)) {
+        return findOrderedChanges(prev, state);
+    }
+
+    let modified = false;
+    const firstEltToMark = isPrefix ? shorter.length : 0;
+    const diffCount = longer.length - shorter.length;
+    if (firstShorter) {
+        for (let i = 0; i < diffCount; i++) {
+            stateItems[firstEltToMark + i].changeType = Change.ADDED;
+            modified = true;
+        }
+    } else {
+        const deletedItems: Value[] = [];
+        for (let i = 0; i < diffCount; i++) {
+            deletedItems.push(prevItems[firstEltToMark + i]);
+        }
+        if (deletedItems.length > 0) {
+            state.addDeletedItems(deletedItems);
+            modified = true;
+        }
+    }
+    if (modified) {
+        state.changeType = Change.MODIFIED;
+    }
+    return modified;
+}
+
+/**
+ * Recursively finds and marks all the changes between two collections.
+ */
+export function findChanges(prev: CollectionValue, state: CollectionValue): boolean {
+    // Special handling for sets - they are unordered collections
+    if (prev instanceof SetValue && state instanceof SetValue) {
+        return findSetChanges(prev, state);
+    }
+
+    if (prev instanceof SequenceValue && state instanceof SequenceValue) {
+        if (prev.items.length === state.items.length) {
+            return findOrderedChanges(prev, state);
+        }
+        return findSequenceChanges(prev, state);
+    }
+
+    // For other collections (structures, functions), use ordered comparison
+    return findOrderedChanges(prev, state);
 }
 
 function dateTimeToStr(dateTime: Moment | undefined): string {
