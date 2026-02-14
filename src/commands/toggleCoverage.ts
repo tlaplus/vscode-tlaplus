@@ -16,6 +16,9 @@ export function registerCoverageCommands(
         100
     );
     context.subscriptions.push(statusBarItem);
+    context.subscriptions.push(
+        provider.onDidChangeEnabled((enabled) => updateStatusBar(enabled))
+    );
 
     context.subscriptions.push(
         vscode.commands.registerCommand(CMD_TOGGLE_COVERAGE, () => {

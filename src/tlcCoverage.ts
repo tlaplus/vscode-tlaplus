@@ -8,24 +8,43 @@ export interface CoverageLevel {
     opacity: number;
 }
 
-export class TlcCoverageDecorationProvider {
-    private static readonly COVERAGE_LEVELS: CoverageLevel[] = [
-        { name: 'never', minInvocations: 0, maxInvocations: 0, opacity: 0.0 },
-        { name: 'rare', minInvocations: 1, maxInvocations: 10, opacity: 0.2 },
-        { name: 'low', minInvocations: 11, maxInvocations: 100, opacity: 0.4 },
-        { name: 'medium', minInvocations: 101, maxInvocations: 1000, opacity: 0.6 },
-        { name: 'high', minInvocations: 1001, maxInvocations: 10000, opacity: 0.8 },
-        { name: 'hot', minInvocations: 10001, maxInvocations: Infinity, opacity: 1.0 }
-    ];
+interface CoverageThresholds {
+    rare: number;
+    low: number;
+    medium: number;
+    high: number;
+}
 
+const DEFAULT_THRESHOLDS: CoverageThresholds = {
+    rare: 10,
+    low: 100,
+    medium: 1000,
+    high: 10000
+};
+
+const COVERAGE_LEVEL_STYLES: Array<Pick<CoverageLevel, 'name' | 'opacity'>> = [
+    { name: 'never', opacity: 0.0 },
+    { name: 'rare', opacity: 0.2 },
+    { name: 'low', opacity: 0.4 },
+    { name: 'medium', opacity: 0.6 },
+    { name: 'high', opacity: 0.8 },
+    { name: 'hot', opacity: 1.0 }
+];
+
+export class TlcCoverageDecorationProvider {
+    private coverageLevels: CoverageLevel[] = [];
     private enabled = false;
     private decorationTypes = new Map<string, vscode.TextEditorDecorationType>();
     private currentCoverage = new Map<string, CoverageItem[]>(); // filePath -> coverage items
     private totalDistinctStates = 0;
     private disposables: vscode.Disposable[] = [];
+    private readonly enabledEmitter = new vscode.EventEmitter<boolean>();
+    public readonly onDidChangeEnabled = this.enabledEmitter.event;
 
     constructor(private context: vscode.ExtensionContext) {
+        this.coverageLevels = this.buildCoverageLevels(DEFAULT_THRESHOLDS);
         this.createDecorationTypes();
+        this.applyConfiguration();
         this.registerEventHandlers();
     }
 
@@ -33,7 +52,7 @@ export class TlcCoverageDecorationProvider {
         const baseColor = '#ff0000';
         const wholeLine = false;
 
-        TlcCoverageDecorationProvider.COVERAGE_LEVELS.forEach(level => {
+        COVERAGE_LEVEL_STYLES.forEach(level => {
             const color = this.hexToRgba(baseColor, level.opacity);
             const decType = vscode.window.createTextEditorDecorationType({
                 backgroundColor: color,
@@ -68,8 +87,9 @@ export class TlcCoverageDecorationProvider {
         this.disposables.push(
             vscode.workspace.onDidChangeConfiguration(event => {
                 if (event.affectsConfiguration('tlaplus.tlc.profiler.relativeScale') ||
-                    event.affectsConfiguration('tlaplus.tlc.profiler.thresholds')) {
-                    this.updateAllEditors();
+                    event.affectsConfiguration('tlaplus.tlc.profiler.thresholds') ||
+                    event.affectsConfiguration('tlaplus.tlc.profiler.enabled')) {
+                    this.handleConfigurationChange(event);
                 }
             })
         );
@@ -124,7 +144,7 @@ export class TlcCoverageDecorationProvider {
 
         // Group decorations by level
         const decorationsByLevel = new Map<string, vscode.DecorationOptions[]>();
-        TlcCoverageDecorationProvider.COVERAGE_LEVELS.forEach(level => {
+        this.coverageLevels.forEach(level => {
             decorationsByLevel.set(level.name, []);
         });
 
@@ -163,20 +183,20 @@ export class TlcCoverageDecorationProvider {
         if (useRelativeScale) {
             // Scale based on percentage of max invocations
             const percentage = (invocations / maxInvocations) * 100;
-            if (percentage === 0) {return TlcCoverageDecorationProvider.COVERAGE_LEVELS[0];}
-            if (percentage <= 1) {return TlcCoverageDecorationProvider.COVERAGE_LEVELS[1];}
-            if (percentage <= 10) {return TlcCoverageDecorationProvider.COVERAGE_LEVELS[2];}
-            if (percentage <= 30) {return TlcCoverageDecorationProvider.COVERAGE_LEVELS[3];}
-            if (percentage <= 60) {return TlcCoverageDecorationProvider.COVERAGE_LEVELS[4];}
-            return TlcCoverageDecorationProvider.COVERAGE_LEVELS[5];
+            if (percentage === 0) {return this.getCoverageLevelByIndex(0);}
+            if (percentage <= 1) {return this.getCoverageLevelByIndex(1);}
+            if (percentage <= 10) {return this.getCoverageLevelByIndex(2);}
+            if (percentage <= 30) {return this.getCoverageLevelByIndex(3);}
+            if (percentage <= 60) {return this.getCoverageLevelByIndex(4);}
+            return this.getCoverageLevelByIndex(5);
         } else {
             // Use absolute thresholds
-            for (const level of TlcCoverageDecorationProvider.COVERAGE_LEVELS) {
+            for (const level of this.coverageLevels) {
                 if (invocations >= level.minInvocations && invocations <= level.maxInvocations) {
                     return level;
                 }
             }
-            return TlcCoverageDecorationProvider.COVERAGE_LEVELS[5]; // hot
+            return this.getCoverageLevelByIndex(5); // hot
         }
     }
 
@@ -197,7 +217,11 @@ export class TlcCoverageDecorationProvider {
     }
 
     public setEnabled(enabled: boolean) {
+        if (this.enabled === enabled) {
+            return;
+        }
         this.enabled = enabled;
+        this.enabledEmitter.fire(enabled);
         if (enabled) {
             this.updateAllEditors();
         } else {
@@ -230,5 +254,118 @@ export class TlcCoverageDecorationProvider {
     public dispose() {
         this.disposeDecorationTypes();
         this.disposables.forEach(d => d.dispose());
+        this.enabledEmitter.dispose();
+    }
+
+    private applyConfiguration() {
+        const config = vscode.workspace.getConfiguration('tlaplus.tlc.profiler');
+        const thresholds = this.normalizeThresholds(config.get<unknown>('thresholds'));
+        this.coverageLevels = this.buildCoverageLevels(thresholds);
+        const enabled = config.get<boolean>('enabled', false);
+        this.setEnabled(enabled);
+    }
+
+    private handleConfigurationChange(event: vscode.ConfigurationChangeEvent) {
+        const config = vscode.workspace.getConfiguration('tlaplus.tlc.profiler');
+        let shouldUpdate = false;
+
+        if (event.affectsConfiguration('tlaplus.tlc.profiler.thresholds')) {
+            const thresholds = this.normalizeThresholds(config.get<unknown>('thresholds'));
+            this.coverageLevels = this.buildCoverageLevels(thresholds);
+            shouldUpdate = true;
+        }
+
+        if (event.affectsConfiguration('tlaplus.tlc.profiler.enabled')) {
+            const enabled = config.get<boolean>('enabled', false);
+            this.setEnabled(enabled);
+        }
+
+        if (event.affectsConfiguration('tlaplus.tlc.profiler.relativeScale')) {
+            shouldUpdate = true;
+        }
+
+        if (shouldUpdate) {
+            this.updateAllEditors();
+        }
+    }
+
+    private normalizeThresholds(raw: unknown): CoverageThresholds {
+        if (!raw || typeof raw !== 'object') {
+            return DEFAULT_THRESHOLDS;
+        }
+
+        const rawRecord = raw as Record<string, unknown>;
+        const toInt = (value: unknown): number | undefined => {
+            if (typeof value === 'number' && Number.isFinite(value)) {
+                return Math.trunc(value);
+            }
+            if (typeof value === 'string' && value.trim().length > 0) {
+                const parsed = Number(value);
+                if (Number.isFinite(parsed)) {
+                    return Math.trunc(parsed);
+                }
+            }
+            return undefined;
+        };
+
+        const rare = toInt(rawRecord.rare);
+        const low = toInt(rawRecord.low);
+        const medium = toInt(rawRecord.medium);
+        const high = toInt(rawRecord.high);
+
+        if (rare === undefined || low === undefined || medium === undefined || high === undefined) {
+            return DEFAULT_THRESHOLDS;
+        }
+
+        if (rare < 1 || !(rare < low && low < medium && medium < high)) {
+            return DEFAULT_THRESHOLDS;
+        }
+
+        return { rare, low, medium, high };
+    }
+
+    private buildCoverageLevels(thresholds: CoverageThresholds): CoverageLevel[] {
+        return [
+            {
+                ...COVERAGE_LEVEL_STYLES[0],
+                minInvocations: 0,
+                maxInvocations: 0
+            },
+            {
+                ...COVERAGE_LEVEL_STYLES[1],
+                minInvocations: 1,
+                maxInvocations: thresholds.rare
+            },
+            {
+                ...COVERAGE_LEVEL_STYLES[2],
+                minInvocations: thresholds.rare + 1,
+                maxInvocations: thresholds.low
+            },
+            {
+                ...COVERAGE_LEVEL_STYLES[3],
+                minInvocations: thresholds.low + 1,
+                maxInvocations: thresholds.medium
+            },
+            {
+                ...COVERAGE_LEVEL_STYLES[4],
+                minInvocations: thresholds.medium + 1,
+                maxInvocations: thresholds.high
+            },
+            {
+                ...COVERAGE_LEVEL_STYLES[5],
+                minInvocations: thresholds.high + 1,
+                maxInvocations: Infinity
+            }
+        ];
+    }
+
+    private getCoverageLevelByIndex(index: number): CoverageLevel {
+        if (index < 0) {
+            return this.coverageLevels[0];
+        }
+        if (index >= this.coverageLevels.length) {
+            return this.coverageLevels[this.coverageLevels.length - 1];
+        }
+        return this.coverageLevels[index];
     }
 }
