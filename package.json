@@ -672,6 +672,12 @@
                     "default": true,
                     "description": "Mark proof step states using whole line."
                 },
+                "tlaplus.formatter.enabled": {
+                    "type": "boolean",
+                    "scope": "window",
+                    "default": true,
+                    "markdownDescription": "Enable the TLA+ document formatter. [More info](https://github.com/FedericoPonzi/tlaplus-formatter/)"
+                },
                 "tlaplus.moduleSearchPaths": {
                     "type": "array",
                     "items": {
