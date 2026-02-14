@@ -104,7 +104,9 @@ export function registerDocumentFormatter(context: vscode.ExtensionContext): voi
                         tempInputPath,
                         tempOutputPath
                     ];
-                    const javaProcess = spawn(javaPath, spawnArgs);
+                    const javaProcess = spawn(javaPath, spawnArgs, {
+                        cwd: documentDir
+                    });
 
                     javaProcess.stdout.on('data', (data) => {
                         console.log(`Formatter STDOUT: ${data}`);
