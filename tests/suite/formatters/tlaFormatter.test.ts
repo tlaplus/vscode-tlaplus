@@ -27,9 +27,9 @@ const EXPECTED =
     'VARIABLE hr\n' +
     'HCini == hr \\in ( 1 .. 12 )\n' +
     'HCnxt == hr\' = IF hr # 12 THEN hr + 1 ELSE 1\n' +
-    'HC == HCini /\\ [] [HCnxt]_hr\n' +
+    'HC == HCini /\\ [][HCnxt]_hr\n' +
     '--------------------------------------------------------------\n' +
-    'THEOREM HC => [] HCini\n' +
+    'THEOREM HC => []HCini\n' +
     '==============================================================\n' +
     'This is post text\n' +
     'Has multiple lines in it.\n';
