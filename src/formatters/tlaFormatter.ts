@@ -3,17 +3,19 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { createHash } from 'crypto';
 import { spawn } from 'child_process';
-import { getJavaPath } from '../tla2tools';
+import { getJavaPath, TLA_CMODS_LIB_NAME } from '../tla2tools';
 import { moduleSearchPaths } from '../paths';
 
 const CFG_FORMATTER_ENABLED = 'tlaplus.formatter.enabled';
 const FORMATTER_JAR_NAME = 'tlaplus-formatter.jar';
+const FORMATTER_MAIN_CLASS = 'me.fponzi.tlaplusformatter.Main';
 
 /**
  * Builds `-DTLA-Library=...` with all module search paths (user-configured,
- * TLC standard/community modules, TLAPS) so the formatter's SANY can resolve
- * any EXTENDS'd modules. Paths using the `jarfile:` scheme are dropped because
- * Java's SANY resolves those from its own classpath.
+ * TLAPS, etc.) so the formatter's SANY can resolve any EXTENDS'd modules.
+ * Paths using the `jarfile:` scheme are dropped because those modules live
+ * inside JARs that are placed on the classpath instead (see the `-cp` args
+ * in registerDocumentFormatter).
  */
 function makeFormatterTlaLibraryOpt(documentDir?: string): string {
     const allPaths: string[] = [];
@@ -47,6 +49,7 @@ function generateHash(input: string, algorithm: string): string {
 
 export function registerDocumentFormatter(context: vscode.ExtensionContext): void {
     const formatterJarPath = path.join(context.extensionPath, 'tools', FORMATTER_JAR_NAME);
+    const cmodsJarPath = path.join(context.extensionPath, 'tools', TLA_CMODS_LIB_NAME);
 
     context.subscriptions.push(
         vscode.languages.registerDocumentFormattingEditProvider('tlaplus', {
@@ -97,9 +100,11 @@ export function registerDocumentFormatter(context: vscode.ExtensionContext): voi
 
                     const javaPath = getJavaPath();
                     const stderrChunks: string[] = [];
+                    const classPath = formatterJarPath + path.delimiter + cmodsJarPath;
                     const spawnArgs = [
                         makeFormatterTlaLibraryOpt(documentDir),
-                        '-jar', formatterJarPath,
+                        '-cp', classPath,
+                        FORMATTER_MAIN_CLASS,
                         '-v', 'ERROR',
                         tempInputPath,
                         tempOutputPath
