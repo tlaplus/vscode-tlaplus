@@ -533,6 +533,68 @@ suite('TLA Symbols Provider Test Suite', () => {
         ]);
     });
 
+    test('Parses module extends dependencies from XML output', () => {
+        const provider = new TlaDocumentSymbolsProvider(new TlaDocumentInfos());
+        const xml = `<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<modules>
+  <RootModule>MCSpec</RootModule>
+  <context>
+    <entry>
+      <ModuleNode>
+        <uniquename>MCSpec</uniquename>
+        <extends>
+          <uniquename>TLC</uniquename>
+          <uniquename>Spec</uniquename>
+          <uniquename>Spec</uniquename>
+        </extends>
+      </ModuleNode>
+    </entry>
+    <entry>
+      <ModuleNode>
+        <uniquename>Spec</uniquename>
+        <extends>
+          <uniquename>Naturals</uniquename>
+        </extends>
+      </ModuleNode>
+    </entry>
+    <entry>
+      <ModuleNode>
+        <uniquename>TLC</uniquename>
+      </ModuleNode>
+    </entry>
+  </context>
+</modules>`;
+
+        const parseXmlOutput = (provider as unknown as { [key: string]: unknown })['parseXmlOutput'] as (
+            xmlContent: string, documentUri: vscode.Uri
+        ) => {
+            dependencies: {
+                rootModuleName?: string;
+                extendsGraph: Map<string, string[]>;
+            };
+        };
+        const parsed = parseXmlOutput(xml, doc.uri);
+        assert.strictEqual(parsed.dependencies.rootModuleName, 'MCSpec');
+        assert.deepStrictEqual(parsed.dependencies.extendsGraph.get('MCSpec'), ['Spec', 'TLC']);
+        assert.deepStrictEqual(parsed.dependencies.extendsGraph.get('Spec'), ['Naturals']);
+        assert.deepStrictEqual(parsed.dependencies.extendsGraph.get('TLC'), []);
+    });
+
+    test('Handles XML without modules element for dependencies', () => {
+        const provider = new TlaDocumentSymbolsProvider(new TlaDocumentInfos());
+        const parseXmlOutput = (provider as unknown as { [key: string]: unknown })['parseXmlOutput'] as (
+            xmlContent: string, documentUri: vscode.Uri
+        ) => {
+            dependencies: {
+                rootModuleName?: string;
+                extendsGraph: Map<string, string[]>;
+            };
+        };
+        const parsed = parseXmlOutput('<invalid/>', doc.uri);
+        assert.strictEqual(parsed.dependencies.rootModuleName, undefined);
+        assert.strictEqual(parsed.dependencies.extendsGraph.size, 0);
+    });
+
 });
 
 async function assertSymbols(

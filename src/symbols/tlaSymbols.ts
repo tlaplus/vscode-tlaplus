@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { Module, TlaDocumentInfo, TlaDocumentInfos } from '../model/documentInfo';
+import { Module, TlaDocumentInfo, TlaDocumentInfos, XmlModuleDependencies } from '../model/documentInfo';
 import { ToolOutputChannel } from '../outputChannels';
 import { runXMLExporter, ToolProcessInfo } from '../tla2tools';
 import { XMLParser } from 'fast-xml-parser';
@@ -36,8 +36,8 @@ export class TlaSymbolInformation extends vscode.SymbolInformation {
     /**
      * Custom JSON serialization to include TLA+ specific properties
      */
-    toJSON(): any {
-        const result: any = {
+    toJSON(): Record<string, unknown> {
+        const result: Record<string, unknown> = {
             name: this.name,
             kind: this.kind,
             containerName: this.containerName,
@@ -87,11 +87,11 @@ export interface SymbolGroup {
 export function groupSymbolsByContainer(symbols: TlaSymbolInformation[]): SymbolGroup[] {
     // Use a Map with composite key to group symbols
     const groupMap = new Map<string, SymbolGroup>();
-    
+
     for (const symbol of symbols) {
         // Create a composite key from containerName and URI
         const key = `${symbol.containerName}|${symbol.location.uri.toString()}`;
-        
+
         // Create grouped symbol (URI and container factored out at group level)
         const groupedSymbol: GroupedSymbol = {
             name: symbol.name,
@@ -105,7 +105,7 @@ export function groupSymbolsByContainer(symbols: TlaSymbolInformation[]): Symbol
             preComment: symbol.preComment,
             level: symbol.level
         };
-        
+
         if (groupMap.has(key)) {
             // Add symbol to existing group
             groupMap.get(key)!.symbols.push(groupedSymbol);
@@ -118,7 +118,7 @@ export function groupSymbolsByContainer(symbols: TlaSymbolInformation[]): Symbol
             });
         }
     }
-    
+
     return Array.from(groupMap.values());
 }
 
@@ -246,6 +246,56 @@ export class TLADocumentSymbolProvider implements vscode.DocumentSymbolProvider 
 
 const sanyOutChannel = new ToolOutputChannel('SANY XML Exporter');
 
+interface XmlExportResult {
+    symbols: vscode.SymbolInformation[];
+    dependencies: XmlModuleDependencies;
+}
+
+interface ParsedXmlLineColumn {
+    begin?: string;
+    end?: string;
+}
+
+interface ParsedXmlLocation {
+    filename: string;
+    line?: ParsedXmlLineColumn;
+    column?: ParsedXmlLineColumn;
+}
+
+interface ParsedXmlNode {
+    uniquename?: string;
+    location?: ParsedXmlLocation;
+    arity?: string;
+    level?: string;
+    ['pre-comments']?: string;
+}
+
+interface ParsedXmlModuleNode {
+    uniquename?: unknown;
+    extends?: {
+        uniquename?: unknown;
+    };
+}
+
+interface ParsedXmlEntry {
+    UserDefinedOpKind?: ParsedXmlNode;
+    TheoremDefNode?: ParsedXmlNode;
+    AssumeDef?: ParsedXmlNode;
+    OpDeclNode?: ParsedXmlNode;
+    ModuleNode?: ParsedXmlModuleNode;
+}
+
+interface ParsedXmlModules {
+    RootModule?: unknown;
+    context?: {
+        entry?: ParsedXmlEntry[];
+    };
+}
+
+interface ParsedXml {
+    modules?: ParsedXmlModules;
+}
+
 /**
  * Provides TLA+ symbols from the given document.
  */
@@ -260,7 +310,8 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
         includeExtendedModules?: boolean
     ): Promise<vscode.SymbolInformation[] | vscode.DocumentSymbol[]> {
 
-        let xmlExporterPromise: Promise<vscode.SymbolInformation[] | undefined> | undefined;
+        let xmlExporterPromise: Promise<XmlExportResult | undefined> | undefined;
+        let xmlDependencies: XmlModuleDependencies = { extendsGraph: new Map<string, string[]>() };
         // Run the XML exporter in the background while regex parsing runs.
         if (process.env.VSCODE_TEST !== 'true' && !document.isDirty) {
             // Skip XML exporter when running in test environment
@@ -301,9 +352,10 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
         // If it succeeds, use the XML-based parsing result. We merge instead of replacing the regex-based
         // parsing result to not lose PlusCal symbols.
         try {
-            const xmlSymbols = await xmlExporterPromise;
-            if (xmlSymbols) {
-                symbols = this.merge(symbols, xmlSymbols);
+            const xmlExportResult = await xmlExporterPromise;
+            if (xmlExportResult) {
+                symbols = this.merge(symbols, xmlExportResult.symbols);
+                xmlDependencies = xmlExportResult.dependencies;
             }
         } catch (error: unknown) {
             // If XML exporter fails, just use regex-based parsing result
@@ -315,7 +367,8 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
             context.rootModule.convert(),
             context.plusCal?.convert(),
             context.modules.map(m => m.convert()),
-            symbols.slice()
+            symbols.slice(),
+            xmlDependencies
         ));
         if (context.plusCal) {
             symbols = symbols.concat(context.plusCal.symbols);
@@ -338,12 +391,12 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
     ): Promise<SymbolGroup[]> {
         // Get the regular symbols first
         const symbols = await this.provideDocumentSymbols(document, token, includeExtendedModules);
-        
+
         // Filter to only TlaSymbolInformation objects and group them
-        const tlaSymbols = symbols.filter((symbol): symbol is TlaSymbolInformation => 
+        const tlaSymbols = symbols.filter((symbol): symbol is TlaSymbolInformation =>
             symbol instanceof TlaSymbolInformation
         );
-        
+
         return groupSymbolsByContainer(tlaSymbols);
     }
 
@@ -352,7 +405,7 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
      */
     private async runXmlExporter(
         uri: vscode.Uri, includeExtendedModules?: boolean
-    ): Promise<vscode.SymbolInformation[] | undefined> {
+    ): Promise<XmlExportResult | undefined> {
         try {
             // Run XML exporter
             const processInfo: ToolProcessInfo = await runXMLExporter(uri, false, includeExtendedModules);
@@ -382,7 +435,7 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
                 return undefined;
             }
 
-            return this.parseXmlSymbols(stdoutData, uri);
+            return this.parseXmlOutput(stdoutData, uri);
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             sanyOutChannel.appendLine(`Error running XML exporter: ${errorMessage}`);
@@ -391,131 +444,184 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
     }
 
     /**
-     * Parse XML content produced by the XML exporter and convert it to vscode.SymbolInformation
+     * Parse XML content produced by the XML exporter and convert it to symbols and module dependencies.
      */
-    private parseXmlSymbols(xmlContent: string, documentUri: vscode.Uri): vscode.SymbolInformation[] {
-        const symbols: vscode.SymbolInformation[] = [];
-
+    private parseXmlOutput(xmlContent: string, documentUri: vscode.Uri): XmlExportResult {
         try {
-            // Parse XML using the fast-xml-parser library
             const parser = new XMLParser({
                 ignoreAttributes: false,
-                attributeNamePrefix: '', // Keep attribute names as-is
+                attributeNamePrefix: '',
                 isArray: (name) => ['entry', 'ModuleNodeRef', 'operands', 'params'].includes(name)
             });
-
-            const xmlObj = parser.parse(xmlContent);
+            const xmlObj = parser.parse(xmlContent) as ParsedXml;
             if (!xmlObj.modules) {
                 sanyOutChannel.appendLine('Invalid XML: missing modules element');
-                return symbols;
+                return {
+                    symbols: [],
+                    dependencies: { extendsGraph: new Map<string, string[]>() }
+                };
             }
-
-            // Process all entries.
-            if (xmlObj.modules.context && xmlObj.modules.context.entry) {
-                // Process all entries and create symbols
-                for (const entry of xmlObj.modules.context.entry) {
-                    if (entry.UserDefinedOpKind) {
-                        // Process user-defined operators (functions)
-                        const opKind = entry.UserDefinedOpKind;
-                        const name = opKind.uniquename;
-
-                        if (name && opKind.location) {
-                            const location = opKind.location;
-                            const line = parseInt(location.line?.begin || '0') - 1;
-                            const col = parseInt(location.column?.begin || '0') - 1;
-                            const endLine = parseInt(location.line?.end || '0') - 1;
-                            const endCol = parseInt(location.column?.end || '0') - 1;
-                            const preComments = opKind['pre-comments'] || undefined;
-                            const level = parseInt(opKind.level);
-                            symbols.push(new TlaSymbolInformation(
-                                name,
-                                this.determineSymbolKind(level, parseInt(opKind.arity)),
-                                opKind.location.filename,
-                                new vscode.Location(
-                                    documentUri,
-                                    new vscode.Range(line, col, endLine, endCol)
-                                ),
-                                preComments,
-                                level
-                            ));
-                        }
-                    } else if (entry.TheoremDefNode) {
-                        // Process theorem/axiom/lemma definitions
-                        const theoremNode = entry.TheoremDefNode;
-                        const name = theoremNode.uniquename;
-
-                        if (name && theoremNode.location) {
-                            const location = theoremNode.location;
-                            const line = parseInt(location.line?.begin || '0') - 1;
-                            const col = parseInt(location.column?.begin || '0') - 1;
-                            const endLine = parseInt(location.line?.end || '0') - 1;
-                            const endCol = parseInt(location.column?.end || '0') - 1;
-                            symbols.push(new TlaSymbolInformation(
-                                name,
-                                vscode.SymbolKind.Boolean,
-                                theoremNode.location.filename,
-                                new vscode.Location(
-                                    documentUri,
-                                    new vscode.Range(line, col, endLine, endCol)
-                                )
-                            ));
-                        }
-                    } else if (entry.AssumeDef) {
-                        // Process assume definitions
-                        const assumeNode = entry.AssumeDef;
-                        const name = assumeNode.uniquename;
-
-                        if (name && assumeNode.location) {
-                            const location = assumeNode.location;
-                            const line = parseInt(location.line?.begin || '0') - 1;
-                            const col = parseInt(location.column?.begin || '0') - 1;
-                            const endLine = parseInt(location.line?.end || '0') - 1;
-                            const endCol = parseInt(location.column?.end || '0') - 1;
-                            symbols.push(new TlaSymbolInformation(
-                                name,
-                                vscode.SymbolKind.Constructor,
-                                assumeNode.location.filename,
-                                new vscode.Location(
-                                    documentUri,
-                                    new vscode.Range(line, col, endLine, endCol)
-                                )
-                            ));
-                        }
-                    } else if (entry.OpDeclNode) {
-                        // Process variable/constant declarations
-                        const declNode = entry.OpDeclNode;
-                        const name = declNode.uniquename;
-
-                        if (name && declNode.location) {
-                            const location = declNode.location;
-                            const line = parseInt(location.line?.begin || '0') - 1;
-                            const col = parseInt(location.column?.begin || '0') - 1;
-                            const endLine = parseInt(location.line?.end || '0') - 1;
-                            const endCol = parseInt(location.column?.end || '0') - 1;
-                            const preComments = declNode['pre-comments'] || undefined;
-                            const level = parseInt(declNode.level); // Parse level from declaration
-
-                            symbols.push(new TlaSymbolInformation(
-                                name,
-                                this.determineSymbolKind(level, parseInt(declNode.arity)),
-                                declNode.location.filename,
-                                new vscode.Location(
-                                    documentUri,
-                                    new vscode.Range(line, col, endLine, endCol)
-                                ),
-                                preComments,
-                                level
-                            ));
-                        }
-                    }
-                }
-            }
-            return symbols;
+            return {
+                symbols: this.parseXmlSymbols(xmlObj.modules, documentUri),
+                dependencies: this.parseXmlModuleDependencies(xmlObj.modules)
+            };
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             sanyOutChannel.appendLine(`Error parsing XML: ${errorMessage}`);
-            return [];
+            return {
+                symbols: [],
+                dependencies: { extendsGraph: new Map<string, string[]>() }
+            };
         }
+    }
+
+    /**
+     * Parse XML content produced by the XML exporter and convert it to vscode.SymbolInformation
+     */
+    private parseXmlSymbols(modules: ParsedXmlModules, documentUri: vscode.Uri): vscode.SymbolInformation[] {
+        const symbols: vscode.SymbolInformation[] = [];
+
+        // Process all entries.
+        if (modules.context && modules.context.entry) {
+            // Process all entries and create symbols
+            for (const entry of modules.context.entry) {
+                if (entry.UserDefinedOpKind) {
+                    // Process user-defined operators (functions)
+                    const opKind = entry.UserDefinedOpKind;
+                    const name = opKind.uniquename;
+
+                    if (name && opKind.location && typeof opKind.location.filename === 'string') {
+                        const location = opKind.location;
+                        const line = parseInt(location.line?.begin || '0') - 1;
+                        const col = parseInt(location.column?.begin || '0') - 1;
+                        const endLine = parseInt(location.line?.end || '0') - 1;
+                        const endCol = parseInt(location.column?.end || '0') - 1;
+                        const preComments = opKind['pre-comments'] || undefined;
+                        const level = parseInt(opKind.level || '0');
+                        symbols.push(new TlaSymbolInformation(
+                            name,
+                            this.determineSymbolKind(level, parseInt(opKind.arity || '0')),
+                            opKind.location.filename,
+                            new vscode.Location(
+                                documentUri,
+                                new vscode.Range(line, col, endLine, endCol)
+                            ),
+                            preComments,
+                            level
+                        ));
+                    }
+                } else if (entry.TheoremDefNode) {
+                    // Process theorem/axiom/lemma definitions
+                    const theoremNode = entry.TheoremDefNode;
+                    const name = theoremNode.uniquename;
+
+                    if (name && theoremNode.location && typeof theoremNode.location.filename === 'string') {
+                        const location = theoremNode.location;
+                        const line = parseInt(location.line?.begin || '0') - 1;
+                        const col = parseInt(location.column?.begin || '0') - 1;
+                        const endLine = parseInt(location.line?.end || '0') - 1;
+                        const endCol = parseInt(location.column?.end || '0') - 1;
+                        symbols.push(new TlaSymbolInformation(
+                            name,
+                            vscode.SymbolKind.Boolean,
+                            theoremNode.location.filename,
+                            new vscode.Location(
+                                documentUri,
+                                new vscode.Range(line, col, endLine, endCol)
+                            )
+                        ));
+                    }
+                } else if (entry.AssumeDef) {
+                    // Process assume definitions
+                    const assumeNode = entry.AssumeDef;
+                    const name = assumeNode.uniquename;
+
+                    if (name && assumeNode.location && typeof assumeNode.location.filename === 'string') {
+                        const location = assumeNode.location;
+                        const line = parseInt(location.line?.begin || '0') - 1;
+                        const col = parseInt(location.column?.begin || '0') - 1;
+                        const endLine = parseInt(location.line?.end || '0') - 1;
+                        const endCol = parseInt(location.column?.end || '0') - 1;
+                        symbols.push(new TlaSymbolInformation(
+                            name,
+                            vscode.SymbolKind.Constructor,
+                            assumeNode.location.filename,
+                            new vscode.Location(
+                                documentUri,
+                                new vscode.Range(line, col, endLine, endCol)
+                            )
+                        ));
+                    }
+                } else if (entry.OpDeclNode) {
+                    // Process variable/constant declarations
+                    const declNode = entry.OpDeclNode;
+                    const name = declNode.uniquename;
+
+                    if (name && declNode.location && typeof declNode.location.filename === 'string') {
+                        const location = declNode.location;
+                        const line = parseInt(location.line?.begin || '0') - 1;
+                        const col = parseInt(location.column?.begin || '0') - 1;
+                        const endLine = parseInt(location.line?.end || '0') - 1;
+                        const endCol = parseInt(location.column?.end || '0') - 1;
+                        const preComments = declNode['pre-comments'] || undefined;
+                        const level = parseInt(declNode.level || '0'); // Parse level from declaration
+
+                        symbols.push(new TlaSymbolInformation(
+                            name,
+                            this.determineSymbolKind(level, parseInt(declNode.arity || '0')),
+                            declNode.location.filename,
+                            new vscode.Location(
+                                documentUri,
+                                new vscode.Range(line, col, endLine, endCol)
+                            ),
+                            preComments,
+                            level
+                        ));
+                    }
+                }
+            }
+        }
+        return symbols;
+    }
+
+    private parseXmlModuleDependencies(modules: ParsedXmlModules): XmlModuleDependencies {
+        const dependencies: XmlModuleDependencies = {
+            rootModuleName: typeof modules.RootModule === 'string'
+                ? modules.RootModule
+                : undefined,
+            extendsGraph: new Map<string, string[]>()
+        };
+
+        const entries = modules.context?.entry;
+        if (!Array.isArray(entries)) {
+            return dependencies;
+        }
+
+        for (const entry of entries) {
+            const moduleNode = entry.ModuleNode;
+            if (!moduleNode || typeof moduleNode.uniquename !== 'string' || moduleNode.uniquename === '') {
+                continue;
+            }
+
+            const moduleName = moduleNode.uniquename;
+            const rawExtends = moduleNode.extends?.uniquename;
+            const extendsValues = this.toStringArray(rawExtends)
+                .filter(name => name.length > 0);
+            const uniqueSortedValues = Array.from(new Set(extendsValues)).sort();
+            dependencies.extendsGraph.set(moduleName, uniqueSortedValues);
+        }
+
+        return dependencies;
+    }
+
+    private toStringArray(value: unknown): string[] {
+        if (Array.isArray(value)) {
+            return value.filter((entry): entry is string => typeof entry === 'string');
+        }
+        if (typeof value === 'string') {
+            return [value];
+        }
+        return [];
     }
 
     /**

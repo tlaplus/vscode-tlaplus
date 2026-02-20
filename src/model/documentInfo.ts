@@ -1,5 +1,20 @@
 import * as vscode from 'vscode';
 
+export type ModuleExtendsGraph = Map<string, string[]>;
+
+export interface XmlModuleDependencies {
+    rootModuleName?: string;
+    extendsGraph: ModuleExtendsGraph;
+}
+
+function cloneExtendsGraph(graph: ModuleExtendsGraph): ModuleExtendsGraph {
+    const cloned: ModuleExtendsGraph = new Map();
+    for (const [moduleName, extendsList] of graph.entries()) {
+        cloned.set(moduleName, extendsList.slice());
+    }
+    return cloned;
+}
+
 /**
  * Describes a module, which can be:
  * - real TLA+ module
@@ -19,18 +34,36 @@ export class Module {
  */
 export class TlaDocumentInfo {
     readonly plusCalSymbols: vscode.SymbolInformation[];
+    private readonly xmlDependencies: XmlModuleDependencies;
 
     constructor(
         private readonly rootModule: Module | undefined = undefined,
         private readonly plusCal: Module | undefined = undefined,
         private readonly modules: Module[] = [],
-        public symbols: vscode.SymbolInformation[] = []
+        public symbols: vscode.SymbolInformation[] = [],
+        xmlDependencies: XmlModuleDependencies = { extendsGraph: new Map<string, string[]>() }
     ) {
         this.plusCalSymbols = plusCal?.symbols || [];
+        this.xmlDependencies = {
+            rootModuleName: xmlDependencies.rootModuleName,
+            extendsGraph: cloneExtendsGraph(xmlDependencies.extendsGraph)
+        };
     }
 
     isPlusCalAt(pos: vscode.Position): boolean {
         return this.plusCal && this.plusCal.range.contains(pos) ? true : false;
+    }
+
+    getRootModuleName(): string | undefined {
+        return this.xmlDependencies.rootModuleName;
+    }
+
+    getExtendedModules(moduleName: string): string[] {
+        return this.xmlDependencies.extendsGraph.get(moduleName)?.slice() ?? [];
+    }
+
+    getExtendsGraph(): ModuleExtendsGraph {
+        return cloneExtendsGraph(this.xmlDependencies.extendsGraph);
     }
 }
 
