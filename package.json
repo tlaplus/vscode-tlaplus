@@ -686,6 +686,12 @@
                     "description": "Paths to look for TLA+ modules.",
                     "default": []
                 },
+                "tlaplus.tlc.sequenceDiagram.traceVariable": {
+                    "type": "string",
+                    "scope": "window",
+                    "default": "_seqDiagramTrace",
+                    "markdownDescription": "Name of the TLA+ variable that holds the message trace (a sequence of records with `src`, `dst`, `msg`, etc.). After each TLC run, if the error trace contains this variable, a PlantUML sequence diagram is generated and opened beside the editor. Use a TLC `ALIAS` to map your spec's variable to this well-known name."
+                },
                 "tlaplus.tlc.profiler.enabled": {
                     "type": "boolean",
                     "default": false,

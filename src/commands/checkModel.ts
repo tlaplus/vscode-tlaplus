@@ -15,6 +15,8 @@ import { TlcModelCheckerStdoutParser } from '../parsers/tlc';
 import { runTlc, stopProcess } from '../tla2tools';
 import { ModelResolveMode, resolveModelForUri } from './modelResolver';
 import { TlcCoverageDecorationProvider } from '../tlcCoverage';
+import { tlcTraceToPuml } from '../generators/tlcTraceToPuml';
+import { showSequenceDiagramFromPuml } from '../panels/sequenceDiagramView';
 
 export const CMD_CHECK_MODEL_RUN = 'tlaplus.model.check.run';
 export const CMD_CHECK_MODEL_RUN_AGAIN = 'tlaplus.model.check.runAgain';
@@ -26,6 +28,7 @@ export const CTX_TLC_RUNNING = 'tlaplus.tlc.isRunning';
 export const CTX_TLC_CAN_RUN_AGAIN = 'tlaplus.tlc.canRunAgain';
 
 const CFG_CREATE_OUT_FILES = 'tlaplus.tlc.modelChecker.createOutFiles';
+const CFG_SEQ_DIAGRAM_TRACE_VAR = 'tlaplus.tlc.sequenceDiagram.traceVariable';
 let checkProcess: ChildProcess | undefined;
 let lastCheckFiles: SpecFiles | undefined;
 let coverageProvider: TlcCoverageDecorationProvider | undefined;
@@ -87,7 +90,8 @@ export async function checkModelCustom(
     }
     const doc = editor.document;
     if (doc.languageId !== LANG_TLAPLUS && doc.languageId !== LANG_TLAPLUS_CFG) {
-        vscode.window.showWarningMessage('File in the active editor is not a .tla or .cfg, it cannot be checked as a model');
+        vscode.window.showWarningMessage(
+            'File in the active editor is not a .tla or .cfg, it cannot be checked as a model');
         return;
     }
     const specFiles = await getSpecFiles(doc.uri, true, true, 'customPick');
@@ -209,6 +213,13 @@ export async function doCheckModel(
                 coverageProvider.updateCoverage(checkResult.coverageStat, totalDistinctStates);
             }
         };
+        // Accumulate raw stdout for sequence-diagram generation
+        const rawChunks: string[] = [];
+        if (checkProcess.stdout) {
+            checkProcess.stdout.on('data', (chunk: Buffer | string) => {
+                rawChunks.push(String(chunk));
+            });
+        }
         const stdoutParser = new TlcModelCheckerStdoutParser(
             ModelCheckResultSource.Process,
             checkProcess.stdout,
@@ -219,6 +230,8 @@ export async function doCheckModel(
         );
         const dCol = await stdoutParser.readAll();
         applyDCollection(dCol, diagnostic);
+        // Auto-generate PlantUML sequence diagram from TLC error trace
+        tryGenerateSequenceDiagram(rawChunks.join(''), specFiles, extContext);
         return resultHolder.checkResult;
     } catch (err) {
         statusBarItem.hide();
@@ -275,4 +288,31 @@ export function mapTlcOutputLine(line: string): string | undefined {
     }
     const cleanLine = line.replace(/@!@!@(START|END)MSG \d+(:\d+)? @!@!@/g, '');
     return cleanLine === '' ? undefined : cleanLine;
+}
+
+/**
+ * Attempts to generate a PlantUML sequence diagram from raw TLC output.
+ * Errors are logged to the TLC output channel, never thrown.
+ */
+function tryGenerateSequenceDiagram(
+    rawOutput: string,
+    specFiles: SpecFiles,
+    extContext: vscode.ExtensionContext,
+): void {
+    try {
+        const traceVar = vscode.workspace.getConfiguration()
+            .get<string>(CFG_SEQ_DIAGRAM_TRACE_VAR) ?? '_seqDiagramTrace';
+        const puml = tlcTraceToPuml(rawOutput, {
+            traceVariable: traceVar,
+            title: specFiles.modelName,
+        });
+        if (puml) {
+            showSequenceDiagramFromPuml(puml, extContext, specFiles.modelName)
+                .catch(err => {
+                    outChannel.appendLine(`[Sequence Diagram] Failed to open editor: ${err}`);
+                });
+        }
+    } catch (err) {
+        outChannel.appendLine(`[Sequence Diagram] Failed to generate: ${err}`);
+    }
 }
