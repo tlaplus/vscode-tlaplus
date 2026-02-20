@@ -19,9 +19,10 @@ export function parseTlcTrace(output: string, traceVariable = '_seqDiagramTrace'
     // Collapse whitespace — TLC wraps long lines, which can split delimiters.
     const flat = output.replace(/\s+/g, ' ');
 
-    // Match:  /\ trace = << ... >>
+    // Match:  /\ trace = << ... >>   (normal variable output)
+    //   or:      trace = << ... >>   (ALIAS output — no /\ prefix)
     const escaped = traceVariable.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const pattern = new RegExp(`/\\\\ ${escaped} = <<(.*?)>>`, 'g');
+    const pattern = new RegExp(`(?:/\\\\ )?${escaped} = <<(.*?)>>`, 'g');
     const matches: string[] = [];
     let m: RegExpExecArray | null;
     while ((m = pattern.exec(flat)) !== null) {

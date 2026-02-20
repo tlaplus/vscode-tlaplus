@@ -1,17 +1,11 @@
 /**
- * sequenceDiagramView.ts — Generate PlantUML from TLC traces.
+ * sequenceDiagramView.ts — Open PlantUML text in a VS Code editor.
  *
  * The extension generates PlantUML text from TLC output — it does NOT render
  * SVG.  Users who want a visual preview install a dedicated PlantUML extension
  * (e.g. jebbs.plantuml) which handles rendering, export, and live preview.
- *
- * Public API:
- *  - showSequenceDiagramFromPuml() Open generated PlantUML text in a new editor.
- *  - showSequenceDiagram()         Convert TraceData → PlantUML → new editor.
  */
 import * as vscode from 'vscode';
-import { TraceData } from '../webview/sequenceDiagram/types';
-import { traceDataToPlantUml } from '../generators/plantUmlGenerator';
 
 /**
  * Show generated PlantUML text in a new untitled editor tab.
@@ -31,15 +25,4 @@ export async function showSequenceDiagramFromPuml(
         preserveFocus: true,
         preview: false,
     });
-}
-
-/**
- * Convert structured TraceData to PlantUML and open in a new editor.
- */
-export async function showSequenceDiagram(
-    data: TraceData,
-    extContext: vscode.ExtensionContext,
-): Promise<void> {
-    const puml = traceDataToPlantUml(data);
-    await showSequenceDiagramFromPuml(puml, extContext);
 }
