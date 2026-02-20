@@ -108,6 +108,30 @@ suite('Trace Parser Test Suite', () => {
             assert.strictEqual(result[0].src, 'CPU-0');
             assert.strictEqual(result[0].dst, 'L2.Cache');
         });
+
+        test('Parses ALIAS output (no /\\ prefix)', () => {
+            const output = '_seqDiagramTrace = <<'
+                + ' [msg |-> "MWr", ch |-> "pcie_req",'
+                + ' src |-> "PCIe", dst |-> "HIOP"] >>';
+            const result = parseTlcTrace(output);
+            assert.ok(result);
+            assert.strictEqual(result.length, 1);
+            assert.strictEqual(result[0].msg, 'MWr');
+            assert.strictEqual(result[0].ch, 'pcie_req');
+        });
+
+        test('Parses multi-state ALIAS output (last match wins)', () => {
+            const output = [
+                '_seqDiagramTrace = << >>',
+                '',
+                '_seqDiagramTrace = <<'
+                    + ' [msg |-> "Req", src |-> "A", dst |-> "B"] >>',
+            ].join('\n');
+            const result = parseTlcTrace(output);
+            assert.ok(result);
+            assert.strictEqual(result.length, 1);
+            assert.strictEqual(result[0].msg, 'Req');
+        });
     });
 
     // ── parseAllTerminalTraces ───────────────────────────────

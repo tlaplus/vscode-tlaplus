@@ -41,18 +41,18 @@ suite('tlcTraceToPuml Test Suite', () => {
         assert.ok(puml.includes('autonumber'));
     });
 
-    test('Includes title header when option provided', () => {
+    test('Includes title on @startuml line when option provided', () => {
         const output = '/\\ _seqDiagramTrace = << [msg |-> "R", src |-> "A", dst |-> "B"] >>';
         const puml = tlcTraceToPuml(output, { title: 'MyModel' });
         assert.ok(puml);
-        assert.ok(puml.includes('header MyModel'));
+        assert.ok(puml.includes('@startuml MyModel'));
     });
 
-    test('Omits title header when not provided', () => {
+    test('Omits title when not provided', () => {
         const output = '/\\ _seqDiagramTrace = << [msg |-> "R", src |-> "A", dst |-> "B"] >>';
         const puml = tlcTraceToPuml(output);
         assert.ok(puml);
-        assert.ok(!puml.includes('header '));
+        assert.ok(puml.startsWith('@startuml\n') || puml.startsWith('@startuml\r'));
     });
 
     test('Colors arrows when channel field present', () => {
@@ -136,5 +136,18 @@ suite('tlcTraceToPuml Test Suite', () => {
         assert.ok(puml);
         assert.ok(puml.includes('skinparam backgroundColor transparent'));
         assert.ok(puml.includes('skinparam sequenceMessageAlign center'));
+    });
+
+    test('Handles ALIAS output format (no /\\ prefix)', () => {
+        const output = [
+            '_seqDiagramTrace = <<',
+            '  [msg |-> "MWr", ch |-> "pcie_req",',
+            '   src |-> "PCIe", dst |-> "HIOP"] >>',
+        ].join('\n');
+        const puml = tlcTraceToPuml(output);
+        assert.ok(puml, 'Expected PlantUML from ALIAS output');
+        assert.ok(puml.includes('participant "PCIe"'));
+        assert.ok(puml.includes('participant "HIOP"'));
+        assert.ok(puml.includes('MWr'));
     });
 });

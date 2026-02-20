@@ -107,7 +107,7 @@ export function tlcTraceToPuml(
     // ── Generate PlantUML ────────────────────────────────────
     const lines: string[] = [];
 
-    lines.push('@startuml');
+    lines.push(options.title ? `@startuml ${esc(options.title)}` : '@startuml');
     lines.push('');
 
     // Skin settings
@@ -126,11 +126,6 @@ export function tlcTraceToPuml(
 
     lines.push('autonumber');
     lines.push('');
-
-    if (options.title) {
-        lines.push(`header ${esc(options.title)}`);
-        lines.push('');
-    }
 
     // Declare participants
     for (const p of participantOrder) {
@@ -426,8 +421,9 @@ function renderMessageStr(
     let lbl: string;
     if (style && m.ch) {
         // Explicit channel: show channel name annotation below message
+        // Close <color> before \n — PlantUML creole breaks mid-tag across newlines
         const c = style.label.replace('#', '');
-        lbl = `<color:#${c}><b>${esc(m.msg)}</b>\\n<size:9>${esc(m.ch)}</size></color>`;
+        lbl = `<color:#${c}><b>${esc(m.msg)}</b></color>\\n<color:#${c}><size:9>${esc(m.ch)}</size></color>`;
     } else if (style) {
         // Auto-channel from msg type: colored but no annotation
         const c = style.label.replace('#', '');
