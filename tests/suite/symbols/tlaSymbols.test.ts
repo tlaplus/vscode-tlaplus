@@ -566,14 +566,14 @@ suite('TLA Symbols Provider Test Suite', () => {
 </modules>`;
 
         const parseXmlOutput = (provider as unknown as { [key: string]: unknown })['parseXmlOutput'] as (
-            xmlContent: string, documentUri: vscode.Uri
+            this: unknown, xmlContent: string, documentUri: vscode.Uri
         ) => {
             dependencies: {
                 rootModuleName?: string;
                 extendsGraph: Map<string, string[]>;
             };
         };
-        const parsed = parseXmlOutput(xml, doc.uri);
+        const parsed = parseXmlOutput.call(provider, xml, doc.uri);
         assert.strictEqual(parsed.dependencies.rootModuleName, 'MCSpec');
         assert.deepStrictEqual(parsed.dependencies.extendsGraph.get('MCSpec'), ['Spec', 'TLC']);
         assert.deepStrictEqual(parsed.dependencies.extendsGraph.get('Spec'), ['Naturals']);
@@ -583,14 +583,14 @@ suite('TLA Symbols Provider Test Suite', () => {
     test('Handles XML without modules element for dependencies', () => {
         const provider = new TlaDocumentSymbolsProvider(new TlaDocumentInfos());
         const parseXmlOutput = (provider as unknown as { [key: string]: unknown })['parseXmlOutput'] as (
-            xmlContent: string, documentUri: vscode.Uri
+            this: unknown, xmlContent: string, documentUri: vscode.Uri
         ) => {
             dependencies: {
                 rootModuleName?: string;
                 extendsGraph: Map<string, string[]>;
             };
         };
-        const parsed = parseXmlOutput('<invalid/>', doc.uri);
+        const parsed = parseXmlOutput.call(provider, '<invalid/>', doc.uri);
         assert.strictEqual(parsed.dependencies.rootModuleName, undefined);
         assert.strictEqual(parsed.dependencies.extendsGraph.size, 0);
     });
