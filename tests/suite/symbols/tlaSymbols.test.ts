@@ -6,7 +6,7 @@ import { TlaDocumentSymbolsProvider, ROOT_CONTAINER_NAME,
 import { replaceDocContents } from '../document';
 import { symModule, loc, range, symField, symFunc, symModRef, symBool, pos, symPlusCal, symConst,
     symVar } from '../shortcuts';
-import { TlaDocumentInfos } from '../../../src/model/documentInfo';
+import { SemanticService } from '../../../src/services/semanticService';
 
 suite('TLA Symbols Provider Test Suite', () => {
     let doc: vscode.TextDocument;
@@ -540,22 +540,22 @@ async function assertSymbols(
     docLines: string[],
     expectSymbols: vscode.SymbolInformation[]
 ): Promise<void> {
-    const docInfos = new TlaDocumentInfos();
-    const symbolsProvider = new TlaDocumentSymbolsProvider(docInfos);
+    const semanticService = new SemanticService();
+    const symbolsProvider = new TlaDocumentSymbolsProvider(semanticService);
     await replaceDocContents(doc, docLines.join('\n'));
     const tokenSrc = new vscode.CancellationTokenSource();
     const symbols = await symbolsProvider.provideDocumentSymbols(doc, tokenSrc.token);
     assert.deepEqual(symbols, expectSymbols);
-    assertDocSymbols(doc.uri, docInfos, expectSymbols);
+    assertDocSymbols(doc.uri, semanticService, expectSymbols);
     return undefined;
 }
 
 function assertDocSymbols(
     docUri: vscode.Uri,
-    docInfos: TlaDocumentInfos,
+    semanticService: SemanticService,
     expectSymbols: vscode.SymbolInformation[]
 ) {
-    const docSymbolsList = docInfos.get(docUri).symbols;
+    const docSymbolsList = semanticService.getDocumentInfo(docUri).symbols;
     expectSymbols.forEach((expSymbol) => {
         const symbol = docSymbolsList.find(s => s.name === expSymbol.name);
         assert.ok(symbol);
