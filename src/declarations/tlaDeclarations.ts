@@ -1,7 +1,9 @@
 import * as vscode from "vscode";
 import * as path from "path";
-import { TlaDocumentInfos, TlaDocumentInfo } from "../model/documentInfo";
+import { TlaDocumentInfo } from "../model/documentInfo";
 import { moduleSearchPaths } from "../paths";
+import { SemanticService } from "../services/semanticService";
+import { TLADocumentSymbolProvider } from "../symbols/tlaSymbols";
 function createJarUri(archivePath: string, internalPath: string): vscode.Uri {
   const normalizedInternal = internalPath.startsWith("/")
     ? internalPath
@@ -409,26 +411,29 @@ async function resolveModuleInBasePath(
 
 async function ensureModuleSymbols(
   moduleUri: vscode.Uri,
-  docInfos: TlaDocumentInfos,
+  semanticService: SemanticService,
 ): Promise<void> {
   if (moduleUri.scheme !== "file") {
     return;
   }
-  const cached = docInfos.get(moduleUri);
+  const cached = semanticService.getDocumentInfo(moduleUri);
   if (cached.symbols.length > 0 || cached.plusCalSymbols.length > 0) {
     return;
   }
 
+  let document: vscode.TextDocument;
   try {
-    await vscode.workspace.openTextDocument(moduleUri);
+    document = await vscode.workspace.openTextDocument(moduleUri);
   } catch {
     return;
   }
 
   try {
-    await vscode.commands.executeCommand(
-      "vscode.executeDocumentSymbolProvider",
-      moduleUri,
+    const token = new vscode.CancellationTokenSource();
+    const provider = new TLADocumentSymbolProvider(semanticService);
+    await provider.provideDocumentSymbols(
+      document,
+      token.token,
     );
   } catch {
     // ignore symbol provider failures; fallback will handle navigation
@@ -438,9 +443,9 @@ async function ensureModuleSymbols(
 async function findSymbolInModule(
   moduleUri: vscode.Uri,
   symbolName: string,
-  docInfos: TlaDocumentInfos,
+  semanticService: SemanticService,
 ): Promise<vscode.Location | undefined> {
-  await ensureModuleSymbols(moduleUri, docInfos);
+  await ensureModuleSymbols(moduleUri, semanticService);
   const document = await vscode.workspace.openTextDocument(moduleUri);
   const searchName = trimTicks(symbolName);
   const escapedName = searchName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -584,18 +589,18 @@ function symbolLocations(
 async function provideSymbolLocations(
   document: vscode.TextDocument,
   position: vscode.Position,
-  docInfos: TlaDocumentInfos,
+  semanticService: SemanticService,
 ): Promise<vscode.Location | vscode.Location[] | undefined> {
   // First check if we're inside an INSTANCE ... WITH clause (left-hand side)
   const instanceContext = getInstanceWithContext(document, position);
   if (instanceContext) {
     const moduleUri = await findModuleFile(instanceContext.moduleName, document.uri);
     if (moduleUri) {
-      const targetLocation = await findSymbolInModule(
-        moduleUri,
-        instanceContext.symbolName,
-        docInfos,
-      );
+        const targetLocation = await findSymbolInModule(
+          moduleUri,
+          instanceContext.symbolName,
+          semanticService,
+        );
       if (targetLocation) {
         return targetLocation;
       }
@@ -616,7 +621,7 @@ async function provideSymbolLocations(
   }
 
   // Fall back to regular symbol resolution
-  const docInfo = docInfos.get(document.uri);
+  const docInfo = semanticService.getDocumentInfo(document.uri);
   const localLocations = docInfo
     ? symbolLocations(document, docInfo, position) ?? []
     : [];
@@ -644,7 +649,7 @@ async function provideSymbolLocations(
     const targetLocation = await findSymbolInModule(
       moduleUri,
       searchName,
-      docInfos,
+      semanticService,
     );
     if (targetLocation) {
       return targetLocation;
@@ -655,26 +660,26 @@ async function provideSymbolLocations(
 }
 
 export class TlaDeclarationsProvider implements vscode.DeclarationProvider {
-  constructor(private readonly docInfos: TlaDocumentInfos) {}
+  constructor(private readonly semanticService: SemanticService) {}
 
   provideDeclaration(
     document: vscode.TextDocument,
     position: vscode.Position,
     _token: vscode.CancellationToken,
   ): vscode.ProviderResult<vscode.Declaration> {
-    return provideSymbolLocations(document, position, this.docInfos);
+    return provideSymbolLocations(document, position, this.semanticService);
   }
 }
 
 export class TlaDefinitionsProvider implements vscode.DefinitionProvider {
-  constructor(private readonly docInfos: TlaDocumentInfos) {}
+  constructor(private readonly semanticService: SemanticService) {}
 
   provideDefinition(
     document: vscode.TextDocument,
     position: vscode.Position,
     _token: vscode.CancellationToken,
   ): vscode.ProviderResult<vscode.Declaration> {
-    return provideSymbolLocations(document, position, this.docInfos);
+    return provideSymbolLocations(document, position, this.semanticService);
   }
 }
 

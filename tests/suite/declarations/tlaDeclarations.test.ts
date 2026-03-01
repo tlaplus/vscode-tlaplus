@@ -3,7 +3,7 @@ import * as assert from 'assert';
 import { LANG_TLAPLUS } from '../../../src/common';
 import { loc, pos, range } from '../shortcuts';
 import { parseDocInfo, replaceDocContents } from '../document';
-import { TlaDocumentInfos } from '../../../src/model/documentInfo';
+import { SemanticService } from '../../../src/services/semanticService';
 import { TlaDeclarationsProvider } from '../../../src/declarations/tlaDeclarations';
 import { TlaDefinitionsProvider } from '../../../src/declarations/tlaDeclarations';
 import { TlaDocumentSymbolsProvider } from '../../../src/symbols/tlaSymbols';
@@ -255,9 +255,9 @@ async function assertDeclarations(
 ): Promise<void> {
     const testDocInfo = parseDocInfo(docLines);
     await replaceDocContents(doc, testDocInfo.lines.join('\n'));
-    const docInfos = new TlaDocumentInfos();
-    const declProvider = new TlaDeclarationsProvider(docInfos);
-    const symbolsProvider = new TlaDocumentSymbolsProvider(docInfos);
+    const semanticService = new SemanticService();
+    const declProvider = new TlaDeclarationsProvider(semanticService);
+    const symbolsProvider = new TlaDocumentSymbolsProvider(semanticService);
     const tokenSrc = new vscode.CancellationTokenSource();
     await symbolsProvider.provideDocumentSymbols(doc, tokenSrc.token);
     const locations = await declProvider.provideDeclaration(doc, testDocInfo.position, tokenSrc.token);
@@ -272,9 +272,9 @@ async function assertDefinitions(
 ): Promise<void> {
     const testDocInfo = parseDocInfo(docLines);
     await replaceDocContents(doc, testDocInfo.lines.join('\n'));
-    const docInfos = new TlaDocumentInfos();
-    const defProvider = new TlaDefinitionsProvider(docInfos);
-    const symbolsProvider = new TlaDocumentSymbolsProvider(docInfos);
+    const semanticService = new SemanticService();
+    const defProvider = new TlaDefinitionsProvider(semanticService);
+    const symbolsProvider = new TlaDocumentSymbolsProvider(semanticService);
     const tokenSrc = new vscode.CancellationTokenSource();
     await symbolsProvider.provideDocumentSymbols(doc, tokenSrc.token);
     const locations = await defProvider.provideDefinition(doc, testDocInfo.position, tokenSrc.token);
