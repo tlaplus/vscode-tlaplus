@@ -1,7 +1,6 @@
 import { Range, Position, window, DiagnosticSeverity } from 'vscode';
 import * as moment from 'moment/moment';
 import { Readable } from 'stream';
-import { clearTimeout } from 'timers';
 import { CheckStatus, ModelCheckResult, InitialStateStatItem, CoverageItem, MessageLine, MessageSpan, ErrorTraceItem,
     CheckState, OutputLine, StructureValue, findChanges, ModelCheckResultSource, WarningInfo,
     ErrorInfo,
