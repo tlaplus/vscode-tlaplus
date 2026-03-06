@@ -1,4 +1,11 @@
 import * as vscode from 'vscode';
+import {
+    CMD_REFRESH_TLC_COVERAGE_INSPECTOR,
+    CMD_REVEAL_TLC_COVERAGE_ENTRY,
+    CMD_SHOW_TLC_COVERAGE_INSPECTOR,
+    revealCoverageEntry,
+    TlcCoverageInspectorTreeDataProvider
+} from '../panels/tlcCoverageInspectorTreeDataProvider';
 import { TlcCoverageDecorationProvider } from '../tlcCoverage';
 
 export const CMD_TOGGLE_COVERAGE = 'tlaplus.tlc.profiler.toggle';
@@ -8,13 +15,10 @@ let statusBarItem: vscode.StatusBarItem | undefined;
 
 export function registerCoverageCommands(
     context: vscode.ExtensionContext,
-    provider: TlcCoverageDecorationProvider
+    provider: TlcCoverageDecorationProvider,
+    inspectorProvider: TlcCoverageInspectorTreeDataProvider
 ): void {
-    // Create status bar item
-    statusBarItem = vscode.window.createStatusBarItem(
-        vscode.StatusBarAlignment.Right,
-        100
-    );
+    statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
     context.subscriptions.push(statusBarItem);
 
     context.subscriptions.push(
@@ -22,34 +26,39 @@ export function registerCoverageCommands(
             const newState = !provider.isEnabled();
             provider.setEnabled(newState);
             updateStatusBar(newState);
-
             const message = newState
-                ? 'TLC coverage visualization enabled'
-                : 'TLC coverage visualization disabled';
+                ? 'TLC source coverage heatmap enabled'
+                : 'TLC source coverage heatmap disabled';
             vscode.window.showInformationMessage(message);
-        })
-    );
-
-    context.subscriptions.push(
+        }),
         vscode.commands.registerCommand(CMD_CLEAR_COVERAGE, () => {
             provider.clearCoverage();
+            inspectorProvider.refresh();
             vscode.window.showInformationMessage('TLC coverage data cleared');
-        })
+        }),
+        vscode.commands.registerCommand(CMD_SHOW_TLC_COVERAGE_INSPECTOR, () =>
+            vscode.commands.executeCommand(`${TlcCoverageInspectorTreeDataProvider.viewType}.focus`)
+        ),
+        vscode.commands.registerCommand(CMD_REFRESH_TLC_COVERAGE_INSPECTOR, () => {
+            inspectorProvider.refresh();
+        }),
+        vscode.commands.registerCommand(CMD_REVEAL_TLC_COVERAGE_ENTRY, (entry) => revealCoverageEntry(entry))
     );
 
-    // Initialize status bar
     updateStatusBar(provider.isEnabled());
 }
 
-function updateStatusBar(enabled: boolean) {
-    if (!statusBarItem) {return;}
+function updateStatusBar(enabled: boolean): void {
+    if (!statusBarItem) {
+        return;
+    }
 
     if (enabled) {
-        statusBarItem.text = '$(flame) Coverage';
-        statusBarItem.tooltip = 'TLC coverage visualization is active. Click to disable.';
+        statusBarItem.text = '$(flame) TLC Coverage';
+        statusBarItem.tooltip = 'TLC source coverage heatmap is active. Click to disable.';
     } else {
-        statusBarItem.text = '$(flame) Coverage (off)';
-        statusBarItem.tooltip = 'TLC coverage visualization is disabled. Click to enable.';
+        statusBarItem.text = '$(flame) TLC Coverage (off)';
+        statusBarItem.tooltip = 'TLC source coverage heatmap is disabled. Click to enable.';
     }
     statusBarItem.command = CMD_TOGGLE_COVERAGE;
     statusBarItem.show();
