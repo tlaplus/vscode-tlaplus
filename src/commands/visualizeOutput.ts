@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import { PassThrough } from 'stream';
 import * as vscode from 'vscode';
 import { ModelCheckResultSource } from '../model/check';
-import { revealEmptyCheckResultView, updateCheckResultView } from '../panels/checkResultView';
+import { CheckResultViewController } from '../panels/checkResultView';
 import { TlcModelCheckerStdoutParser } from '../parsers/tlc';
 
 export const CMD_VISUALIZE_TLC_OUTPUT = 'tlaplus.out.visualize';
@@ -10,7 +10,10 @@ export const CMD_VISUALIZE_TLC_OUTPUT = 'tlaplus.out.visualize';
 /**
  * Opens a panel with visualization of the TLC output file (.out).
  */
-export function visualizeTlcOutput(extContext: vscode.ExtensionContext): void {
+export function visualizeTlcOutput(
+    _extContext: vscode.ExtensionContext,
+    checkResultView: CheckResultViewController,
+): void {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
         vscode.window.showWarningMessage('No editor is active, cannot find an .out file to visualize');
@@ -27,15 +30,15 @@ export function visualizeTlcOutput(extContext: vscode.ExtensionContext): void {
             vscode.window.showErrorMessage(`Cannot read file: ${err}`);
             return;
         }
-        showOutput(data, extContext);
+        showOutput(data, checkResultView);
     });
 }
 
-function showOutput(buffer: Buffer, extContext: vscode.ExtensionContext) {
+function showOutput(buffer: Buffer, checkResultView: CheckResultViewController) {
     const stream = new PassThrough();
     stream.end(buffer);
-    revealEmptyCheckResultView(extContext);
+    checkResultView.revealEmpty();
     const parser = new TlcModelCheckerStdoutParser(
-        ModelCheckResultSource.OutFile, stream, undefined, false, updateCheckResultView);
-    parser.readAll();
+        ModelCheckResultSource.OutFile, stream, undefined, false, (checkResult) => checkResultView.updateCheckResult(checkResult));
+    void parser.readAll();
 }
