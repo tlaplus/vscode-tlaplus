@@ -389,13 +389,24 @@
             },
             {
                 "command": "tlaplus.tlc.profiler.toggle",
-                "title": "Toggle Coverage Visualization",
+                "title": "Toggle TLC Coverage Heatmap",
                 "category": "TLA+",
                 "icon": "$(flame)"
             },
             {
                 "command": "tlaplus.tlc.profiler.clear",
-                "title": "Clear Coverage Data",
+                "title": "Clear TLC Coverage Data",
+                "category": "TLA+",
+                "icon": "$(clear-all)"
+            },
+            {
+                "command": "tlaplus.tlc.profiler.showInspector",
+                "title": "Show TLC Coverage Inspector",
+                "category": "TLA+"
+            },
+            {
+                "command": "tlaplus.tlc.profiler.refreshInspector",
+                "title": "Refresh TLC Coverage Inspector",
                 "category": "TLA+"
             },
             {
@@ -513,6 +524,18 @@
                     "command": "tlaplus.tlc.profiler.toggle",
                     "when": "resourceExtname == .tla",
                     "group": "navigation"
+                }
+            ],
+            "view/title": [
+                {
+                    "command": "tlaplus.tlc.profiler.refreshInspector",
+                    "when": "view == tlaplus.tlc-coverage-inspector",
+                    "group": "navigation"
+                },
+                {
+                    "command": "tlaplus.tlc.profiler.clear",
+                    "when": "view == tlaplus.tlc-coverage-inspector",
+                    "group": "navigation@1"
                 }
             ],
             "debug/variables/context": [
@@ -695,12 +718,12 @@
                 "tlaplus.tlc.profiler.enabled": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Enable TLC coverage visualization by default"
+                    "description": "Enable the TLC source coverage heatmap by default"
                 },
                 "tlaplus.tlc.profiler.relativeScale": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Use relative scaling (percentage of max) instead of absolute invocation counts"
+                    "description": "Use relative scaling (percentage of max) instead of absolute TLC invocation counts"
                 },
                 "tlaplus.tlc.profiler.thresholds": {
                     "type": "object",
@@ -710,7 +733,7 @@
                         "medium": 1000,
                         "high": 10000
                     },
-                    "description": "Invocation count thresholds for coverage levels"
+                    "description": "Invocation count thresholds for TLC source coverage levels"
                 }
             }
         },
@@ -804,6 +827,12 @@
                 {
                     "id": "tlaplus.module-search-paths",
                     "name": "Module Search Paths",
+                    "type": "tree",
+                    "icon": "resources/images/tlaplus.svg"
+                },
+                {
+                    "id": "tlaplus.tlc-coverage-inspector",
+                    "name": "TLC Coverage Inspector",
                     "type": "tree",
                     "icon": "resources/images/tlaplus.svg"
                 }
