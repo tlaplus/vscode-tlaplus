@@ -35,7 +35,9 @@ suite('TLC Coverage Inspector Tree Test Suite', () => {
         const store = new TlcCoverageSnapshotStore();
         const provider = new TlcCoverageInspectorTreeDataProvider(store);
         try {
-            store.updateCoverage([coverageItem('Never', 0, 0, undefined)], 0);
+            store.updateCoverage([
+                new CoverageItem('Spec', 'Never', undefined, new vscode.Range(0, 0, 0, 4), 0, 0)
+            ], 0);
 
             const roots = await provider.getChildren() as vscode.TreeItem[];
             const entries = await provider.getChildren(roots[0] as unknown as never) as vscode.TreeItem[];
