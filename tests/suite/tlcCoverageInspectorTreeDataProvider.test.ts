@@ -1,4 +1,5 @@
 import * as assert from 'assert';
+import * as path from 'path';
 import * as vscode from 'vscode';
 import { CoverageItem } from '../../src/model/check';
 import {
@@ -77,7 +78,7 @@ suite('TLC Coverage Inspector Tree Test Suite', () => {
             }
         });
 
-        assert.strictEqual(openedUri?.fsPath, '/tmp/spec.tla');
+        assert.strictEqual(openedUri?.fsPath, path.normalize(entry.item.filePath ?? ''));
         assert.deepStrictEqual(revealedRange, entry.item.range);
         assert.ok((fakeEditor as { selection?: vscode.Selection }).selection instanceof vscode.Selection);
     });
