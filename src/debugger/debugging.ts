@@ -2,10 +2,12 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { exists, replaceExtension } from '../common';
 import {
-    doCheckModel, getSpecFiles, stopModelChecking
+    resolveSpecFiles, runCheckSession, stopModelChecking
 } from '../commands/checkModel';
 import { SpecFiles } from '../model/check';
 import { extractFingerprintFromTrace, findLatestTraceFile } from '../tla2tools';
+import { ExtensionRuntime } from '../runtime/extensionRuntime';
+import { CheckResultViewController } from '../panels/checkResultView';
 
 export const TLAPLUS_DEBUG_LAUNCH_SMOKE = 'tlaplus.debugger.smoke';
 export const TLAPLUS_DEBUG_LAUNCH_CHECKNDEBUG = 'tlaplus.debugger.run';
@@ -86,8 +88,9 @@ export async function attachDebugger(): Promise<void> {
  */
 export async function checkAndDebugSpec(
     resource: vscode.Uri | undefined,
-    diagnostic: vscode.DiagnosticCollection,
-    context: vscode.ExtensionContext
+    runtime: ExtensionRuntime,
+    context: vscode.ExtensionContext,
+    checkResultView: CheckResultViewController,
 ): Promise<void> {
     let targetResource = resource;
     if (!targetResource && vscode.window.activeTextEditor) {
@@ -98,7 +101,7 @@ export async function checkAndDebugSpec(
     if (!targetResource) {
         return;
     }
-    const specFiles = await getSpecFiles(targetResource);
+    const specFiles = await resolveSpecFiles(runtime, targetResource);
     if (!specFiles) {
         return;
     }
@@ -117,13 +120,19 @@ export async function checkAndDebugSpec(
         });
     };
     // Don't await doCheckModel because it only returns after TLC terminates.
-    doCheckModel(specFiles, false, context, diagnostic, true, ['-debugger', `port=${initPort}`], portOpenCallback);
+    void runCheckSession(specFiles, runtime, context, checkResultView, {
+        showOptionsPrompt: true,
+        showFullOutput: false,
+        extraOpts: ['-debugger', `port=${initPort}`],
+        debuggerPortCallback: portOpenCallback,
+    }, false);
 }
 
 export async function checkAndDebugSpecCustom(
     resource: vscode.Uri | undefined,
-    diagnostic: vscode.DiagnosticCollection,
-    context: vscode.ExtensionContext
+    runtime: ExtensionRuntime,
+    context: vscode.ExtensionContext,
+    checkResultView: CheckResultViewController,
 ): Promise<void> {
     let targetResource = resource;
     if (!targetResource && vscode.window.activeTextEditor) {
@@ -134,7 +143,7 @@ export async function checkAndDebugSpecCustom(
     if (!targetResource) {
         return;
     }
-    const specFiles = await getSpecFiles(targetResource, true, true, 'customPick');
+    const specFiles = await resolveSpecFiles(runtime, targetResource, true, true, 'customPick');
     if (!specFiles) {
         return;
     }
@@ -153,13 +162,19 @@ export async function checkAndDebugSpecCustom(
         });
     };
     // Don't await doCheckModel because it only returns after TLC terminates.
-    doCheckModel(specFiles, false, context, diagnostic, true, ['-debugger', `port=${initPort}`], portOpenCallback);
+    void runCheckSession(specFiles, runtime, context, checkResultView, {
+        showOptionsPrompt: true,
+        showFullOutput: false,
+        extraOpts: ['-debugger', `port=${initPort}`],
+        debuggerPortCallback: portOpenCallback,
+    }, false);
 }
 
 export async function smokeTestSpec(
     resource: vscode.Uri | undefined,
-    diagnostic: vscode.DiagnosticCollection,
-    context: vscode.ExtensionContext
+    runtime: ExtensionRuntime,
+    context: vscode.ExtensionContext,
+    checkResultView: CheckResultViewController,
 ): Promise<void> {
     let targetResource = resource;
     if (!targetResource && vscode.window.activeTextEditor) {
@@ -206,11 +221,15 @@ export async function smokeTestSpec(
         }
         return lastSpecFiles.cfgFileName.startsWith(prefixName);
     };
-    stopModelChecking(terminateLastRun, true);
+    stopModelChecking(runtime, terminateLastRun, true);
 
     // Don't await doCheckModel because it only returns after TLC terminates.
-    doCheckModel(specFiles, false, context, diagnostic, false,
-        ['-simulate', '-noTE', '-debugger', `nosuspend,port=${initPort}`], portOpenCallback);
+    void runCheckSession(specFiles, runtime, context, checkResultView, {
+        showOptionsPrompt: false,
+        showFullOutput: false,
+        extraOpts: ['-simulate', '-noTE', '-debugger', `nosuspend,port=${initPort}`],
+        debuggerPortCallback: portOpenCallback,
+    }, false);
 }
 
 /**
@@ -278,8 +297,9 @@ export async function gotoState(context: DebugVariableContext | undefined): Prom
  */
 export async function debugCounterexample(
     tlaFilePath: string | undefined,
-    diagnostic: vscode.DiagnosticCollection,
-    context: vscode.ExtensionContext
+    runtime: ExtensionRuntime,
+    context: vscode.ExtensionContext,
+    checkResultView: CheckResultViewController,
 ): Promise<void> {
     // If no path provided, try to get it from the active editor
     let targetTlaFilePath = tlaFilePath;
@@ -293,7 +313,7 @@ export async function debugCounterexample(
     }
 
     // Get the spec files
-    const specFiles = await getSpecFiles(vscode.Uri.file(targetTlaFilePath), false, true);
+    const specFiles = await resolveSpecFiles(runtime, vscode.Uri.file(targetTlaFilePath), false, true);
     if (!specFiles) {
         vscode.window.showWarningMessage('Could not determine specification files');
         return;
@@ -341,5 +361,10 @@ export async function debugCounterexample(
     ];
 
     // Don't await doCheckModel because it only returns after TLC terminates
-    doCheckModel(specFiles, false, context, diagnostic, false, debugOptions, portOpenCallback);
+    void runCheckSession(specFiles, runtime, context, checkResultView, {
+        showOptionsPrompt: false,
+        showFullOutput: false,
+        extraOpts: debugOptions,
+        debuggerPortCallback: portOpenCallback,
+    }, false);
 }

@@ -1,11 +1,13 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { replaceExtension, deleteDir, readFile, exists } from '../common';
-import { getEditorIfCanRunTlc, doCheckModel } from './checkModel';
+import { getEditorIfCanRunTlc, runCheckSession } from './checkModel';
 import { createCustomModel } from './customModel';
 import { ToolOutputChannel } from '../outputChannels';
 import { ModelCheckResult, CheckState, SequenceValue, Value, OutputLine, SpecFiles } from '../model/check';
 import { parseVariableValue } from '../parsers/tlcValues';
+import { ExtensionRuntime } from '../runtime/extensionRuntime';
+import { CheckResultViewController } from '../panels/checkResultView';
 
 export const CMD_EVALUATE_SELECTION = 'tlaplus.evaluateSelection';
 export const CMD_EVALUATE_EXPRESSION = 'tlaplus.evaluateExpression';
@@ -19,26 +21,28 @@ const outChannel = new ToolOutputChannel('TLA+ evaluation');
  * Evaluates the expression, currently selected in the active editor.
  */
 export async function evaluateSelection(
-    diagnostic: vscode.DiagnosticCollection,
-    extContext: vscode.ExtensionContext
+    runtime: ExtensionRuntime,
+    extContext: vscode.ExtensionContext,
+    checkResultView: CheckResultViewController,
 ): Promise<void> {
-    const editor = getEditorIfCanRunTlc(extContext);
+    const editor = getEditorIfCanRunTlc();
     if (!editor) {
         return;
     }
     const selRange = new vscode.Range(editor.selection.start, editor.selection.end);
     const selText = editor.document.getText(selRange);
-    doEvaluateExpression(editor, selText, diagnostic, extContext);
+    void doEvaluateExpression(editor, selText, runtime, extContext, checkResultView);
 }
 
 /**
  * Asks the user to enter an expression and evalutes it in the context of the specification from the active editor.
  */
 export async function evaluateExpression(
-    diagnostic: vscode.DiagnosticCollection,
-    extContext: vscode.ExtensionContext
+    runtime: ExtensionRuntime,
+    extContext: vscode.ExtensionContext,
+    checkResultView: CheckResultViewController,
 ): Promise<void> {
-    const editor = getEditorIfCanRunTlc(extContext);
+    const editor = getEditorIfCanRunTlc();
     if (!editor) {
         return;
     }
@@ -51,15 +55,16 @@ export async function evaluateExpression(
             return;
         }
         lastEvaluatedExpression = expr;
-        doEvaluateExpression(editor, expr, diagnostic, extContext);
+        void doEvaluateExpression(editor, expr, runtime, extContext, checkResultView);
     });
 }
 
 async function doEvaluateExpression(
     editor: vscode.TextEditor,
     expr: string,
-    diagnostic: vscode.DiagnosticCollection,
-    extContext: vscode.ExtensionContext
+    runtime: ExtensionRuntime,
+    extContext: vscode.ExtensionContext,
+    checkResultView: CheckResultViewController,
 ) {
     const eExpr = expr.trim();
     if (eExpr === '') {
@@ -95,8 +100,11 @@ async function doEvaluateExpression(
     outChannel.clear();
     outChannel.appendLine(`Evaluating constant expression:\n${expr}\n`);
     outChannel.revealWindow();
-    const checkResult = await doCheckModel(specFiles, false, extContext, diagnostic, false);
-    displayResult(checkResult);
+    const session = await runCheckSession(specFiles, runtime, extContext, checkResultView, {
+        showOptionsPrompt: false,
+        showFullOutput: false,
+    }, false);
+    displayResult(session?.result);
     deleteDir(model.dirPath);
 }
 

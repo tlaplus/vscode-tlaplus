@@ -1,9 +1,10 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { runTlc, stopProcess, ToolProcessInfo } from '../tla2tools';
-import { getSpecFiles, mapTlcOutputLine, outChannel } from '../commands/checkModel';
+import { mapTlcOutputLine } from '../services/checkService';
 import { CFG_TLC_STATISTICS_TYPE, ShareOption } from '../commands/tlcStatisticsCfg';
 import { exists } from '../common';
+import { CheckService } from '../services/checkService';
+import { SpecFiles } from '../model/check';
 
 export interface FileParameter {
 	fileName: string;
@@ -18,16 +19,20 @@ export interface BehaviorLengthParameter {
 export interface FileWithBehaviorLengthParameter extends FileParameter, BehaviorLengthParameter {}
 
 export class CheckModuleTool implements vscode.LanguageModelTool<FileParameter> {
+    constructor(private readonly checkService: CheckService) {}
+
     async invoke(
         options: vscode.LanguageModelToolInvocationOptions<FileParameter>,
         token: vscode.CancellationToken
     ) {
         const baseOpts = ['-modelcheck', '-cleanup'];
         const extraOpts = options.input.extraOpts || [];
-        return runTLC(options, token, [...baseOpts, ...extraOpts]);
+        return runTLC(this.checkService, options, token, [...baseOpts, ...extraOpts]);
     }
 }
 export class SmokeModuleTool implements vscode.LanguageModelTool<FileParameter> {
+    constructor(private readonly checkService: CheckService) {}
+
     async invoke(
         options: vscode.LanguageModelToolInvocationOptions<FileParameter>,
         token: vscode.CancellationToken
@@ -35,10 +40,12 @@ export class SmokeModuleTool implements vscode.LanguageModelTool<FileParameter> 
         // Terminate smoke testing, i.e., simulation after 3 seconds.
         const baseOpts = ['-simulate', '-cleanup'];
         const extraOpts = options.input.extraOpts || [];
-        return runTLC(options, token, [...baseOpts, ...extraOpts], ['-Dtlc2.TLC.stopAfter=3']);
+        return runTLC(this.checkService, options, token, [...baseOpts, ...extraOpts], ['-Dtlc2.TLC.stopAfter=3']);
     }
 }
 export class ExploreModuleTool implements vscode.LanguageModelTool<FileWithBehaviorLengthParameter> {
+    constructor(private readonly checkService: CheckService) {}
+
     async invoke(
         options: vscode.LanguageModelToolInvocationOptions<FileWithBehaviorLengthParameter>,
         token: vscode.CancellationToken
@@ -47,6 +54,7 @@ export class ExploreModuleTool implements vscode.LanguageModelTool<FileWithBehav
         const baseOpts = ['-simulate', '-cleanup', '-invlevel', options.input.behaviorLength.toString()];
         const extraOpts = options.input.extraOpts || [];
         return runTLC(
+            this.checkService,
             options,
             token,
             [...baseOpts, ...extraOpts],
@@ -56,6 +64,7 @@ export class ExploreModuleTool implements vscode.LanguageModelTool<FileWithBehav
 }
 
 async function runTLC(
+    checkService: CheckService,
     options: vscode.LanguageModelToolInvocationOptions<FileParameter>,
     token: vscode.CancellationToken,
     extraOps: string[],
@@ -64,11 +73,10 @@ async function runTLC(
     const cancellationResult = (filePath: string) => new vscode.LanguageModelToolResult([
         new vscode.LanguageModelTextPart(`Model checking cancelled for ${filePath}.`)
     ]);
-    const maybeReturnOnCancel = (procInfo?: ToolProcessInfo): vscode.LanguageModelToolResult | undefined => {
+    let sessionCancellation: (() => void) | undefined;
+    const maybeReturnOnCancel = (): vscode.LanguageModelToolResult | undefined => {
         if (token.isCancellationRequested) {
-            if (procInfo) {
-                stopProcess(procInfo.process);
-            }
+            sessionCancellation?.();
             return cancellationResult(input.fileName);
         }
         return undefined;
@@ -95,7 +103,7 @@ async function runTLC(
         );
     }
 
-    const specFiles = await getSpecFiles(fileUri, false, false);
+    const specFiles = await checkService.resolveSpecFiles(fileUri, false, false);
     const cancelAfterSpecLookup = maybeReturnOnCancel();
     if (cancelAfterSpecLookup) {
         return cancelAfterSpecLookup;
@@ -130,70 +138,40 @@ async function runTLC(
     if (shareStats !== ShareOption.DoNotShare) {
         extraJavaOpts.push('-Dtlc2.TLC.ide=TLAiVSCode');
     }
-    const cfgFilePath = input.configFileName ? input.configFileName : specFiles.cfgFilePath;
-    const procInfo = await runTlc(
-        specFiles.tlaFilePath,
-        cfgFilePath,
-        false,
-        extraOps,
-        extraJavaOpts
-    );
-    const cancelAfterStart = maybeReturnOnCancel(procInfo);
+    const sessionSpecFiles = input.configFileName
+        ? new SpecFiles(specFiles.tlaFilePath, input.configFileName, specFiles.modelName, specFiles.outputDir)
+        : specFiles;
+    const session = await checkService.startSession(sessionSpecFiles, {
+        showOptionsPrompt: false,
+        showFullOutput: true,
+        extraOpts: extraOps,
+        extraJavaOpts,
+    });
+    sessionCancellation = () => session?.requestCancel();
+    const cancelAfterStart = maybeReturnOnCancel();
     if (cancelAfterStart) {
         return cancelAfterStart;
     }
-    if (procInfo === undefined) {
+    if (session === undefined) {
         return new vscode.LanguageModelToolResult([
             new vscode.LanguageModelTextPart('Failed to start TLC process')
         ]);
     }
 
-    // Bind to output channel for display in VS Code output view.
-    outChannel.bindTo(procInfo);
-
-    // Create output collector
-    const outputLines: string[] = [];
-    let cancelled = false;
-    const disposeCancellation = token.onCancellationRequested(() => {
-        cancelled = true;
-        stopProcess(procInfo.process);
-    });
-    const immediateCancellation = maybeReturnOnCancel(procInfo);
-    if (immediateCancellation) {
-        disposeCancellation.dispose();
-        return immediateCancellation;
+    const cancellationDisposable = token.onCancellationRequested(() => session.requestCancel());
+    await session.completion;
+    cancellationDisposable.dispose();
+    if (token.isCancellationRequested || session.lifecycle === 'cancelled') {
+        return cancellationResult(input.fileName);
     }
 
-    // Return a promise that resolves when the process completes.
-    return new Promise<vscode.LanguageModelToolResult>((resolve) => {
-        // Custom handler for capturing output
-        const stdoutHandler = (data: Buffer) => {
-            const str = data.toString();
-            const lines = str.split('\n');
-            for (const line of lines) {
-                if (line.trim() !== '') {
-                    const cleanedLine = mapTlcOutputLine(line);
-                    if (cleanedLine !== undefined) {
-                        outputLines.push(cleanedLine);
-                    }
-                }
-            }
-        };
-
-        // Add event listener to capture merged output
-        procInfo.mergedOutput.on('data', stdoutHandler);
-
-        // Listen for process completion
-        procInfo.process.on('close', (code) => {
-            disposeCancellation.dispose();
-            const result = new vscode.LanguageModelToolResult([
-                new vscode.LanguageModelTextPart(
-                    cancelled
-                        ? `Model checking cancelled for ${input.fileName}.`
-                        : `Model check completed with exit code ${code}.\n\nOutput:\n${outputLines.join('\n')}`
-                )
-            ]);
-            resolve(result);
-        });
-    });
+    const outputLines = session.rawOutput
+        .split('\n')
+        .map((line) => mapTlcOutputLine(line))
+        .filter((line): line is string => line !== undefined && line.trim() !== '');
+    return new vscode.LanguageModelToolResult([
+        new vscode.LanguageModelTextPart(
+            `Model check ${session.lifecycle} for ${input.fileName}.\n\nOutput:\n${outputLines.join('\n')}`
+        )
+    ]);
 }

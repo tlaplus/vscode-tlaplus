@@ -27,19 +27,13 @@ declare module 'vscode' {
         }
     }
 }
-import { applyDCollection } from '../diagnostic';
 import { TLADocumentSymbolProvider } from '../symbols/tlaSymbols';
-import { parseSpec, transpilePlusCal } from '../commands/parseModule';
-import { TlaDocumentInfos } from '../model/documentInfo';
 import { JarFileSystemProviderHandle, acquireJarFileSystemProvider } from '../JarFileSystemProvider';
-import { getSpecFiles, mapTlcOutputLine, outChannel } from '../commands/checkModel';
-import { runTlc, extractFingerprintFromTrace } from '../tla2tools';
+import { extractFingerprintFromTrace } from '../tla2tools';
 import { CFG_TLC_STATISTICS_TYPE, ShareOption } from '../commands/tlcStatisticsCfg';
-import { getDiagnostic } from '../main';
 import { moduleSearchPaths } from '../paths';
-import { TlcModelCheckerStdoutParser } from '../parsers/tlc';
-import { updateCheckResultView } from '../panels/checkResultView';
-import { ModelCheckResultSource } from '../model/check';
+import { mapTlcOutputLine } from '../services/checkService';
+import { ExtensionRuntime, createExtensionRuntime } from '../runtime/extensionRuntime';
 
 /**
  * Custom error class for article validation errors.
@@ -59,8 +53,10 @@ export class MCPServer implements vscode.Disposable {
     private jarProviderHandle: JarFileSystemProviderHandle;
     private vscodeRegistrationDisposable: vscode.Disposable | undefined;
     private mcpOutputChannel: vscode.OutputChannel;
+    private readonly runtime: ExtensionRuntime;
 
-    constructor(port: number) {
+    constructor(port: number, runtime?: ExtensionRuntime) {
+        this.runtime = runtime ?? createExtensionRuntime(vscode.languages.createDiagnosticCollection('tlaplus-mcp'));
         // Initialize JAR file system provider
         this.jarProviderHandle = acquireJarFileSystemProvider();
 
@@ -469,13 +465,12 @@ export class MCPServer implements vscode.Disposable {
                     }
 
                     // Transpile PlusCal to TLA+ (if any), and parse the resulting TLA+ spec
-                    const messages = await transpilePlusCal(fileUri);
-                    const specData = await parseSpec(fileUri);
+                    const messages = await this.runtime.parseService.transpilePlusCal(fileUri);
+                    const specData = await this.runtime.parseService.parseSpec(fileUri);
 
                     // Post-process SANY's parse results
                     messages.addAll(specData.dCollection);
-                    const diagnostic = getDiagnostic();
-                    applyDCollection(messages, diagnostic);
+                    this.runtime.diagnosticsProjector.project(messages);
 
                     // Format the result based on whether there were any errors
                     if (messages.messages.length === 0) {
@@ -549,7 +544,7 @@ export class MCPServer implements vscode.Disposable {
                     }
 
                     const document = await vscode.workspace.openTextDocument(fileUri);
-                    const tdsp = new TLADocumentSymbolProvider(new TlaDocumentInfos());
+                    const tdsp = new TLADocumentSymbolProvider(this.runtime.semanticService);
                     const symbols =
                         await tdsp.provideGroupedDocumentSymbols(
                             document, new vscode.CancellationTokenSource().token, includeExtendedModules
@@ -1567,7 +1562,7 @@ export class MCPServer implements vscode.Disposable {
         }
 
         try {
-            const specFiles = await getSpecFiles(fileUri, false, false);
+            const specFiles = await this.runtime.checkService.resolveSpecFiles(fileUri, false, false);
             if (!specFiles) {
                 // Extract the spec name from the file name.
                 const specName = path.basename(fileName, path.extname(fileName));
@@ -1593,11 +1588,17 @@ export class MCPServer implements vscode.Disposable {
             }
 
             // Use the provided cfgFilePath or default to specFiles.cfgFilePath
-            const configFilePath = cfgFilePath || specFiles.cfgFilePath;
+            const sessionSpecFiles = cfgFilePath
+                ? { ...specFiles, cfgFilePath }
+                : specFiles;
 
-            const procInfo = await runTlc(
-                specFiles.tlaFilePath, configFilePath, false, extraOps, extraJavaOpts);
-            if (procInfo === undefined) {
+            const session = await this.runtime.checkService.startSession(sessionSpecFiles, {
+                showOptionsPrompt: false,
+                showFullOutput: true,
+                extraOpts: extraOps,
+                extraJavaOpts,
+            });
+            if (session === undefined) {
                 return {
                     content: [{
                         type: 'text',
@@ -1606,66 +1607,17 @@ export class MCPServer implements vscode.Disposable {
                 };
             }
 
-            // Bind to output channel for display in VS Code output view
-            outChannel.bindTo(procInfo);
-
-            // Use a proper promise to wait for process completion
-            return await new Promise<{
-                content: { type: 'text'; text: string; }[];
-            }>(resolve => {
-                // Create output collector for MCP response
-                const outputLines: string[] = [];
-
-                // Create parser to update the webview with structured results
-                const stdoutParser = new TlcModelCheckerStdoutParser(
-                    ModelCheckResultSource.Process,
-                    procInfo.mergedOutput,
-                    specFiles,
-                    true,
-                    (checkResult) => {
-                        // Update the webview so users can see counterexamples
-                        updateCheckResultView(checkResult);
-                    }
-                );
-
-                // Start parsing in background - this will handle SANY messages and update webview
-                stdoutParser.readAll().then(dCol => {
-                    // Apply SANY diagnostics if any
-                    const diagnostic = getDiagnostic();
-                    applyDCollection(dCol, diagnostic);
-                }).catch(error => {
-                    console.warn('Error parsing TLC output for webview:', error);
-                });
-
-                // Also collect text output for the MCP response
-                // Note: Multiple listeners on the same stream work fine in Node.js
-                const stdoutHandler = (data: Buffer) => {
-                    const str = data.toString();
-                    const lines = str.split('\n');
-                    for (const line of lines) {
-                        if (line.trim() !== '') {
-                            const cleanedLine = mapTlcOutputLine(line);
-                            if (cleanedLine !== undefined) {
-                                outputLines.push(cleanedLine);
-                            }
-                        }
-                    }
-                };
-
-                // Add event listener to capture merged output
-                procInfo.mergedOutput.on('data', stdoutHandler);
-
-                // Listen for process completion
-                procInfo.process.on('close', (code) => {
-                    resolve({
-                        content: [{
-                            type: 'text',
-                            text: `Model check completed with exit code ${code}.\n\n` +
-                                `Output:\n${outputLines.join('\n')}`
-                        }]
-                    });
-                });
-            });
+            await session.completion;
+            const outputLines = session.rawOutput
+                .split('\n')
+                .map((line) => mapTlcOutputLine(line))
+                .filter((line): line is string => line !== undefined && line.trim() !== '');
+            return {
+                content: [{
+                    type: 'text',
+                    text: `Model check ${session.lifecycle}.\n\nOutput:\n${outputLines.join('\n')}`
+                }]
+            };
         } catch (error) {
             return {
                 content: [{
