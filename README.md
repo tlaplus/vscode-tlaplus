@@ -10,6 +10,7 @@ This extension adds support for the [TLA<sup>+</sup> formal specification langua
 - Running the PlusCal-to-TLA<sup>+</sup> translator and module parser.
 - Running TLC model checker on TLA<sup>+</sup> specifications.
 - Model checking process and result visualization.
+- TLC source coverage heatmaps and a Coverage Inspector for reviewing uncovered, rare, and hot actions.
 - Evaluating constant expressions.
 - Converting TLA<sup>+</sup> specifications to LaTeX and PDF documents.
 - Code completion.
@@ -19,6 +20,12 @@ This extension adds support for the [TLA<sup>+</sup> formal specification langua
 <img src="https://raw.githubusercontent.com/tlaplus/vscode-tlaplus/master/resources/images/screencast.gif" width="800" height="auto">
 
 ## Documentation
+
+## TLC Coverage
+
+- Use the `TLC Coverage` status bar item to toggle inline TLC source coverage heatmaps in `.tla` files.
+- Use `TLA+: Show TLC Coverage Inspector` to review the latest TLC run as grouped `Uncovered`, `Rare`, `Covered`, and `Hot` actions and jump to source.
+- Use `TLA+: Visualize simulation coverage` for `.ndjson` simulation coverage files. It is separate from TLC source coverage.
 
 [The project's Wiki](https://github.com/tlaplus/vscode-tlaplus/wiki) provides information on how to install, configure and use the extension.
 
