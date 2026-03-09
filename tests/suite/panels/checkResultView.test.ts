@@ -1,9 +1,10 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { revealEmptyCheckResultView, isCheckResultViewPanelFocused } from '../../../src/panels/checkResultView';
+import { CheckResultViewController } from '../../../src/panels/checkResultView';
 
 suite('Check Result View Test Suite', () => {
     let doc: vscode.TextDocument;
+    let controller: CheckResultViewController;
     const configKey = 'tlaplus.tlc.modelChecker.preserveEditorFocus';
 
     suiteSetup(async () => {
@@ -11,6 +12,7 @@ suite('Check Result View Test Suite', () => {
             content: 'test content',
             language: 'tlaplus'
         });
+        controller = new CheckResultViewController(vscode.Uri.file(__dirname));
         await vscode.window.showTextDocument(doc);
     });
 
@@ -25,7 +27,7 @@ suite('Check Result View Test Suite', () => {
     async function waitForFocusState(expectedPanelFocused: boolean, timeoutMs = 2000): Promise<boolean> {
         const startTime = Date.now();
         while (Date.now() - startTime < timeoutMs) {
-            if (isCheckResultViewPanelFocused() === expectedPanelFocused) {
+            if (controller.isFocused() === expectedPanelFocused) {
                 return true;
             }
             await new Promise(resolve => setTimeout(resolve, 50));
@@ -40,31 +42,28 @@ suite('Check Result View Test Suite', () => {
             vscode.ConfigurationTarget.Global
         );
         await vscode.window.showTextDocument(doc, {preview: true, preserveFocus: false});
+        controller.dispose();
         return vscode.commands.executeCommand('workbench.action.closeActiveEditor');
     });
 
     test('Preserves editor focus when configured', async () => {
         await setPreserveEditorFocus(true);
 
-        revealEmptyCheckResultView({
-            extensionUri: vscode.Uri.file(__dirname)
-        } as vscode.ExtensionContext);
+        controller.revealEmpty();
 
         const success = await waitForFocusState(false);
         assert.ok(success, 'Timed out waiting for editor to remain focused');
-        assert.ok(!isCheckResultViewPanelFocused(), 'Expected editor to remain focused');
+        assert.ok(!controller.isFocused(), 'Expected editor to remain focused');
     });
 
     test('Switches focus to panel when preserveEditorFocus is disabled', async function() {
         await setPreserveEditorFocus(false);
 
-        revealEmptyCheckResultView({
-            extensionUri: vscode.Uri.file(__dirname)
-        } as vscode.ExtensionContext);
+        controller.revealEmpty();
 
         const success = await waitForFocusState(true);
         assert.ok(success, 'Timed out waiting for panel to gain focus');
-        assert.ok(isCheckResultViewPanelFocused(),
+        assert.ok(controller.isFocused(),
             'Expected editor to lose focus when preserveEditorFocus is disabled');
     });
 });

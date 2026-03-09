@@ -1,15 +1,19 @@
 import * as vscode from 'vscode';
-import { parseSpec, transpilePlusCal } from '../commands/parseModule';
-import { applyDCollection } from '../diagnostic';
 import { TLADocumentSymbolProvider } from '../symbols/tlaSymbols';
-import { TlaDocumentInfos } from '../model/documentInfo';
-import { getDiagnostic } from '../main';
+import { DiagnosticsProjector } from '../services/diagnosticsProjector';
+import { ParseService } from '../services/parseService';
+import { SemanticService } from '../services/semanticService';
 
 export interface FileParameter {
 	fileName: string;
 }
 
 export class ParseModuleTool implements vscode.LanguageModelTool<FileParameter> {
+    constructor(
+        private readonly parseService: ParseService,
+        private readonly diagnosticsProjector: DiagnosticsProjector,
+    ) {}
+
     async invoke(
         options: vscode.LanguageModelToolInvocationOptions<FileParameter>,
         token: vscode.CancellationToken
@@ -35,14 +39,13 @@ export class ParseModuleTool implements vscode.LanguageModelTool<FileParameter> 
         try {
             throwIfCancelled();
             // Transpile PlusCal to TLA+ (if any), and parse the resulting TLA+ spec.
-            const messages = await transpilePlusCal(fileUri, token);
+            const messages = await this.parseService.transpilePlusCal(fileUri, token);
             throwIfCancelled();
-            const specData = await parseSpec(fileUri, token);
+            const specData = await this.parseService.parseSpec(fileUri, token);
             throwIfCancelled();
             // Post-process SANY's parse results.
             messages.addAll(specData.dCollection);
-            const diagnostic = getDiagnostic();
-            applyDCollection(messages, diagnostic);
+            this.diagnosticsProjector.project(messages);
             // We are happy if SANY is happy.
             if (messages.messages.length === 0) {
                 // If there are no parse failures, return a success message.
@@ -70,6 +73,8 @@ export class ParseModuleTool implements vscode.LanguageModelTool<FileParameter> 
 }
 
 export class SymbolProviderTool implements vscode.LanguageModelTool<FileParameter> {
+    constructor(private readonly semanticService: SemanticService) {}
+
     async invoke(
         options: vscode.LanguageModelToolInvocationOptions<FileParameter>,
         token: vscode.CancellationToken
@@ -83,7 +88,7 @@ export class SymbolProviderTool implements vscode.LanguageModelTool<FileParamete
 
         try {
             const document = await vscode.workspace.openTextDocument(fileUri);
-            const tdsp = new TLADocumentSymbolProvider(new TlaDocumentInfos());
+            const tdsp = new TLADocumentSymbolProvider(this.semanticService);
             const symbols = await tdsp.provideGroupedDocumentSymbols(document, token);
 
             const newLocal = JSON.stringify(symbols, null, 2);
