@@ -70,20 +70,19 @@ async function runTLC(
     extraOps: string[],
     extraJavaOpts: string[] = []
 ): Promise<vscode.LanguageModelToolResult> {
+    const input = options.input;
     const cancellationResult = (filePath: string) => new vscode.LanguageModelToolResult([
         new vscode.LanguageModelTextPart(`Model checking cancelled for ${filePath}.`)
     ]);
-    let sessionCancellation: (() => void) | undefined;
-    const maybeReturnOnCancel = (): vscode.LanguageModelToolResult | undefined => {
+    const maybeReturnOnCancel = (requestCancel?: () => void): vscode.LanguageModelToolResult | undefined => {
         if (token.isCancellationRequested) {
-            sessionCancellation?.();
+            requestCancel?.();
             return cancellationResult(input.fileName);
         }
         return undefined;
     };
 
     // create an URI from the file name
-    const input = options.input;
     const fileUri = vscode.Uri.file(input.fileName);
 
     const cancelBeforeStart = maybeReturnOnCancel();
@@ -147,8 +146,7 @@ async function runTLC(
         extraOpts: extraOps,
         extraJavaOpts,
     });
-    sessionCancellation = () => session?.requestCancel();
-    const cancelAfterStart = maybeReturnOnCancel();
+    const cancelAfterStart = maybeReturnOnCancel(() => session?.requestCancel());
     if (cancelAfterStart) {
         return cancelAfterStart;
     }
