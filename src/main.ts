@@ -36,8 +36,12 @@ import { ModuleSearchPathsTreeDataProvider } from './panels/moduleSearchPathsTre
 import { CheckModuleTool, ExploreModuleTool, SmokeModuleTool } from './lm/TLCTool';
 import { ParseModuleTool, SymbolProviderTool } from './lm/SANYTool';
 import { MCPServer } from './lm/MCPServer';
+import {
+    TlcCoverageInspectorTreeDataProvider
+} from './panels/tlcCoverageInspectorTreeDataProvider';
 import { TlcCoverageDecorationProvider } from './tlcCoverage';
 import { registerCoverageCommands } from './commands/toggleCoverage';
+import { TlcCoverageSnapshotStore } from './tlcCoverageSnapshot';
 import { acquireJarFileSystemProvider } from './JarFileSystemProvider';
 
 const TLAPLUS_FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file', language: LANG_TLAPLUS };
@@ -265,13 +269,29 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         configChanged => currentProofStepWebviewViewProvider.considerConfigChanged(configChanged)
     );
 
-    // Initialize coverage provider
-    const coverageProvider = new TlcCoverageDecorationProvider(context);
-    context.subscriptions.push(coverageProvider);
-    setCoverageProvider(coverageProvider);
-
-    // Register coverage commands
-    registerCoverageCommands(context, coverageProvider);
+    const coverageSnapshotStore = new TlcCoverageSnapshotStore();
+    const coverageProvider = new TlcCoverageDecorationProvider(coverageSnapshotStore);
+    const coverageInspectorProvider = new TlcCoverageInspectorTreeDataProvider(coverageSnapshotStore);
+    const coverageInspectorView = vscode.window.createTreeView(
+        TlcCoverageInspectorTreeDataProvider.viewType,
+        {
+            treeDataProvider: coverageInspectorProvider,
+            showCollapseAll: true
+        }
+    );
+    const updateCoverageInspectorMessage = () => {
+        coverageInspectorView.message = coverageInspectorProvider.getMessage();
+    };
+    updateCoverageInspectorMessage();
+    context.subscriptions.push(
+        coverageSnapshotStore,
+        coverageProvider,
+        coverageInspectorProvider,
+        coverageInspectorView,
+        coverageInspectorProvider.onDidChangeTreeData(() => updateCoverageInspectorMessage())
+    );
+    setCoverageProvider(coverageSnapshotStore);
+    registerCoverageCommands(context, coverageProvider, coverageInspectorProvider);
 
     const mcpPort = vscode.workspace.getConfiguration().get<number>('tlaplus.mcp.port');
     if (typeof mcpPort === 'number' && (mcpPort >= 1024 && mcpPort <= 65535 || mcpPort === 0)) {

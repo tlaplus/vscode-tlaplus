@@ -14,7 +14,7 @@ import {
 import { TlcModelCheckerStdoutParser } from '../parsers/tlc';
 import { runTlc, stopProcess } from '../tla2tools';
 import { ModelResolveMode, resolveModelForUri } from './modelResolver';
-import { TlcCoverageDecorationProvider } from '../tlcCoverage';
+import { TlcCoverageSnapshotStore } from '../tlcCoverageSnapshot';
 import { tlcTraceToPuml } from '../generators/tlcTraceToPuml';
 import { showSequenceDiagramFromPuml } from '../panels/sequenceDiagramView';
 
@@ -31,7 +31,7 @@ const CFG_CREATE_OUT_FILES = 'tlaplus.tlc.modelChecker.createOutFiles';
 const CFG_SEQ_DIAGRAM_TRACE_VAR = 'tlaplus.tlc.sequenceDiagram.traceVariable';
 let checkProcess: ChildProcess | undefined;
 let lastCheckFiles: SpecFiles | undefined;
-let coverageProvider: TlcCoverageDecorationProvider | undefined;
+let coverageSnapshotStore: TlcCoverageSnapshotStore | undefined;
 const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);
 export const outChannel = new ToolOutputChannel('TLC', mapTlcOutputLine);
 
@@ -42,8 +42,8 @@ class CheckResultHolder {
 /**
  * Sets the coverage provider to be used for visualization.
  */
-export function setCoverageProvider(provider: TlcCoverageDecorationProvider): void {
-    coverageProvider = provider;
+export function setCoverageProvider(provider: TlcCoverageSnapshotStore): void {
+    coverageSnapshotStore = provider;
 }
 
 /**
@@ -203,14 +203,13 @@ export async function doCheckModel(
             }
 
             // Update coverage visualization
-            if (coverageProvider && checkResult.coverageStat.length > 0) {
-                // Get total distinct states from the last entry in initialStatesStat
+            if (coverageSnapshotStore) {
                 let totalDistinctStates = 0;
                 if (checkResult.initialStatesStat.length > 0) {
                     const lastStat = checkResult.initialStatesStat[checkResult.initialStatesStat.length - 1];
                     totalDistinctStates = lastStat.distinct;
                 }
-                coverageProvider.updateCoverage(checkResult.coverageStat, totalDistinctStates);
+                coverageSnapshotStore.updateCoverage(checkResult.coverageStat, totalDistinctStates);
             }
         };
         // Accumulate raw stdout for sequence-diagram generation
