@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { TlaDocumentInfos } from '../model/documentInfo';
 import { getPrevText } from './completions';
+import { SemanticService } from '../services/semanticService';
 
 export const TLA_OPERATORS = [
     'E', 'A', 'X', 'lnot', 'land', 'lor', 'cdot', 'equiv', 'subseteq', 'in', 'notin', 'intersect',
@@ -50,7 +50,7 @@ const TLA_STD_MODULE_ITEMS = TLA_STD_MODULES.map(m => {
  */
 export class TlaCompletionItemProvider implements vscode.CompletionItemProvider {
     constructor(
-        private readonly docInfos: TlaDocumentInfos
+        private readonly semanticService: SemanticService
     ) {}
 
     provideCompletionItems(
@@ -70,7 +70,7 @@ export class TlaCompletionItemProvider implements vscode.CompletionItemProvider 
         if (isOperator) {
             return new vscode.CompletionList(TLA_OPERATOR_ITEMS, false);
         }
-        const docInfo = this.docInfos.get(document.uri);
+        const docInfo = this.semanticService.getDocumentInfo(document.uri);
         const symbols = docInfo.symbols || [];
         const symbolInfos = symbols.map(s => new vscode.CompletionItem(s.name, mapKind(s.kind)));
         let items = TLA_INNER_ITEMS.concat(symbolInfos);

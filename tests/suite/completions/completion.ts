@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import * as assert from 'assert';
 import { loc, pos } from '../shortcuts';
-import { TlaDocumentInfos } from '../../../src/model/documentInfo';
+import { TlaDocumentInfo } from '../../../src/model/documentInfo';
+import { SemanticService } from '../../../src/services/semanticService';
 
 export function assertSymbolClass(
     labels: string[],
@@ -27,12 +28,17 @@ export function assertCompletion(
     }
 }
 
-export function createTestDocInfos(docUri: vscode.Uri): TlaDocumentInfos {
+export function createTestDocInfos(docUri: vscode.Uri): SemanticService {
     const symbolsList = [];
     symbolsList.push(
         new vscode.SymbolInformation('Foo', vscode.SymbolKind.Field, 'test', loc(docUri, pos(0, 0)))
     );
-    const docInfos = new TlaDocumentInfos();
-    docInfos.get(docUri).symbols = symbolsList;
-    return docInfos;
+    const semanticService = new SemanticService();
+    semanticService.updateSnapshot(docUri, {
+        documentInfo: new TlaDocumentInfo(undefined, undefined, [], symbolsList),
+        source: 'heuristic',
+        freshness: 'current',
+        authority: 'heuristic',
+    });
+    return semanticService;
 }

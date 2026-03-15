@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
-import { Module, TlaDocumentInfo, TlaDocumentInfos } from '../model/documentInfo';
+import { Module, TlaDocumentInfo } from '../model/documentInfo';
 import { ToolOutputChannel } from '../outputChannels';
 import { runXMLExporter, ToolProcessInfo } from '../tla2tools';
 import { XMLParser } from 'fast-xml-parser';
+import { SemanticService } from '../services/semanticService';
 
 const COMMA_LEN = 1;
 export const ROOT_SYMBOL_NAME = '*';
@@ -214,9 +215,9 @@ export class TLADocumentSymbolProvider implements vscode.DocumentSymbolProvider 
     private tlaDocSymbolsProvider: TlaDocumentSymbolsProvider;
 
     constructor(
-        private readonly docInfos: TlaDocumentInfos
+        private readonly semanticService: SemanticService
     ) {
-        this.tlaDocSymbolsProvider = new TlaDocumentSymbolsProvider(docInfos);
+        this.tlaDocSymbolsProvider = new TlaDocumentSymbolsProvider(semanticService);
     }
 
     async provideDocumentSymbols(
@@ -251,7 +252,7 @@ const sanyOutChannel = new ToolOutputChannel('SANY XML Exporter');
  */
 export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider {
     constructor(
-        private readonly docInfos: TlaDocumentInfos
+        private readonly semanticService: SemanticService
     ) { }
 
     async provideDocumentSymbols(
@@ -300,10 +301,12 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
         // Wait for XML exporter to finish successfully.  If it fails, use the regex-based parsing result.
         // If it succeeds, use the XML-based parsing result. We merge instead of replacing the regex-based
         // parsing result to not lose PlusCal symbols.
+        let usedXmlSymbols = false;
         try {
             const xmlSymbols = await xmlExporterPromise;
             if (xmlSymbols) {
                 symbols = this.merge(symbols, xmlSymbols);
+                usedXmlSymbols = true;
             }
         } catch (error: unknown) {
             // If XML exporter fails, just use regex-based parsing result
@@ -311,12 +314,20 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
             sanyOutChannel.appendLine(`XML exporter encountered an error: ${errorMessage}`);
         }
 
-        this.docInfos.set(document.uri, new TlaDocumentInfo(
+        const documentInfo = new TlaDocumentInfo(
             context.rootModule.convert(),
             context.plusCal?.convert(),
             context.modules.map(m => m.convert()),
             symbols.slice()
-        ));
+        );
+        this.semanticService.updateSnapshot(document.uri, {
+            documentInfo,
+            source: usedXmlSymbols ? 'merged' : 'heuristic',
+            freshness: document.isDirty ? 'partial' : 'current',
+            authority: usedXmlSymbols ? 'authoritative' : 'heuristic',
+            documentVersion: document.version,
+            includeExtendedModules: includeExtendedModules ?? false,
+        });
         if (context.plusCal) {
             symbols = symbols.concat(context.plusCal.symbols);
         }

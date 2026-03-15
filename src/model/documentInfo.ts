@@ -50,3 +50,18 @@ export class TlaDocumentInfos {
         this.map.set(uri, docInfo);
     }
 }
+
+export type SemanticSource = 'heuristic' | 'sany' | 'merged';
+export type SemanticFreshness = 'current' | 'stale' | 'partial';
+export type SemanticAuthority = 'heuristic' | 'merged' | 'authoritative';
+
+export class SemanticSnapshot {
+    constructor(
+        readonly documentInfo: TlaDocumentInfo = new TlaDocumentInfo(),
+        readonly source: SemanticSource = 'heuristic',
+        readonly freshness: SemanticFreshness = 'stale',
+        readonly authority: SemanticAuthority = 'heuristic',
+        readonly documentVersion: number | undefined = undefined,
+        readonly includeExtendedModules: boolean = false,
+    ) {}
+}
