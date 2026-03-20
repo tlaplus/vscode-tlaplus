@@ -29,8 +29,8 @@ jobs:
     if: needs.checksecret.outputs.is_MY_SECRET_set == 'true'
     runs-on: macOS-latest
     steps:
-    - uses: actions/checkout@v1
-    - uses: actions/setup-node@v1
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
       with:
         node-version: '22.14.0'
     - name: Get (latest) TLC

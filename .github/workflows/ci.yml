@@ -16,6 +16,12 @@ jobs:
     - uses: actions/setup-node@v4
       with:
         node-version: '22'
+    - name: Get (latest) TLC
+      shell: bash
+      run: curl -sL https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar -o tools/tla2tools.jar
+    - name: Get (latest) CommunityModules
+      shell: bash
+      run: curl -sL https://github.com/tlaplus/CommunityModules/releases/latest/download/CommunityModules-deps.jar -o tools/CommunityModules-deps.jar
     - name: Install dependencies
       run: |
         npm ci
