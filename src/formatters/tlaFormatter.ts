@@ -3,12 +3,11 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { createHash } from 'crypto';
 import { spawn } from 'child_process';
-import { getJavaPath, TLA_CMODS_LIB_NAME } from '../tla2tools';
+import { getJavaPath, TLA_CMODS_LIB_NAME, TLA_TOOLS_LIB_NAME } from '../tla2tools';
 import { moduleSearchPaths } from '../paths';
 
 const CFG_FORMATTER_ENABLED = 'tlaplus.formatter.enabled';
-const FORMATTER_JAR_NAME = 'tlaplus-formatter.jar';
-const FORMATTER_MAIN_CLASS = 'me.fponzi.tlaplusformatter.Main';
+const FORMATTER_MAIN_CLASS = 'formatter.Main';
 
 /**
  * Builds `-DTLA-Library=...` with all module search paths (user-configured,
@@ -48,7 +47,7 @@ function generateHash(input: string, algorithm: string): string {
 }
 
 export function registerDocumentFormatter(context: vscode.ExtensionContext): void {
-    const formatterJarPath = path.join(context.extensionPath, 'tools', FORMATTER_JAR_NAME);
+    const toolsJarPath = path.join(context.extensionPath, 'tools', TLA_TOOLS_LIB_NAME);
     const cmodsJarPath = path.join(context.extensionPath, 'tools', TLA_CMODS_LIB_NAME);
 
     context.subscriptions.push(
@@ -100,7 +99,7 @@ export function registerDocumentFormatter(context: vscode.ExtensionContext): voi
 
                     const javaPath = getJavaPath();
                     const stderrChunks: string[] = [];
-                    const classPath = formatterJarPath + path.delimiter + cmodsJarPath;
+                    const classPath = toolsJarPath + path.delimiter + cmodsJarPath;
                     const spawnArgs = [
                         makeFormatterTlaLibraryOpt(documentDir),
                         '-cp', classPath,

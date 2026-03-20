@@ -676,7 +676,7 @@
                     "type": "boolean",
                     "scope": "window",
                     "default": true,
-                    "markdownDescription": "Enable the TLA+ document formatter. [More info](https://github.com/FedericoPonzi/tlaplus-formatter/)"
+                    "markdownDescription": "Enable the TLA+ document formatter."
                 },
                 "tlaplus.moduleSearchPaths": {
                     "type": "array",
