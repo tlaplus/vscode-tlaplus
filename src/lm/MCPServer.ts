@@ -39,7 +39,7 @@ import { getDiagnostic } from '../main';
 import { moduleSearchPaths } from '../paths';
 import { TlcModelCheckerStdoutParser } from '../parsers/tlc';
 import { updateCheckResultView } from '../panels/checkResultView';
-import { ModelCheckResultSource } from '../model/check';
+import { ModelCheckResultSource, SpecFiles } from '../model/check';
 
 /**
  * Custom error class for article validation errors.
@@ -1556,7 +1556,7 @@ export class MCPServer implements vscode.Disposable {
     }> {
         // Create a URI from the file name
         const fileUri = vscode.Uri.file(fileName);
-        // Check if the file exists
+        // Check if the spec file exists.
         if (!(await exists(fileName))) {
             return {
                 content: [{
@@ -1565,9 +1565,24 @@ export class MCPServer implements vscode.Disposable {
                 }]
             };
         }
+        // Check if the explicitly provided cfg file exists.
+        if (cfgFilePath && !(await exists(cfgFilePath))) {
+            return {
+                content: [{
+                    type: 'text',
+                    text: `Configuration file ${cfgFilePath} does not exist on disk.`
+                }]
+            };
+        }
 
         try {
-            const specFiles = await getSpecFiles(fileUri, false, false);
+            // When an explicit cfg is provided, use it directly instead of
+            // relying on naming-convention discovery (e.g. Spec.cfg / MCSpec.cfg).
+            // This supports the common TLC pattern of multiple .cfg files per module.
+            const specFiles = cfgFilePath
+                ? new SpecFiles(fileName, cfgFilePath)
+                : await getSpecFiles(fileUri, false, false);
+
             if (!specFiles) {
                 // Extract the spec name from the file name.
                 const specName = path.basename(fileName, path.extname(fileName));
@@ -1592,11 +1607,8 @@ export class MCPServer implements vscode.Disposable {
                 extraJavaOpts.push('-Dutil.ExecutionStatisticsCollector.waitForCompletion=true');
             }
 
-            // Use the provided cfgFilePath or default to specFiles.cfgFilePath
-            const configFilePath = cfgFilePath || specFiles.cfgFilePath;
-
             const procInfo = await runTlc(
-                specFiles.tlaFilePath, configFilePath, false, extraOps, extraJavaOpts);
+                specFiles.tlaFilePath, specFiles.cfgFilePath, false, extraOps, extraJavaOpts);
             if (procInfo === undefined) {
                 return {
                     content: [{
