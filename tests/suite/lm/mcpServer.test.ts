@@ -286,4 +286,104 @@ suite('MCP Server regressions', () => {
             }
         });
     });
+
+    suite('runTLCInMCP respects explicit cfgFile parameter', () => {
+        let tmpDir: string;
+
+        const getPrototype = () => MCPServer.prototype as unknown as {
+            runTLCInMCP(
+                fileName: string,
+                extraOps: string[],
+                extraJavaOpts: string[],
+                cfgFilePath?: string
+            ): Promise<{ content: { type: 'text'; text: string }[] }>;
+        };
+
+        setup(async () => {
+            tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'mcp-cfg-test-'));
+        });
+
+        teardown(async () => {
+            await fsp.rm(tmpDir, { recursive: true, force: true });
+        });
+
+        test('returns config-not-found error when no cfgFile and no convention match', async function () {
+            this.timeout(10000);
+            const tlaFile = path.join(tmpDir, 'MySpec.tla');
+            await fsp.writeFile(tlaFile, '---- MODULE MySpec ----\n====');
+
+            const result = await getPrototype().runTLCInMCP.call({}, tlaFile, ['-simulate'], []);
+
+            assert.ok(
+                result.content[0].text.includes('Please create an MC'),
+                'Should return config-not-found error when no cfgFile provided'
+            );
+        });
+
+        test('bypasses config discovery when cfgFile is explicitly provided', async function () {
+            this.timeout(10000);
+            const tlaFile = path.join(tmpDir, 'MySpec.tla');
+            const cfgFile = path.join(tmpDir, 'custom-scenario.cfg');
+            await fsp.writeFile(tlaFile, '---- MODULE MySpec ----\n====');
+            await fsp.writeFile(cfgFile, 'SPECIFICATION Spec');
+
+            const result = await getPrototype().runTLCInMCP.call({}, tlaFile, ['-simulate'], [], cfgFile);
+            const text = result.content[0].text;
+
+            assert.ok(
+                !text.includes('Please create an MC'),
+                `Should not return config-not-found error when cfgFile is provided, got: ${text}`
+            );
+        });
+
+        // Reproducer for the original bug: multiple .cfg files per module
+        // with names that don't follow the {Spec}.cfg / MC{Spec}.cfg convention.
+        // Before the fix, cfgFile was ignored and the tool returned
+        // "No MySpec.cfg or MCMySpec.tla/MCMySpec.cfg files found" for every config.
+        test('multiple cfg files per module — cfgFile selects the right config', async function () {
+            this.timeout(10000);
+            const tlaFile = path.join(tmpDir, 'MySpec.tla');
+            await fsp.writeFile(tlaFile, '---- MODULE MySpec ----\n====');
+
+            const configs = [
+                'MySpec_positive.cfg',
+                'MySpec_negative.cfg',
+                'MySpec_bounded.cfg',
+            ];
+            for (const name of configs) {
+                await fsp.writeFile(path.join(tmpDir, name), 'SPECIFICATION Spec');
+            }
+
+            for (const name of configs) {
+                const cfgFile = path.join(tmpDir, name);
+                const result = await getPrototype().runTLCInMCP.call(
+                    {}, tlaFile, ['-simulate'], [], cfgFile
+                );
+                const text = result.content[0].text;
+                assert.ok(
+                    !text.includes('Please create an MC'),
+                    `cfgFile=${name} should not trigger config-not-found error, got: ${text}`
+                );
+            }
+        });
+
+        test('returns clear error when explicit cfgFile does not exist', async function () {
+            this.timeout(10000);
+            const tlaFile = path.join(tmpDir, 'MySpec.tla');
+            const cfgFile = path.join(tmpDir, 'nonexistent.cfg');
+            await fsp.writeFile(tlaFile, '---- MODULE MySpec ----\n====');
+
+            const result = await getPrototype().runTLCInMCP.call({}, tlaFile, ['-simulate'], [], cfgFile);
+            const text = result.content[0].text;
+
+            assert.ok(
+                text.includes('does not exist on disk'),
+                `Should return missing-file error for nonexistent cfgFile, got: ${text}`
+            );
+            assert.ok(
+                text.includes('nonexistent.cfg'),
+                `Error should mention the config file path, got: ${text}`
+            );
+        });
+    });
 });
