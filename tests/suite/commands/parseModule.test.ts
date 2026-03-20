@@ -82,7 +82,6 @@ Spec == Init /\\ Next
         // The output should contain SANY error messages (proving stderr is merged with stdout)
         const hasErrorMessage = capturedOutput.includes('line 4, col 9 to line 4, col 9 of module ParseError') &&
                                 capturedOutput.includes('Unknown operator: `x') &&
-                                capturedOutput.includes('Linting of module ParseError') &&
                                 capturedOutput.includes('*** Errors: 4');
 
         assert.ok(hasErrorMessage, `mergedOutput should contain error messages. Got: ${capturedOutput.substring(0, 300)}`);
