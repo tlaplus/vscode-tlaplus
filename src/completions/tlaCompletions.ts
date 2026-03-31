@@ -23,7 +23,10 @@ export const TLA_OPERATORS = [
     'cong', 'ominus', 'X',
     'doteq', 'odot', 'wr',
     'otimes', 'propto', 'oslash',
-    'E', 'A', 'EE', 'AA'
+    'E', 'A', 'EE', 'AA',
+    // Aliases
+    'intersect', 'union', 'times', 'circ',
+    'forall', 'exists', 'neg'
 ];
 
 const enableUnicodeAutocomplete = vscode.workspace.getConfiguration()
@@ -38,9 +41,9 @@ export const TLA_UNICODE_OPERATORS: Map<string, string> = new Map([
     ['~>', '↝'], ['prec', '≺'], ['succ', '≻'],
     ['-+->', '⇸'], ['preceq', '⪯'], ['succeq', '⪰'],
     ['div', '÷'], ['subseteq', '⊆'], ['supseteq', '⊇'],
-    ['cdot', '·'], ['subset', '⊂'], ['supset', '⊃'],
-    ['o', '○'], ['sqsubset', '⊏'], ['sqsupset', '⊐'],
-    ['bullet', '•'], ['sqsubseteq', '⊑'], ['sqsupseteq', '⊒'],
+    ['cdot', '⋅'], ['subset', '⊂'], ['supset', '⊃'],
+    ['o', '∘'], ['sqsubset', '⊏'], ['sqsupset', '⊐'],
+    ['bullet', '●'], ['sqsubseteq', '⊑'], ['sqsupseteq', '⊒'],
     ['star', '⋆'], ['vdash', '⊢'], ['dashv', '⊣'],
     ['bigcirc', '◯'], ['models', '⊨'], ['vDash', '=|'],
     ['sim', '∼'], ['maps', '→'], ['leftarrow', '←'],
@@ -51,8 +54,9 @@ export const TLA_UNICODE_OPERATORS: Map<string, string> = new Map([
     ['doteq', '≐'], ['odot', '⊙'], ['wr', '≀'],
     ['otimes', '⊗'], ['propto', '∝'], ['oslash', '⊘'],
     ['E', '∃'], ['A', '∀'], ['EE', '∃'], ['AA', '∀'],
-    // Repeats
+    // Aliases
     ['times', '×'], ['circ', '∘'], ['intersect', '∩'], ['union', '∪'],
+    ['forall', '∀'], ['exists', '∃'], ['neg', '¬'],
 ]);
 
 export const TLA_STARTING_KEYWORDS = [  // These keywords start blocks, and should not be in the middle of an expression
