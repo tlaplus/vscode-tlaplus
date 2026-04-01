@@ -31,7 +31,8 @@ export function activate(context: vscode.ExtensionContext): void {
             { label: 'TLA+' }),
         vscode.languages.registerCompletionItemProvider(
             LANG_TLAPLUS,
-            new TlaCompletionItemProvider(tlaDocInfos)),
+            new TlaCompletionItemProvider(tlaDocInfos),
+            ...TlaCompletionItemProvider.TRIGGER_CHARS),
         vscode.languages.registerCompletionItemProvider(
             LANG_TLAPLUS_CFG,
             new CfgCompletionItemProvider()),

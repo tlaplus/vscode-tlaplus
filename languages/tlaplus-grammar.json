@@ -44,27 +44,27 @@
             "patterns": [
                 {
                     "comment": "Set operators",
-                    "match": "\\\\(in|notin|subseteq|subset|supseteq|supset|union|intersect|cup|cap|setminus)\\b",
+                    "match": "\\\\(in|notin|subseteq|subset|supseteq|supset|union|intersect|cup|cap|sqsubset|sqsupset|sqsubseteq|sqsupseteq|sqcap|sqcup|uplus|setminus)\\b|[∈∉⊆⊂⊇⊃∪∩⊏⊐⊑⊒⊓⊔⊎]",
                     "name": "keyword.operator.set.tlaplus"
                 },
                 {
                     "comment": "Logic operators",
-                    "match": "\\\\(land|lor|lnot|neg|equiv|implies|iff)\\b",
+                    "match": "\\\\(land|lor|lnot|neg|equiv|implies|iff)\\b|[∧∨¬≡⇒]",
                     "name": "keyword.operator.logic.tlaplus"
                 },
                 {
                     "comment": "Arithmetic operators",
-                    "match": "\\\\(leq|geq|ll|gg|prec|succ|preceq|succeq|sim|simeq|asymp|approx|cong|neq|doteq|propto|models|perp|mid|parallel|bowtie|ltimes|rtimes|div|cdot|star|circ|bullet|wr|oplus|ominus|otimes|oslash|odot|dagger|ddagger)\\b",
+                    "match": "\\\\(leq|geq|ll|gg|prec|succ|preceq|succeq|sim|simeq|asymp|approx|cong|neq|doteq|propto|models|perp|mid|parallel|bowtie|ltimes|rtimes|div|cdot|star|circ|bigcirc|bullet|wr|oplus|ominus|otimes|oslash|odot|dagger|ddagger)\\b|[≤≥≪≫≺≻⪯⪰∼≃≍≈≅≠≐∝⊨÷⋅⋆∘●◯≀⊕⊖⊗⊘⊙]",
                     "name": "keyword.operator.arithmetic.tlaplus"
                 },
                 {
                     "comment": "Quantifiers",
-                    "match": "\\\\(A|E|forall|exists)\\b",
+                    "match": "\\\\(A|E|forall|exists)\\b|[∀∃]",
                     "name": "keyword.operator.quantifier.tlaplus"
                 },
                 {
                     "comment": "Arrows",
-                    "match": "\\\\(times|X)\\b",
+                    "match": "\\\\(times|X)\\b|×",
                     "name": "keyword.operator.product.tlaplus"
                 },
                 {
