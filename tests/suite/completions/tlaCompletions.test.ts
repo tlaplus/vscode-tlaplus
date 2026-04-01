@@ -73,6 +73,40 @@ suite('TLA Completions Provider Test Suite', () => {
         ], EXPECT_OPERATORS);
     });
 
+    test('Completes operators when typing symbolic operator \\[]', async () => {
+        const docInfo = parseDocInfo(['x \\[${a}']);
+        await replaceDocContents(doc, docInfo.lines.join('\n'));
+        const docInfos = createTestDocInfos(doc.uri);
+        const completionsProvider = new TlaCompletionItemProvider(docInfos);
+        const tokenSrc = new vscode.CancellationTokenSource();
+        const ctx: vscode.CompletionContext = {
+            triggerKind: vscode.CompletionTriggerKind.TriggerCharacter,
+            triggerCharacter: docInfo.char
+        };
+        const completions = await completionsProvider.provideCompletionItems(doc, docInfo.position, tokenSrc.token, ctx);
+        assert.ok(completions, 'Completions should be returned for symbolic operator \\[]');
+        assert.ok(completions.items.length > 0, 'Should have completion items for symbolic operators');
+        const boxCompletion = completions.items.find(item => item.label === '\\[]');
+        assert.ok(boxCompletion, 'Should have \\[] completion');
+    });
+
+    test('Completes operators when typing symbolic operator \\~>', async () => {
+        const docInfo = parseDocInfo(['x \\~${a}']);
+        await replaceDocContents(doc, docInfo.lines.join('\n'));
+        const docInfos = createTestDocInfos(doc.uri);
+        const completionsProvider = new TlaCompletionItemProvider(docInfos);
+        const tokenSrc = new vscode.CancellationTokenSource();
+        const ctx: vscode.CompletionContext = {
+            triggerKind: vscode.CompletionTriggerKind.TriggerCharacter,
+            triggerCharacter: docInfo.char
+        };
+        const completions = await completionsProvider.provideCompletionItems(doc, docInfo.position, tokenSrc.token, ctx);
+        assert.ok(completions, 'Completions should be returned for symbolic operator \\~>');
+        assert.ok(completions.items.length > 0, 'Should have completion items for symbolic operators');
+        const leadsToCompletion = completions.items.find(item => item.label === '\\~>');
+        assert.ok(leadsToCompletion, 'Should have \\~> completion');
+    });
+
     test('Completes all but operators after \\ followed by a space', () => {
         return assertCompletions(doc, [
             '\\ e${q}'

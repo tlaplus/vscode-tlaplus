@@ -116,6 +116,9 @@ export function resolveOperatorCompletion(
  * Completes TLA+ text.
  */
 export class TlaCompletionItemProvider implements vscode.CompletionItemProvider {
+    // Non-word trigger characters for symbolic operators like \[], \<>, \~>, \-+->
+    static readonly TRIGGER_CHARS = ['[', ']', '<', '>', '~', '-', '+'];
+
     constructor(
         private readonly docInfos: TlaDocumentInfos
     ) { }
@@ -133,13 +136,13 @@ export class TlaCompletionItemProvider implements vscode.CompletionItemProvider 
         if (prevText.startsWith('CONSTANT') || prevText.startsWith('RECURSIVE')) {
             return new vscode.CompletionList([], false);
         }
-        const isOperator = /^.*(?<!\/)\\\w*$/g.test(prevText);  // contains \ before the trailing letters, but not /\
+        const isOperator = /^.*(?<!\/)\\\S*$/g.test(prevText);  // contains \ before trailing non-space chars, but not /\
         if (isOperator) {
             // Set an explicit replacement range that includes the backslash.
             // Without this, VS Code uses word-based replacement which doesn't consider '\'
             // part of a word, so typing '\in' and selecting a completion would only replace
             // 'in', leaving the backslash behind (e.g., '\in' -> '\∈' instead of '∈').
-            const match = prevText.match(/\\(\w*)$/);
+            const match = prevText.match(/\\(\S*)$/);
             if (match) {
                 const backslashCol = prevText.length - match[0].length;
                 const range = new vscode.Range(

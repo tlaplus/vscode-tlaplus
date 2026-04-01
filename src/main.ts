@@ -168,7 +168,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             { label: 'TLA+' }),
         vscode.languages.registerCompletionItemProvider(
             TLAPLUS_FILE_SELECTOR,
-            new TlaCompletionItemProvider(tlaDocInfos)),
+            new TlaCompletionItemProvider(tlaDocInfos),
+            ...TlaCompletionItemProvider.TRIGGER_CHARS),
         vscode.languages.registerCompletionItemProvider(
             TLAPLUS_CFG_FILE_SELECTOR,
             new CfgCompletionItemProvider()),
