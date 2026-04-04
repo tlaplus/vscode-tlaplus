@@ -20,6 +20,38 @@ export class SanyData {
     readonly filePathToMonolithFilePath = new Map<string, string>();
 }
 
+export type DivergenceType = 'none' | 'pcal' | 'tla' | 'both';
+
+/**
+ * Determines the type of PlusCal/TLA+ divergence from SANY output.
+ */
+export function getDivergenceType(sanyData: SanyData): DivergenceType {
+    const warnings = sanyData.dCollection.getMessages().filter(
+        msg => msg.diagnostic.severity === vscode.DiagnosticSeverity.Warning
+    );
+    if (warnings.some(m => m.diagnostic.message.includes('have changed since the last translation'))) {
+        return 'both';
+    }
+    if (warnings.some(m => m.diagnostic.message.includes('TLA+ translation'))) {
+        return 'tla';
+    }
+    if (warnings.some(m =>
+        m.diagnostic.message.includes('PlusCal algorithm') && m.diagnostic.message.includes('has changed since'))) {
+        return 'pcal';
+    }
+    return 'none';
+}
+
+const TRANSLATION_CHECKSUM_RE = /^\\[*] BEGIN TRANSLATION\s*\(/m;
+
+/**
+ * Quick check whether a document contains a BEGIN TRANSLATION marker with checksums.
+ * Only files with checksums can have detectable divergence.
+ */
+export function hasTranslationChecksums(text: string): boolean {
+    return TRANSLATION_CHECKSUM_RE.test(text);
+}
+
 /**
  * Parses stdout of TLA+ code parser.
  */
@@ -51,6 +83,9 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
             return;
         }
         if (line.startsWith('Semantic processing of module ')) {
+            // Flush any pending rangeless message (e.g. divergence warning from syntax parsing phase)
+            // before switching to a new module context
+            this.tryAddMessage(true);
             const curMod = line.substring(30);
             this.curFilePath = this.result.modulePaths.get(curMod);
             return;
@@ -63,7 +98,7 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
             newBlockType = OutBlockType.ParseError;
         } else if (line.startsWith('*** Abort messages:')) {
             newBlockType = OutBlockType.AbortMessages;
-        } else if (line.startsWith('*** Warnings:')) {
+        } else if (line.startsWith('*** Warnings:') || line.startsWith('Warnings (')) {
             newBlockType = OutBlockType.Warnings;
         } else if (line.startsWith('Fatal errors while parsing TLA+ spec')) {
             this.tryAddMonolithSpec(line);
@@ -139,6 +174,9 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
                 if (range) {
                     if (this.errRange) {
                         this.tryAddMessage();   // We found the beginning of a new message, so finish the previous one
+                    } else if (this.errMessage) {
+                        // Flush a rangeless message (e.g. PlusCal divergence warning) before starting a ranged one
+                        this.tryAddMessage(true);
                     }
                     this.errRange = range;
                 } else {

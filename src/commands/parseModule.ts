@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { DCollection, applyDCollection } from '../diagnostic';
 import { TranspilerStdoutParser } from '../parsers/pluscal';
-import { SanyData, SanyStdoutParser } from '../parsers/sany';
+import { SanyData, SanyStdoutParser, getDivergenceType, hasTranslationChecksums } from '../parsers/sany';
 import { runPlusCal, runSany, stopProcess, ToolProcessInfo } from '../tla2tools';
 import { ToolOutputChannel } from '../outputChannels';
 import { LANG_TLAPLUS } from '../common';
@@ -29,8 +29,30 @@ export function parseModule(diagnostic: vscode.DiagnosticCollection): void {
     editor.document.save().then(() => doParseFile(editor.document, diagnostic));
 }
 
+const OVERWRITE_PCAL_TRANSL_LABEL = 'Overwrite Translation';
+
 async function doParseFile(doc: vscode.TextDocument, diagnostic: vscode.DiagnosticCollection) {
     try {
+        // Only run the pre-translation SANY check if the file has translation markers with checksums.
+        // This avoids doubling SANY invocations for files without PlusCal or without checksums.
+        if (hasTranslationChecksums(doc.getText())) {
+            const initialSpecData = await parseSpec(doc.uri);
+            const divergence = getDivergenceType(initialSpecData);
+            if (divergence === 'tla' || divergence === 'both') {
+                const choice = await vscode.window.showWarningMessage(
+                    'A hash mismatch has been found that indicates that the TLA+ translation has been modified '
+                    + 'manually since its last translation. Click "Overwrite Translation" to replace the TLA+ '
+                    + 'translation anyway or "Cancel" to abort re-translation and keep the modified TLA+ translation.',
+                    OVERWRITE_PCAL_TRANSL_LABEL,
+                    'Cancel'
+                );
+                if (choice !== OVERWRITE_PCAL_TRANSL_LABEL) {
+                    // User cancelled — apply initial SANY diagnostics without translating
+                    applyDCollection(initialSpecData.dCollection, diagnostic);
+                    return;
+                }
+            }
+        }
         const messages = await transpilePlusCal(doc.uri);
         vscode.window.showTextDocument(doc);    // To force changes reloading
         const specData = await parseSpec(doc.uri);

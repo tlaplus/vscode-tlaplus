@@ -533,6 +533,48 @@ suite('TLA Symbols Provider Test Suite', () => {
         ]);
     });
 
+    test('Ends PlusCal at BEGIN TRANSLATION without checksum', () => {
+        return assertSymbols(doc, [
+            '(* --algorithm foo',
+            'begin',
+            '  skip;',
+            'end algorithm; *)',
+            '\\* BEGIN TRANSLATION',
+            'VARIABLE pc',
+        ], [
+            symVar('pc', ROOT_CONTAINER_NAME, loc(doc.uri, pos(5, 9))),
+            symPlusCal('foo', loc(doc.uri, range(0, 0, 3, 17)))
+        ]);
+    });
+
+    test('Ends PlusCal at BEGIN TRANSLATION with checksum', () => {
+        return assertSymbols(doc, [
+            '(* --algorithm foo',
+            'begin',
+            '  skip;',
+            'end algorithm; *)',
+            '\\* BEGIN TRANSLATION (chksum(pcal) = "abc123" /\\ chksum(tla) = "def456")',
+            'VARIABLE pc',
+        ], [
+            symVar('pc', ROOT_CONTAINER_NAME, loc(doc.uri, pos(5, 9))),
+            symPlusCal('foo', loc(doc.uri, range(0, 0, 3, 17)))
+        ]);
+    });
+
+    test('Ends PlusCal at BEGIN TRANSLATION with hash comment', () => {
+        return assertSymbols(doc, [
+            '(* --algorithm foo',
+            'begin',
+            '  skip;',
+            'end algorithm; *)',
+            '\\* BEGIN TRANSLATION - the hash of the PCal code: PCal-e313c8def40ad1e3112011f0db802650',
+            'VARIABLE pc',
+        ], [
+            symVar('pc', ROOT_CONTAINER_NAME, loc(doc.uri, pos(5, 9))),
+            symPlusCal('foo', loc(doc.uri, range(0, 0, 3, 17)))
+        ]);
+    });
+
 });
 
 async function assertSymbols(

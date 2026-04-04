@@ -819,7 +819,8 @@ export class TlaDocumentSymbolsProvider implements vscode.DocumentSymbolProvider
         if (matches) {
             return SpecialSymbol.PlusCalEnd;
         }
-        return line.text === '\\* BEGIN TRANSLATION' ? SpecialSymbol.PlusCalEnd : undefined;
+        return line.text.trimEnd().startsWith('\\* BEGIN TRANSLATION')
+            ? SpecialSymbol.PlusCalEnd : undefined;
     }
 }
 

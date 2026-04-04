@@ -1,4 +1,5 @@
 import { ChildProcess } from 'child_process';
+import * as fsp from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { LANG_TLAPLUS, LANG_TLAPLUS_CFG } from '../common';
@@ -11,8 +12,10 @@ import {
     revealLastCheckResultView,
     updateCheckResultView
 } from '../panels/checkResultView';
+import { getDivergenceType, hasTranslationChecksums } from '../parsers/sany';
 import { TlcModelCheckerStdoutParser } from '../parsers/tlc';
 import { runTlc, stopProcess } from '../tla2tools';
+import { parseSpec } from './parseModule';
 import { ModelResolveMode, resolveModelForUri } from './modelResolver';
 import { TlcCoverageDecorationProvider } from '../tlcCoverage';
 import { tlcTraceToPuml } from '../generators/tlcTraceToPuml';
@@ -29,6 +32,8 @@ export const CTX_TLC_CAN_RUN_AGAIN = 'tlaplus.tlc.canRunAgain';
 
 const CFG_CREATE_OUT_FILES = 'tlaplus.tlc.modelChecker.createOutFiles';
 const CFG_SEQ_DIAGRAM_TRACE_VAR = 'tlaplus.tlc.sequenceDiagram.traceVariable';
+const CONTINUE_MODEL_CHECKING = 'Continue Model-Checking';
+const ABORT_MODEL_CHECKING = 'Abort Model-Checking';
 let checkProcess: ChildProcess | undefined;
 let lastCheckFiles: SpecFiles | undefined;
 let coverageProvider: TlcCoverageDecorationProvider | undefined;
@@ -174,6 +179,10 @@ export async function doCheckModel(
     debuggerPortCallback?: (port?: number) => void
 ): Promise<ModelCheckResult | undefined> {
     try {
+        // Check for PlusCal/TLA+ divergence before running TLC
+        if (!await checkDivergenceBeforeModelCheck(specFiles.tlaFilePath)) {
+            return undefined;
+        }
         const procInfo = await runTlc(
             specFiles.tlaFilePath, specFiles.cfgFilePath, showOptionsPrompt, extraOpts);
         if (procInfo === undefined) {
@@ -314,5 +323,66 @@ function tryGenerateSequenceDiagram(
         }
     } catch (err) {
         outChannel.appendLine(`[Sequence Diagram] Failed to generate: ${err}`);
+    }
+}
+
+/**
+ * Checks for PlusCal/TLA+ divergence before model checking.
+ * Returns true if model checking should proceed, false if the user aborted.
+ * Fails open — if the check itself errors, model checking proceeds.
+ */
+async function checkDivergenceBeforeModelCheck(tlaFilePath: string): Promise<boolean> {
+    try {
+        const text = await fsp.readFile(tlaFilePath, 'utf-8');
+        if (!hasTranslationChecksums(text)) {
+            return true;
+        }
+        const sanyData = await parseSpec(vscode.Uri.file(tlaFilePath));
+        const divergence = getDivergenceType(sanyData);
+        if (divergence === 'none') {
+            return true;
+        }
+        const moduleName = path.basename(tlaFilePath, '.tla');
+        let message: string;
+        let defaultToContinue = false;
+        switch (divergence) {
+            case 'pcal':
+                message = `The PlusCal algorithm in module ${moduleName} has changed since its last translation `
+                    + '(chksum(pcal) mismatch).\n\n'
+                    + 'To permanently disable this warning, change the first conjunct on the '
+                    + '\\* BEGIN TRANSLATION line to:\n\n'
+                    + '\t\tchksum(pcal) \\in STRING\n\n'
+                    + 'Would you like to abort model-checking?';
+                break;
+            case 'tla':
+                message = `The TLA+ translation in module ${moduleName} has changed since its last translation `
+                    + '(chksum(tla) mismatch).\n\n'
+                    + 'To permanently disable this warning, change the second conjunct on the '
+                    + '\\* BEGIN TRANSLATION line to:\n\n'
+                    + '\t\tchksum(tla) \\in STRING\n\n'
+                    + 'Would you like to abort model-checking?';
+                defaultToContinue = true;
+                break;
+            case 'both':
+                message = `The PlusCal algorithm and its translation in module ${moduleName} have been modified `
+                    + 'since the last translation (chksums mismatch).\n\n'
+                    + 'To permanently disable this warning, change the conjuncts on the '
+                    + '\\* BEGIN TRANSLATION line to:\n\n'
+                    + '\t\tchksum(pcal) \\in STRING /\\ chksum(tla) \\in STRING\n\n'
+                    + 'Would you like to abort model-checking?';
+                break;
+        }
+        // TLA+-only divergence defaults to Continue; otherwise defaults to Abort.
+        // VS Code shows the first button as the primary/default action.
+        const buttons: string[] = defaultToContinue
+            ? [CONTINUE_MODEL_CHECKING, ABORT_MODEL_CHECKING]
+            : [ABORT_MODEL_CHECKING, CONTINUE_MODEL_CHECKING];
+        const choice = await vscode.window.showWarningMessage(message, ...buttons);
+        if (choice === undefined) {
+            return defaultToContinue;
+        }
+        return choice === CONTINUE_MODEL_CHECKING;
+    } catch {
+        return true;
     }
 }
