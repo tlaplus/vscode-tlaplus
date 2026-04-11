@@ -11,8 +11,10 @@ import {
     revealLastCheckResultView,
     updateCheckResultView
 } from '../panels/checkResultView';
+import { getDivergenceType } from '../parsers/sany';
 import { TlcModelCheckerStdoutParser } from '../parsers/tlc';
 import { runTlc, stopProcess } from '../tla2tools';
+import { parseSpec } from './parseModule';
 import { ModelResolveMode, resolveModelForUri } from './modelResolver';
 import { TlcCoverageDecorationProvider } from '../tlcCoverage';
 import { tlcTraceToPuml } from '../generators/tlcTraceToPuml';
@@ -29,6 +31,12 @@ export const CTX_TLC_CAN_RUN_AGAIN = 'tlaplus.tlc.canRunAgain';
 
 const CFG_CREATE_OUT_FILES = 'tlaplus.tlc.modelChecker.createOutFiles';
 const CFG_SEQ_DIAGRAM_TRACE_VAR = 'tlaplus.tlc.sequenceDiagram.traceVariable';
+const CONTINUE_MODEL_CHECKING = 'Continue Model-Checking';
+const ABORT_MODEL_CHECKING = 'Abort Model-Checking';
+const WARN_DIVERGENCE_SUFFIX =
+    'To permanently disable this warning, adjust the chksum conjuncts on the '
+    + '\\* BEGIN TRANSLATION line(s).\n\n'
+    + 'Would you like to abort model-checking?';
 let checkProcess: ChildProcess | undefined;
 let lastCheckFiles: SpecFiles | undefined;
 let coverageProvider: TlcCoverageDecorationProvider | undefined;
@@ -174,6 +182,10 @@ export async function doCheckModel(
     debuggerPortCallback?: (port?: number) => void
 ): Promise<ModelCheckResult | undefined> {
     try {
+        // Check for PlusCal/TLA+ divergence before running TLC
+        if (!await checkDivergenceBeforeModelCheck(specFiles.tlaFilePath)) {
+            return undefined;
+        }
         const procInfo = await runTlc(
             specFiles.tlaFilePath, specFiles.cfgFilePath, showOptionsPrompt, extraOpts);
         if (procInfo === undefined) {
@@ -314,5 +326,69 @@ function tryGenerateSequenceDiagram(
         }
     } catch (err) {
         outChannel.appendLine(`[Sequence Diagram] Failed to generate: ${err}`);
+    }
+}
+
+function formatModuleList(names: string[]): string {
+    if (names.length === 1) {
+        return `module ${names[0]}`;
+    }
+    return `modules ${names.join(', ')}`;
+}
+
+/**
+ * Checks for PlusCal/TLA+ divergence before model checking.
+ * Returns true if model checking should proceed, false if the user aborted.
+ * Fails open — if the check itself errors, model checking proceeds.
+ */
+async function checkDivergenceBeforeModelCheck(tlaFilePath: string): Promise<boolean> {
+    try {
+        const sanyData = await parseSpec(vscode.Uri.file(tlaFilePath));
+        const divergence = getDivergenceType(sanyData);
+        if (divergence.size === 0) {
+            return true;
+        }
+        // Group modules by divergence type so we can produce one line per type.
+        const pcalModules: string[] = [];
+        const tlaModules: string[] = [];
+        const bothModules: string[] = [];
+        for (const [name, modType] of divergence) {
+            switch (modType) {
+                case 'pcal': pcalModules.push(name); break;
+                case 'tla': tlaModules.push(name); break;
+                case 'both': bothModules.push(name); break;
+            }
+        }
+        const lines: string[] = [];
+        if (pcalModules.length > 0) {
+            lines.push(`The PlusCal algorithm in ${formatModuleList(pcalModules)} has changed since its last `
+                + 'translation (chksum(pcal) mismatch).');
+        }
+        if (tlaModules.length > 0) {
+            lines.push(`The TLA+ translation in ${formatModuleList(tlaModules)} has changed since its last `
+                + 'translation (chksum(tla) mismatch).');
+        }
+        if (bothModules.length > 0) {
+            lines.push(`The PlusCal algorithm and its translation in ${formatModuleList(bothModules)} have been `
+                + 'modified since the last translation (chksums mismatch).');
+        }
+        const hasNonTlaOnly = pcalModules.length > 0 || bothModules.length > 0;
+        const message = lines.join('\n\n') + '\n\n' + WARN_DIVERGENCE_SUFFIX;
+        // TLA+-only divergence (Case 3) uses an information dialog to match the
+        // "transient/easily-ignored" intent.  Cases 2 & 4 use a warning dialog.
+        const defaultToContinue = !hasNonTlaOnly;
+        const buttons: string[] = defaultToContinue
+            ? [CONTINUE_MODEL_CHECKING, ABORT_MODEL_CHECKING]
+            : [ABORT_MODEL_CHECKING, CONTINUE_MODEL_CHECKING];
+        const showMessage = defaultToContinue
+            ? vscode.window.showInformationMessage
+            : vscode.window.showWarningMessage;
+        const choice = await showMessage(message, ...buttons);
+        if (choice === undefined) {
+            return defaultToContinue;
+        }
+        return choice === CONTINUE_MODEL_CHECKING;
+    } catch {
+        return true;
     }
 }

@@ -1,6 +1,8 @@
 import * as assert from 'assert';
 import { beforeEach } from 'mocha';
-import { SanyStdoutParser } from '../../../src/parsers/sany';
+import {
+    SanyStdoutParser, hasTranslationChecksums, getDivergenceType
+} from '../../../src/parsers/sany';
 import { pathToUri } from '../../../src/common';
 import { applyDCollection } from '../../../src/diagnostic';
 import { Expectation, diagError, diagWarning, range, expectDiag, getTlaDiagnostics } from './testUtils';
@@ -407,6 +409,338 @@ suite('SANY Output Parser Test Suite', () => {
             ]));
     });
 
+    test('Captures PlusCal algorithm divergence warning', () => {
+        const stdout = [
+            `Parsing file ${ROOT_PATH}`,
+            `Semantic processing of module ${ROOT_NAME}`,
+            'Semantic errors:',
+            '*** Warnings: 1',
+            `In module ${ROOT_NAME}`,
+            `The PlusCal algorithm in module ${ROOT_NAME} has changed since its last translation.`
+        ].join('\n');
+        assertOutput(
+            stdout,
+            expectDiag(ROOT_PATH, [
+                diagWarning(
+                    range(0, 0, 0, 0),
+                    `In module ${ROOT_NAME}\n`
+                        + `The PlusCal algorithm in module ${ROOT_NAME} has changed since its last translation.`
+                )
+            ]));
+    });
+
+    test('Captures TLA+ translation divergence warning', () => {
+        const stdout = [
+            `Parsing file ${ROOT_PATH}`,
+            `Semantic processing of module ${ROOT_NAME}`,
+            'Semantic errors:',
+            '*** Warnings: 1',
+            `In module ${ROOT_NAME}`,
+            `The TLA+ translation in module ${ROOT_NAME} has changed since its last translation.`
+        ].join('\n');
+        assertOutput(
+            stdout,
+            expectDiag(ROOT_PATH, [
+                diagWarning(
+                    range(0, 0, 0, 0),
+                    `In module ${ROOT_NAME}\n`
+                        + `The TLA+ translation in module ${ROOT_NAME} has changed since its last translation.`
+                )
+            ]));
+    });
+
+    test('Captures both PlusCal and TLA+ divergence warning', () => {
+        const stdout = [
+            `Parsing file ${ROOT_PATH}`,
+            `Semantic processing of module ${ROOT_NAME}`,
+            'Semantic errors:',
+            '*** Warnings: 1',
+            `In module ${ROOT_NAME}`,
+            `Both the PlusCal algorithm and its TLA+ translation in module ${ROOT_NAME}`
+                + ' have changed since the last translation.'
+        ].join('\n');
+        assertOutput(
+            stdout,
+            expectDiag(ROOT_PATH, [
+                diagWarning(
+                    range(0, 0, 0, 0),
+                    `In module ${ROOT_NAME}\n`
+                        + `Both the PlusCal algorithm and its TLA+ translation in module ${ROOT_NAME}`
+                        + ' have changed since the last translation.'
+                )
+            ]));
+    });
+
+    test('Captures divergence warning in syntax parsing format', () => {
+        // This is the actual format SANY emits for divergence warnings
+        const stdout = [
+            `Parsing file ${ROOT_PATH}`,
+            'Labels added.',
+            `Warnings (1) during syntax parsing of ${ROOT_PATH}:`,
+            `In module ${ROOT_NAME}`,
+            `The TLA+ translation in module ${ROOT_NAME} has changed since its last translation.`,
+            `Semantic processing of module ${ROOT_NAME}`,
+        ].join('\n');
+        assertOutput(
+            stdout,
+            expectDiag(ROOT_PATH, [
+                diagWarning(
+                    range(0, 0, 0, 0),
+                    `In module ${ROOT_NAME}\n`
+                        + `The TLA+ translation in module ${ROOT_NAME} has changed since its last translation.`
+                )
+            ]));
+    });
+
+    test('Handles divergence warning followed by regular warning', () => {
+        const stdout = [
+            `Parsing file ${ROOT_PATH}`,
+            `Semantic processing of module ${ROOT_NAME}`,
+            'Semantic errors:',
+            '*** Warnings: 2',
+            `In module ${ROOT_NAME}`,
+            '',
+            `The PlusCal algorithm in module ${ROOT_NAME} has changed since its last translation.`,
+            '',
+            '',
+            `line 24, col 10 to line 24, col 25 of module ${ROOT_NAME}`,
+            '',
+            'Multiple declarations or definitions for symbol FooConst.'
+        ].join('\n');
+        assertOutput(
+            stdout,
+            expectDiag(ROOT_PATH, [
+                diagWarning(
+                    range(0, 0, 0, 0),
+                    `In module ${ROOT_NAME}\n`
+                        + `The PlusCal algorithm in module ${ROOT_NAME} has changed since its last translation.`
+                ),
+                diagWarning(
+                    range(23, 9, 23, 25),
+                    'Multiple declarations or definitions for symbol FooConst.'
+                )
+            ]));
+    });
+
+    test('Parses divergence warnings from multiple modules', () => {
+        const IMPORT_PATH = '/Users/alice/TLA/bar.tla';
+        const IMPORT_NAME = 'bar';
+        const stdout = [
+            `Parsing file ${ROOT_PATH}`,
+            `Parsing file ${IMPORT_PATH}`,
+            `Warnings (2) during syntax parsing of ${ROOT_PATH}:`,
+            `In module ${ROOT_NAME}`,
+            `Both the PlusCal algorithm and its TLA+ translation in module ${ROOT_NAME}`
+                + ' have changed since the last translation.',
+            `In module ${IMPORT_NAME}`,
+            `The TLA+ translation in module ${IMPORT_NAME} has changed since its last translation.`,
+            `Semantic processing of module ${IMPORT_NAME}`,
+            `Semantic processing of module ${ROOT_NAME}`,
+        ].join('\n');
+        assertOutput(
+            stdout,
+            expectDiag(ROOT_PATH, [
+                diagWarning(
+                    range(0, 0, 0, 0),
+                    `In module ${ROOT_NAME}\n`
+                        + `Both the PlusCal algorithm and its TLA+ translation in module ${ROOT_NAME}`
+                        + ' have changed since the last translation.'
+                )
+            ]),
+            expectDiag(IMPORT_PATH, [
+                diagWarning(
+                    range(0, 0, 0, 0),
+                    `In module ${IMPORT_NAME}\n`
+                        + `The TLA+ translation in module ${IMPORT_NAME} has changed since its last translation.`
+                )
+            ]));
+    });
+
+    test('getDivergenceType returns pcal for PlusCal-only divergence', () => {
+        const stdout = [
+            `Parsing file ${ROOT_PATH}`,
+            `Semantic processing of module ${ROOT_NAME}`,
+            'Semantic errors:',
+            '*** Warnings: 1',
+            `In module ${ROOT_NAME}`,
+            `The PlusCal algorithm in module ${ROOT_NAME} has changed since its last translation.`
+        ].join('\n');
+        const sanyData = assertOutputAndReturnData(stdout);
+        assert.strictEqual(getDivergenceType(sanyData).get(ROOT_NAME), 'pcal');
+    });
+
+    test('getDivergenceType returns tla for TLA+ divergence', () => {
+        const stdout = [
+            `Parsing file ${ROOT_PATH}`,
+            `Semantic processing of module ${ROOT_NAME}`,
+            'Semantic errors:',
+            '*** Warnings: 1',
+            `In module ${ROOT_NAME}`,
+            `The TLA+ translation in module ${ROOT_NAME} has changed since its last translation.`
+        ].join('\n');
+        const sanyData = assertOutputAndReturnData(stdout);
+        assert.strictEqual(getDivergenceType(sanyData).get(ROOT_NAME), 'tla');
+    });
+
+    test('getDivergenceType returns both for dual divergence', () => {
+        const stdout = [
+            `Parsing file ${ROOT_PATH}`,
+            `Semantic processing of module ${ROOT_NAME}`,
+            'Semantic errors:',
+            '*** Warnings: 1',
+            `In module ${ROOT_NAME}`,
+            `Both the PlusCal algorithm and its TLA+ translation in module ${ROOT_NAME}`
+                + ' have changed since the last translation.'
+        ].join('\n');
+        const sanyData = assertOutputAndReturnData(stdout);
+        assert.strictEqual(getDivergenceType(sanyData).get(ROOT_NAME), 'both');
+    });
+
+    test('getDivergenceType returns empty map for non-divergence warnings', () => {
+        const stdout = [
+            `Parsing file ${ROOT_PATH}`,
+            `Semantic processing of module ${ROOT_NAME}`,
+            'Semantic errors:',
+            '*** Warnings: 1',
+            `line 24, col 10 to line 24, col 25 of module ${ROOT_NAME}`,
+            'Multiple declarations or definitions for symbol FooConst.'
+        ].join('\n');
+        const sanyData = assertOutputAndReturnData(stdout);
+        assert.strictEqual(getDivergenceType(sanyData).size, 0);
+    });
+
+    test('getDivergenceType returns tla in syntax parsing format', () => {
+        const stdout = [
+            `Parsing file ${ROOT_PATH}`,
+            'Labels added.',
+            `Warnings (1) during syntax parsing of ${ROOT_PATH}:`,
+            `In module ${ROOT_NAME}`,
+            `The TLA+ translation in module ${ROOT_NAME} has changed since its last translation.`,
+            `Semantic processing of module ${ROOT_NAME}`,
+        ].join('\n');
+        const sanyData = assertOutputAndReturnData(stdout);
+        assert.strictEqual(getDivergenceType(sanyData).get(ROOT_NAME), 'tla');
+    });
+
+    test('getDivergenceType returns empty map when no warnings', () => {
+        const stdout = [
+            `Parsing file ${ROOT_PATH}`,
+            `Semantic processing of module ${ROOT_NAME}`,
+        ].join('\n');
+        const sanyData = assertOutputAndReturnData(stdout);
+        assert.strictEqual(getDivergenceType(sanyData).size, 0);
+    });
+
+    test('hasTranslationChecksums returns true for checksum format', () => {
+        const text = '\\* BEGIN TRANSLATION (chksum(pcal) = "abc" /\\ chksum(tla) = "def")\nVARIABLE pc\n';
+        assert.strictEqual(hasTranslationChecksums(text), true);
+    });
+
+    test('hasTranslationChecksums returns false for plain BEGIN TRANSLATION', () => {
+        const text = '\\* BEGIN TRANSLATION\nVARIABLE pc\n';
+        assert.strictEqual(hasTranslationChecksums(text), false);
+    });
+
+    test('hasTranslationChecksums returns false for hash comment format', () => {
+        const text = '\\* BEGIN TRANSLATION - the hash of the PCal code: PCal-abc\nVARIABLE pc\n';
+        assert.strictEqual(hasTranslationChecksums(text), false);
+    });
+
+    test('hasTranslationChecksums returns false when no translation marker', () => {
+        assert.strictEqual(hasTranslationChecksums('---- MODULE Foo ----\n====\n'), false);
+    });
+
+    test('getDivergenceType attributes divergence to the imported module path', () => {
+        const IMPORT_PATH = '/Users/alice/TLA/bar.tla';
+        const IMPORT_NAME = 'bar';
+        const stdout = [
+            `Parsing file ${ROOT_PATH}`,
+            `Parsing file ${IMPORT_PATH}`,
+            'Semantic processing of module TLC',
+            `Semantic processing of module ${IMPORT_NAME}`,
+            'Semantic errors:',
+            '*** Warnings: 1',
+            `In module ${IMPORT_NAME}`,
+            `The TLA+ translation in module ${IMPORT_NAME} has changed since its last translation.`,
+            `Semantic processing of module ${ROOT_NAME}`,
+        ].join('\n');
+        const sanyData = assertOutputAndReturnData(stdout);
+        const divergence = getDivergenceType(sanyData);
+        assert.strictEqual(divergence.size, 1);
+        assert.strictEqual(divergence.get(IMPORT_NAME), 'tla');
+        assert.strictEqual(divergence.has(ROOT_NAME), false);
+    });
+
+    test('getDivergenceType reports root module path when root diverges', () => {
+        const stdout = [
+            `Parsing file ${ROOT_PATH}`,
+            `Semantic processing of module ${ROOT_NAME}`,
+            'Semantic errors:',
+            '*** Warnings: 1',
+            `In module ${ROOT_NAME}`,
+            `The PlusCal algorithm in module ${ROOT_NAME} has changed since its last translation.`,
+        ].join('\n');
+        const sanyData = assertOutputAndReturnData(stdout);
+        const divergence = getDivergenceType(sanyData);
+        assert.strictEqual(divergence.size, 1);
+        assert.strictEqual(divergence.get(ROOT_NAME), 'pcal');
+    });
+
+    test('getDivergenceType tracks per-module divergence types independently', () => {
+        const IMPORT_PATH = '/Users/alice/TLA/bar.tla';
+        const IMPORT_NAME = 'bar';
+        const stdout = [
+            `Parsing file ${ROOT_PATH}`,
+            `Parsing file ${IMPORT_PATH}`,
+            `Semantic processing of module ${IMPORT_NAME}`,
+            'Semantic errors:',
+            '*** Warnings: 2',
+            `In module ${IMPORT_NAME}`,
+            `The PlusCal algorithm in module ${IMPORT_NAME} has changed since its last translation.`,
+            `Semantic processing of module ${ROOT_NAME}`,
+            '*** Warnings: 1',
+            `In module ${ROOT_NAME}`,
+            `The TLA+ translation in module ${ROOT_NAME} has changed since its last translation.`,
+        ].join('\n');
+        const sanyData = assertOutputAndReturnData(stdout);
+        const divergence = getDivergenceType(sanyData);
+        assert.strictEqual(divergence.size, 2);
+        assert.strictEqual(divergence.get(IMPORT_NAME), 'pcal');
+        assert.strictEqual(divergence.get(ROOT_NAME), 'tla');
+    });
+
+    test('hasTranslationChecksums only checks provided text, not imported modules', () => {
+        const rootText = '---- MODULE Foo ----\nEXTENDS Bar\n====\n';
+        const importedText =
+            '---- MODULE Bar ----\n'
+            + '\\* BEGIN TRANSLATION (chksum(pcal) = "abc" /\\ chksum(tla) = "def")\n'
+            + 'VARIABLE pc\n'
+            + '\\* END TRANSLATION\n'
+            + '====\n';
+        assert.strictEqual(hasTranslationChecksums(rootText), false);
+        assert.strictEqual(hasTranslationChecksums(importedText), true);
+    });
+
+    test('getDivergenceType detects imported-module divergence even when root has no checksums', () => {
+        const IMPORT_PATH = '/Users/alice/TLA/bar.tla';
+        const IMPORT_NAME = 'bar';
+        const stdout = [
+            `Parsing file ${ROOT_PATH}`,
+            `Parsing file ${IMPORT_PATH}`,
+            `Semantic processing of module ${IMPORT_NAME}`,
+            'Semantic errors:',
+            '*** Warnings: 1',
+            `In module ${IMPORT_NAME}`,
+            `Both the PlusCal algorithm and its TLA+ translation in module ${IMPORT_NAME}`
+                + ' have changed since the last translation.',
+            `Semantic processing of module ${ROOT_NAME}`,
+        ].join('\n');
+        const sanyData = assertOutputAndReturnData(stdout);
+        const divergence = getDivergenceType(sanyData);
+        assert.strictEqual(divergence.size, 1);
+        assert.strictEqual(divergence.get(IMPORT_NAME), 'both');
+    });
+
 });
 
 function assertOutput(out: string, ...expected: Expectation[]) {
@@ -418,6 +752,12 @@ function assertOutput(out: string, ...expected: Expectation[]) {
         const actDiags = getTlaDiagnostics().get(pathToUri(exp.filePath));
         assert.deepEqual(actDiags, exp.diagnostics);
     }
+}
+
+function assertOutputAndReturnData(out: string) {
+    const outLines = out.split('\n');
+    const parser = new SanyStdoutParser(outLines);
+    return parser.readAllSync();
 }
 
 function assertOutputWithFileContents(
