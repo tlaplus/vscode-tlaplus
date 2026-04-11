@@ -22,24 +22,42 @@ export class SanyData {
 
 export type DivergenceType = 'none' | 'pcal' | 'tla' | 'both';
 
+export type DivergenceResult = Map<string, DivergenceType>;
+
+const DIVERGENCE_PRIORITY: Record<DivergenceType, number> = {
+    'none': 0, 'pcal': 1, 'tla': 2, 'both': 3
+};
+
 /**
  * Determines the type of PlusCal/TLA+ divergence from SANY output.
+ *
+ * Returns a map from module name to divergence type for each
+ * divergent module.  An empty map means no divergence was detected.
  */
-export function getDivergenceType(sanyData: SanyData): DivergenceType {
+export function getDivergenceType(sanyData: SanyData): DivergenceResult {
     const warnings = sanyData.dCollection.getMessages().filter(
         msg => msg.diagnostic.severity === vscode.DiagnosticSeverity.Warning
     );
-    if (warnings.some(m => m.diagnostic.message.includes('have changed since the last translation'))) {
-        return 'both';
+    const modules = new Map<string, DivergenceType>();
+    for (const w of warnings) {
+        const msg = w.diagnostic.message;
+        let dtype: DivergenceType | undefined;
+        if (msg.includes('have changed since the last translation')) {
+            dtype = 'both';
+        } else if (msg.includes('TLA+ translation')) {
+            dtype = 'tla';
+        } else if (msg.includes('PlusCal algorithm') && msg.includes('has changed since')) {
+            dtype = 'pcal';
+        }
+        if (dtype) {
+            const modName = pathToModuleName(w.filePath);
+            const existing = modules.get(modName);
+            if (!existing || DIVERGENCE_PRIORITY[dtype] > DIVERGENCE_PRIORITY[existing]) {
+                modules.set(modName, dtype);
+            }
+        }
     }
-    if (warnings.some(m => m.diagnostic.message.includes('TLA+ translation'))) {
-        return 'tla';
-    }
-    if (warnings.some(m =>
-        m.diagnostic.message.includes('PlusCal algorithm') && m.diagnostic.message.includes('has changed since'))) {
-        return 'pcal';
-    }
-    return 'none';
+    return modules;
 }
 
 const TRANSLATION_CHECKSUM_RE = /^\\[*] BEGIN TRANSLATION\s*\(/m;
@@ -179,6 +197,9 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
                         this.tryAddMessage(true);
                     }
                     this.errRange = range;
+                } else if (this.tryParseModuleSwitch(line)) {
+                    // tryParseModuleSwitch flushes the pending message internally
+                    // before switching curFilePath, then starts the new message.
                 } else {
                     this.appendErrMessage(line);
                 }
@@ -290,6 +311,27 @@ export class SanyStdoutParser extends ProcessOutputHandler<SanyData> {
         const moldulePathMatches = rxModulePath.exec(line);
         const modulePath = moldulePathMatches ? moldulePathMatches[1] : line;
         this.rememberParsedModule(modulePath);
+    }
+
+    /**
+     * Detects "In module X" lines inside Warnings/Errors blocks.
+     * When a different module is named, switches curFilePath so subsequent
+     * messages are attributed to the correct file.  Returns true if the
+     * line matched the pattern.
+     */
+    private tryParseModuleSwitch(line: string): boolean {
+        const match = /^In module (\w+)$/.exec(line);
+        if (!match) {
+            return false;
+        }
+        const modName = match[1];
+        const modPath = this.result.modulePaths.get(modName);
+        if (modPath) {
+            this.tryAddMessage(true);
+            this.curFilePath = modPath;
+        }
+        this.appendErrMessage(line);
+        return true;
     }
 
     private appendErrMessage(line: string) {

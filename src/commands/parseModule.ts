@@ -4,7 +4,7 @@ import { TranspilerStdoutParser } from '../parsers/pluscal';
 import { SanyData, SanyStdoutParser, getDivergenceType, hasTranslationChecksums } from '../parsers/sany';
 import { runPlusCal, runSany, stopProcess, ToolProcessInfo } from '../tla2tools';
 import { ToolOutputChannel } from '../outputChannels';
-import { LANG_TLAPLUS } from '../common';
+import { LANG_TLAPLUS, pathToModuleName } from '../common';
 
 export const CMD_PARSE_MODULE = 'tlaplus.parse';
 
@@ -30,6 +30,11 @@ export function parseModule(diagnostic: vscode.DiagnosticCollection): void {
 }
 
 const OVERWRITE_PCAL_TRANSL_LABEL = 'Overwrite Translation';
+const CANCEL_LABEL = 'Cancel';
+const WARN_TLA_MODIFIED =
+    'The TLA+ translation has been modified manually since its last translation. '
+    + 'Click "Overwrite Translation" to replace it with a fresh translation from '
+    + 'the PlusCal algorithm or "' + CANCEL_LABEL + '" to keep the modified TLA+ translation.';
 
 async function doParseFile(doc: vscode.TextDocument, diagnostic: vscode.DiagnosticCollection) {
     try {
@@ -38,13 +43,16 @@ async function doParseFile(doc: vscode.TextDocument, diagnostic: vscode.Diagnost
         if (hasTranslationChecksums(doc.getText())) {
             const initialSpecData = await parseSpec(doc.uri);
             const divergence = getDivergenceType(initialSpecData);
-            if (divergence === 'tla' || divergence === 'both') {
+            // Prompt for overwrite when the root module's TLA+ translation was
+            // manually edited.  This applies to both 'tla' (only translation changed)
+            // and 'both' (PlusCal also changed) — either way, manual TLA+ edits
+            // will be lost on re-translation.
+            const rootType = divergence.get(pathToModuleName(doc.uri.fsPath));
+            if (rootType === 'tla' || rootType === 'both') {
                 const choice = await vscode.window.showWarningMessage(
-                    'A hash mismatch has been found that indicates that the TLA+ translation has been modified '
-                    + 'manually since its last translation. Click "Overwrite Translation" to replace the TLA+ '
-                    + 'translation anyway or "Cancel" to abort re-translation and keep the modified TLA+ translation.',
+                    WARN_TLA_MODIFIED,
                     OVERWRITE_PCAL_TRANSL_LABEL,
-                    'Cancel'
+                    CANCEL_LABEL
                 );
                 if (choice !== OVERWRITE_PCAL_TRANSL_LABEL) {
                     // User cancelled — apply initial SANY diagnostics without translating
