@@ -39,6 +39,12 @@ import { MCPServer } from './lm/MCPServer';
 import { TlcCoverageDecorationProvider } from './tlcCoverage';
 import { registerCoverageCommands } from './commands/toggleCoverage';
 import { acquireJarFileSystemProvider } from './JarFileSystemProvider';
+import {
+    CMD_MODEL_EDITOR_DISPLAY,
+    MODEL_EDITOR_VIEW_TYPE,
+    ModelEditorCfgProvider,
+    showModelEditor
+} from './panels/modelEditorView';
 
 const TLAPLUS_FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file', language: LANG_TLAPLUS };
 const TLAPLUS_CFG_FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file', language: LANG_TLAPLUS_CFG };
@@ -126,6 +132,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         vscode.commands.registerCommand(
             CMD_CHECK_MODEL_DISPLAY,
             () => displayModelChecking(context)),
+        vscode.commands.registerCommand(
+            CMD_MODEL_EDITOR_DISPLAY,
+            (uri?: vscode.Uri) => showModelEditor(context, uri)),
+        vscode.window.registerCustomEditorProvider(
+            MODEL_EDITOR_VIEW_TYPE,
+            new ModelEditorCfgProvider(context.extensionUri),
+            { supportsMultipleEditorsPerDocument: false }),
         vscode.commands.registerCommand(
             CMD_VISUALIZE_TLC_OUTPUT,
             () => visualizeTlcOutput(context)),

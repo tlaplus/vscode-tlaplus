@@ -105,6 +105,22 @@ suite('Model Resolver', () => {
         assert.strictEqual(warningShown, true, 'Expected warning message to be shown');
     });
 
+    test('Missing model warning offers opening the model editor', async () => {
+        const tlaPath = path.join(testDir, 'Spec.tla');
+        fs.writeFileSync(tlaPath, '---- MODULE Spec ----\n====');
+
+        let options: string[] = [];
+        (vscode.window as unknown as { showWarningMessage: typeof vscode.window.showWarningMessage }).showWarningMessage =
+            (async (_message: string, ...items: unknown[]) => {
+                options = items.filter((item): item is string => typeof item === 'string');
+                return undefined;
+            }) as typeof vscode.window.showWarningMessage;
+
+        const result = await resolveModelForUri(vscode.Uri.file(tlaPath), true, true);
+        assert.strictEqual(result, undefined);
+        assert.ok(options.includes('Open with Model Editor'), 'Expected Open with Model Editor option');
+    });
+
     test('Custom pick allows selecting .tla as config and strips extension', async () => {
         const tlaPath = path.join(testDir, 'Spec.tla');
         const altTlaPath = path.join(testDir, 'Alt.tla');

@@ -175,10 +175,20 @@ export async function resolveModelForUri(
 function showConfigAbsenceWarning(cfgPath: string) {
     const fileName = path.basename(cfgPath);
     const createOption = 'Create model file';
-    vscode.window.showWarningMessage(`Model file ${fileName} doesn't exist. Cannot check model.`, createOption)
+    const openEditorOption = 'Open with Model Editor';
+    vscode.window.showWarningMessage(
+        `Model file ${fileName} doesn't exist. Cannot check model.`,
+        createOption,
+        openEditorOption
+    )
         .then((option) => {
             if (option === createOption) {
                 createModelFile(cfgPath);
+            } else if (option === openEditorOption) {
+                void vscode.commands.executeCommand(
+                    'tlaplus.model.editor.display',
+                    vscode.Uri.file(replaceExtension(cfgPath, 'tla'))
+                );
             }
         });
 }
