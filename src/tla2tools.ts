@@ -155,7 +155,7 @@ export async function runXMLExporter(
     );
 }
 
-function buildTexOptions(
+export function buildTexOptions(
     tlaFilePath: string,
     shadeComments: boolean,
     commentColor: number,
