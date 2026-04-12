@@ -4,13 +4,12 @@ import * as path from 'path';
 import { spawn } from 'child_process';
 
 import { LANG_TLAPLUS, replaceExtension, pathToUri, emptyFunc } from '../common';
-import { runTex, ToolProcessInfo } from '../tla2tools';
+import { runTex, ToolProcessInfo, CFG_TLA_PDF_CONVERT_COMMAND } from '../tla2tools';
 import { ToolOutputChannel } from '../outputChannels';
 
 export const CMD_EXPORT_TLA_TO_TEX = 'tlaplus.exportToTex';
 export const CMD_EXPORT_TLA_TO_PDF = 'tlaplus.exportToPdf';
 
-const CFG_PDF_CONVERT_COMMAND = 'tlaplus.pdf.convertCommand';
 const NO_ERROR = 0;
 const PDF_VIEWER_EXTENSION = 'tomoki1207.pdf';
 const PDF_VIEWER_VIEW_ID = 'pdf.preview';
@@ -126,7 +125,7 @@ function getDocumentIfCanRun(format: string): vscode.TextDocument | undefined {
 }
 
 async function getPdfToolInfo(texFilePath: string): Promise<PdfToolInfo | undefined> {
-    const pdfCmd = (vscode.workspace.getConfiguration().get<string>(CFG_PDF_CONVERT_COMMAND) || '').trim();
+    const pdfCmd = (vscode.workspace.getConfiguration().get<string>(CFG_TLA_PDF_CONVERT_COMMAND) || '').trim();
     if (pdfCmd === '') {
         vscode.window.showWarningMessage('PDF generation command not specified. Check the extension settings.');
         return Promise.resolve(undefined);

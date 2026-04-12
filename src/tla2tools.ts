@@ -23,6 +23,7 @@ const CFG_TLA_PDF_NUMBER_LINES = 'tlaplus.pdf.numberLines';
 const CFG_TLA_PDF_NO_PCAL_SHADE = 'tlaplus.pdf.noPcalShade';
 const CFG_TLA_PDF_COMMENTS_SHADE = 'tlaplus.pdf.commentsShade';
 const CFG_TLA_PDF_COMMENTS_SHADE_COLOR = 'tlaplus.pdf.commentsShadeColor';
+export const CFG_TLA_PDF_CONVERT_COMMAND = 'tlaplus.pdf.convertCommand';
 
 const VAR_TLC_SPEC_NAME = /\$\{specName\}/g;
 const VAR_TLC_MODEL_NAME = /\$\{modelName\}/g;
@@ -159,8 +160,13 @@ function buildTexOptions(
     shadeComments: boolean,
     commentColor: number,
     numberLines: boolean,
-    noPcalShade: boolean): string[] {
+    noPcalShade: boolean,
+    latexCommand?: string): string[] {
     const toolArgs = [path.basename(tlaFilePath)];
+
+    if (latexCommand) {
+        toolArgs.unshift('-latexCommand', latexCommand);
+    }
 
     if (shadeComments) {
         toolArgs.unshift('-nops',
@@ -184,8 +190,9 @@ export async function runTex(tlaFilePath: string): Promise<ToolProcessInfo> {
     const commentColor = vscode.workspace.getConfiguration().get<number>(CFG_TLA_PDF_COMMENTS_SHADE_COLOR, 0.85);
     const numberLines = vscode.workspace.getConfiguration().get<boolean>(CFG_TLA_PDF_NUMBER_LINES, false);
     const noPcalShade = vscode.workspace.getConfiguration().get<boolean>(CFG_TLA_PDF_NO_PCAL_SHADE, false);
+    const latexCommand = (vscode.workspace.getConfiguration().get<string>(CFG_TLA_PDF_CONVERT_COMMAND) || '').trim() || undefined;
 
-    const options = buildTexOptions(tlaFilePath, shadeComments, commentColor, numberLines, noPcalShade);
+    const options = buildTexOptions(tlaFilePath, shadeComments, commentColor, numberLines, noPcalShade, latexCommand);
 
     return runTool(
         TlaTool.TEX,
