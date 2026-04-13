@@ -15,7 +15,6 @@ type TabId = 'overview' | 'specOptions' | 'tlcOptions';
 interface ModelEditorPanelData {
     state: ModelEditorState;
     discovered: DiscoveredSpecInfo;
-    unsupportedDirectives: string[];
     tlcOptions?: TlcOptionsState;
 }
 
@@ -37,7 +36,10 @@ function isTabDirty(
             || current.checkDeadlock !== saved.checkDeadlock
             || !deepEqual(current.constants, saved.constants)
             || !deepEqual(current.invariants, saved.invariants)
-            || !deepEqual(current.properties, saved.properties);
+            || !deepEqual(current.properties, saved.properties)
+            || !deepEqual(
+                current.symmetryConstants, saved.symmetryConstants
+            );
     }
     if (tab === 'specOptions') {
         return current.stateConstraint !== saved.stateConstraint
@@ -46,7 +48,10 @@ function isTabDirty(
                 current.definitionOverrides, saved.definitionOverrides
             )
             || current.additionalDefinitions
-                !== saved.additionalDefinitions;
+                !== saved.additionalDefinitions
+            || current.viewExpression !== saved.viewExpression
+            || current.alias !== saved.alias
+            || current.postCondition !== saved.postCondition;
     }
     if (tab === 'tlcOptions') {
         return !deepEqual(currentTlc, savedTlc);
@@ -69,25 +74,27 @@ function isAnyDirty(
 /* eslint-disable max-len */
 const TIPS = {
     behaviorSpec: 'Choose how TLC explores your system. This tells TLC where to start and how states evolve over time.',
-    mode: 'Init/Next is the most common — provide an initial-state predicate and a next-state relation. Temporal formula uses a single operator like Spec that combines fairness conditions. No behavior spec lets you evaluate constant expressions without state exploration.',
+    mode: 'Init/Next is the most common. provide an initial-state predicate and a next-state relation. Temporal formula uses a single operator like Spec that combines fairness conditions. No behavior spec lets you evaluate constant expressions without state exploration.',
     deadlock: 'When enabled, TLC verifies every reachable state has at least one successor. Disable this if your spec intentionally has terminal states (e.g. a protocol that completes).',
-    invariants: 'State predicates that must hold in every reachable state. Use these to catch safety violations — for example, TypeOK to verify variables stay within expected types.',
-    properties: 'Temporal formulas checked over the full behavior graph. Use these for liveness properties — for example, verifying that every request eventually gets a response.',
+    invariants: 'State predicates that must hold in every reachable state. Use these to catch safety violations. for example, TypeOK to verify variables stay within expected types.',
+    properties: 'Temporal formulas checked over the full behavior graph. Use these for liveness properties. for example, verifying that every request eventually gets a response.',
     constants: 'TLC needs concrete values for each CONSTANT in your spec. Use ordinary assignment for expressions like 1..3, model value for unique identifiers, or set of model values for finite enumerated sets.',
-    stateConstraint: 'Limits which states TLC explores by requiring this expression to be TRUE. Use this to make large or infinite models tractable — for example, Len(queue) < 5 to cap queue size during exploration.',
-    actionConstraint: 'Filters which transitions TLC considers by requiring this expression over current and next-state variables to be TRUE. Useful for focusing model checking on specific scenarios — for example, only exploring paths where message count stays bounded.',
-    defOverrides: 'Replaces spec operators with model-specific definitions during checking. Essential for making infinite sets finite — for example, overriding Nat with 0..10 so TLC can enumerate values.',
+    stateConstraint: 'Limits which states TLC explores by requiring this expression to be TRUE. Use this to make large or infinite models tractable. for example, Len(queue) < 5 to cap queue size during exploration.',
+    actionConstraint: 'Filters which transitions TLC considers by requiring this expression over current and next-state variables to be TRUE. Useful for focusing model checking on specific scenarios. for example, only exploring paths where message count stays bounded.',
+    defOverrides: 'Replaces spec operators with model-specific definitions during checking. Essential for making infinite sets finite. for example, overriding Nat with 0..10 so TLC can enumerate values.',
     additionalDefs: 'Extra TLA+ definitions added to the MC module. Use this for helper operators needed by constraints or overrides, or for ASSUME statements that validate model parameters.',
+    symmetry: 'Declares a symmetry set to reduce the state space. TLC treats all permutations of the set as equivalent, which can dramatically speed up checking when the spec is symmetric in those values.',
+    viewExpr: 'A TLA+ expression evaluated in each state and included in error traces. Use this to see computed values (like queue lengths or message counts) alongside raw state variables in counterexamples.',
+    alias: 'An operator that renames or transforms variables in error traces. Useful for making counterexamples more readable. for example, showing derived values instead of raw state.',
+    postCondition: 'An operator evaluated after model checking finishes. It receives the set of all reachable states, useful for computing statistics or asserting global properties of the state graph.',
     tlcOptions: 'Controls how TLC runs: checking strategy, parallelism, and diagnostics. These are command-line arguments, not part of the .cfg file.',
     checkingMode: 'BFS (breadth-first) explores all states and finds the shortest counterexamples. DFID uses less memory for very large state spaces. Simulation generates random behaviors and is useful for quick smoke tests or exploring specs that are too large to check exhaustively.',
     workers: 'Number of parallel threads. Set to 0 to automatically use all available CPU cores (recommended). More workers check faster but use more memory.',
     dfidDepth: 'Maximum search depth for depth-first iterative deepening. Deeper values explore more of the state space but take longer.',
     simTraces: 'How many random traces to generate. Set to 0 for unlimited (runs until you stop it). Higher values give more confidence but take longer.',
-    simSeed: 'A fixed seed makes simulation reproducible — the same seed always generates the same traces. Useful for debugging a specific counterexample.',
+    simSeed: 'A fixed seed makes simulation reproducible. the same seed always generates the same traces. Useful for debugging a specific counterexample.',
     fpBits: 'Controls the fingerprint function used to identify states. Higher values reduce the probability of hash collisions (false matches) but use more memory. The default of 1 is fine for most models.',
-    profiling: 'Shows how often each expression is evaluated during model checking. Useful for finding performance bottlenecks in your spec — results appear in the TLC coverage panel.',
-    viewExpr: 'A TLA+ expression evaluated in each state and included in error traces. Use this to see computed values (like queue lengths or message counts) alongside raw state variables in counterexamples.',
-    postCondition: 'An operator evaluated after model checking finishes. It receives the set of all reachable states, useful for computing statistics or asserting global properties of the state graph.',
+    profiling: 'Shows how often each expression is evaluated during model checking. Useful for finding performance bottlenecks in your spec. results appear in the TLC coverage panel.',
 };
 /* eslint-enable max-len */
 
@@ -586,6 +593,47 @@ function OverviewTab(props: {
                                 return { ...prev, constants: cs };
                             })}
                         />
+                        {c.kind === 'setModelValues' && (
+                            <label style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                whiteSpace: 'nowrap' as const
+                            }}>
+                                <input
+                                    type="checkbox"
+                                    checked={(s.symmetryConstants ?? [])
+                                        .includes(c.name)}
+                                    onChange={(e) => {
+                                        const on = e.target.checked;
+                                        update((prev) => {
+                                            const syms = [
+                                                ...(prev.symmetryConstants
+                                                    ?? [])
+                                            ];
+                                            if (on
+                                                && !syms.includes(c.name)
+                                            ) {
+                                                syms.push(c.name);
+                                            } else if (!on) {
+                                                const idx = syms.indexOf(
+                                                    c.name
+                                                );
+                                                if (idx >= 0) {
+                                                    syms.splice(idx, 1);
+                                                }
+                                            }
+                                            return {
+                                                ...prev,
+                                                symmetryConstants: syms
+                                            };
+                                        });
+                                    }}
+                                />
+                                Symmetry
+                                <InfoTip text={TIPS.symmetry} />
+                            </label>
+                        )}
                     </div>
                 ))}
             </DirtyField>
@@ -603,44 +651,44 @@ function SpecOptionsTab(props: {
 
     return (<>
         <section style={S.section}>
-            <h2 style={S.sectionHeading}>
-                STATE CONSTRAINT
-                <InfoTip text={TIPS.stateConstraint} />
-            </h2>
+            <h2 style={S.sectionHeading}>CONSTRAINTS</h2>
+
             <DirtyField
                 dirty={s.stateConstraint !== saved.stateConstraint}
                 onUndo={() => revert((sv) => ({
                     stateConstraint: sv.stateConstraint
                 }))}
             >
-                <TextField
-                    label="Constraint expression"
+                <label style={S.fieldLabel}>
+                    State constraint:
+                    <InfoTip text={TIPS.stateConstraint} />
+                </label>
+                <input
+                    style={S.input}
                     value={s.stateConstraint}
                     placeholder="e.g. Len(queue) < 5"
-                    onChange={(v) => update((prev) => ({
-                        ...prev, stateConstraint: v
+                    onChange={(e) => update((prev) => ({
+                        ...prev, stateConstraint: e.target.value
                     }))}
                 />
             </DirtyField>
-        </section>
 
-        <section style={S.section}>
-            <h2 style={S.sectionHeading}>
-                ACTION CONSTRAINT
-                <InfoTip text={TIPS.actionConstraint} />
-            </h2>
             <DirtyField
                 dirty={s.actionConstraint !== saved.actionConstraint}
                 onUndo={() => revert((sv) => ({
                     actionConstraint: sv.actionConstraint
                 }))}
             >
-                <TextField
-                    label="Action constraint expression"
+                <label style={S.fieldLabel}>
+                    Action constraint:
+                    <InfoTip text={TIPS.actionConstraint} />
+                </label>
+                <input
+                    style={S.input}
                     value={s.actionConstraint}
                     placeholder="e.g. TotalMessages' < 100"
-                    onChange={(v) => update((prev) => ({
-                        ...prev, actionConstraint: v
+                    onChange={(e) => update((prev) => ({
+                        ...prev, actionConstraint: e.target.value
                     }))}
                 />
             </DirtyField>
@@ -670,8 +718,12 @@ function SpecOptionsTab(props: {
                             value={o.name}
                             placeholder="Original operator"
                             onChange={(e) => update((prev) => {
-                                const ovs = [...prev.definitionOverrides];
-                                ovs[i] = { ...ovs[i], name: e.target.value };
+                                const ovs = [
+                                    ...prev.definitionOverrides
+                                ];
+                                ovs[i] = {
+                                    ...ovs[i], name: e.target.value
+                                };
                                 return {
                                     ...prev, definitionOverrides: ovs
                                 };
@@ -687,9 +739,12 @@ function SpecOptionsTab(props: {
                             value={o.expression}
                             placeholder="Override expression"
                             onChange={(e) => update((prev) => {
-                                const ovs = [...prev.definitionOverrides];
+                                const ovs = [
+                                    ...prev.definitionOverrides
+                                ];
                                 ovs[i] = {
-                                    ...ovs[i], expression: e.target.value
+                                    ...ovs[i],
+                                    expression: e.target.value
                                 };
                                 return {
                                     ...prev, definitionOverrides: ovs
@@ -723,10 +778,8 @@ function SpecOptionsTab(props: {
         </section>
 
         <section style={S.section}>
-            <h2 style={S.sectionHeading}>
-                ADDITIONAL DEFINITIONS
-                <InfoTip text={TIPS.additionalDefs} />
-            </h2>
+            <h2 style={S.sectionHeading}>ADVANCED</h2>
+
             <DirtyField
                 dirty={s.additionalDefinitions
                     !== saved.additionalDefinitions}
@@ -734,12 +787,81 @@ function SpecOptionsTab(props: {
                     additionalDefinitions: sv.additionalDefinitions
                 }))}
             >
-                <TextArea
-                    label="TLA+ definitions"
+                <label style={S.fieldLabel}>
+                    Additional definitions:
+                    <InfoTip text={TIPS.additionalDefs} />
+                </label>
+                <textarea
+                    style={{
+                        ...S.input,
+                        minHeight: '80px',
+                        resize: 'vertical'
+                    } as React.CSSProperties}
                     value={s.additionalDefinitions}
-                    placeholder={'e.g.\nMaxVal == 10\nASSUME MaxVal > 0'}
-                    onChange={(v) => update((prev) => ({
-                        ...prev, additionalDefinitions: v
+                    placeholder={'e.g. MaxVal == 10'}
+                    onChange={(e) => update((prev) => ({
+                        ...prev,
+                        additionalDefinitions: e.target.value
+                    }))}
+                />
+            </DirtyField>
+
+            <DirtyField
+                dirty={s.viewExpression !== saved.viewExpression}
+                onUndo={() => revert((sv) => ({
+                    viewExpression: sv.viewExpression
+                }))}
+            >
+                <label style={S.fieldLabel}>
+                    View expression:
+                    <InfoTip text={TIPS.viewExpr} />
+                </label>
+                <input
+                    style={S.input}
+                    value={s.viewExpression}
+                    placeholder="e.g. <<pc, stack>>"
+                    onChange={(e) => update((prev) => ({
+                        ...prev, viewExpression: e.target.value
+                    }))}
+                />
+            </DirtyField>
+
+            <DirtyField
+                dirty={s.alias !== saved.alias}
+                onUndo={() => revert((sv) => ({
+                    alias: sv.alias
+                }))}
+            >
+                <label style={S.fieldLabel}>
+                    Alias:
+                    <InfoTip text={TIPS.alias} />
+                </label>
+                <input
+                    style={S.input}
+                    value={s.alias}
+                    placeholder="Operator name"
+                    onChange={(e) => update((prev) => ({
+                        ...prev, alias: e.target.value
+                    }))}
+                />
+            </DirtyField>
+
+            <DirtyField
+                dirty={s.postCondition !== saved.postCondition}
+                onUndo={() => revert((sv) => ({
+                    postCondition: sv.postCondition
+                }))}
+            >
+                <label style={S.fieldLabel}>
+                    Post-condition:
+                    <InfoTip text={TIPS.postCondition} />
+                </label>
+                <input
+                    style={S.input}
+                    value={s.postCondition}
+                    placeholder="Operator name"
+                    onChange={(e) => update((prev) => ({
+                        ...prev, postCondition: e.target.value
                     }))}
                 />
             </DirtyField>
@@ -847,26 +969,6 @@ function TlcOptionsTab(props: {
                 Enable profiling
                 <InfoTip text={TIPS.profiling} />
             </label>
-            <label style={S.fieldLabel}>
-                View expression:
-                <InfoTip text={TIPS.viewExpr} />
-            </label>
-            <TextField
-                label=""
-                value={opts.viewExpression}
-                placeholder="e.g. <<pc, stack>>"
-                onChange={(v) => set('viewExpression', v)}
-            />
-            <label style={S.fieldLabel}>
-                Post-condition:
-                <InfoTip text={TIPS.postCondition} />
-            </label>
-            <TextField
-                label=""
-                value={opts.postCondition}
-                placeholder="Operator name"
-                onChange={(v) => set('postCondition', v)}
-            />
         </section>
     </>);
 }
@@ -914,7 +1016,7 @@ function App() {
     const defaultTlcOpts: TlcOptionsState = {
         checkingMode: 'bfs', workers: 0, dfidDepth: 100,
         simulateTraces: 0, simulateSeed: '', fpBits: 1,
-        enableProfiling: false, viewExpression: '', postCondition: ''
+        enableProfiling: false
     };
     const [tlcOptions, setTlcOptions] = React.useState<TlcOptionsState>(
         persisted?.tlcOptions ?? defaultTlcOpts
@@ -1021,7 +1123,7 @@ function App() {
         return <div style={S.page}>Loading model editor...</div>;
     }
 
-    const { state, discovered, unsupportedDirectives } = data;
+    const { state, discovered } = data;
     const dirty = isAnyDirty(
         state, savedState, tlcOptions, savedTlcOptions
     );
@@ -1049,17 +1151,6 @@ function App() {
     return (
         <div style={S.page}>
             <h1 style={S.heading}>TLA+ Model Editor</h1>
-
-            {unsupportedDirectives.length > 0 && (
-                <div style={S.warning}>
-                    ⚠ The existing config uses directives not yet
-                    supported by the editor:{' '}
-                    <strong>
-                        {unsupportedDirectives.join(', ')}
-                    </strong>.
-                    Saving will not preserve them.
-                </div>
-            )}
 
             <section style={S.section}>
                 <div style={S.headerRow}>
@@ -1157,15 +1248,6 @@ const S: Record<string, React.CSSProperties> = {
         boxSizing: 'border-box' as const
     },
     heading: { fontSize: '1.5rem', marginBottom: '0.5rem' },
-    warning: {
-        padding: '10px 12px',
-        marginBottom: '16px',
-        borderRadius: '6px',
-        border: '1px solid var(--vscode-inputValidation-warningBorder)',
-        background: 'var(--vscode-inputValidation-warningBackground)',
-        color: 'var(--vscode-foreground)',
-        fontSize: '0.9rem'
-    },
     section: {
         border: '1px solid var(--vscode-panel-border)',
         borderRadius: '6px',

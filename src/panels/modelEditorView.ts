@@ -7,7 +7,6 @@ import { getUri } from './utilities/getUri';
 import {
     buildModelEditorPaths,
     DEFAULT_TLC_OPTIONS,
-    detectUnsupportedDirectives,
     discoverSpecInfo,
     parseModelEditorState,
     serializeModelEditorState,
@@ -272,14 +271,15 @@ async function buildInitPayload(specPath: string) {
             stateConstraint: '',
             actionConstraint: '',
             definitionOverrides: [],
-            additionalDefinitions: ''
+            additionalDefinitions: '',
+            symmetryConstants: [],
+            viewExpression: '',
+            alias: '',
+            postCondition: ''
         };
 
-    const unsupportedDirectives = cfgContent
-        ? detectUnsupportedDirectives(cfgContent) : [];
-
     return {
-        state, discovered, unsupportedDirectives,
+        state, discovered,
         tlcOptions: existingTlcOptions
     };
 }

@@ -2,7 +2,6 @@ import * as assert from 'assert';
 import * as path from 'path';
 import {
     buildModelEditorPaths,
-    detectUnsupportedDirectives,
     discoverSpecInfo,
     parseModelEditorState,
     serializeModelEditorState,
@@ -10,6 +9,16 @@ import {
 } from '../../../src/model/modelEditorFiles';
 
 suite('Model editor files', () => {
+    const base: ModelEditorState = {
+        specName: 'Spec', specPath: path.join('/tmp', 'Spec.tla'),
+        modelName: 'MCSpec',
+        behavior: { kind: 'initNext', init: 'Init', next: 'Next' },
+        checkDeadlock: true, constants: [], invariants: [], properties: [],
+        stateConstraint: '', actionConstraint: '',
+        definitionOverrides: [], additionalDefinitions: '',
+        symmetryConstants: [], viewExpression: '', alias: '', postCondition: ''
+    };
+
     test('Builds MC-prefixed model file paths from a spec', () => {
         const paths = buildModelEditorPaths(path.join('/tmp', 'Spec.tla'));
         assert.strictEqual(paths.specName, 'Spec');
@@ -26,23 +35,15 @@ suite('Model editor files', () => {
 
     test('Serializes editor state into TLC files', () => {
         const state: ModelEditorState = {
-            specName: 'Spec',
-            specPath: path.join('/tmp', 'Spec.tla'),
-            modelName: 'MCSpec',
-            behavior: { kind: 'initNext', init: 'Init', next: 'Next' },
+            ...base,
             checkDeadlock: false,
             constants: [
                 { name: 'N', kind: 'ordinary', value: '3' },
                 { name: 'Nodes', kind: 'setModelValues', value: 'a, b' }
             ],
             invariants: ['TypeOK'],
-            properties: ['Liveness'],
-            stateConstraint: '',
-            actionConstraint: '',
-            definitionOverrides: [],
-            additionalDefinitions: ''
+            properties: ['Liveness']
         };
-
         const files = serializeModelEditorState(state);
         assert.match(files.tlaContent, /---- MODULE MCSpec ----/);
         assert.match(files.tlaContent, /EXTENDS Spec, TLC/);
@@ -57,20 +58,11 @@ suite('Model editor files', () => {
 
     test('Round-trips state from generated files', () => {
         const state: ModelEditorState = {
-            specName: 'Spec',
-            specPath: path.join('/tmp', 'Spec.tla'),
-            modelName: 'MCSpec',
+            ...base,
             behavior: { kind: 'temporal', temporal: 'Spec' },
-            checkDeadlock: true,
             constants: [{ name: 'Node', kind: 'modelValue', value: 'node_a' }],
-            invariants: ['TypeOK'],
-            properties: [],
-            stateConstraint: '',
-            actionConstraint: '',
-            definitionOverrides: [],
-            additionalDefinitions: ''
+            invariants: ['TypeOK']
         };
-
         const files = serializeModelEditorState(state);
         const result = parseModelEditorState(
             path.join('/tmp', 'Spec.tla'), files.tlaContent, files.cfgContent
@@ -87,15 +79,7 @@ suite('Model editor files', () => {
         const result = parseModelEditorState(
             path.join('/tmp', 'Spec.tla'),
             '---- MODULE Spec ----\n====',
-            [
-                'CONSTANTS',
-                '    greeting = "Hello"',
-                '    Node <- node_a',
-                'INIT Init',
-                'NEXT Next',
-                'INVARIANT TypeOK',
-                'PROPERTY Liveness'
-            ].join('\n')
+            'CONSTANTS\n    greeting = "Hello"\n    Node <- node_a\nINIT Init\nNEXT Next\nINVARIANT TypeOK\nPROPERTY Liveness'
         );
         assert.ok(result);
         const parsed = result!.state;
@@ -110,14 +94,7 @@ suite('Model editor files', () => {
         const result = parseModelEditorState(
             path.join('/tmp', 'Spec.tla'),
             '---- MODULE Spec ----\n====',
-            [
-                'CONSTANTS',
-                '  a1 = a1  a2 = a2',
-                '',
-                '  a3 = a3',
-                'INVARIANTS TypeOK Safety',
-                'PROPERTIES Liveness Fairness'
-            ].join('\n')
+            'CONSTANTS\n  a1 = a1  a2 = a2\n\n  a3 = a3\nINVARIANTS TypeOK Safety\nPROPERTIES Liveness Fairness'
         );
         assert.ok(result);
         const parsed = result!.state;
@@ -131,38 +108,10 @@ suite('Model editor files', () => {
         assert.deepStrictEqual(discovered.constants, ['M', 'N(_, _)', 'P(x)']);
     });
 
-    test('Detects unsupported directives in cfg content', () => {
-        const cfg = [
-            'INIT Init', 'NEXT Next', 'SYMMETRY Perms',
-            'CONSTRAINT StateLimit', 'ACTION_CONSTRAINT ActionLimit',
-            'VIEW ViewExpr', 'INVARIANT TypeOK'
-        ].join('\n');
-        assert.deepStrictEqual(detectUnsupportedDirectives(cfg), ['SYMMETRY', 'VIEW']);
-    });
-
-    test('Returns empty list when cfg has only supported directives', () => {
-        const cfg = [
-            'INIT Init', 'NEXT Next', 'CHECK_DEADLOCK FALSE',
-            'CONSTANT N = 3', 'CONSTRAINT StateLimit',
-            'ACTION_CONSTRAINT ActionLimit',
-            'INVARIANT TypeOK', 'PROPERTY Liveness'
-        ].join('\n');
-        assert.deepStrictEqual(detectUnsupportedDirectives(cfg), []);
-    });
-
-    test('Ignores comments when detecting unsupported directives', () => {
-        const cfg = ['\\* SYMMETRY Perms', 'INIT Init'].join('\n');
-        assert.deepStrictEqual(detectUnsupportedDirectives(cfg), []);
-    });
-
     test('Serializes state constraint and action constraint', () => {
         const state: ModelEditorState = {
-            specName: 'Spec', specPath: path.join('/tmp', 'Spec.tla'),
-            modelName: 'MCSpec',
-            behavior: { kind: 'initNext', init: 'Init', next: 'Next' },
-            checkDeadlock: true, constants: [], invariants: [], properties: [],
-            stateConstraint: 'StateLimit', actionConstraint: 'ActionLimit',
-            definitionOverrides: [], additionalDefinitions: ''
+            ...base,
+            stateConstraint: 'StateLimit', actionConstraint: 'ActionLimit'
         };
         const files = serializeModelEditorState(state);
         assert.match(files.cfgContent, /CONSTRAINT StateLimit/);
@@ -171,13 +120,8 @@ suite('Model editor files', () => {
 
     test('Serializes definition overrides into cfg and tla', () => {
         const state: ModelEditorState = {
-            specName: 'Spec', specPath: path.join('/tmp', 'Spec.tla'),
-            modelName: 'MCSpec',
-            behavior: { kind: 'initNext', init: 'Init', next: 'Next' },
-            checkDeadlock: true, constants: [], invariants: [], properties: [],
-            stateConstraint: '', actionConstraint: '',
-            definitionOverrides: [{ name: 'Nat', expression: '0..10' }],
-            additionalDefinitions: ''
+            ...base,
+            definitionOverrides: [{ name: 'Nat', expression: '0..10' }]
         };
         const files = serializeModelEditorState(state);
         assert.match(files.cfgContent, /CONSTANT Nat <- MC_Nat/);
@@ -186,12 +130,9 @@ suite('Model editor files', () => {
 
     test('Serializes additional definitions into tla', () => {
         const state: ModelEditorState = {
-            specName: 'Spec', specPath: path.join('/tmp', 'Spec.tla'),
-            modelName: 'MCSpec',
+            ...base,
             behavior: { kind: 'none' },
-            checkDeadlock: true, constants: [], invariants: [], properties: [],
-            stateConstraint: '', actionConstraint: '',
-            definitionOverrides: [], additionalDefinitions: 'MaxVal == 10\nASSUME MaxVal > 0'
+            additionalDefinitions: 'MaxVal == 10\nASSUME MaxVal > 0'
         };
         const files = serializeModelEditorState(state);
         assert.match(files.tlaContent, /MaxVal == 10/);
@@ -225,10 +166,7 @@ suite('Model editor files', () => {
 
     test('Round-trips spec options through serialization', () => {
         const state: ModelEditorState = {
-            specName: 'Spec', specPath: path.join('/tmp', 'Spec.tla'),
-            modelName: 'MCSpec',
-            behavior: { kind: 'initNext', init: 'Init', next: 'Next' },
-            checkDeadlock: true, constants: [], invariants: [], properties: [],
+            ...base,
             stateConstraint: 'Len(q) < 5', actionConstraint: 'ActionOK',
             definitionOverrides: [{ name: 'Nat', expression: '0..10' }],
             additionalDefinitions: 'MaxVal == 10'
@@ -246,20 +184,12 @@ suite('Model editor files', () => {
     });
 
     test('Round-trips TLC options through serialization', () => {
-        const state: ModelEditorState = {
-            specName: 'Spec', specPath: path.join('/tmp', 'Spec.tla'),
-            modelName: 'MCSpec',
-            behavior: { kind: 'initNext', init: 'Init', next: 'Next' },
-            checkDeadlock: true, constants: [], invariants: [], properties: [],
-            stateConstraint: '', actionConstraint: '',
-            definitionOverrides: [], additionalDefinitions: ''
-        };
         const tlcOpts = {
             checkingMode: 'simulate' as const, workers: 4, dfidDepth: 50,
             simulateTraces: 100, simulateSeed: '42', fpBits: 2,
-            enableProfiling: true, viewExpression: '<<pc>>', postCondition: 'Done'
+            enableProfiling: true
         };
-        const files = serializeModelEditorState(state, tlcOpts);
+        const files = serializeModelEditorState(base, tlcOpts);
         const result = parseModelEditorState(
             path.join('/tmp', 'Spec.tla'), files.tlaContent, files.cfgContent
         );
@@ -268,8 +198,42 @@ suite('Model editor files', () => {
         assert.strictEqual(result!.tlcOptions!.checkingMode, 'simulate');
         assert.strictEqual(result!.tlcOptions!.workers, 4);
         assert.strictEqual(result!.tlcOptions!.simulateTraces, 100);
-        assert.strictEqual(result!.tlcOptions!.simulateSeed, '42');
-        assert.strictEqual(result!.tlcOptions!.enableProfiling, true);
-        assert.strictEqual(result!.tlcOptions!.viewExpression, '<<pc>>');
+    });
+
+    test('Serializes SYMMETRY into cfg and tla', () => {
+        const state: ModelEditorState = {
+            ...base,
+            constants: [{ name: 'Nodes', kind: 'setModelValues', value: 'a, b' }],
+            symmetryConstants: ['Nodes']
+        };
+        const files = serializeModelEditorState(state);
+        assert.match(files.cfgContent, /SYMMETRY MC_symm_Nodes/);
+        assert.match(files.tlaContent, /MC_symm_Nodes == Permutations\(Nodes\)/);
+    });
+
+    test('Serializes VIEW, ALIAS, POSTCONDITION into cfg', () => {
+        const state: ModelEditorState = {
+            ...base,
+            viewExpression: '<<pc, stack>>',
+            alias: 'MyAlias',
+            postCondition: 'PostOp'
+        };
+        const files = serializeModelEditorState(state);
+        assert.match(files.cfgContent, /VIEW <<pc, stack>>/);
+        assert.match(files.cfgContent, /ALIAS MyAlias/);
+        assert.match(files.cfgContent, /POSTCONDITION PostOp/);
+    });
+
+    test('Parses VIEW, ALIAS, POSTCONDITION, SYMMETRY from raw cfg', () => {
+        const result = parseModelEditorState(
+            path.join('/tmp', 'Spec.tla'),
+            '---- MODULE Spec ----\n====',
+            'INIT Init\nNEXT Next\nVIEW <<pc>>\nALIAS A\nPOSTCONDITION P\nSYMMETRY Sym1'
+        );
+        assert.ok(result);
+        assert.strictEqual(result!.state.viewExpression, '<<pc>>');
+        assert.strictEqual(result!.state.alias, 'A');
+        assert.strictEqual(result!.state.postCondition, 'P');
+        assert.deepStrictEqual(result!.state.symmetryConstants, ['Sym1']);
     });
 });

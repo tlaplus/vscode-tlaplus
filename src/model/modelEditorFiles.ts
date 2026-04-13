@@ -34,6 +34,10 @@ export interface ModelEditorState {
     actionConstraint: string;
     definitionOverrides: DefinitionOverride[];
     additionalDefinitions: string;
+    symmetryConstants: string[];
+    viewExpression: string;
+    alias: string;
+    postCondition: string;
 }
 
 export interface ModelEditorPaths {
@@ -64,8 +68,6 @@ export interface TlcOptionsState {
     simulateSeed: string;
     fpBits: number;
     enableProfiling: boolean;
-    viewExpression: string;
-    postCondition: string;
 }
 
 export const DEFAULT_TLC_OPTIONS: TlcOptionsState = {
@@ -75,15 +77,13 @@ export const DEFAULT_TLC_OPTIONS: TlcOptionsState = {
     simulateTraces: 0,
     simulateSeed: '',
     fpBits: 1,
-    enableProfiling: false,
-    viewExpression: '',
-    postCondition: ''
+    enableProfiling: false
 };
 
 /** All TLC flags managed by the model editor. */
 const MANAGED_TLC_FLAGS = new Set([
     '-workers', '-simulate', '-dfid', '-seed',
-    '-fpbits', '-coverage', '-view', '-postcondition'
+    '-fpbits', '-coverage'
 ]);
 
 export function tlcOptionsManagedFlags(): Set<string> {
@@ -114,12 +114,6 @@ export function tlcOptionsToArgs(opts: TlcOptionsState): string[] {
     if (opts.enableProfiling) {
         args.push('-coverage', '1');
     }
-    if (opts.viewExpression.trim()) {
-        args.push('-view', opts.viewExpression.trim());
-    }
-    if (opts.postCondition.trim()) {
-        args.push('-postCondition', opts.postCondition.trim());
-    }
     return args;
 }
 
@@ -131,38 +125,12 @@ const CFG_DIRECTIVE_KEYWORDS = new Set([
     'INVARIANT', 'INVARIANTS',
     'PROPERTY', 'PROPERTIES',
     'CHECK_DEADLOCK',
-    'CONSTRAINT', 'ACTION_CONSTRAINT',
-    'SYMMETRY', 'VIEW', 'ALIAS', 'POSTCONDITION',
-    'TYPE_CONSTRAINT'
+    'CONSTRAINT', 'CONSTRAINTS',
+    'ACTION_CONSTRAINT', 'ACTION_CONSTRAINTS',
+    'SYMMETRY', 'VIEW', 'ALIAS', 'POSTCONDITION'
 ]);
 
-const SUPPORTED_DIRECTIVES = new Set([
-    'INIT', 'NEXT', 'SPECIFICATION',
-    'CONSTANT', 'CONSTANTS',
-    'INVARIANT', 'INVARIANTS',
-    'PROPERTY', 'PROPERTIES',
-    'CHECK_DEADLOCK',
-    'CONSTRAINT', 'ACTION_CONSTRAINT'
-]);
 
-/**
- * Detects cfg directives that the model editor does not yet support.
- * Returns a deduplicated list of directive names found (e.g. ['SYMMETRY', 'CONSTRAINT']).
- */
-export function detectUnsupportedDirectives(cfgContent: string): string[] {
-    const found = new Set<string>();
-    for (const line of cfgContent.split(/\r?\n/)) {
-        const trimmed = line.trim();
-        if (trimmed.length === 0 || trimmed.startsWith('\\*')) {
-            continue;
-        }
-        const match = trimmed.match(/^([A-Z_]+)\b/);
-        if (match && !SUPPORTED_DIRECTIVES.has(match[1])) {
-            found.add(match[1]);
-        }
-    }
-    return [...found].sort();
-}
 
 export function buildModelEditorPaths(specPath: string): ModelEditorPaths {
     const directory = path.dirname(specPath);
@@ -279,6 +247,31 @@ export function serializeModelEditorState(
         }
     }
 
+    // SYMMETRY: generate Permutations operator in tla, directive in cfg
+    for (const symConst of state.symmetryConstants ?? []) {
+        if (symConst.trim()) {
+            const symOp = `MC_symm_${symConst.trim()}`;
+            tlaLines.splice(tlaLines.length - 1, 0,
+                `${symOp} == Permutations(${symConst.trim()})`
+            );
+            cfgLines.push(`SYMMETRY ${symOp}`);
+        }
+    }
+
+    if (state.viewExpression?.trim()) {
+        cfgLines.push(`VIEW ${state.viewExpression.trim()}`);
+    }
+
+    if (state.alias?.trim()) {
+        cfgLines.push(`ALIAS ${state.alias.trim()}`);
+    }
+
+    if (state.postCondition?.trim()) {
+        cfgLines.push(
+            `POSTCONDITION ${state.postCondition.trim()}`
+        );
+    }
+
     return {
         tlaContent: tlaLines.join('\n'),
         cfgContent: cfgLines.join('\n')
@@ -299,28 +292,11 @@ export function parseModelEditorState(
         ?? extractSerializedMarker(tlaContent);
     if (parsed) {
         const state = parsed.state;
-        // Backfill fields that may not exist in older state markers
-        const s = state as unknown as Record<string, unknown>;
-        if (!('specPath' in s) || !s.specPath) {
-            state.specPath = specPath;
-        }
-        if (!('specName' in s) || !s.specName) {
-            state.specName = path.basename(
-                specPath, path.extname(specPath)
-            );
-        }
-        if (!('stateConstraint' in s)) {
-            state.stateConstraint = '';
-        }
-        if (!('actionConstraint' in s)) {
-            state.actionConstraint = '';
-        }
-        if (!('definitionOverrides' in s)) {
-            state.definitionOverrides = [];
-        }
-        if (!('additionalDefinitions' in s)) {
-            state.additionalDefinitions = '';
-        }
+        // specPath is not stored in the marker — reconstruct it
+        state.specPath = specPath;
+        state.specName = path.basename(
+            specPath, path.extname(specPath)
+        );
         return { state, tlcOptions: parsed.tlcOptions };
     }
 
@@ -360,6 +336,23 @@ export function parseModelEditorState(
 
     const definitionOverrides = parseCfgOverrides(cfgContent);
 
+    const symmetryMatch = [
+        ...cfgContent.matchAll(/^\s*SYMMETRY\s+(.+)$/gm)
+    ].flatMap((m) => splitSymbolList(m[1]))
+        .map((name) => {
+            // Strip MC_symm_ prefix to recover the constant name
+            if (name.startsWith('MC_symm_')) {
+                return name.substring('MC_symm_'.length);
+            }
+            return name;
+        });
+
+    const viewMatch = cfgContent.match(/^\s*VIEW\s+(.+)$/m);
+    const aliasMatch = cfgContent.match(/^\s*ALIAS\s+(.+)$/m);
+    const postCondMatch = cfgContent.match(
+        /^\s*POSTCONDITION\s+(.+)$/m
+    );
+
     return {
         state: {
             specName: paths.specName,
@@ -375,7 +368,14 @@ export function parseModelEditorState(
             actionConstraint: actionConstraintMatch
                 ? actionConstraintMatch[1].trim() : '',
             definitionOverrides,
-            additionalDefinitions: ''
+            additionalDefinitions: '',
+            symmetryConstants: symmetryMatch,
+            viewExpression: viewMatch
+                ? viewMatch[1].trim() : '',
+            alias: aliasMatch
+                ? aliasMatch[1].trim() : '',
+            postCondition: postCondMatch
+                ? postCondMatch[1].trim() : ''
         }
     };
 }
@@ -418,8 +418,7 @@ export function discoverSpecInfo(specText: string): DiscoveredSpecInfo {
 
 /**
  * Extract the state marker from content.
- * Handles both old format (flat ModelEditorState) and new format
- * (wrapped { state, tlcOptions }).
+ * Format: { state: {...}, tlcOptions?: {...} }
  */
 function extractSerializedMarker(
     content: string
@@ -435,7 +434,6 @@ function extractSerializedMarker(
         const raw = JSON.parse(
             markerLine.substring(STATE_MARKER.length)
         );
-        // New format: { state: {...}, tlcOptions: {...} }
         if (raw.state && typeof raw.state === 'object'
             && 'specName' in raw.state) {
             return {
@@ -443,10 +441,6 @@ function extractSerializedMarker(
                 tlcOptions: raw.tlcOptions as
                     TlcOptionsState | undefined
             };
-        }
-        // Old format: flat ModelEditorState
-        if ('specName' in raw) {
-            return { state: raw as ModelEditorState };
         }
         return undefined;
     } catch {
