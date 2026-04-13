@@ -6,12 +6,22 @@ import { getNonce } from './utilities/getNonce';
 import { getUri } from './utilities/getUri';
 import {
     buildModelEditorPaths,
+    DEFAULT_TLC_OPTIONS,
     detectUnsupportedDirectives,
     discoverSpecInfo,
     parseModelEditorState,
     serializeModelEditorState,
-    ModelEditorState
+    tlcOptionsToArgs,
+    tlcOptionsManagedFlags,
+    ModelEditorState,
+    TlcOptionsState
 } from '../model/modelEditorFiles';
+import { doCheckModel, getSpecFiles } from '../commands/checkModel';
+import { revealEmptyCheckResultView } from './checkResultView';
+
+const modelEditorDiagnostics = vscode.languages.createDiagnosticCollection(
+    'tlaplus-model-editor'
+);
 
 export const CMD_MODEL_EDITOR_DISPLAY = 'tlaplus.model.editor.display';
 export const MODEL_EDITOR_VIEW_TYPE = 'tlaplus.cfgEditor';
@@ -57,7 +67,7 @@ export function showModelEditor(
         return;
     }
 
-    ModelEditorPanel.createOrReveal(context.extensionUri, fileUri);
+    ModelEditorPanel.createOrReveal(context, fileUri);
 }
 
 /**
@@ -66,7 +76,7 @@ export function showModelEditor(
  */
 export class ModelEditorCfgProvider implements vscode.CustomTextEditorProvider {
 
-    constructor(private readonly extensionUri: vscode.Uri) {}
+    constructor(private readonly extContext: vscode.ExtensionContext) {}
 
     public resolveCustomTextEditor(
         document: vscode.TextDocument,
@@ -81,7 +91,7 @@ export class ModelEditorCfgProvider implements vscode.CustomTextEditorProvider {
         const cfgPath = document.uri.fsPath;
         const specPath = resolveSpecPathFromCfg(cfgPath);
         setupModelEditorWebview(
-            webviewPanel, this.extensionUri, () => specPath
+            webviewPanel, this.extContext, () => specPath
         );
     }
 }
@@ -95,10 +105,11 @@ interface WebviewSetup {
 
 function setupModelEditorWebview(
     panel: vscode.WebviewPanel,
-    extensionUri: vscode.Uri,
+    extContext: vscode.ExtensionContext,
     getSpecPath: () => string
 ): WebviewSetup {
     const disposables: vscode.Disposable[] = [];
+    const extensionUri = extContext.extensionUri;
 
     panel.webview.options = {
         enableScripts: true,
@@ -120,26 +131,28 @@ function setupModelEditorWebview(
                 void sendInitData();
             } else if (message.command === 'saveModel') {
                 saveModelFiles(
-                    panel, message.state as ModelEditorState
+                    panel, message.state as ModelEditorState,
+                    message.tlcOptions as
+                        TlcOptionsState | undefined
                 );
             } else if (message.command === 'saveAndRun') {
-                saveModelFiles(
-                    panel, message.state as ModelEditorState
-                );
                 const st = message.state as ModelEditorState;
-                const paths = buildModelEditorPaths(st.specPath);
-                void vscode.commands.executeCommand(
-                    'tlaplus.model.check.run',
-                    vscode.Uri.file(paths.tlaFilePath)
-                );
+                const tlcOpts = (message.tlcOptions
+                    ?? DEFAULT_TLC_OPTIONS) as TlcOptionsState;
+                if (saveModelFiles(panel, st, tlcOpts)) {
+                    void launchTlc(st, tlcOpts, extContext);
+                }
             } else if (message.command === 'openFile') {
                 const filePath = message.path as string;
-                const sp = getSpecPath();
+                const dir = path.dirname(getSpecPath());
+                const mn = sanitizeModelName(
+                    (message.modelName as string) ?? ''
+                );
                 let target: string;
-                if (filePath === 'tla') {
-                    target = buildModelEditorPaths(sp).tlaFilePath;
-                } else if (filePath === 'cfg') {
-                    target = buildModelEditorPaths(sp).cfgFilePath;
+                if (filePath === 'tla' && mn) {
+                    target = path.join(dir, `${mn}.tla`);
+                } else if (filePath === 'cfg' && mn) {
+                    target = path.join(dir, `${mn}.cfg`);
                 } else {
                     target = filePath;
                 }
@@ -218,9 +231,12 @@ async function buildInitPayload(specPath: string) {
         cfgContent = fs.readFileSync(paths.cfgFilePath, 'utf-8');
     } catch { /* */ }
 
-    const existingState = (tlaContent || cfgContent)
+    const parsed = (tlaContent || cfgContent)
         ? parseModelEditorState(specPath, tlaContent, cfgContent)
         : undefined;
+
+    const existingState = parsed?.state;
+    const existingTlcOptions = parsed?.tlcOptions;
 
     // Merge discovered constants with existing state: keep existing
     // assignments for known constants, add new ones from the spec.
@@ -234,7 +250,12 @@ async function buildInitPayload(specPath: string) {
     });
 
     const state: ModelEditorState = existingState
-        ? { ...existingState, constants: mergedConstants }
+        ? {
+            ...existingState,
+            specPath,
+            specName: paths.specName,
+            constants: mergedConstants
+        }
         : {
             specName: paths.specName,
             specPath,
@@ -257,31 +278,70 @@ async function buildInitPayload(specPath: string) {
     const unsupportedDirectives = cfgContent
         ? detectUnsupportedDirectives(cfgContent) : [];
 
-    return { state, discovered, unsupportedDirectives };
+    return {
+        state, discovered, unsupportedDirectives,
+        tlcOptions: existingTlcOptions
+    };
+}
+
+/**
+ * Strip path separators and '..' from model names to prevent
+ * writing files outside the spec directory.
+ */
+function sanitizeModelName(name: string): string {
+    return name.replace(/[/\\]/g, '').replace(/\.\./g, '');
 }
 
 function saveModelFiles(
     panel: vscode.WebviewPanel,
-    state: ModelEditorState
-): void {
-    const paths = buildModelEditorPaths(state.specPath);
-    const { tlaContent, cfgContent } = serializeModelEditorState(state);
+    state: ModelEditorState,
+    tlcOptions?: TlcOptionsState
+): boolean {
+    const dir = path.dirname(state.specPath);
+    const safeName = sanitizeModelName(state.modelName);
+    const tlaPath = path.join(dir, `${safeName}.tla`);
+    const cfgPath = path.join(dir, `${safeName}.cfg`);
+    const { tlaContent, cfgContent } = serializeModelEditorState(
+        state, tlcOptions
+    );
 
     try {
-        fs.writeFileSync(paths.tlaFilePath, tlaContent, 'utf-8');
-        fs.writeFileSync(paths.cfgFilePath, cfgContent, 'utf-8');
-        void panel.webview.postMessage({
-            type: 'saved',
-            message: `Saved ${paths.modelName}.tla and `
-                + `${paths.modelName}.cfg. `
-                + 'Use Run Model Checker to execute.'
-        });
+        fs.writeFileSync(tlaPath, tlaContent, 'utf-8');
+        fs.writeFileSync(cfgPath, cfgContent, 'utf-8');
+        void panel.webview.postMessage({ type: 'saved' });
+        return true;
     } catch (err) {
         void panel.webview.postMessage({
             type: 'error',
             message: `Failed to save model files: ${err}`
         });
+        return false;
     }
+}
+
+async function launchTlc(
+    state: ModelEditorState,
+    tlcOpts: TlcOptionsState,
+    extContext: vscode.ExtensionContext
+): Promise<void> {
+    const dir = path.dirname(state.specPath);
+    const safeName = sanitizeModelName(state.modelName);
+    const tlaPath = path.join(dir, `${safeName}.tla`);
+    const uri = vscode.Uri.file(tlaPath);
+    const specFiles = await getSpecFiles(uri, true, false);
+    if (!specFiles) {
+        vscode.window.showWarningMessage(
+            'Cannot find model files. Save first.'
+        );
+        return;
+    }
+    modelEditorDiagnostics.clear();
+    revealEmptyCheckResultView(extContext);
+    const extraOpts = tlcOptionsToArgs(tlcOpts);
+    await doCheckModel(
+        specFiles, true, extContext, modelEditorDiagnostics,
+        false, extraOpts, undefined, tlcOptionsManagedFlags()
+    );
 }
 
 /**
@@ -324,6 +384,7 @@ function getWebviewHtml(
                     style-src 'unsafe-inline';
                     script-src 'nonce-${nonce}';">
             <title>TLA+ Model Editor</title>
+            <style>body { padding: 0 !important; overflow-y: scroll; }</style>
         </head>
         <body>
             <div id="root"></div>
@@ -343,8 +404,11 @@ class ModelEditorPanel {
     private readonly disposables: vscode.Disposable[] = [];
     private specPath: string;
 
-    private constructor(extensionUri: vscode.Uri, specUri: vscode.Uri) {
+    private constructor(
+        extContext: vscode.ExtensionContext, specUri: vscode.Uri
+    ) {
         this.specPath = specUri.fsPath;
+        const extensionUri = extContext.extensionUri;
 
         this.panel = vscode.window.createWebviewPanel(
             'tlaplusModelEditor',
@@ -373,7 +437,7 @@ class ModelEditorPanel {
         );
 
         const setup = setupModelEditorWebview(
-            this.panel, extensionUri, () => this.specPath
+            this.panel, extContext, () => this.specPath
         );
         this.disposables.push(...setup.disposables);
         this.sendInit = setup.sendInitData;
@@ -382,7 +446,7 @@ class ModelEditorPanel {
     private sendInit: () => Promise<void> = () => Promise.resolve();
 
     public static createOrReveal(
-        extensionUri: vscode.Uri, specUri: vscode.Uri
+        extContext: vscode.ExtensionContext, specUri: vscode.Uri
     ): void {
         if (ModelEditorPanel.currentPanel) {
             ModelEditorPanel.currentPanel.specPath = specUri.fsPath;
@@ -391,7 +455,7 @@ class ModelEditorPanel {
             return;
         }
         ModelEditorPanel.currentPanel = new ModelEditorPanel(
-            extensionUri, specUri
+            extContext, specUri
         );
     }
 

@@ -207,14 +207,39 @@ export async function runTlc(
     cfgFilePath: string,
     showOptionsPrompt: boolean,
     extraOpts: string[] = [],
-    extraJavaOpts: string[] = []
+    extraJavaOpts: string[] = [],
+    managedFlags?: Set<string>
 ): Promise<ToolProcessInfo | undefined> {
     const promptedOptions = await getTlcOptions(showOptionsPrompt);
     if (promptedOptions === undefined) {
         // Command cancelled by user
         return undefined;
     }
-    const customOptions = extraOpts.concat(promptedOptions);
+    // When extraOpts or managedFlags specify a flag, remove it from
+    // prompted options to avoid defaults overriding explicit values
+    // or re-introducing flags the caller intentionally omitted.
+    const suppressFlags = new Set(
+        managedFlags
+            ? [...managedFlags].map((f) => f.toLowerCase())
+            : extraOpts.filter((o) => o.startsWith('-'))
+                .map((o) => o.toLowerCase())
+    );
+    const filtered: string[] = [];
+    for (let i = 0; i < promptedOptions.length; i++) {
+        if (promptedOptions[i].startsWith('-')
+            && suppressFlags.has(
+                promptedOptions[i].toLowerCase()
+            )) {
+            // Skip this flag and its value (if next is not a flag)
+            if (i + 1 < promptedOptions.length
+                && !promptedOptions[i + 1].startsWith('-')) {
+                i++;
+            }
+            continue;
+        }
+        filtered.push(promptedOptions[i]);
+    }
+    const customOptions = extraOpts.concat(filtered);
     const javaOptions = [makeTlaLibraryJavaOpt()];
     const shareStats = vscode.workspace.getConfiguration().get<ShareOption>(CFG_TLC_STATISTICS_TYPE);
     if (shareStats !== ShareOption.DoNotShare) {

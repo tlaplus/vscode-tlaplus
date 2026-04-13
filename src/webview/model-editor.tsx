@@ -4,7 +4,8 @@ import { vsCodeApi } from './common/vscode_api';
 import type {
     ConstantAssignmentKind,
     DiscoveredSpecInfo,
-    ModelEditorState
+    ModelEditorState,
+    TlcOptionsState
 } from '../model/modelEditorFiles';
 
 // ── Types ─────────────────────────────────────────────────────────
@@ -15,6 +16,7 @@ interface ModelEditorPanelData {
     state: ModelEditorState;
     discovered: DiscoveredSpecInfo;
     unsupportedDirectives: string[];
+    tlcOptions?: TlcOptionsState;
 }
 
 // ── Dirty-tracking helpers ──────────────────────────────────────
@@ -26,7 +28,9 @@ function deepEqual(a: unknown, b: unknown): boolean {
 function isTabDirty(
     tab: TabId,
     current: ModelEditorState,
-    saved: ModelEditorState
+    saved: ModelEditorState,
+    currentTlc?: TlcOptionsState,
+    savedTlc?: TlcOptionsState
 ): boolean {
     if (tab === 'overview') {
         return !deepEqual(current.behavior, saved.behavior)
@@ -44,31 +48,46 @@ function isTabDirty(
             || current.additionalDefinitions
                 !== saved.additionalDefinitions;
     }
+    if (tab === 'tlcOptions') {
+        return !deepEqual(currentTlc, savedTlc);
+    }
     return false;
 }
 
 function isAnyDirty(
     current: ModelEditorState,
-    saved: ModelEditorState
+    saved: ModelEditorState,
+    currentTlc?: TlcOptionsState,
+    savedTlc?: TlcOptionsState
 ): boolean {
-    return !deepEqual(current, saved);
+    return !deepEqual(current, saved)
+        || !deepEqual(currentTlc, savedTlc);
 }
 
 // ── Tooltip texts ─────────────────────────────
 
 /* eslint-disable max-len */
 const TIPS = {
-    behaviorSpec: 'Defines how your system behaves by specifying the initial states (Init) and how states can transition (Next).',
-    mode: 'Init/Next is the most common. Temporal formula uses a single spec operator. No behavior spec evaluates constant expressions only.',
-    deadlock: 'Checks that every reachable state has at least one successor state.',
-    invariants: 'State predicates checked in every reachable state.',
-    properties: 'Temporal formulas verified over the full behavior graph.',
-    constants: 'Assign concrete values to each CONSTANT declared in the spec. Use Ordinary for expressions, Model value for uninterpreted identifiers, or Set of model values for finite sets.',
-    stateConstraint: 'A TLA+ expression that must be TRUE for a state to be explored. Use this to bound the model, e.g. Len(queue) < 5. Does not affect correctness.',
-    actionConstraint: 'A TLA+ expression over primed and unprimed variables. Only transitions where this is TRUE are explored.',
-    defOverrides: 'Replace spec operators with model-specific definitions. For example, replace Nat with 0..10 to make an infinite set finite.',
-    additionalDefs: 'Free-form TLA+ text added to the MC module. Use for helper operators, ASSUME statements, or definitions needed by constraints or overrides.',
-    tlcOptions: 'Runtime options for the model checker: checking mode, parallelism, memory, and profiling. Passed as command-line arguments.',
+    behaviorSpec: 'Choose how TLC explores your system. This tells TLC where to start and how states evolve over time.',
+    mode: 'Init/Next is the most common — provide an initial-state predicate and a next-state relation. Temporal formula uses a single operator like Spec that combines fairness conditions. No behavior spec lets you evaluate constant expressions without state exploration.',
+    deadlock: 'When enabled, TLC verifies every reachable state has at least one successor. Disable this if your spec intentionally has terminal states (e.g. a protocol that completes).',
+    invariants: 'State predicates that must hold in every reachable state. Use these to catch safety violations — for example, TypeOK to verify variables stay within expected types.',
+    properties: 'Temporal formulas checked over the full behavior graph. Use these for liveness properties — for example, verifying that every request eventually gets a response.',
+    constants: 'TLC needs concrete values for each CONSTANT in your spec. Use ordinary assignment for expressions like 1..3, model value for unique identifiers, or set of model values for finite enumerated sets.',
+    stateConstraint: 'Limits which states TLC explores by requiring this expression to be TRUE. Use this to make large or infinite models tractable — for example, Len(queue) < 5 to cap queue size during exploration.',
+    actionConstraint: 'Filters which transitions TLC considers by requiring this expression over current and next-state variables to be TRUE. Useful for focusing model checking on specific scenarios — for example, only exploring paths where message count stays bounded.',
+    defOverrides: 'Replaces spec operators with model-specific definitions during checking. Essential for making infinite sets finite — for example, overriding Nat with 0..10 so TLC can enumerate values.',
+    additionalDefs: 'Extra TLA+ definitions added to the MC module. Use this for helper operators needed by constraints or overrides, or for ASSUME statements that validate model parameters.',
+    tlcOptions: 'Controls how TLC runs: checking strategy, parallelism, and diagnostics. These are command-line arguments, not part of the .cfg file.',
+    checkingMode: 'BFS (breadth-first) explores all states and finds the shortest counterexamples. DFID uses less memory for very large state spaces. Simulation generates random behaviors and is useful for quick smoke tests or exploring specs that are too large to check exhaustively.',
+    workers: 'Number of parallel threads. Set to 0 to automatically use all available CPU cores (recommended). More workers check faster but use more memory.',
+    dfidDepth: 'Maximum search depth for depth-first iterative deepening. Deeper values explore more of the state space but take longer.',
+    simTraces: 'How many random traces to generate. Set to 0 for unlimited (runs until you stop it). Higher values give more confidence but take longer.',
+    simSeed: 'A fixed seed makes simulation reproducible — the same seed always generates the same traces. Useful for debugging a specific counterexample.',
+    fpBits: 'Controls the fingerprint function used to identify states. Higher values reduce the probability of hash collisions (false matches) but use more memory. The default of 1 is fine for most models.',
+    profiling: 'Shows how often each expression is evaluated during model checking. Useful for finding performance bottlenecks in your spec — results appear in the TLC coverage panel.',
+    viewExpr: 'A TLA+ expression evaluated in each state and included in error traces. Use this to see computed values (like queue lengths or message counts) alongside raw state variables in counterexamples.',
+    postCondition: 'An operator evaluated after model checking finishes. It receives the set of all reachable states, useful for computing statistics or asserting global properties of the state graph.',
 };
 /* eslint-enable max-len */
 
@@ -95,6 +114,8 @@ function TabBar(props: {
     onChange: (tab: TabId) => void;
     current: ModelEditorState;
     saved: ModelEditorState;
+    currentTlc: TlcOptionsState;
+    savedTlc: TlcOptionsState;
 }) {
     const tabs: { id: TabId; label: string }[] = [
         { id: 'overview', label: 'Model Overview' },
@@ -105,7 +126,8 @@ function TabBar(props: {
         <div style={S.tabBar}>
             {tabs.map((tab) => {
                 const dirty = isTabDirty(
-                    tab.id, props.current, props.saved
+                    tab.id, props.current, props.saved,
+                    props.currentTlc, props.savedTlc
                 );
                 const active = props.active === tab.id;
                 return (
@@ -308,6 +330,76 @@ function TextArea(props: {
     );
 }
 
+function ModelNameEditor(props: {
+    modelName: string;
+    onChange: (name: string) => void;
+    onOpenFile: (kind: string) => void;
+}) {
+    const [editing, setEditing] = React.useState(false);
+    const [draft, setDraft] = React.useState('');
+
+    const startEdit = () => {
+        // Strip the MC prefix for editing
+        const suffix = props.modelName.startsWith('MC')
+            ? props.modelName.substring(2)
+            : props.modelName;
+        setDraft(suffix);
+        setEditing(true);
+    };
+
+    const confirm = () => {
+        const trimmed = draft.trim();
+        if (trimmed) {
+            props.onChange(`MC${trimmed}`);
+        }
+        setEditing(false);
+    };
+
+    const cancel = () => setEditing(false);
+
+    if (editing) {
+        return (
+            <div style={S.modelNameEdit}>
+                <span style={S.smallText}>MC</span>
+                <input
+                    style={{ ...S.input, width: '160px' }}
+                    value={draft}
+                    autoFocus
+                    onChange={(e) => setDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') { confirm(); }
+                        if (e.key === 'Escape') { cancel(); }
+                    }}
+                />
+                <span style={S.smallText}>.tla / .cfg</span>
+                <button style={S.chipButton} onClick={confirm}>
+                    ✓
+                </button>
+                <button style={S.chipButton} onClick={cancel}>
+                    ✕
+                </button>
+            </div>
+        );
+    }
+
+    return (
+        <div style={S.modelNameRow}>
+            <a style={S.fileLink} href="#" onClick={(e) => {
+                e.preventDefault(); props.onOpenFile('tla');
+            }}>{props.modelName}.tla</a>
+            {' / '}
+            <a style={S.fileLink} href="#" onClick={(e) => {
+                e.preventDefault(); props.onOpenFile('cfg');
+            }}>{props.modelName}.cfg</a>
+            <button
+                style={S.chipButton}
+                onClick={startEdit}
+                title="Rename model files"
+            >✎</button>
+        </div>
+    );
+}
+
 // ── content Tab ────────────────────────
 
 function OverviewTab(props: {
@@ -479,7 +571,11 @@ function OverviewTab(props: {
                             </option>
                         </select>
                         <input
-                            style={S.input}
+                            style={{
+                                ...S.input,
+                                flex: '1 1 150px',
+                                width: 'auto'
+                            }}
                             value={c.value}
                             placeholder={placeholderForKind(c.kind)}
                             onChange={(e) => update((prev) => {
@@ -566,7 +662,11 @@ function SpecOptionsTab(props: {
                 {s.definitionOverrides.map((o, i) => (
                     <div key={i} style={S.overrideRow}>
                         <input
-                            style={S.input}
+                            style={{
+                                ...S.input,
+                                flex: '1 1 120px',
+                                width: 'auto'
+                            }}
                             value={o.name}
                             placeholder="Original operator"
                             onChange={(e) => update((prev) => {
@@ -579,7 +679,11 @@ function SpecOptionsTab(props: {
                         />
                         <span style={S.arrow}>→</span>
                         <input
-                            style={S.input}
+                            style={{
+                                ...S.input,
+                                flex: '1 1 120px',
+                                width: 'auto'
+                            }}
                             value={o.expression}
                             placeholder="Override expression"
                             onChange={(e) => update((prev) => {
@@ -643,20 +747,151 @@ function SpecOptionsTab(props: {
     </>);
 }
 
-function TlcOptionsTab() {
-    return (
+function TlcOptionsTab(props: {
+    opts: TlcOptionsState;
+    onChange: (fn: (o: TlcOptionsState) => TlcOptionsState) => void;
+}) {
+    const { opts, onChange } = props;
+    const set = <K extends keyof TlcOptionsState>(
+        key: K, value: TlcOptionsState[K]
+    ) => onChange((prev) => ({ ...prev, [key]: value }));
+
+    return (<>
         <section style={S.section}>
             <h2 style={S.sectionHeading}>
-                TLC OPTIONS
-                <InfoTip text={TIPS.tlcOptions} />
+                CHECKING MODE
+                <InfoTip text={TIPS.checkingMode} />
             </h2>
-            <div style={S.smallText}>
-                TLC options (workers, simulation mode, profiling, etc.)
-                are coming in a future update. For now, configure them
-                via the <code>tlaplus.tlc.modelChecker.options</code>
-                {' '}setting or the options prompt when running TLC.
+            <div style={{ marginBottom: '12px' }}>
+                {(['bfs', 'dfid', 'simulate'] as const).map((m) => (
+                    <label key={m} style={S.radioLabel}>
+                        <input
+                            type="radio"
+                            name="checkingMode"
+                            checked={opts.checkingMode === m}
+                            onChange={() => set('checkingMode', m)}
+                        />
+                        {{
+                            bfs: 'Model checking (BFS)',
+                            dfid: 'Depth-first (DFID)',
+                            simulate: 'Simulation'
+                        }[m]}
+                    </label>
+                ))}
             </div>
+
+            {opts.checkingMode === 'dfid' && (
+                <NumberField
+                    label="Max depth"
+                    info={TIPS.dfidDepth}
+                    value={opts.dfidDepth}
+                    onChange={(v) => set('dfidDepth', v)}
+                />
+            )}
+
+            {opts.checkingMode === 'simulate' && (<>
+                <NumberField
+                    label="Number of traces (0 = unlimited)"
+                    info={TIPS.simTraces}
+                    value={opts.simulateTraces}
+                    onChange={(v) => set('simulateTraces', v)}
+                />
+                <TextField
+                    label="Seed"
+                    value={opts.simulateSeed}
+                    placeholder="Leave empty for random"
+                    onChange={(v) => set('simulateSeed', v)}
+                />
+            </>)}
         </section>
+
+        <section style={S.section}>
+            <h2 style={S.sectionHeading}>RESOURCES</h2>
+            <label style={S.fieldLabel}>
+                Workers (threads):
+                <InfoTip text={TIPS.workers} />
+                <input
+                    style={{ ...S.input, width: '120px' }}
+                    type="number"
+                    value={opts.workers}
+                    min={0}
+                    onChange={(e) => set('workers',
+                        parseInt(e.target.value, 10) || 0
+                    )}
+                />
+                {opts.workers === 0 && (
+                    <span style={S.smallText}>
+                        (0 = auto, uses all available CPU cores)
+                    </span>
+                )}
+            </label>
+            <NumberField
+                label="Fingerprint bits"
+                info={TIPS.fpBits}
+                value={opts.fpBits}
+                min={0}
+                onChange={(v) => set('fpBits', v)}
+            />
+        </section>
+
+        <section style={S.section}>
+            <h2 style={S.sectionHeading}>ADVANCED</h2>
+            <label style={S.checkbox}>
+                <input
+                    type="checkbox"
+                    checked={opts.enableProfiling}
+                    onChange={(e) => set(
+                        'enableProfiling', e.target.checked
+                    )}
+                />
+                Enable profiling
+                <InfoTip text={TIPS.profiling} />
+            </label>
+            <label style={S.fieldLabel}>
+                View expression:
+                <InfoTip text={TIPS.viewExpr} />
+            </label>
+            <TextField
+                label=""
+                value={opts.viewExpression}
+                placeholder="e.g. <<pc, stack>>"
+                onChange={(v) => set('viewExpression', v)}
+            />
+            <label style={S.fieldLabel}>
+                Post-condition:
+                <InfoTip text={TIPS.postCondition} />
+            </label>
+            <TextField
+                label=""
+                value={opts.postCondition}
+                placeholder="Operator name"
+                onChange={(v) => set('postCondition', v)}
+            />
+        </section>
+    </>);
+}
+
+function NumberField(props: {
+    label: string;
+    info?: string;
+    value: number;
+    min?: number;
+    onChange: (v: number) => void;
+}) {
+    return (
+        <label style={S.fieldLabel}>
+            {props.label}:
+            {props.info && <InfoTip text={props.info} />}
+            <input
+                style={{ ...S.input, width: '120px' }}
+                type="number"
+                value={props.value}
+                min={props.min}
+                onChange={(e) => props.onChange(
+                    parseInt(e.target.value, 10) || 0
+                )}
+            />
+        </label>
     );
 }
 
@@ -676,6 +911,20 @@ function App() {
     );
     const [error, setError] = React.useState('');
     const [activeTab, setActiveTab] = React.useState<TabId>('overview');
+    const defaultTlcOpts: TlcOptionsState = {
+        checkingMode: 'bfs', workers: 0, dfidDepth: 100,
+        simulateTraces: 0, simulateSeed: '', fpBits: 1,
+        enableProfiling: false, viewExpression: '', postCondition: ''
+    };
+    const [tlcOptions, setTlcOptions] = React.useState<TlcOptionsState>(
+        persisted?.tlcOptions ?? defaultTlcOpts
+    );
+    const [savedTlcOptions, setSavedTlcOptions] = React.useState<
+        TlcOptionsState
+    >(persisted?.tlcOptions
+        ? JSON.parse(JSON.stringify(persisted.tlcOptions))
+        : defaultTlcOpts
+    );
 
     React.useEffect(() => {
         vsCodeApi.postMessage({ command: 'ready' });
@@ -686,27 +935,34 @@ function App() {
             message?: string;
         }>) => {
             if (event.data?.type === 'init' && event.data.data) {
-                setData(event.data.data);
+                const d = event.data.data;
+                setData(d);
                 setSavedState(
-                    JSON.parse(JSON.stringify(event.data.data.state))
+                    JSON.parse(JSON.stringify(d.state))
                 );
-                vsCodeApi.setState(event.data.data);
+                if (d.tlcOptions) {
+                    setTlcOptions(d.tlcOptions);
+                    setSavedTlcOptions(
+                        JSON.parse(JSON.stringify(d.tlcOptions))
+                    );
+                }
+                vsCodeApi.setState(d);
             } else if (event.data?.type === 'saved') {
                 setError('');
                 setData((prev) => {
                     if (prev) {
-                        const snap = JSON.parse(
+                        setSavedState(JSON.parse(
                             JSON.stringify(prev.state)
-                        );
-                        setSavedState(snap);
+                        ));
                         vsCodeApi.setState(prev);
                     }
                     return prev;
                 });
+                setSavedTlcOptions(
+                    JSON.parse(JSON.stringify(tlcOptions))
+                );
             } else if (event.data?.type === 'error') {
                 setError(event.data.message ?? 'Error.');
-            } else if (event.data?.type === 'requestReady') {
-                vsCodeApi.postMessage({ command: 'ready' });
             } else if (
                 event.data?.type === 'specUpdated'
                 && event.data.discovered
@@ -766,19 +1022,27 @@ function App() {
     }
 
     const { state, discovered, unsupportedDirectives } = data;
-    const dirty = isAnyDirty(state, savedState);
+    const dirty = isAnyDirty(
+        state, savedState, tlcOptions, savedTlcOptions
+    );
 
     const saveModel = () => {
-        vsCodeApi.postMessage({ command: 'saveModel', state });
+        vsCodeApi.postMessage({
+            command: 'saveModel', state, tlcOptions
+        });
     };
 
     const saveAndRun = () => {
-        vsCodeApi.postMessage({ command: 'saveAndRun', state });
+        vsCodeApi.postMessage({
+            command: 'saveAndRun', state, tlcOptions
+        });
     };
 
     const openFile = (pathOrKind: string) => {
         vsCodeApi.postMessage({
-            command: 'openFile', path: pathOrKind
+            command: 'openFile',
+            path: pathOrKind,
+            modelName: state.modelName
         });
     };
 
@@ -809,25 +1073,13 @@ function App() {
                                 openFile(state.specPath);
                             }}
                         >{state.specName}</a>
-                        <div style={S.smallText}>
-                            <a
-                                style={S.fileLink}
-                                href="#"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    openFile('tla');
-                                }}
-                            >{state.modelName}.tla</a>
-                            {' / '}
-                            <a
-                                style={S.fileLink}
-                                href="#"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    openFile('cfg');
-                                }}
-                            >{state.modelName}.cfg</a>
-                        </div>
+                        <ModelNameEditor
+                            modelName={state.modelName}
+                            onChange={(name) => updateState((prev) => ({
+                                ...prev, modelName: name
+                            }))}
+                            onOpenFile={openFile}
+                        />
                     </div>
                     <div style={S.buttonGroup}>
                         <button
@@ -854,6 +1106,8 @@ function App() {
                 onChange={setActiveTab}
                 current={state}
                 saved={savedState}
+                currentTlc={tlcOptions}
+                savedTlc={savedTlcOptions}
             />
 
             {activeTab === 'overview' && (
@@ -873,7 +1127,12 @@ function App() {
                     revert={revertFields}
                 />
             )}
-            {activeTab === 'tlcOptions' && <TlcOptionsTab />}
+            {activeTab === 'tlcOptions' && (
+                <TlcOptionsTab
+                    opts={tlcOptions}
+                    onChange={(fn) => setTlcOptions(fn)}
+                />
+            )}
         </div>
     );
 }
@@ -892,9 +1151,10 @@ const S: Record<string, React.CSSProperties> = {
     page: {
         fontFamily: 'var(--vscode-font-family)',
         color: 'var(--vscode-foreground)',
-        padding: '16px',
+        padding: '12px',
         maxWidth: '980px',
-        margin: '0 auto'
+        margin: '0 auto',
+        boxSizing: 'border-box' as const
     },
     heading: { fontSize: '1.5rem', marginBottom: '0.5rem' },
     warning: {
@@ -936,13 +1196,37 @@ const S: Record<string, React.CSSProperties> = {
         textDecoration: 'none',
         cursor: 'pointer'
     },
+    modelNameRow: {
+        display: 'flex',
+        alignItems: 'center',
+        flexWrap: 'wrap' as const,
+        gap: '6px',
+        fontSize: '0.85rem',
+        color: 'var(--vscode-descriptionForeground)'
+    },
+    modelNameEdit: {
+        display: 'flex',
+        alignItems: 'center',
+        flexWrap: 'wrap' as const,
+        gap: '4px',
+        marginTop: '2px'
+    },
+    chipButton: {
+        background: 'transparent',
+        border: 'none',
+        color: 'var(--vscode-descriptionForeground)',
+        cursor: 'pointer',
+        fontSize: '0.9rem',
+        padding: '2px 4px'
+    },
     button: {
         padding: '6px 12px',
         color: 'var(--vscode-button-foreground)',
         background: 'var(--vscode-button-background)',
         border: 'none',
         borderRadius: '4px',
-        cursor: 'pointer'
+        cursor: 'pointer',
+        whiteSpace: 'nowrap' as const
     },
     buttonPrimary: {
         padding: '6px 12px',
@@ -951,13 +1235,26 @@ const S: Record<string, React.CSSProperties> = {
         border: 'none',
         borderRadius: '4px',
         cursor: 'pointer',
-        fontWeight: 600
+        fontWeight: 600,
+        whiteSpace: 'nowrap' as const
     },
     buttonDisabled: {
         opacity: 0.5,
         cursor: 'default'
     },
-    buttonGroup: { display: 'flex', gap: '8px' },
+    buttonGroup: {
+        display: 'flex',
+        gap: '8px',
+        flexShrink: 0,
+        flexWrap: 'wrap' as const
+    },
+    radioLabel: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        marginBottom: '6px',
+        cursor: 'pointer'
+    },
     initNextSummary: {
         display: 'flex',
         alignItems: 'center',
@@ -977,7 +1274,8 @@ const S: Record<string, React.CSSProperties> = {
         display: 'flex',
         justifyContent: 'space-between',
         gap: '12px',
-        alignItems: 'center'
+        alignItems: 'flex-start',
+        flexWrap: 'wrap' as const
     },
     smallText: {
         fontSize: '0.85rem',
@@ -1016,9 +1314,9 @@ const S: Record<string, React.CSSProperties> = {
         fontSize: '0.85rem'
     },
     constantRow: {
-        display: 'grid',
-        gridTemplateColumns: '140px 200px 1fr',
-        gap: '10px',
+        display: 'flex',
+        flexWrap: 'wrap' as const,
+        gap: '8px',
         alignItems: 'center',
         marginBottom: '8px'
     },
@@ -1027,17 +1325,18 @@ const S: Record<string, React.CSSProperties> = {
     // Tab bar
     tabBar: {
         display: 'flex',
+        flexWrap: 'wrap' as const,
         gap: '0',
         marginBottom: '16px'
     },
     tabWrap: {
-        flex: 1,
+        flex: '1 1 0',
+        minWidth: '100px',
         display: 'flex',
         flexDirection: 'column' as const
     },
     tab: {
-        flex: 1,
-        padding: '8px 16px',
+        padding: '8px 10px',
         background: 'transparent',
         color: 'var(--vscode-foreground)',
         border: 'none',
@@ -1045,7 +1344,8 @@ const S: Record<string, React.CSSProperties> = {
         fontSize: '0.9rem',
         opacity: 0.7,
         textAlign: 'center',
-        outline: 'none'
+        outline: 'none',
+        whiteSpace: 'nowrap' as const
     },
     tabActiveText: {
         opacity: 1,
@@ -1085,6 +1385,9 @@ const S: Record<string, React.CSSProperties> = {
         color: 'var(--vscode-editorHoverWidget-foreground)',
         fontSize: '0.82rem',
         lineHeight: '1.45',
+        textTransform: 'none' as const,
+        letterSpacing: 'normal',
+        fontWeight: 'normal' as const,
         zIndex: 100,
         pointerEvents: 'none',
         boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
@@ -1135,8 +1438,8 @@ const S: Record<string, React.CSSProperties> = {
 
     // Spec options
     overrideRow: {
-        display: 'grid',
-        gridTemplateColumns: '1fr auto 1fr auto',
+        display: 'flex',
+        flexWrap: 'wrap' as const,
         gap: '8px',
         alignItems: 'center',
         marginBottom: '8px'

@@ -54,6 +54,75 @@ export interface DiscoveredSpecInfo {
     propertyCandidates: string[];
 }
 
+export type TlcCheckingMode = 'bfs' | 'dfid' | 'simulate';
+
+export interface TlcOptionsState {
+    checkingMode: TlcCheckingMode;
+    workers: number;
+    dfidDepth: number;
+    simulateTraces: number;
+    simulateSeed: string;
+    fpBits: number;
+    enableProfiling: boolean;
+    viewExpression: string;
+    postCondition: string;
+}
+
+export const DEFAULT_TLC_OPTIONS: TlcOptionsState = {
+    checkingMode: 'bfs',
+    workers: 0,
+    dfidDepth: 100,
+    simulateTraces: 0,
+    simulateSeed: '',
+    fpBits: 1,
+    enableProfiling: false,
+    viewExpression: '',
+    postCondition: ''
+};
+
+/** All TLC flags managed by the model editor. */
+const MANAGED_TLC_FLAGS = new Set([
+    '-workers', '-simulate', '-dfid', '-seed',
+    '-fpbits', '-coverage', '-view', '-postcondition'
+]);
+
+export function tlcOptionsManagedFlags(): Set<string> {
+    return MANAGED_TLC_FLAGS;
+}
+
+export function tlcOptionsToArgs(opts: TlcOptionsState): string[] {
+    const args: string[] = [];
+    if (opts.workers <= 0) {
+        args.push('-workers', 'auto');
+    } else {
+        args.push('-workers', String(opts.workers));
+    }
+    if (opts.checkingMode === 'simulate') {
+        args.push('-simulate');
+        if (opts.simulateTraces > 0) {
+            args.push(`num=${opts.simulateTraces}`);
+        }
+        if (opts.simulateSeed) {
+            args.push('-seed', opts.simulateSeed);
+        }
+    } else if (opts.checkingMode === 'dfid') {
+        args.push('-dfid', String(opts.dfidDepth));
+    }
+    if (opts.fpBits > 0) {
+        args.push('-fpbits', String(opts.fpBits));
+    }
+    if (opts.enableProfiling) {
+        args.push('-coverage', '1');
+    }
+    if (opts.viewExpression.trim()) {
+        args.push('-view', opts.viewExpression.trim());
+    }
+    if (opts.postCondition.trim()) {
+        args.push('-postCondition', opts.postCondition.trim());
+    }
+    return args;
+}
+
 const STATE_MARKER = '\\* MODEL_EDITOR_STATE ';
 
 const CFG_DIRECTIVE_KEYWORDS = new Set([
@@ -110,10 +179,21 @@ export function buildModelEditorPaths(specPath: string): ModelEditorPaths {
     };
 }
 
+export interface ModelEditorMarker {
+    state: ModelEditorState;
+    tlcOptions?: TlcOptionsState;
+}
+
 export function serializeModelEditorState(
-    state: ModelEditorState
+    state: ModelEditorState,
+    tlcOptions?: TlcOptionsState
 ): { tlaContent: string; cfgContent: string } {
-    const meta = `${STATE_MARKER}${JSON.stringify(state)}`;
+    // Strip specPath from the stored marker — it's an absolute path
+    // that becomes stale if the project moves. We reconstruct it
+    // from the cfg file location on load.
+    const { specPath: _stripped, ...stateWithoutPath } = state;
+    const marker = { state: stateWithoutPath, tlcOptions };
+    const meta = `${STATE_MARKER}${JSON.stringify(marker)}`;
     const tlaLines = [
         `---- MODULE ${state.modelName} ----`,
         `EXTENDS ${state.specName}, TLC`,
@@ -205,29 +285,43 @@ export function serializeModelEditorState(
     };
 }
 
+export interface ParsedModelEditor {
+    state: ModelEditorState;
+    tlcOptions?: TlcOptionsState;
+}
+
 export function parseModelEditorState(
     specPath: string,
     tlaContent: string,
     cfgContent: string
-): ModelEditorState | undefined {
-    const serialized = extractSerializedState(cfgContent)
-        ?? extractSerializedState(tlaContent);
-    if (serialized) {
+): ParsedModelEditor | undefined {
+    const parsed = extractSerializedMarker(cfgContent)
+        ?? extractSerializedMarker(tlaContent);
+    if (parsed) {
+        const state = parsed.state;
         // Backfill fields that may not exist in older state markers
-        const s = serialized as unknown as Record<string, unknown>;
+        const s = state as unknown as Record<string, unknown>;
+        if (!('specPath' in s) || !s.specPath) {
+            state.specPath = specPath;
+        }
+        if (!('specName' in s) || !s.specName) {
+            state.specName = path.basename(
+                specPath, path.extname(specPath)
+            );
+        }
         if (!('stateConstraint' in s)) {
-            serialized.stateConstraint = '';
+            state.stateConstraint = '';
         }
         if (!('actionConstraint' in s)) {
-            serialized.actionConstraint = '';
+            state.actionConstraint = '';
         }
         if (!('definitionOverrides' in s)) {
-            serialized.definitionOverrides = [];
+            state.definitionOverrides = [];
         }
         if (!('additionalDefinitions' in s)) {
-            serialized.additionalDefinitions = '';
+            state.additionalDefinitions = '';
         }
-        return serialized;
+        return { state, tlcOptions: parsed.tlcOptions };
     }
 
     const paths = buildModelEditorPaths(specPath);
@@ -267,20 +361,22 @@ export function parseModelEditorState(
     const definitionOverrides = parseCfgOverrides(cfgContent);
 
     return {
-        specName: paths.specName,
-        specPath,
-        modelName: paths.modelName,
-        behavior,
-        checkDeadlock,
-        constants,
-        invariants,
-        properties,
-        stateConstraint: constraintMatch
-            ? constraintMatch[1].trim() : '',
-        actionConstraint: actionConstraintMatch
-            ? actionConstraintMatch[1].trim() : '',
-        definitionOverrides,
-        additionalDefinitions: ''
+        state: {
+            specName: paths.specName,
+            specPath,
+            modelName: paths.modelName,
+            behavior,
+            checkDeadlock,
+            constants,
+            invariants,
+            properties,
+            stateConstraint: constraintMatch
+                ? constraintMatch[1].trim() : '',
+            actionConstraint: actionConstraintMatch
+                ? actionConstraintMatch[1].trim() : '',
+            definitionOverrides,
+            additionalDefinitions: ''
+        }
     };
 }
 
@@ -305,25 +401,54 @@ export function discoverSpecInfo(specText: string): DiscoveredSpecInfo {
     }
 
     const allOperators = [...operators].sort();
+    const initNextPattern = /^(init|next)$/i;
+    const nonInitNext = allOperators.filter(
+        (op) => !initNextPattern.test(op)
+    );
     return {
         constants: [...constants].sort(),
         allOperators,
         initCandidates: rankCandidates(allOperators, [/^Init$/i, /init/i]),
         nextCandidates: rankCandidates(allOperators, [/^Next$/i, /next/i]),
         temporalCandidates: rankCandidates(allOperators, [/^Spec$/i, /spec|behavior/i]),
-        invariantCandidates: rankCandidates(allOperators, [/^TypeOK$/i, /inv|typeok|safety/i]),
-        propertyCandidates: rankCandidates(allOperators, [/prop|live|liveness|fair/i]),
+        invariantCandidates: rankCandidates(nonInitNext, [/^TypeOK$/i, /inv|typeok|safety/i]),
+        propertyCandidates: rankCandidates(nonInitNext, [/prop|live|liveness|fair/i]),
     };
 }
 
-function extractSerializedState(content: string): ModelEditorState | undefined {
-    const markerLine = content.split(/\r?\n/).find((line) => line.startsWith(STATE_MARKER));
+/**
+ * Extract the state marker from content.
+ * Handles both old format (flat ModelEditorState) and new format
+ * (wrapped { state, tlcOptions }).
+ */
+function extractSerializedMarker(
+    content: string
+): { state: ModelEditorState; tlcOptions?: TlcOptionsState } | undefined {
+    const markerLine = content.split(/\r?\n/).find(
+        (line) => line.startsWith(STATE_MARKER)
+    );
     if (!markerLine) {
         return undefined;
     }
 
     try {
-        return JSON.parse(markerLine.substring(STATE_MARKER.length)) as ModelEditorState;
+        const raw = JSON.parse(
+            markerLine.substring(STATE_MARKER.length)
+        );
+        // New format: { state: {...}, tlcOptions: {...} }
+        if (raw.state && typeof raw.state === 'object'
+            && 'specName' in raw.state) {
+            return {
+                state: raw.state as ModelEditorState,
+                tlcOptions: raw.tlcOptions as
+                    TlcOptionsState | undefined
+            };
+        }
+        // Old format: flat ModelEditorState
+        if ('specName' in raw) {
+            return { state: raw as ModelEditorState };
+        }
+        return undefined;
     } catch {
         return undefined;
     }

@@ -179,7 +179,8 @@ export async function doCheckModel(
     diagnostic: vscode.DiagnosticCollection,
     showOptionsPrompt: boolean,
     extraOpts: string[] = [],
-    debuggerPortCallback?: (port?: number) => void
+    debuggerPortCallback?: (port?: number) => void,
+    managedFlags?: Set<string>
 ): Promise<ModelCheckResult | undefined> {
     try {
         // Check for PlusCal/TLA+ divergence before running TLC
@@ -187,7 +188,8 @@ export async function doCheckModel(
             return undefined;
         }
         const procInfo = await runTlc(
-            specFiles.tlaFilePath, specFiles.cfgFilePath, showOptionsPrompt, extraOpts);
+            specFiles.tlaFilePath, specFiles.cfgFilePath,
+            showOptionsPrompt, extraOpts, [], managedFlags);
         if (procInfo === undefined) {
             // Command cancelled by user, make sure UI state is reset
             vscode.commands.executeCommand('setContext', CTX_TLC_CAN_RUN_AGAIN, !!lastCheckFiles);

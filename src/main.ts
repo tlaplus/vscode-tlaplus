@@ -137,7 +137,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             (uri?: vscode.Uri) => showModelEditor(context, uri)),
         vscode.window.registerCustomEditorProvider(
             MODEL_EDITOR_VIEW_TYPE,
-            new ModelEditorCfgProvider(context.extensionUri),
+            new ModelEditorCfgProvider(context),
             { supportsMultipleEditorsPerDocument: false }),
         vscode.commands.registerCommand(
             CMD_VISUALIZE_TLC_OUTPUT,
