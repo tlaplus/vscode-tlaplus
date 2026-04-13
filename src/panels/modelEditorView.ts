@@ -66,7 +66,9 @@ export function showModelEditor(
         return;
     }
 
-    ModelEditorPanel.createOrReveal(context, fileUri);
+    // If the user opened an MC file, resolve to the underlying spec
+    const resolvedUri = resolveSpecUri(fileUri);
+    ModelEditorPanel.createOrReveal(context, resolvedUri);
 }
 
 /**
@@ -348,6 +350,26 @@ async function launchTlc(
  * Given a .cfg path, find the most likely .tla spec it belongs to.
  * MC-prefixed configs map back to the unprefixed spec if it exists.
  */
+/**
+ * If the URI points to an MC-prefixed .tla file, resolve to the
+ * underlying spec (e.g. MCSpec.tla → Spec.tla).
+ */
+function resolveSpecUri(fileUri: vscode.Uri): vscode.Uri {
+    const filePath = fileUri.fsPath;
+    const dir = path.dirname(filePath);
+    const baseName = path.basename(filePath, '.tla');
+
+    if (baseName.startsWith('MC') && baseName.length > 2) {
+        const unprefixed = baseName.substring(2);
+        const candidate = path.join(dir, `${unprefixed}.tla`);
+        if (fs.existsSync(candidate)) {
+            return vscode.Uri.file(candidate);
+        }
+    }
+
+    return fileUri;
+}
+
 function resolveSpecPathFromCfg(cfgPath: string): string {
     const dir = path.dirname(cfgPath);
     const baseName = path.basename(cfgPath, '.cfg');
