@@ -97,7 +97,6 @@ export class ModelEditorCfgProvider implements vscode.CustomTextEditorProvider {
     }
 }
 
-// ── Shared webview setup ──────────────────────────────────────────
 
 interface WebviewSetup {
     disposables: vscode.Disposable[];
@@ -417,7 +416,6 @@ function getWebviewHtml(
     `;
 }
 
-// ── Command-based standalone panel ────────────────────────────────
 
 class ModelEditorPanel {
     private static currentPanel: ModelEditorPanel | undefined;
