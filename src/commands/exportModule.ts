@@ -4,12 +4,13 @@ import * as path from 'path';
 import { spawn } from 'child_process';
 
 import { LANG_TLAPLUS, replaceExtension, pathToUri, emptyFunc } from '../common';
-import { runTex, ToolProcessInfo, CFG_TLA_PDF_CONVERT_COMMAND } from '../tla2tools';
+import { runTex, ToolProcessInfo } from '../tla2tools';
 import { ToolOutputChannel } from '../outputChannels';
 
 export const CMD_EXPORT_TLA_TO_TEX = 'tlaplus.exportToTex';
 export const CMD_EXPORT_TLA_TO_PDF = 'tlaplus.exportToPdf';
 
+const CFG_PDF_CONVERT_COMMAND = 'tlaplus.pdf.convertCommand';
 const NO_ERROR = 0;
 const PDF_VIEWER_EXTENSION = 'tomoki1207.pdf';
 const PDF_VIEWER_VIEW_ID = 'pdf.preview';
@@ -44,15 +45,21 @@ export async function exportModuleToPdf(extContext: vscode.ExtensionContext): Pr
         return;
     }
     const tlaFilePath = doc.uri.fsPath;
-    const texGenerated = await generateTexFile(tlaFilePath, false);
+    const latexCommand = (vscode.workspace.getConfiguration()
+        .get<string>(CFG_PDF_CONVERT_COMMAND) || '').trim() || undefined;
+    const texGenerated = await generateTexFile(tlaFilePath, false, latexCommand);
     if (!texGenerated) {
         return;
     }
-    generatePdfFile(tlaFilePath);
+    await generatePdfFile(tlaFilePath);
 }
 
-async function generateTexFile(tlaFilePath: string, notifySuccess: boolean): Promise<boolean> {
-    const procInfo = await runTex(tlaFilePath);
+async function generateTexFile(
+    tlaFilePath: string,
+    notifySuccess: boolean,
+    latexCommand?: string
+): Promise<boolean> {
+    const procInfo = await runTex(tlaFilePath, latexCommand);
     texOutChannel.bindTo(procInfo);
     return new Promise((resolve, reject) => {
         procInfo.process.on('close', (exitCode: number) => {
@@ -73,7 +80,7 @@ async function generateTexFile(tlaFilePath: string, notifySuccess: boolean): Pro
     });
 }
 
-async function generatePdfFile(tlaFilePath: string) {
+async function generatePdfFile(tlaFilePath: string): Promise<void> {
     const pdfToolInfo = await getPdfToolInfo(path.basename(tlaFilePath));
     if (!pdfToolInfo) {
         return;
@@ -87,14 +94,18 @@ async function generatePdfFile(tlaFilePath: string) {
     const procInfo = new ToolProcessInfo(cmdLine, proc);
     pdfOutChannel.bindTo(procInfo);
     proc.on('error', emptyFunc);  // Without this line, the `close` even doesn't fire in case of invalid command
-    proc.on('close', (exitCode: number) => {
-        if (exitCode !== NO_ERROR) {
-            vscode.window.showErrorMessage(`Error generating PDF: exit code ${exitCode}`);
-            pdfOutChannel.revealWindow();
-            return;
-        }
-        notifyPdfIsReady(replaceExtension(tlaFilePath, 'pdf'));
-        removeTempFiles(tlaFilePath, 'log', 'aux');
+    return new Promise((resolve) => {
+        proc.on('close', (exitCode: number) => {
+            if (exitCode !== NO_ERROR) {
+                vscode.window.showErrorMessage(`Error generating PDF: exit code ${exitCode}`);
+                pdfOutChannel.revealWindow();
+                resolve();
+                return;
+            }
+            notifyPdfIsReady(replaceExtension(tlaFilePath, 'pdf'));
+            removeTempFiles(tlaFilePath, 'log', 'aux');
+            resolve();
+        });
     });
 }
 
@@ -125,7 +136,7 @@ function getDocumentIfCanRun(format: string): vscode.TextDocument | undefined {
 }
 
 async function getPdfToolInfo(texFilePath: string): Promise<PdfToolInfo | undefined> {
-    const pdfCmd = (vscode.workspace.getConfiguration().get<string>(CFG_TLA_PDF_CONVERT_COMMAND) || '').trim();
+    const pdfCmd = (vscode.workspace.getConfiguration().get<string>(CFG_PDF_CONVERT_COMMAND) || '').trim();
     if (pdfCmd === '') {
         vscode.window.showWarningMessage('PDF generation command not specified. Check the extension settings.');
         return Promise.resolve(undefined);

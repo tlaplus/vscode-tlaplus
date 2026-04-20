@@ -23,7 +23,6 @@ const CFG_TLA_PDF_NUMBER_LINES = 'tlaplus.pdf.numberLines';
 const CFG_TLA_PDF_NO_PCAL_SHADE = 'tlaplus.pdf.noPcalShade';
 const CFG_TLA_PDF_COMMENTS_SHADE = 'tlaplus.pdf.commentsShade';
 const CFG_TLA_PDF_COMMENTS_SHADE_COLOR = 'tlaplus.pdf.commentsShadeColor';
-export const CFG_TLA_PDF_CONVERT_COMMAND = 'tlaplus.pdf.convertCommand';
 
 const VAR_TLC_SPEC_NAME = /\$\{specName\}/g;
 const VAR_TLC_MODEL_NAME = /\$\{modelName\}/g;
@@ -185,12 +184,11 @@ export function buildTexOptions(
     return toolArgs;
 }
 
-export async function runTex(tlaFilePath: string): Promise<ToolProcessInfo> {
+export async function runTex(tlaFilePath: string, latexCommand?: string): Promise<ToolProcessInfo> {
     const shadeComments = vscode.workspace.getConfiguration().get<boolean>(CFG_TLA_PDF_COMMENTS_SHADE, true);
     const commentColor = vscode.workspace.getConfiguration().get<number>(CFG_TLA_PDF_COMMENTS_SHADE_COLOR, 0.85);
     const numberLines = vscode.workspace.getConfiguration().get<boolean>(CFG_TLA_PDF_NUMBER_LINES, false);
     const noPcalShade = vscode.workspace.getConfiguration().get<boolean>(CFG_TLA_PDF_NO_PCAL_SHADE, false);
-    const latexCommand = (vscode.workspace.getConfiguration().get<string>(CFG_TLA_PDF_CONVERT_COMMAND) || '').trim() || undefined;
 
     const options = buildTexOptions(tlaFilePath, shadeComments, commentColor, numberLines, noPcalShade, latexCommand);
 
@@ -445,7 +443,7 @@ export async function findLatestTraceFile(
 ): Promise<string | undefined> {
     const modelName = cfgFilePath ? path.parse(cfgFilePath).name : path.basename(tlaFilePath, '.tla');
     const traceDir = cfgFilePath ? path.dirname(cfgFilePath) : path.join(path.dirname(tlaFilePath), '.vscode', 'tlc');
-    
+
     try {
         const files = await fsp.readdir(traceDir);
         // Match files with pattern: {modelName}_trace_T{timestamp}_F{fp}_W{workers}_Mbfs.tlc
@@ -460,11 +458,11 @@ export async function findLatestTraceFile(
                 const timestampB = b.match![1];
                 return timestampB.localeCompare(timestampA);
             });
-        
+
         if (traceFiles.length === 0) {
             return undefined;
         }
-        
+
         return path.join(traceDir, traceFiles[0].file);
     } catch (err) {
         // Directory doesn't exist or other error - return undefined
@@ -501,12 +499,12 @@ export async function buildTlcOptions(tlaFilePath: string, cfgFilePath: string, 
     });
     const opts = [path.basename(tlaFilePath), '-tool', '-modelcheck'];
     addValueOrDefault('-config', cfgFilePath, custOpts, opts);
-    
+
     // For BFS mode (not -simulate), always set -fp to a random value between 0 and 130
     const isSimulateMode = custOpts.some(opt => opt.toLowerCase() === '-simulate');
     const isLoadTrace = custOpts.some(opt => opt.toLowerCase() === '-loadtrace');
     let fpValue: number | undefined;
-    
+
     if (!isSimulateMode) {
         // Check if -fp is already present in custom options
         const fpIndex = custOpts.indexOf('-fp');
@@ -519,13 +517,13 @@ export async function buildTlcOptions(tlaFilePath: string, cfgFilePath: string, 
             fpValue = parseInt(custOpts[fpIndex + 1], 10);
         }
     }
-    
+
     // Add -dumptrace for BFS mode (not simulation) when not loading a trace
     if (!isSimulateMode && !isLoadTrace) {
         const traceFilePath = await buildTraceFilePath(cfgFilePath, custOpts, fpValue);
         opts.push('-dumptrace', 'tlc', traceFilePath);
     }
-    
+
     return opts.concat(custOpts);
 }
 
