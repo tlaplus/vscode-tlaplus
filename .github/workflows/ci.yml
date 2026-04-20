@@ -31,7 +31,7 @@ jobs:
       run: |
         if ! command -v pdflatex >/dev/null 2>&1; then
           sudo apt-get update
-          sudo apt-get install -y texlive-latex-base
+          sudo apt-get install -y --no-install-recommends texlive-latex-base
         fi
         pdflatex --version
     - name: Install LaTeX (macOS)
