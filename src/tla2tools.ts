@@ -443,7 +443,7 @@ export async function findLatestTraceFile(
 ): Promise<string | undefined> {
     const modelName = cfgFilePath ? path.parse(cfgFilePath).name : path.basename(tlaFilePath, '.tla');
     const traceDir = cfgFilePath ? path.dirname(cfgFilePath) : path.join(path.dirname(tlaFilePath), '.vscode', 'tlc');
-
+    
     try {
         const files = await fsp.readdir(traceDir);
         // Match files with pattern: {modelName}_trace_T{timestamp}_F{fp}_W{workers}_Mbfs.tlc
@@ -458,11 +458,11 @@ export async function findLatestTraceFile(
                 const timestampB = b.match![1];
                 return timestampB.localeCompare(timestampA);
             });
-
+        
         if (traceFiles.length === 0) {
             return undefined;
         }
-
+        
         return path.join(traceDir, traceFiles[0].file);
     } catch (err) {
         // Directory doesn't exist or other error - return undefined
@@ -499,12 +499,12 @@ export async function buildTlcOptions(tlaFilePath: string, cfgFilePath: string, 
     });
     const opts = [path.basename(tlaFilePath), '-tool', '-modelcheck'];
     addValueOrDefault('-config', cfgFilePath, custOpts, opts);
-
+    
     // For BFS mode (not -simulate), always set -fp to a random value between 0 and 130
     const isSimulateMode = custOpts.some(opt => opt.toLowerCase() === '-simulate');
     const isLoadTrace = custOpts.some(opt => opt.toLowerCase() === '-loadtrace');
     let fpValue: number | undefined;
-
+    
     if (!isSimulateMode) {
         // Check if -fp is already present in custom options
         const fpIndex = custOpts.indexOf('-fp');
@@ -517,13 +517,13 @@ export async function buildTlcOptions(tlaFilePath: string, cfgFilePath: string, 
             fpValue = parseInt(custOpts[fpIndex + 1], 10);
         }
     }
-
+    
     // Add -dumptrace for BFS mode (not simulation) when not loading a trace
     if (!isSimulateMode && !isLoadTrace) {
         const traceFilePath = await buildTraceFilePath(cfgFilePath, custOpts, fpValue);
         opts.push('-dumptrace', 'tlc', traceFilePath);
     }
-
+    
     return opts.concat(custOpts);
 }
 
