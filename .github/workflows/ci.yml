@@ -26,6 +26,37 @@ jobs:
       run: |
         npm ci
         npm install -g @vscode/vsce 
+    - name: Install LaTeX (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        if ! command -v pdflatex >/dev/null 2>&1; then
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends texlive-latex-base
+        fi
+        pdflatex --version
+    - name: Install LaTeX (macOS)
+      if: matrix.os == 'macOS-latest'
+      run: |
+        if ! command -v pdflatex >/dev/null 2>&1; then
+          brew install --cask basictex
+          echo "/Library/TeX/texbin" >> "$GITHUB_PATH"
+        fi
+        /Library/TeX/texbin/pdflatex --version || pdflatex --version
+    - name: Install LaTeX (Windows)
+      if: matrix.os == 'windows-latest'
+      shell: pwsh
+      run: |
+        $miktexBin = 'C:\Program Files\MiKTeX\miktex\bin\x64'
+        if (-not (Get-Command pdflatex -ErrorAction SilentlyContinue)) {
+          choco install miktex --yes
+          Add-Content -Path $env:GITHUB_PATH -Value $miktexBin
+          $env:Path = "$miktexBin;$env:Path"
+        }
+        if (Test-Path "$miktexBin\pdflatex.exe") {
+          & "$miktexBin\pdflatex.exe" --version
+        } else {
+          pdflatex --version
+        }
     - name: Build
       run: |
         npm run vscode:prepublish

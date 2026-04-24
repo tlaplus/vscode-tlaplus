@@ -1,6 +1,13 @@
 import * as assert from 'assert';
 import * as path from 'path';
-import { buildJavaOptions, buildTlcOptions, buildPlusCalOptions, splitArguments, extractFingerprintFromTrace } from '../../src/tla2tools';
+import {
+    buildJavaOptions,
+    buildTlcOptions,
+    buildPlusCalOptions,
+    buildTexOptions,
+    splitArguments,
+    extractFingerprintFromTrace
+} from '../../src/tla2tools';
 
 suite('TLA+ Tools Test Suite', () => {
 
@@ -16,6 +23,19 @@ suite('TLA+ Tools Test Suite', () => {
             buildPlusCalOptions('/path/to/module.tla', ['-lineWidth', '100']),
             ['-lineWidth', '100', '-nocfg', 'module.tla']
         );
+    });
+
+    test('Adds latex command to TEX options when configured', async () => {
+        assert.deepEqual(
+            buildTexOptions('/path/to/module.tla', false, 0.85, false, false, 'xelatex'),
+            ['-latexCommand', 'xelatex', 'module.tla']
+        );
+    });
+
+    test('Omits latex command from TEX options when not configured', async () => {
+        const opts = buildTexOptions('/path/to/module.tla', false, 0.85, false, false);
+        assert.deepEqual(opts, ['module.tla']);
+        assert.ok(!opts.includes('-latexCommand'));
     });
 
     test('Provides default TLC options', async () => {

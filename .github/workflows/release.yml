@@ -49,6 +49,13 @@ jobs:
       run: |
         npm ci
         npm install -g vsce
+    - name: Install LaTeX
+      run: |
+        if ! command -v pdflatex >/dev/null 2>&1; then
+          brew install --cask basictex
+          echo "/Library/TeX/texbin" >> "$GITHUB_PATH"
+        fi
+        /Library/TeX/texbin/pdflatex --version || pdflatex --version
     - name: Build
       run: |
         npm run vscode:prepublish

@@ -154,13 +154,18 @@ export async function runXMLExporter(
     );
 }
 
-function buildTexOptions(
+export function buildTexOptions(
     tlaFilePath: string,
     shadeComments: boolean,
     commentColor: number,
     numberLines: boolean,
-    noPcalShade: boolean): string[] {
+    noPcalShade: boolean,
+    latexCommand?: string): string[] {
     const toolArgs = [path.basename(tlaFilePath)];
+
+    if (latexCommand) {
+        toolArgs.unshift('-latexCommand', latexCommand);
+    }
 
     if (shadeComments) {
         toolArgs.unshift('-nops',
@@ -179,13 +184,13 @@ function buildTexOptions(
     return toolArgs;
 }
 
-export async function runTex(tlaFilePath: string): Promise<ToolProcessInfo> {
+export async function runTex(tlaFilePath: string, latexCommand?: string): Promise<ToolProcessInfo> {
     const shadeComments = vscode.workspace.getConfiguration().get<boolean>(CFG_TLA_PDF_COMMENTS_SHADE, true);
     const commentColor = vscode.workspace.getConfiguration().get<number>(CFG_TLA_PDF_COMMENTS_SHADE_COLOR, 0.85);
     const numberLines = vscode.workspace.getConfiguration().get<boolean>(CFG_TLA_PDF_NUMBER_LINES, false);
     const noPcalShade = vscode.workspace.getConfiguration().get<boolean>(CFG_TLA_PDF_NO_PCAL_SHADE, false);
 
-    const options = buildTexOptions(tlaFilePath, shadeComments, commentColor, numberLines, noPcalShade);
+    const options = buildTexOptions(tlaFilePath, shadeComments, commentColor, numberLines, noPcalShade, latexCommand);
 
     return runTool(
         TlaTool.TEX,
