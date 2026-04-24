@@ -132,6 +132,30 @@ class CheckResultViewPanel {
         }
     }
 
+    private formatErrorMessages(): string {
+        if (!this.checkResult || !this.checkResult.errors || this.checkResult.errors.length === 0) {
+            return '';
+        }
+
+        // Collect TLC's error messages (e.g. "Invariant XYZ is violated.",
+        // "Temporal property Liveness is violated.", deadlock messages, etc.)
+        // so the AI knows which invariant or property failed.
+        const messages: string[] = [];
+        for (const error of this.checkResult.errors) {
+            if (!error.errorTrace || error.errorTrace.length === 0) {
+                continue;
+            }
+            if (!error.lines || error.lines.length === 0) {
+                continue;
+            }
+            const errorMessage = error.lines.map((line) => line.toString()).join('\n').trim();
+            if (errorMessage.length > 0) {
+                messages.push(errorMessage);
+            }
+        }
+        return messages.join('\n---\n');
+    }
+
     private formatErrorTrace(): string {
         if (!this.checkResult || !this.checkResult.errors || this.checkResult.errors.length === 0) {
             return 'No counterexample available.';
@@ -184,11 +208,15 @@ class CheckResultViewPanel {
                 vscode.window.showWarningMessage('No specification file available for debugging');
             }
         } else if (message.command === 'openAIChat') {
+            const errorMessage = this.formatErrorMessages();
             const traceText = this.formatErrorTrace();
+            const errorMessageBlock = errorMessage
+                ? `**TLC error message:**\n\`\`\`\n${errorMessage}\n\`\`\`\n\n`
+                : '';
             const prompt = `Help me analyze this TLA+ counterexample/trace.
 
-**Counterexample:**
-\`\`\`
+${errorMessageBlock}**Counterexample:**
+\`\`\`tla
 ${traceText}
 \`\`\`
 
@@ -210,9 +238,8 @@ ${traceText}
 
 **Please help me:**
 1. Understand what went wrong in this counterexample
-2. Identify which invariant or property was violated and why
-3. Suggest ALIAS expressions to make the trace more readable
-4. Recommend next steps for fixing the specification or finding the root cause`;
+2. Suggest ALIAS expressions to make the trace more readable
+3. Recommend next steps for fixing the specification or finding the root cause`;
             
             vscode.commands.executeCommand('workbench.action.chat.open', { query: prompt });
         } else if (message.command === 'openFile') {
