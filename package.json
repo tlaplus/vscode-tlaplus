@@ -40,6 +40,16 @@
     "main": "./out/main.js",
     "browser": "./out/main.browser.js",
     "contributes": {
+        "customEditors": [
+            {
+                "viewType": "tlaplus.cfgEditor",
+                "displayName": "TLA+ Model Editor",
+                "selector": [
+                    { "filenamePattern": "*.cfg" }
+                ],
+                "priority": "option"
+            }
+        ],
         "mcpServerDefinitionProviders": [
             {
                 "id": "tlaplus.mcp-server",
@@ -337,6 +347,11 @@
                 "category": "TLA+"
             },
             {
+                "command": "tlaplus.model.editor.display",
+                "title": "Open with Model Editor",
+                "category": "TLA+"
+            },
+            {
                 "command": "tlaplus.out.visualize",
                 "title": "Visualize TLC output",
                 "category": "TLA+"
@@ -436,6 +451,10 @@
                     "when": "editorLangId == tlaplus || editorLangId == tlaplus_cfg"
                 },
                 {
+                    "command": "tlaplus.model.editor.display",
+                    "when": "(editorLangId == tlaplus || editorLangId == tlaplus_cfg) && config.tlaplus.modelEditor.enabled"
+                },
+                {
                     "command": "tlaplus.model.check.runAgain",
                     "when": "tlaplus.tlc.canRunAgain"
                 },
@@ -479,6 +498,11 @@
                     "command": "tlaplus.model.check.run",
                     "when": "resourceLangId == tlaplus || resourceLangId == tlaplus_cfg",
                     "group": "z_commands"
+                },
+                {
+                    "command": "tlaplus.model.editor.display",
+                    "when": "(resourceLangId == tlaplus || resourceLangId == tlaplus_cfg) && config.tlaplus.modelEditor.enabled",
+                    "group": "z_commands"
                 }
             ],
             "editor/context": [
@@ -486,6 +510,11 @@
                     "command": "tlaplus.model.check.run",
                     "when": "editorLangId == tlaplus || editorLangId == tlaplus_cfg",
                     "group": "z_commands@10"
+                },
+                {
+                    "command": "tlaplus.model.editor.display",
+                    "when": "(editorLangId == tlaplus || editorLangId == tlaplus_cfg) && config.tlaplus.modelEditor.enabled",
+                    "group": "z_commands@15"
                 },
                 {
                     "command": "tlaplus.debugger.run",
@@ -508,6 +537,11 @@
                     "command": "tlaplus.debugger.run",
                     "when": "resourceLangId == tlaplus || editorLangId == tlaplus_cfg",
                     "group": "1_run@20"
+                },
+                {
+                    "command": "tlaplus.model.editor.display",
+                    "when": "(resourceLangId == tlaplus || editorLangId == tlaplus_cfg) && config.tlaplus.modelEditor.enabled",
+                    "group": "navigation"
                 },
                 {
                     "command": "tlaplus.tlc.profiler.toggle",
@@ -717,6 +751,11 @@
                         "high": 10000
                     },
                     "description": "Invocation count thresholds for coverage levels"
+                },
+                "tlaplus.modelEditor.enabled": {
+                    "type": "boolean",
+                    "default": false,
+                    "markdownDescription": "Enable the visual Model Editor for creating and editing TLC model configurations. This is an experimental feature — [share feedback](https://github.com/tlaplus/vscode-tlaplus/issues)."
                 }
             }
         },
