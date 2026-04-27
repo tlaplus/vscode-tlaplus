@@ -31,6 +31,11 @@ async function closeModelEditorTabs(): Promise<void> {
 
 suite('Model Editor View Test Suite', () => {
 
+    suiteSetup(async () => {
+        const ext = vscode.extensions.getExtension('tlaplus.vscode-ide');
+        await ext?.activate();
+    });
+
     suiteTeardown(async () => {
         await closeModelEditorTabs();
         await setEnabled(undefined);
