@@ -41,7 +41,6 @@ import { registerCoverageCommands } from './commands/toggleCoverage';
 import { acquireJarFileSystemProvider } from './JarFileSystemProvider';
 import {
     CMD_MODEL_EDITOR_DISPLAY,
-    registerModelEditor,
     showModelEditor
 } from './panels/modelEditorView';
 
@@ -134,7 +133,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         vscode.commands.registerCommand(
             CMD_MODEL_EDITOR_DISPLAY,
             (uri?: vscode.Uri) => showModelEditor(context, uri)),
-        registerModelEditor(context),
         vscode.commands.registerCommand(
             CMD_VISUALIZE_TLC_OUTPUT,
             () => visualizeTlcOutput(context)),

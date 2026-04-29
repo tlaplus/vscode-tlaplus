@@ -40,16 +40,6 @@
     "main": "./out/main.js",
     "browser": "./out/main.browser.js",
     "contributes": {
-        "customEditors": [
-            {
-                "viewType": "tlaplus.cfgEditor",
-                "displayName": "TLA+ Model Editor",
-                "selector": [
-                    { "filenamePattern": "*.cfg" }
-                ],
-                "priority": "option"
-            }
-        ],
         "mcpServerDefinitionProviders": [
             {
                 "id": "tlaplus.mcp-server",
