@@ -440,7 +440,13 @@ export class MCPServer implements vscode.Disposable {
             version: '1.0.0',
         }, {
             capabilities: {
-                resources: {}  // Enable resource support
+                resources: {},  // Enable resource support
+                // Enable server-to-client logging notifications. We use these as a
+                // keep-alive on long-running tools (e.g. tlaplus_mcp_tlc_check) so that
+                // the SSE stream stays active and the client (Cursor, Claude Code, ...)
+                // does not abort the underlying fetch with errors like
+                // {"error":"fetch failed"} after ~60s of silence.
+                logging: {}
             }
         });
 
@@ -675,14 +681,14 @@ export class MCPServer implements vscode.Disposable {
                 // eslint-disable-next-line max-len
                 extraJavaOpts: z.array(z.string()).optional().describe('Optional array of additional Java options to pass to the JVM (e.g., ["-Xmx4g", "-Dtlc2.TLC.stopAfter=60"]).')
             },
-            async ({ fileName, cfgFile, extraOpts, extraJavaOpts }) => {
+            async ({ fileName, cfgFile, extraOpts, extraJavaOpts }, extra) => {
                 const absolutePath = this.resolveFilePath(fileName);
                 const validatedPath = this.validateWorkspacePath(absolutePath);
                 const cfgFilePath = cfgFile ? this.validateWorkspacePath(this.resolveFilePath(cfgFile)) : undefined;
                 // Prepend the command line argument ['-modelcheck'] to extra opts.
                 const options = extraOpts ? ['-cleanup', '-modelcheck', ...extraOpts] : ['-cleanup', '-modelcheck'];
                 const javaOpts = extraJavaOpts || [];
-                return this.runTLCInMCP(validatedPath, options, javaOpts, cfgFilePath);
+                return this.runTLCInMCP(validatedPath, options, javaOpts, cfgFilePath, extra);
             }
         );
 
@@ -698,14 +704,14 @@ export class MCPServer implements vscode.Disposable {
                 // eslint-disable-next-line max-len
                 extraJavaOpts: z.array(z.string()).optional().describe('Optional array of additional Java options to pass to the JVM (e.g., ["-Xmx4g"]). Note: -Dtlc2.TLC.stopAfter=3 is set by default.')
             },
-            async ({ fileName, cfgFile, extraOpts, extraJavaOpts }) => {
+            async ({ fileName, cfgFile, extraOpts, extraJavaOpts }, extra) => {
                 const absolutePath = this.resolveFilePath(fileName);
                 const validatedPath = this.validateWorkspacePath(absolutePath);
                 const cfgFilePath = cfgFile ? this.validateWorkspacePath(this.resolveFilePath(cfgFile)) : undefined;
                 // Prepend the command line argument ['-modelcheck'] to extra opts.
                 const options = extraOpts ? ['-cleanup', '-simulate', ...extraOpts] : ['-cleanup', '-simulate'];
                 const javaOpts = ['-Dtlc2.TLC.stopAfter=3', ...(extraJavaOpts || [])];
-                return this.runTLCInMCP(validatedPath, options, javaOpts, cfgFilePath);
+                return this.runTLCInMCP(validatedPath, options, javaOpts, cfgFilePath, extra);
             }
         );
 
@@ -722,7 +728,7 @@ export class MCPServer implements vscode.Disposable {
                 extraJavaOpts: z.array(z.string()).optional().describe('Optional array of additional Java options to pass to the JVM (e.g., ["-Xmx4g"]). Note: -Dtlc2.TLC.stopAfter=3 is set by default.'),
                 behaviorLength: z.number().min(1).describe('The length of the behavior to generate.')
             },
-            async ({ fileName, behaviorLength, cfgFile, extraOpts, extraJavaOpts }) => {
+            async ({ fileName, behaviorLength, cfgFile, extraOpts, extraJavaOpts }, extra) => {
                 const absolutePath = this.resolveFilePath(fileName);
                 const validatedPath = this.validateWorkspacePath(absolutePath);
                 const cfgFilePath = cfgFile ? this.validateWorkspacePath(this.resolveFilePath(cfgFile)) : undefined;
@@ -735,7 +741,8 @@ export class MCPServer implements vscode.Disposable {
                     validatedPath,
                     options,
                     javaOpts,
-                    cfgFilePath
+                    cfgFilePath,
+                    extra
                 );
             }
         );
@@ -753,7 +760,7 @@ export class MCPServer implements vscode.Disposable {
                 // eslint-disable-next-line max-len
                 extraJavaOpts: z.array(z.string()).optional().describe('Optional array of additional Java options to pass to the JVM (e.g., ["-Xmx4g"]).')
             },
-            async ({ fileName, traceFile, cfgFile, extraOpts, extraJavaOpts }) => {
+            async ({ fileName, traceFile, cfgFile, extraOpts, extraJavaOpts }, extra) => {
                 const absolutePath = this.resolveFilePath(fileName);
                 const validatedPath = this.validateWorkspacePath(absolutePath);
 
@@ -792,7 +799,7 @@ export class MCPServer implements vscode.Disposable {
                         ['-cleanup', '-fp', String(fpValue), '-loadtrace', 'tlc', validatedTracePath];
                 }
                 const javaOpts = extraJavaOpts || [];
-                return this.runTLCInMCP(validatedPath, options, javaOpts, cfgFilePath);
+                return this.runTLCInMCP(validatedPath, options, javaOpts, cfgFilePath, extra);
             }
         );
 
@@ -1546,11 +1553,28 @@ export class MCPServer implements vscode.Disposable {
         }
     }
 
+    // TODO: Stream TLC's partial output to the MCP client at runtime.
+    //
+    // Today this method buffers TLC's stdout/stderr into `outputLines` and
+    // only delivers it to the LLM as part of the final tool response (after
+    // `procInfo.process.on('close')` fires). For runaway models that is too
+    // late: by the time TLC finally exits (or the user kills it) the LLM has
+    // no visibility into what went wrong. Diagnosing state-space explosion
+    // in particular requires watching TLC's periodically emitted coverage /
+    // progress lines (states found, distinct, queue size, ...) while TLC is
+    // still running, so the LLM (and the user) can decide to abort early.
+    //
+    // The plumbing is essentially in place: when the client supplied an
+    // `_meta.progressToken`, emit `notifications/progress` events carrying
+    // the lines TLC produced since the last flush; otherwise fall back to
+    // `notifications/message` with level 'info'. Cursor renders progress
+    // events live inside its Tool Execution UI.
     private async runTLCInMCP(
         fileName: string,
         extraOps: string[],
         extraJavaOpts: string[] = [],
-        cfgFilePath?: string
+        cfgFilePath?: string,
+        toolExtra?: TLCToolExtra
     ): Promise<{
         content: { type: 'text'; text: string; }[];
     }> {
@@ -1649,6 +1673,41 @@ export class MCPServer implements vscode.Disposable {
                     console.warn('Error parsing TLC output for webview:', error);
                 });
 
+                // SSE keep-alive (heartbeat).
+                //
+                // MCP clients that talk to us via Streamable HTTP (Cursor, Claude Code, ...)
+                // wrap each tool call in a single fetch() against the SSE response stream.
+                // If the server stays silent for too long (typically ~60s) the client aborts
+                // the underlying socket with errors like {"error":"fetch failed"}, even
+                // though TLC is still happily model checking.
+                //
+                // A periodic notifications/message event is enough activity on the SSE
+                // stream to keep the client's fetch open while TLC runs. We use level
+                // 'debug' so MCP clients do not surface the heartbeat in chat.
+                const HEARTBEAT_INTERVAL_MS = 10_000;
+                const heartbeatStartedAt = Date.now();
+                const heartbeatTimer: NodeJS.Timeout | undefined = toolExtra?.sendNotification
+                    ? setInterval(() => {
+                        const elapsedSec = Math.round((Date.now() - heartbeatStartedAt) / 1000);
+                        try {
+                            const result = toolExtra.sendNotification!({
+                                method: 'notifications/message',
+                                params: {
+                                    level: 'debug',
+                                    logger: 'tlaplus_mcp_tlc',
+                                    data: `keep-alive (TLC running ~${elapsedSec}s)`
+                                }
+                            });
+                            if (result && typeof result.catch === 'function') {
+                                result.catch(err =>
+                                    console.warn('TLA+ MCP keep-alive notification failed:', err));
+                            }
+                        } catch (err) {
+                            console.warn('TLA+ MCP keep-alive notification threw:', err);
+                        }
+                    }, HEARTBEAT_INTERVAL_MS)
+                    : undefined;
+
                 // Also collect text output for the MCP response
                 // Note: Multiple listeners on the same stream work fine in Node.js
                 const stdoutHandler = (data: Buffer) => {
@@ -1669,6 +1728,9 @@ export class MCPServer implements vscode.Disposable {
 
                 // Listen for process completion
                 procInfo.process.on('close', (code) => {
+                    if (heartbeatTimer) {
+                        clearInterval(heartbeatTimer);
+                    }
                     resolve({
                         content: [{
                             type: 'text',
@@ -1687,4 +1749,20 @@ export class MCPServer implements vscode.Disposable {
             };
         }
     }
+}
+
+// Subset of @modelcontextprotocol/sdk's RequestHandlerExtra that we use on the
+// TLC tool path to keep the SSE stream alive during long-running runs. The
+// notification shape mirrors the MCP `notifications/message` schema; we only
+// emit it with `level: 'debug'` so MCP clients (Cursor, Claude Code, ...) do
+// not surface the heartbeat in chat.
+interface TLCToolExtra {
+    sendNotification?: (notification: {
+        method: 'notifications/message';
+        params: {
+            level: 'debug' | 'info' | 'notice' | 'warning' | 'error' | 'critical' | 'alert' | 'emergency';
+            logger?: string;
+            data: unknown;
+        };
+    }) => Promise<void> | void;
 }

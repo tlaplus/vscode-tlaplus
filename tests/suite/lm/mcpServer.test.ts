@@ -3,11 +3,39 @@ import * as fs from 'fs';
 import * as http from 'http';
 import * as os from 'os';
 import * as path from 'path';
+import { ChildProcess } from 'child_process';
+import { EventEmitter } from 'events';
 import * as vscode from 'vscode';
 import { MCPServer } from '../../../src/lm/MCPServer';
 import { McpServer as SdkMcpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import * as checkModel from '../../../src/commands/checkModel';
+import * as common from '../../../src/common';
+import * as tla2tools from '../../../src/tla2tools';
+import { ToolProcessInfo } from '../../../src/tla2tools';
+import { SpecFiles } from '../../../src/model/check';
 
 const fsp = fs.promises;
+
+class MockStdout extends EventEmitter {
+    public on(event: string | symbol, listener: (...args: unknown[]) => void): this {
+        return super.on(event, listener);
+    }
+}
+
+class MockProcess extends EventEmitter {
+    public stdout = new MockStdout();
+    public stderr = new MockStdout();
+    public killed = false;
+    public exitCode: number | null = null;
+    public signalCode: NodeJS.Signals | null = null;
+    public pid = 99999;
+
+    kill(signal?: NodeJS.Signals | number): boolean {
+        this.killed = true;
+        this.emit('killed', signal);
+        return true;
+    }
+}
 
 suite('MCP Server regressions', () => {
     suite('validateArticleName should prevent path traversal', () => {
@@ -384,6 +412,186 @@ suite('MCP Server regressions', () => {
                 text.includes('nonexistent.cfg'),
                 `Error should mention the config file path, got: ${text}`
             );
+        });
+    });
+
+    // Long-running TLC runs invoked through the MCP server (e.g.
+    // `tlaplus_mcp_tlc_check` on a non-trivial spec) failed in Cursor with
+    // `{"error":"fetch failed"}` after roughly a minute. MCP clients using
+    // Streamable HTTP wrap each tool call in a single fetch() against the
+    // SSE response stream; if the server stays silent for too long the
+    // client aborts the underlying socket even though TLC is still
+    // model checking. The fix is a periodic notifications/message ping on
+    // the SSE stream, which is enough activity to keep the client's fetch
+    // open. This suite pins down both halves of that contract: the timer
+    // must actually fire while TLC is running, and it must be cleared
+    // once the run finishes so we do not keep pinging a closed stream.
+    suite('runTLCInMCP heartbeat keeps the MCP SSE stream alive', () => {
+        type Notification = {
+            method: string;
+            params: { data?: unknown; level?: string; logger?: string };
+        };
+
+        const getPrototype = () => MCPServer.prototype as unknown as {
+            runTLCInMCP(
+                fileName: string,
+                extraOps: string[],
+                extraJavaOpts: string[],
+                cfgFilePath?: string,
+                toolExtra?: { sendNotification?: (n: Notification) => void | Promise<void> }
+            ): Promise<{ content: { type: 'text'; text: string }[] }>;
+        };
+
+        type CheckModelMutable = {
+            getSpecFiles: typeof checkModel.getSpecFiles;
+            mapTlcOutputLine: typeof checkModel.mapTlcOutputLine;
+            outChannel: typeof checkModel.outChannel;
+        };
+        type CommonMutable = { exists: typeof common.exists };
+        type Tla2ToolsMutable = { runTlc: typeof tla2tools.runTlc };
+
+        let originals: {
+            getSpecFiles: typeof checkModel.getSpecFiles;
+            mapTlcOutputLine: typeof checkModel.mapTlcOutputLine;
+            bindTo: typeof checkModel.outChannel.bindTo;
+            exists: typeof common.exists;
+            runTlc: typeof tla2tools.runTlc;
+        };
+        let mockProcess: MockProcess;
+        let runTlcCalls: number;
+
+        setup(() => {
+            const checkModelMutable = checkModel as unknown as CheckModelMutable;
+            const commonMutable = common as unknown as CommonMutable;
+            const tla2toolsMutable = tla2tools as unknown as Tla2ToolsMutable;
+
+            originals = {
+                getSpecFiles: checkModelMutable.getSpecFiles,
+                mapTlcOutputLine: checkModelMutable.mapTlcOutputLine,
+                bindTo: checkModelMutable.outChannel.bindTo,
+                exists: commonMutable.exists,
+                runTlc: tla2toolsMutable.runTlc
+            };
+
+            runTlcCalls = 0;
+            mockProcess = new MockProcess();
+
+            const specFiles = new SpecFiles(
+                path.join(os.tmpdir(), 'HeartbeatExample.tla'),
+                path.join(os.tmpdir(), 'HeartbeatExample.cfg')
+            );
+
+            checkModelMutable.getSpecFiles = async () => specFiles;
+            checkModelMutable.mapTlcOutputLine = (line: string) => line.trim();
+            checkModelMutable.outChannel.bindTo = () => { /* no-op */ };
+            commonMutable.exists = async () => true;
+            tla2toolsMutable.runTlc = async () => {
+                runTlcCalls++;
+                return new ToolProcessInfo('tlc', mockProcess as unknown as ChildProcess);
+            };
+        });
+
+        teardown(() => {
+            const checkModelMutable = checkModel as unknown as CheckModelMutable;
+            const commonMutable = common as unknown as CommonMutable;
+            const tla2toolsMutable = tla2tools as unknown as Tla2ToolsMutable;
+
+            checkModelMutable.getSpecFiles = originals.getSpecFiles;
+            checkModelMutable.mapTlcOutputLine = originals.mapTlcOutputLine;
+            checkModelMutable.outChannel.bindTo = originals.bindTo;
+            commonMutable.exists = originals.exists;
+            tla2toolsMutable.runTlc = originals.runTlc;
+
+            // Avoid leaking the parser awaiting a never-ending stream if a
+            // test bailed out before emitting 'close'.
+            if (mockProcess && mockProcess.listenerCount('close') > 0) {
+                mockProcess.emit('close', 0);
+            }
+        });
+
+        test('heartbeat fires repeatedly while TLC runs and stops once it ends', async function() {
+            this.timeout(5000);
+
+            const notifications: Notification[] = [];
+            const sendNotification = (n: Notification) => {
+                notifications.push(n);
+            };
+
+            // The production heartbeat interval is 10s. We only compress that
+            // exact value so test code (mocha's own timeout, our wait loops,
+            // ...) keeps using real wall-clock delays.
+            const realSetInterval = global.setInterval;
+            const HEARTBEAT_INTERVAL_MS = 10_000;
+            const compressInterval = ((
+                cb: (...args: unknown[]) => void,
+                ms?: number,
+                ...args: unknown[]
+            ) => {
+                const compressed = ms === HEARTBEAT_INTERVAL_MS ? 5 : ms;
+                return realSetInterval(cb, compressed as number, ...args);
+            }) as unknown as typeof setInterval;
+
+            const heartbeatPings = () => notifications.filter(n =>
+                n.method === 'notifications/message');
+
+            global.setInterval = compressInterval;
+            try {
+                const tlaFile = path.join(os.tmpdir(), 'HeartbeatExample.tla');
+
+                const runPromise = getPrototype().runTLCInMCP.call(
+                    {},
+                    tlaFile,
+                    ['-cleanup', '-modelcheck'],
+                    [],
+                    undefined,
+                    { sendNotification }
+                );
+
+                const deadline = Date.now() + 2000;
+                while (heartbeatPings().length < 2 && Date.now() < deadline) {
+                    await new Promise(resolve => setTimeout(resolve, 5));
+                }
+
+                const pingsWhileRunning = heartbeatPings().length;
+                assert.ok(
+                    pingsWhileRunning >= 2,
+                    'Expected the heartbeat to fire repeatedly while TLC '
+                        + `is running; saw ${pingsWhileRunning} ping(s). Without a `
+                        + 'heartbeat MCP clients (e.g. Cursor) abort long-running '
+                        + 'TLC tool calls with {"error":"fetch failed"}.'
+                );
+
+                for (const ping of heartbeatPings()) {
+                    assert.strictEqual(
+                        ping.method, 'notifications/message',
+                        'Heartbeat must use notifications/message so it counts as '
+                            + 'SSE traffic for MCP clients');
+                    assert.strictEqual(
+                        ping.params.level, 'debug',
+                        'Heartbeat must use level=debug so MCP clients hide it from chat');
+                    assert.strictEqual(
+                        ping.params.logger, 'tlaplus_mcp_tlc',
+                        'Heartbeat must be tagged with the TLC logger name');
+                }
+
+                // Close the process so runTLCInMCP resolves and clears the timer.
+                mockProcess.emit('close', 0);
+                await runPromise;
+                const pingsAtClose = heartbeatPings().length;
+
+                // If the timer leaked past 'close' we would keep pinging a
+                // client that is no longer listening on the SSE stream.
+                await new Promise(resolve => setTimeout(resolve, 80));
+                assert.strictEqual(
+                    heartbeatPings().length, pingsAtClose,
+                    'Heartbeat timer must be cleared once the TLC run ends; '
+                        + 'a leaked timer would keep pinging a closed SSE stream'
+                );
+
+                assert.strictEqual(runTlcCalls, 1, 'TLC should have been started exactly once');
+            } finally {
+                global.setInterval = realSetInterval;
+            }
         });
     });
 });
