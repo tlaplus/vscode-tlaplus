@@ -46,17 +46,15 @@ jobs:
       if: matrix.os == 'windows-latest'
       shell: pwsh
       run: |
-        $miktexBin = 'C:\Program Files\MiKTeX\miktex\bin\x64'
-        if (-not (Get-Command pdflatex -ErrorAction SilentlyContinue)) {
-          choco install miktex --yes
-          Add-Content -Path $env:GITHUB_PATH -Value $miktexBin
-          $env:Path = "$miktexBin;$env:Path"
+        # choco install miktex hits flaky CTAN mirrors; retry a few times.
+        $bin = 'C:\Program Files\MiKTeX\miktex\bin\x64'
+        for ($i = 1; $i -le 5; $i++) {
+          try { choco install miktex --yes --no-progress } catch {}
+          if (Test-Path "$bin\pdflatex.exe") { break }
+          Start-Sleep -Seconds ($i * 10)
         }
-        if (Test-Path "$miktexBin\pdflatex.exe") {
-          & "$miktexBin\pdflatex.exe" --version
-        } else {
-          pdflatex --version
-        }
+        Add-Content $env:GITHUB_PATH $bin
+        & "$bin\pdflatex.exe" --version
     - name: Build
       run: |
         npm run vscode:prepublish
