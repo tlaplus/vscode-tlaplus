@@ -1,8 +1,11 @@
 import * as assert from 'assert';
+import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 
 suite('CheckModel cancellation handling', () => {
+    const fsp = fs.promises;
     const tla2toolsPath = require.resolve(path.resolve(__dirname, '../../../src/tla2tools'));
     const checkModelPath = require.resolve(path.resolve(__dirname, '../../../src/commands/checkModel'));
     const modelPath = require.resolve(path.resolve(__dirname, '../../../src/model/check'));
@@ -71,12 +74,21 @@ suite('CheckModel cancellation handling', () => {
         const { doCheckModel, CTX_TLC_CAN_RUN_AGAIN, CTX_TLC_RUNNING } = await import(checkModelPath);
         const { SpecFiles } = await import(modelPath);
 
-        const specFiles = new SpecFiles('Dummy.tla', 'Dummy.cfg');
+        const tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'check-model-cancel-'));
+        const tlaFile = path.join(tmpDir, 'Dummy.tla');
+        const cfgFile = path.join(tmpDir, 'Dummy.cfg');
+        await fsp.writeFile(tlaFile, '---- MODULE Dummy ----\n====\n');
+        await fsp.writeFile(cfgFile, 'SPECIFICATION Spec\n');
+
+        const specFiles = new SpecFiles(tlaFile, cfgFile);
         const diagnostics = vscode.languages.createDiagnosticCollection('cancel-test');
 
-        await doCheckModel(specFiles, true, {} as vscode.ExtensionContext, diagnostics, true);
-
-        diagnostics.dispose();
+        try {
+            await doCheckModel(specFiles, true, {} as vscode.ExtensionContext, diagnostics, true);
+        } finally {
+            diagnostics.dispose();
+            await fsp.rm(tmpDir, { recursive: true, force: true });
+        }
 
         assert.strictEqual(
             contextValues[CTX_TLC_RUNNING],
