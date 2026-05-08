@@ -3,23 +3,26 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { SanyData } from '../../../src/parsers/sany';
 
 suite('CheckModel cancellation handling', () => {
     const fsp = fs.promises;
     const tla2toolsPath = require.resolve(path.resolve(__dirname, '../../../src/tla2tools'));
+    const parseModulePath = require.resolve(path.resolve(__dirname, '../../../src/commands/parseModule'));
     const checkModelPath = require.resolve(path.resolve(__dirname, '../../../src/commands/checkModel'));
     const modelPath = require.resolve(path.resolve(__dirname, '../../../src/model/check'));
 
     let originalTla2tools: typeof import('../../../src/tla2tools') | undefined;
+    let originalParseModule: typeof import('../../../src/commands/parseModule') | undefined;
     let originalExecuteCommand: typeof vscode.commands.executeCommand | undefined;
 
-    const makeCacheEntry = (exports: unknown): NodeJS.Module => ({
-        id: tla2toolsPath,
-        filename: tla2toolsPath,
+    const makeCacheEntry = (filename: string, exports: unknown): NodeJS.Module => ({
+        id: filename,
+        filename,
         loaded: true,
         exports,
         parent: null,
-        path: tla2toolsPath,
+        path: filename,
         paths: [],
         children: [],
         require,
@@ -27,21 +30,25 @@ suite('CheckModel cancellation handling', () => {
     } as unknown as NodeJS.Module);
 
     setup(() => {
-        // Ensure a clean slate for module cache
         delete require.cache[checkModelPath];
         delete require.cache[tla2toolsPath];
+        delete require.cache[parseModulePath];
     });
 
     teardown(() => {
-        // Restore executeCommand and cached modules
         if (originalExecuteCommand) {
             (vscode.commands as unknown as { executeCommand: typeof vscode.commands.executeCommand })
                 .executeCommand = originalExecuteCommand;
         }
         if (originalTla2tools) {
-            require.cache[tla2toolsPath] = makeCacheEntry(originalTla2tools);
+            require.cache[tla2toolsPath] = makeCacheEntry(tla2toolsPath, originalTla2tools);
         } else {
             delete require.cache[tla2toolsPath];
+        }
+        if (originalParseModule) {
+            require.cache[parseModulePath] = makeCacheEntry(parseModulePath, originalParseModule);
+        } else {
+            delete require.cache[parseModulePath];
         }
         delete require.cache[checkModelPath];
     });
@@ -49,15 +56,22 @@ suite('CheckModel cancellation handling', () => {
     test('does not leave TLC running context when launch is cancelled', async function() {
         this.timeout(5000);
         originalTla2tools = await import(tla2toolsPath);
+        originalParseModule = await import(parseModulePath);
 
-        // Stub runTlc to simulate user cancelling the options prompt
         const stubbedTla2tools = {
             ...originalTla2tools,
             runTlc: async () => undefined,
         } as typeof import('../../../src/tla2tools');
-        require.cache[tla2toolsPath] = makeCacheEntry(stubbedTla2tools);
+        require.cache[tla2toolsPath] = makeCacheEntry(tla2toolsPath, stubbedTla2tools);
 
-        // Capture context updates
+        // Stub parseSpec to avoid spawning Java SANY, which can exceed the
+        // 5s timeout during cold JVM startup on Windows CI runners.
+        const stubbedParseModule = {
+            ...originalParseModule,
+            parseSpec: async () => new SanyData(),
+        } as typeof import('../../../src/commands/parseModule');
+        require.cache[parseModulePath] = makeCacheEntry(parseModulePath, stubbedParseModule);
+
         const contextValues: Record<string, unknown> = {};
         originalExecuteCommand = vscode.commands.executeCommand;
         const stubExecuteCommand: typeof vscode.commands.executeCommand =

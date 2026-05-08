@@ -8,6 +8,7 @@ import {
 } from '../../../src/parsers/sany';
 
 const FIXTURES_DIR = path.join(__dirname, '..', '..', '..', '..', 'tests', 'fixtures');
+const TEST_TIMEOUT_MS = 5 * 60 * 1000;
 
 suite('PlusCal Divergence Detection Integration Tests', () => {
     let tempDir: string;
@@ -23,7 +24,7 @@ suite('PlusCal Divergence Detection Integration Tests', () => {
     });
 
     test('SANY detects no divergence on clean file with matching checksums', async function () {
-        this.timeout(15000);
+        this.timeout(TEST_TIMEOUT_MS);
         const filePath = copyFixture('DivergenceTest.tla');
         const output = await runSanyOnFile(filePath);
         assert.ok(output.includes('Semantic processing of module DivergenceTest'),
@@ -34,7 +35,7 @@ suite('PlusCal Divergence Detection Integration Tests', () => {
     });
 
     test('SANY detects TLA+ translation divergence when translation is modified', async function () {
-        this.timeout(15000);
+        this.timeout(TEST_TIMEOUT_MS);
         const filePath = copyFixture('DivergenceTest.tla');
 
         let content = fs.readFileSync(filePath, 'utf-8');
@@ -47,7 +48,7 @@ suite('PlusCal Divergence Detection Integration Tests', () => {
     });
 
     test('SANY detects PlusCal divergence when algorithm is modified', async function () {
-        this.timeout(15000);
+        this.timeout(TEST_TIMEOUT_MS);
         const filePath = copyFixture('DivergenceTest.tla');
 
         let content = fs.readFileSync(filePath, 'utf-8');
@@ -60,7 +61,7 @@ suite('PlusCal Divergence Detection Integration Tests', () => {
     });
 
     test('SANY detects both divergences when algorithm and translation are modified', async function () {
-        this.timeout(15000);
+        this.timeout(TEST_TIMEOUT_MS);
         const filePath = copyFixture('DivergenceTest.tla');
 
         let content = fs.readFileSync(filePath, 'utf-8');
@@ -74,7 +75,7 @@ suite('PlusCal Divergence Detection Integration Tests', () => {
     });
 
     test('Pre-model-check: divergence detected on modified TLA+ translation', async function () {
-        this.timeout(15000);
+        this.timeout(TEST_TIMEOUT_MS);
         const filePath = copyFixture('DivergenceTest.tla');
 
         let content = fs.readFileSync(filePath, 'utf-8');
@@ -90,7 +91,7 @@ suite('PlusCal Divergence Detection Integration Tests', () => {
     });
 
     test('Pre-model-check: no divergence on clean file', async function () {
-        this.timeout(15000);
+        this.timeout(TEST_TIMEOUT_MS);
         const filePath = copyFixture('DivergenceTest.tla');
         const content = fs.readFileSync(filePath, 'utf-8');
 
@@ -103,7 +104,7 @@ suite('PlusCal Divergence Detection Integration Tests', () => {
     });
 
     test('Pre-model-check: skipped when no checksums', async function () {
-        this.timeout(15000);
+        this.timeout(TEST_TIMEOUT_MS);
         const filePath = copyFixture('DivergenceTest.tla');
 
         // Remove checksums from the BEGIN TRANSLATION line
@@ -119,7 +120,7 @@ suite('PlusCal Divergence Detection Integration Tests', () => {
     });
 
     test('SANY detects divergence in an imported module', async function () {
-        this.timeout(15000);
+        this.timeout(TEST_TIMEOUT_MS);
         // Copy the fixture as an imported module and break its TLA+ translation.
         const helperPath = path.join(tempDir, 'DivHelper.tla');
         let helperContent = fs.readFileSync(path.join(FIXTURES_DIR, 'DivergenceTest.tla'), 'utf-8');
@@ -159,19 +160,12 @@ suite('PlusCal Divergence Detection Integration Tests', () => {
             capturedOutput += chunk.toString();
         });
 
-        await new Promise<void>((resolve, reject) => {
+        await new Promise<void>((resolve) => {
             if (procInfo.mergedOutput.readableEnded) {
                 resolve();
                 return;
             }
-            const timer = setTimeout(
-                () => reject(new Error('SANY did not finish in time')),
-                10000
-            );
-            procInfo.mergedOutput.once('end', () => {
-                clearTimeout(timer);
-                resolve();
-            });
+            procInfo.mergedOutput.once('end', resolve);
         });
 
         return capturedOutput;
