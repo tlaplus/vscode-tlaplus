@@ -28,6 +28,9 @@ import {
     InitResponseCapabilitiesExperimental,
 } from './model/paths';
 import { moduleSearchPaths, TLAPS } from './paths';
+import { parseSpec } from './commands/parseModule';
+import { SanyData } from './parsers/sany';
+import { applyDCollection } from './diagnostic';
 
 export enum proofStateNames {
     proved = 'proved',
@@ -67,6 +70,7 @@ export class TlapsClient {
 
     constructor(
         private context: vscode.ExtensionContext,
+        private diagnostic: vscode.DiagnosticCollection,
         private currentProofStepDetailsListener: ((details: TlapsProofStepDetails) => void),
         private configChangedListener: ((configChanged: TlapsConfigChanged) => void)
     ) {
@@ -118,16 +122,9 @@ export class TlapsClient {
                 if (!this.client) {
                     return;
                 }
-                vscode.commands.executeCommand('tlaplus.tlaps.check-step.lsp',
-                    {
-                        uri: te.document.uri.toString(),
-                        version: te.document.version
-                    } as VersionedTextDocumentIdentifier,
-                    {
-                        start: te.selection.start,
-                        end: te.selection.end
-                    } as Range,
-                );
+                this.checkStep(te).catch((err) => {
+                    vscode.window.showErrorMessage(`TLAPS proof check failed: ${err}`);
+                });
             }
         ));
         context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(event => {
@@ -172,6 +169,76 @@ export class TlapsClient {
 
     public deactivate() {
         this.tryStop();
+    }
+
+    // Runs SANY on the module before forwarding the proof check to TLAPS.
+    //
+    // TLAPS and SANY do not accept exactly the same language: TLAPS accepts some
+    // specifications that SANY (the standard TLA+ front end) correctly rejects.
+    // TLAPS accepts "raw TLA" (rTLA), which permits unrestrictive assertions
+    // about behaviors that should be unassertable in TLA+, i.e. formulas that
+    // are not insensitive to stuttering. Eliminating rTLA is the primary reason
+    // for running SANY before TLAPS.
+    // To preserve the invariant the TLA+ Toolbox used to enforce, we parse the
+    // module with SANY first (reusing the implementation behind `tlaplus.parse`)
+    // and only invoke TLAPS if the module is a valid TLA+ module.
+    private async checkStep(te: vscode.TextEditor) {
+        const document = te.document;
+        // SANY and the TLAPS LSP expect file:// documents.
+        if (document.uri.scheme !== 'file') {
+            vscode.window.showWarningMessage(
+                'TLAPS proof checking is only available for TLA+ files saved on disk.'
+            );
+            return;
+        }
+        // Capture the selection before any `await`, as it may change meanwhile.
+        const selection: Range = {
+            start: te.selection.start,
+            end: te.selection.end,
+        };
+        // Persist the buffer so SANY and TLAPS operate on the same content.
+        if (document.isDirty && !await document.save()) {
+            return;
+        }
+        let sanyData: SanyData;
+        try {
+            sanyData = await parseSpec(document.uri);
+        } catch (err) {
+            // SANY itself failed to run (not a parse error). Let the user decide
+            // whether to proceed without the SANY check; default to aborting.
+            const continueLabel = 'Run TLAPS anyway';
+            const choice = await vscode.window.showErrorMessage(
+                `Error parsing module with SANY: ${err}`,
+                continueLabel
+            );
+            if (choice === continueLabel) {
+                this.runCheckStep(document, selection);
+            }
+            return;
+        }
+        applyDCollection(sanyData.dCollection, this.diagnostic);
+        const hasErrors = sanyData.dCollection.getMessages().some(
+            (msg) => msg.diagnostic.severity === vscode.DiagnosticSeverity.Error
+        );
+        if (hasErrors) {
+            // SANY's diagnostics already annotate the module (editor markers and
+            // the Problems view), so don't invoke TLAPS on an invalid module.
+            return;
+        }
+        this.runCheckStep(document, selection);
+    }
+
+    private runCheckStep(document: vscode.TextDocument, selection: Range) {
+        if (!this.client) {
+            return;
+        }
+        vscode.commands.executeCommand('tlaplus.tlaps.check-step.lsp',
+            {
+                uri: document.uri.toString(),
+                version: document.version
+            } as VersionedTextDocumentIdentifier,
+            selection,
+        );
     }
 
     private readConfig(): boolean {

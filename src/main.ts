@@ -262,6 +262,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     );
     tlapsClient = new TlapsClient(
         context,
+        diagnostic,
         details => currentProofStepWebviewViewProvider.showProofStepDetails(details),
         configChanged => currentProofStepWebviewViewProvider.considerConfigChanged(configChanged)
     );

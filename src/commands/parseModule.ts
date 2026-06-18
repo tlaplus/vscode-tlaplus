@@ -94,6 +94,12 @@ export async function transpilePlusCal(fileUri: vscode.Uri, token?: vscode.Cance
  */
 export async function parseSpec(fileUri: vscode.Uri, token?: vscode.CancellationToken): Promise<SanyData> {
     throwIfCancelled(token);
+    // SANY runs on a filesystem path, so only file:// URIs are supported.
+    // Reject untitled or virtual (e.g. jarfile://) URIs with a clear error
+    // instead of letting the underlying process fail obscurely on fsPath.
+    if (fileUri.scheme !== 'file') {
+        throw new Error(`Cannot parse '${fileUri.toString()}': only files saved on disk are supported.`);
+    }
     const procInfo = await runSany(fileUri.fsPath);
     sanyOutChannel.bindTo(procInfo);
     const cancellationDisposable = registerCancellation(procInfo, token);
