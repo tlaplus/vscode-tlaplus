@@ -26,6 +26,13 @@ This document uses a **producer-consumer** (bounded buffer) specification as a r
   ```
   See `tla-functions-records-sequences.md` for details on `EXCEPT` and nested updates.
 
+### CASE
+
+* Avoid `CASE` with overlapping guards (guards that can hold simultaneously). Per *Specifying Systems* §16.1.4, the chosen arm is then unspecified, so the value of the `CASE` is not determined by the language semantics. Different tools may resolve the choice differently, making the spec non-portable: the same `CASE` can yield different verdicts depending on which matching arm a tool picks. Flag any `CASE` whose guards are not mutually exclusive. If all overlapping arms yield the same value the overlap is benign, but then it should be removed by merging those arms into one (disjoining their guards), leaving non-overlapping guards.
+  - To decide overlap: check pairwise disjointness (`~(g_i /\ g_j)`) as an `INVARIANT` with TLC/Apalache (reachable states only), or prove it deductively with TLAPS.
+
+* Use `CASE` only as syntactic sugar for a nested `IF-THEN-ELSE` with non-overlapping guards. Do not use `CASE` to express non-determinism. For a non-deterministic next-state relation, write a disjunction of action formulas `(p1 /\ A1) \/ ... \/ (pn /\ An)`, where each `Ai` is an action. To choose non-deterministically among values, use existential quantification, e.g. `\E v \in S : x' = v`.
+
 ## Spec Structure
 
 * Use SANY to perform syntax and level-checking of a TLA+ module before reviewing. This catches syntax errors early and ensures the spec is well-formed. If you are an AI assistant, use the `tlaplus_mcp_sany_parse` tool to parse the spec.
