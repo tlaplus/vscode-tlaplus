@@ -114,8 +114,8 @@ This document uses a **producer-consumer** (bounded buffer) specification as a r
 
 ### Configuration file
 
-* Consider whether deadlock checking is appropriate for your spec. Some specs legitimately terminate (e.g., when producers stop producing and consumers finish consuming all items from the buffer), and reporting this as a deadlock would be a false positive. In such cases, disable deadlock checking in the TLC configuration with `CHECK_DEADLOCK FALSE`. Additionally, consider adding an invariant that characterizes states in which the system may terminate, for example
-`(~ ENABLED Next) <=> buffer = <<>>`.
+* Consider whether deadlock checking is appropriate for your spec. Some specs legitimately terminate (e.g., when producers stop producing and consumers finish consuming all items from the buffer), and reporting this as a deadlock would be a false positive. In such cases, disable deadlock checking in the TLC configuration with `CHECK_DEADLOCK FALSE`. Additionally, consider adding an invariant that constrains the states in which the system may terminate, for example
+`(~ ENABLED Next) => buffer = <<>>`.
 
 ### Simulation and Exhaustive Model Checking
 
