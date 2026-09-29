@@ -38,6 +38,8 @@ const WARN_DIVERGENCE_SUFFIX =
     + '\\* BEGIN TRANSLATION line(s).\n\n'
     + 'Would you like to abort model-checking?';
 let checkProcess: ChildProcess | undefined;
+let checkInProgress = false;
+let activeCheckRunId = 0;
 let lastCheckFiles: SpecFiles | undefined;
 let coverageProvider: TlcCoverageDecorationProvider | undefined;
 const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);
@@ -62,6 +64,9 @@ export async function checkModel(
     diagnostic: vscode.DiagnosticCollection,
     extContext: vscode.ExtensionContext
 ): Promise<void> {
+    if (fileUri && !canRunTlc(extContext)) {
+        return;
+    }
     const uri = fileUri ? fileUri : getActiveEditorFileUri(extContext);
     if (!uri) {
         return;
@@ -123,12 +128,16 @@ export function stopModelChecking(
     terminateLastRun: (lastSpecFiles: SpecFiles | undefined) => boolean =
     (): boolean => { return true; },
     silent: boolean = false
-): void {
+): Promise<void> {
     if (checkProcess && terminateLastRun(lastCheckFiles)) {
-        stopProcess(checkProcess);
+        const process = checkProcess;
+        const closed = new Promise<void>(resolve => process.once('close', () => resolve()));
+        stopProcess(process);
+        return closed;
     } else if (!silent) {
         vscode.window.showInformationMessage("There're no currently running model checking processes");
     }
+    return Promise.resolve();
 }
 
 export function showTlcOutput(): void {
@@ -162,7 +171,7 @@ export function getEditorIfCanRunTlc(extContext: vscode.ExtensionContext): vscod
 }
 
 function canRunTlc(extContext: vscode.ExtensionContext): boolean {
-    if (checkProcess) {
+    if (checkProcess || checkInProgress) {
         vscode.window.showWarningMessage(
             'Another model checking process is currently running',
             'Show currently running process'
@@ -181,6 +190,11 @@ export async function doCheckModel(
     extraOpts: string[] = [],
     debuggerPortCallback?: (port?: number) => void
 ): Promise<ModelCheckResult | undefined> {
+    if (!canRunTlc(extContext)) {
+        return undefined;
+    }
+    const checkRunId = ++activeCheckRunId;
+    checkInProgress = true;
     try {
         // Check for PlusCal/TLA+ divergence before running TLC
         if (!await checkDivergenceBeforeModelCheck(specFiles.tlaFilePath)) {
@@ -198,13 +212,17 @@ export async function doCheckModel(
         vscode.commands.executeCommand('setContext', CTX_TLC_CAN_RUN_AGAIN, true);
         updateStatusBarItem(true, specFiles);
         outChannel.bindTo(procInfo);
-        checkProcess = procInfo.process;
-        checkProcess.on('close', () => {
-            checkProcess = undefined;
-            updateStatusBarItem(false, lastCheckFiles);
+        const process = procInfo.process;
+        checkProcess = process;
+        checkInProgress = false;
+        process.on('close', () => {
+            if (checkProcess === process) {
+                checkProcess = undefined;
+                updateStatusBarItem(false, lastCheckFiles);
+            }
         });
         if (showCheckResultView) {
-            attachFileSaver(specFiles, checkProcess);
+            attachFileSaver(specFiles, process);
             revealEmptyCheckResultView(extContext);
         }
         const resultHolder = new CheckResultHolder();
@@ -227,14 +245,14 @@ export async function doCheckModel(
         };
         // Accumulate raw stdout for sequence-diagram generation
         const rawChunks: string[] = [];
-        if (checkProcess.stdout) {
-            checkProcess.stdout.on('data', (chunk: Buffer | string) => {
+        if (process.stdout) {
+            process.stdout.on('data', (chunk: Buffer | string) => {
                 rawChunks.push(String(chunk));
             });
         }
         const stdoutParser = new TlcModelCheckerStdoutParser(
             ModelCheckResultSource.Process,
-            checkProcess.stdout,
+            process.stdout,
             specFiles,
             true,
             checkResultCallback,
@@ -248,6 +266,10 @@ export async function doCheckModel(
     } catch (err) {
         statusBarItem.hide();
         vscode.window.showErrorMessage(`Error checking model: ${err}`);
+    } finally {
+        if (activeCheckRunId === checkRunId) {
+            checkInProgress = false;
+        }
     }
     return undefined;
 }

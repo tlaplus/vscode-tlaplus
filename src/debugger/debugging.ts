@@ -206,7 +206,7 @@ export async function smokeTestSpec(
         }
         return lastSpecFiles.cfgFileName.startsWith(prefixName);
     };
-    stopModelChecking(terminateLastRun, true);
+    await stopModelChecking(terminateLastRun, true);
 
     // Don't await doCheckModel because it only returns after TLC terminates.
     doCheckModel(specFiles, false, context, diagnostic, false,
