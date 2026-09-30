@@ -161,12 +161,21 @@ export function getEditorIfCanRunTlc(extContext: vscode.ExtensionContext): vscod
     return editor;
 }
 
+export function warnCheckRunning(extContext: vscode.ExtensionContext): void {
+    const showProcess = 'Show currently running process';
+    vscode.window.showWarningMessage(
+        'Another model checking process is currently running',
+        showProcess
+    ).then(choice => {
+        if (choice === showProcess) {
+            revealLastCheckResultView(extContext);
+        }
+    });
+}
+
 function canRunTlc(extContext: vscode.ExtensionContext): boolean {
     if (checkProcess) {
-        vscode.window.showWarningMessage(
-            'Another model checking process is currently running',
-            'Show currently running process'
-        ).then(() => revealLastCheckResultView(extContext));
+        warnCheckRunning(extContext);
         return false;
     }
     return true;

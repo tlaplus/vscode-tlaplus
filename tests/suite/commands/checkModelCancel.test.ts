@@ -11,10 +11,13 @@ suite('CheckModel cancellation handling', () => {
     const parseModulePath = require.resolve(path.resolve(__dirname, '../../../src/commands/parseModule'));
     const checkModelPath = require.resolve(path.resolve(__dirname, '../../../src/commands/checkModel'));
     const modelPath = require.resolve(path.resolve(__dirname, '../../../src/model/check'));
+    const checkResultViewPath = require.resolve(path.resolve(__dirname, '../../../src/panels/checkResultView'));
 
     let originalTla2tools: typeof import('../../../src/tla2tools') | undefined;
     let originalParseModule: typeof import('../../../src/commands/parseModule') | undefined;
+    let originalCheckResultView: typeof import('../../../src/panels/checkResultView') | undefined;
     let originalExecuteCommand: typeof vscode.commands.executeCommand | undefined;
+    let originalShowWarningMessage: typeof vscode.window.showWarningMessage | undefined;
 
     const makeCacheEntry = (filename: string, exports: unknown): NodeJS.Module => ({
         id: filename,
@@ -40,6 +43,11 @@ suite('CheckModel cancellation handling', () => {
             (vscode.commands as unknown as { executeCommand: typeof vscode.commands.executeCommand })
                 .executeCommand = originalExecuteCommand;
         }
+        if (originalShowWarningMessage) {
+            (vscode.window as unknown as { showWarningMessage: typeof vscode.window.showWarningMessage })
+                .showWarningMessage = originalShowWarningMessage;
+            originalShowWarningMessage = undefined;
+        }
         if (originalTla2tools) {
             require.cache[tla2toolsPath] = makeCacheEntry(tla2toolsPath, originalTla2tools);
         } else {
@@ -49,6 +57,10 @@ suite('CheckModel cancellation handling', () => {
             require.cache[parseModulePath] = makeCacheEntry(parseModulePath, originalParseModule);
         } else {
             delete require.cache[parseModulePath];
+        }
+        if (originalCheckResultView) {
+            require.cache[checkResultViewPath] = makeCacheEntry(checkResultViewPath, originalCheckResultView);
+            originalCheckResultView = undefined;
         }
         delete require.cache[checkModelPath];
     });
@@ -114,5 +126,35 @@ suite('CheckModel cancellation handling', () => {
             true,
             'Run-again context must not be enabled when launch is cancelled'
         );
+    });
+
+    // To reproduce by hand:
+    // 1. Open a .tla file whose model takes a while to check and run "TLA+: Check model with TLC".
+    // 2. Close the "TLA+ model checking" tab while TLC is running.
+    // 3. Run "TLA+: Check model with TLC" again. The warning "Another model checking process is
+    //    currently running" appears with a "Show currently running process" button.
+    // 4. Dismiss the warning with its close button or Escape, without clicking the button.
+    // Before the fix, the "TLA+ model checking" tab reopened anyway.
+    test('reveals the running check only when the warning\'s button is clicked', async () => {
+        originalCheckResultView = await import(checkResultViewPath);
+        let reveals = 0;
+        require.cache[checkResultViewPath] = makeCacheEntry(checkResultViewPath, {
+            ...originalCheckResultView,
+            revealLastCheckResultView: () => { reveals++; }
+        });
+        let clicked = false;
+        originalShowWarningMessage = vscode.window.showWarningMessage;
+        (vscode.window as unknown as { showWarningMessage: (msg: string, button: string) => Thenable<unknown> })
+            .showWarningMessage = (_msg, button) => Promise.resolve(clicked ? button : undefined);
+        const { warnCheckRunning } = await import(checkModelPath);
+        const tick = () => new Promise(resolve => setImmediate(resolve));
+
+        warnCheckRunning({} as vscode.ExtensionContext);
+        await tick();
+        assert.strictEqual(reveals, 0);
+        clicked = true;
+        warnCheckRunning({} as vscode.ExtensionContext);
+        await tick();
+        assert.strictEqual(reveals, 1);
     });
 });
