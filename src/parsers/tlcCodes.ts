@@ -196,6 +196,7 @@ export const CFG_MISSING_ID = registerCode(5003, TlcCodeType.Error);
 export const CFG_TWICE_KEYWORD = registerCode(5004, TlcCodeType.Error);
 export const CFG_EXPECT_ID = registerCode(5005, TlcCodeType.Error);
 export const CFG_EXPECTED_SYMBOL = registerCode(5006, TlcCodeType.Error);
+export const CFG_LEXICAL_ERROR = registerCode(5007, TlcCodeType.Error);
 export const TLC_MODE_MC = registerCode(2187, TlcCodeType.Info);
 export const TLC_MODE_MC_DFS = registerCode(2271, TlcCodeType.Ignore);
 export const TLC_MODE_SIMU = registerCode(2188, TlcCodeType.Ignore);
