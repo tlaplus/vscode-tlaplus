@@ -13,7 +13,7 @@ import {
 } from '../panels/checkResultView';
 import { getDivergenceType } from '../parsers/sany';
 import { TlcModelCheckerStdoutParser } from '../parsers/tlc';
-import { runTlc, stopProcess } from '../tla2tools';
+import { runTlc, stopProcess, ToolProcessInfo } from '../tla2tools';
 import { parseSpec } from './parseModule';
 import { ModelResolveMode, resolveModelForUri } from './modelResolver';
 import { TlcCoverageDecorationProvider } from '../tlcCoverage';
@@ -38,6 +38,10 @@ const WARN_DIVERGENCE_SUFFIX =
     + '\\* BEGIN TRANSLATION line(s).\n\n'
     + 'Would you like to abort model-checking?';
 let checkProcess: ChildProcess | undefined;
+// True while doCheckModel sets up a check, before checkProcess exists. Only
+// the setup phase sets and clears it, so a finished check cannot clear the
+// flag of a newer one.
+let checkInProgress = false;
 let lastCheckFiles: SpecFiles | undefined;
 let coverageProvider: TlcCoverageDecorationProvider | undefined;
 const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);
@@ -141,10 +145,10 @@ export function stopModelChecking(
 }
 
 /**
- * Tells whether a model check is running.
+ * Tells whether a model check is starting or running.
  */
 export function isModelCheckingActive(): boolean {
-    return !!checkProcess;
+    return !!checkProcess || checkInProgress;
 }
 
 export function showTlcOutput(): void {
@@ -209,13 +213,22 @@ export async function doCheckModel(
     if (!canRunTlc(extContext)) {
         return undefined;
     }
+    // No await may separate this from canRunTlc.
+    checkInProgress = true;
     try {
-        // Check for PlusCal/TLA+ divergence before running TLC
-        if (!await checkDivergenceBeforeModelCheck(specFiles.tlaFilePath)) {
-            return undefined;
+        let procInfo: ToolProcessInfo | undefined;
+        try {
+            // Check for PlusCal/TLA+ divergence before running TLC
+            if (!await checkDivergenceBeforeModelCheck(specFiles.tlaFilePath)) {
+                return undefined;
+            }
+            procInfo = await runTlc(
+                specFiles.tlaFilePath, specFiles.cfgFilePath, showOptionsPrompt, extraOpts);
+        } finally {
+            // No await may separate this from setting checkProcess below, or
+            // another check could start in between.
+            checkInProgress = false;
         }
-        const procInfo = await runTlc(
-            specFiles.tlaFilePath, specFiles.cfgFilePath, showOptionsPrompt, extraOpts);
         if (procInfo === undefined) {
             // Command cancelled by user, make sure UI state is reset
             vscode.commands.executeCommand('setContext', CTX_TLC_CAN_RUN_AGAIN, !!lastCheckFiles);
