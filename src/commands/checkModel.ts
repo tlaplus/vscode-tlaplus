@@ -62,6 +62,11 @@ export async function checkModel(
     diagnostic: vscode.DiagnosticCollection,
     extContext: vscode.ExtensionContext
 ): Promise<void> {
+    // Reject before getSpecFiles prompts for a model. Without fileUri,
+    // getActiveEditorFileUri checks, and a second check would warn twice.
+    if (fileUri && !canRunTlc(extContext)) {
+        return;
+    }
     const uri = fileUri ? fileUri : getActiveEditorFileUri(extContext);
     if (!uri) {
         return;
@@ -123,12 +128,23 @@ export function stopModelChecking(
     terminateLastRun: (lastSpecFiles: SpecFiles | undefined) => boolean =
     (): boolean => { return true; },
     silent: boolean = false
-): void {
+): Promise<void> {
     if (checkProcess && terminateLastRun(lastCheckFiles)) {
-        stopProcess(checkProcess);
+        const process = checkProcess;
+        const closed = new Promise<void>(resolve => process.once('close', () => resolve()));
+        stopProcess(process);
+        return closed;
     } else if (!silent) {
         vscode.window.showInformationMessage("There're no currently running model checking processes");
     }
+    return Promise.resolve();
+}
+
+/**
+ * Tells whether a model check is running.
+ */
+export function isModelCheckingActive(): boolean {
+    return !!checkProcess;
 }
 
 export function showTlcOutput(): void {
@@ -174,7 +190,7 @@ export function warnCheckRunning(extContext: vscode.ExtensionContext): void {
 }
 
 function canRunTlc(extContext: vscode.ExtensionContext): boolean {
-    if (checkProcess) {
+    if (isModelCheckingActive()) {
         warnCheckRunning(extContext);
         return false;
     }
@@ -190,6 +206,9 @@ export async function doCheckModel(
     extraOpts: string[] = [],
     debuggerPortCallback?: (port?: number) => void
 ): Promise<ModelCheckResult | undefined> {
+    if (!canRunTlc(extContext)) {
+        return undefined;
+    }
     try {
         // Check for PlusCal/TLA+ divergence before running TLC
         if (!await checkDivergenceBeforeModelCheck(specFiles.tlaFilePath)) {

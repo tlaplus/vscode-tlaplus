@@ -1,0 +1,3 @@
+---- MODULE SmokeSpec ----
+EXTENDS Spec
+====
