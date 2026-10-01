@@ -267,6 +267,87 @@ suite('CheckModel command handling', () => {
         }
     });
 
+    test('starts one TLC process when a second check arrives while the first is in runTlc', async function() {
+        this.timeout(5000);
+        originalTla2tools = await import(tla2toolsPath);
+        originalParseModule = await import(parseModulePath);
+
+        class FakeProcess extends EventEmitter {
+            stdout = new PassThrough();
+            stderr = new PassThrough();
+        }
+
+        // runTlc blocks, as it does while the options prompt is open, until
+        // the test releases it. The TLC process it then starts exits at once.
+        const spawned: FakeProcess[] = [];
+        let enterRunTlc: () => void = () => undefined;
+        const runTlcEntered = new Promise<void>(resolve => { enterRunTlc = resolve; });
+        let releaseRunTlc: () => void = () => undefined;
+        const runTlcReleased = new Promise<void>(resolve => { releaseRunTlc = resolve; });
+        const stubbedTla2tools = {
+            ...originalTla2tools,
+            runTlc: async () => {
+                enterRunTlc();
+                await runTlcReleased;
+                const process = new FakeProcess();
+                spawned.push(process);
+                setImmediate(() => {
+                    process.stdout.end();
+                    process.emit('close', 0, null);
+                });
+                return {
+                    commandLine: 'tlc',
+                    process: process as unknown as import('child_process').ChildProcess,
+                    mergedOutput: new PassThrough()
+                };
+            }
+        } as typeof import('../../../src/tla2tools');
+        require.cache[tla2toolsPath] = makeCacheEntry(tla2toolsPath, stubbedTla2tools);
+
+        // Skip SANY, which is not under test.
+        const stubbedParseModule = {
+            ...originalParseModule,
+            parseSpec: async () => new SanyData(),
+        } as typeof import('../../../src/commands/parseModule');
+        require.cache[parseModulePath] = makeCacheEntry(parseModulePath, stubbedParseModule);
+
+        // Ignore context updates, and leave the "already running" warning
+        // unanswered, as if the user has not clicked yet.
+        originalExecuteCommand = vscode.commands.executeCommand;
+        (vscode.commands as unknown as { executeCommand: typeof vscode.commands.executeCommand })
+            .executeCommand = <T>(): Thenable<T> => Promise.resolve(undefined as unknown as T);
+        originalShowWarningMessage = vscode.window.showWarningMessage;
+        (vscode.window as unknown as {
+            showWarningMessage: typeof vscode.window.showWarningMessage
+        }).showWarningMessage = () => new Promise<undefined>(resolve => { void resolve; });
+
+        // Keep the fake output out of the TLC output channel.
+        const { doCheckModel, outChannel } = await import(checkModelPath);
+        const { SpecFiles } = await import(modelPath);
+        const originalBindTo = outChannel.bindTo;
+        outChannel.bindTo = () => undefined;
+
+        const specFiles = new SpecFiles(fixtureSpec, fixtureCfg);
+        const ctx = {} as vscode.ExtensionContext;
+        const diagnostics = vscode.languages.createDiagnosticCollection('setup-overlap-test');
+
+        try {
+            // Start a check, and start a second one while the first is still
+            // in runTlc, before its TLC process exists.
+            const first = doCheckModel(specFiles, false, ctx, diagnostics, false);
+            await runTlcEntered;
+            const second = doCheckModel(specFiles, false, ctx, diagnostics, false);
+            releaseRunTlc();
+            await Promise.all([first, second]);
+            assert.strictEqual(spawned.length, 1, 'A check started during setup must not spawn a second TLC');
+        } finally {
+            // Unblock runTlc if the test failed before releasing it.
+            releaseRunTlc();
+            outChannel.bindTo = originalBindTo;
+            diagnostics.dispose();
+        }
+    });
+
     test('skips a smoke test quietly while a manual check is running', async function() {
         this.timeout(5000);
         originalTla2tools = await import(tla2toolsPath);
