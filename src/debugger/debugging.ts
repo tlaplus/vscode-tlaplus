@@ -2,7 +2,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { exists, replaceExtension } from '../common';
 import {
-    doCheckModel, getSpecFiles, stopModelChecking
+    doCheckModel, getSpecFiles, isModelCheckingActive, stopModelChecking
 } from '../commands/checkModel';
 import { SpecFiles } from '../model/check';
 import { extractFingerprintFromTrace, findLatestTraceFile } from '../tla2tools';
@@ -206,7 +206,14 @@ export async function smokeTestSpec(
         }
         return lastSpecFiles.cfgFileName.startsWith(prefixName);
     };
-    stopModelChecking(terminateLastRun, true);
+    // Wait for the previous smoke run to exit; doCheckModel would reject the
+    // new run while the old process is still exiting.
+    await stopModelChecking(terminateLastRun, true);
+    // A manually started check is still running; skip the smoke test without
+    // the warning doCheckModel would show.
+    if (isModelCheckingActive()) {
+        return;
+    }
 
     // Don't await doCheckModel because it only returns after TLC terminates.
     doCheckModel(specFiles, false, context, diagnostic, false,
