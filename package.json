@@ -75,6 +75,10 @@
                 "extensions": [
                     ".tla"
                 ],
+                "icon": {
+                    "light": "resources/images/tlaplus.png",
+                    "dark": "resources/images/tlaplus.png"
+                },
                 "configuration": "./languages/tlaplus-lang-config.json"
             },
             {
