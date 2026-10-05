@@ -53,6 +53,27 @@ test.describe('Check Result webview fixture', () => {
         expect(openAfter).toBe(openBefore);
     });
 
+    test('copy failure posts showErrorMessage', async ({ page, fixtureServer }) => {
+        await page.goto(fixtureServer.endpoint, { waitUntil: 'networkidle' });
+        const variableItem = page.locator('vscode-tree-item#state-1 vscode-tree-item').first();
+        await variableItem.waitFor({ state: 'visible' });
+        await page.evaluate(() => {
+            navigator.clipboard.writeText = () =>
+                Promise.reject(new DOMException('Write permission denied.', 'NotAllowedError'));
+        });
+
+        await variableItem.locator('.var-block').hover();
+        await variableItem.locator('.codicon-copy').click();
+
+        await expect.poll(() => page.evaluate(() => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            return (window as any).__testMessages;
+        })).toContainEqual({
+            command: 'showErrorMessage',
+            text: 'Failed to copy value: NotAllowedError: Write permission denied.'
+        });
+    });
+
     test('error trace tree wraps text and link does not collapse state', async ({ page, fixtureServer }) => {
         page.on('console', msg => {
             if (msg.type() === 'error') {
