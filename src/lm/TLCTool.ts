@@ -4,6 +4,7 @@ import { runTlc, stopProcess, ToolProcessInfo } from '../tla2tools';
 import { getSpecFiles, mapTlcOutputLine, outChannel } from '../commands/checkModel';
 import { CFG_TLC_STATISTICS_TYPE, ShareOption } from '../commands/tlcStatisticsCfg';
 import { exists } from '../common';
+import { SpecFiles } from '../model/check';
 
 export interface FileParameter {
 	fileName: string;
@@ -95,7 +96,9 @@ async function runTLC(
         );
     }
 
-    const specFiles = await getSpecFiles(fileUri, false, false);
+    const specFiles = input.configFileName
+        ? new SpecFiles(input.fileName, input.configFileName)
+        : await getSpecFiles(fileUri, false, false);
     const cancelAfterSpecLookup = maybeReturnOnCancel();
     if (cancelAfterSpecLookup) {
         return cancelAfterSpecLookup;
@@ -130,10 +133,9 @@ async function runTLC(
     if (shareStats !== ShareOption.DoNotShare) {
         extraJavaOpts.push('-Dtlc2.TLC.ide=TLAiVSCode');
     }
-    const cfgFilePath = input.configFileName ? input.configFileName : specFiles.cfgFilePath;
     const procInfo = await runTlc(
         specFiles.tlaFilePath,
-        cfgFilePath,
+        specFiles.cfgFilePath,
         false,
         extraOps,
         extraJavaOpts
