@@ -176,7 +176,8 @@ export const TLC_DISTRIBUTED_SERVER_RUNNING = registerCode(7000, TlcCodeType.Inf
 export const TLC_DISTRIBUTED_WORKER_REGISTERED = registerCode(TLC_DISTRIBUTED_SERVER_RUNNING.num + 1, TlcCodeType.Info);
 export const TLC_DISTRIBUTED_WORKER_DEREGISTERED
     = registerCode(TLC_DISTRIBUTED_WORKER_REGISTERED.num + 1, TlcCodeType.Info);
-export const TLC_DISTRIBUTED_WORKER_STATS = registerCode(TLC_DISTRIBUTED_WORKER_DEREGISTERED.num + 1, TlcCodeType.Info);
+export const TLC_DISTRIBUTED_WORKER_STATS
+    = registerCode(TLC_DISTRIBUTED_WORKER_DEREGISTERED.num + 1, TlcCodeType.Ignore);
 export const TLC_DISTRIBUTED_SERVER_NOT_RUNNING = registerCode(TLC_DISTRIBUTED_WORKER_STATS.num + 1, TlcCodeType.Info);
 export const TLC_DISTRIBUTED_VM_VERSION = registerCode(TLC_DISTRIBUTED_SERVER_NOT_RUNNING.num + 1, TlcCodeType.Ignore);
 export const TLC_DISTRIBUTED_WORKER_LOST = registerCode(TLC_DISTRIBUTED_VM_VERSION.num + 1, TlcCodeType.Error);

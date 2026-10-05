@@ -388,8 +388,8 @@ class ModelCheckResultBuilder {
                 }
                 break;
             default:
-                window.showErrorMessage(`No handler for message of type ${message.type}`);
-                console.error(`No handler for message of type ${message.type}, text: ${message.lines.join('\n')}`);
+                window.showErrorMessage(`No handler for message of type ${message.type.code}`);
+                console.error(`No handler for message of type ${message.type.code}, text: ${message.lines.join('\n')}`);
         }
     }
 
