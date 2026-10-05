@@ -173,21 +173,16 @@ export const TLC_FINISHED = registerCode(2186, TlcCodeType.Info);
 // distributed TLC
 
 export const TLC_DISTRIBUTED_SERVER_RUNNING = registerCode(7000, TlcCodeType.Info);
-export const TLC_DISTRIBUTED_WORKER_REGISTERED = registerCode(TLC_DISTRIBUTED_SERVER_RUNNING.num + 1, TlcCodeType.Info);
-export const TLC_DISTRIBUTED_WORKER_DEREGISTERED
-    = registerCode(TLC_DISTRIBUTED_WORKER_REGISTERED.num + 1, TlcCodeType.Info);
-export const TLC_DISTRIBUTED_WORKER_STATS
-    = registerCode(TLC_DISTRIBUTED_WORKER_DEREGISTERED.num + 1, TlcCodeType.Ignore);
-export const TLC_DISTRIBUTED_SERVER_NOT_RUNNING = registerCode(TLC_DISTRIBUTED_WORKER_STATS.num + 1, TlcCodeType.Info);
-export const TLC_DISTRIBUTED_VM_VERSION = registerCode(TLC_DISTRIBUTED_SERVER_NOT_RUNNING.num + 1, TlcCodeType.Ignore);
-export const TLC_DISTRIBUTED_WORKER_LOST = registerCode(TLC_DISTRIBUTED_VM_VERSION.num + 1, TlcCodeType.Error);
-export const TLC_DISTRIBUTED_EXCEED_BLOCKSIZE = registerCode(TLC_DISTRIBUTED_WORKER_LOST.num + 1, TlcCodeType.Error);
-export const TLC_DISTRIBUTED_SERVER_FPSET_WAITING
-    = registerCode(TLC_DISTRIBUTED_EXCEED_BLOCKSIZE.num + 1, TlcCodeType.Ignore);
-export const TLC_DISTRIBUTED_SERVER_FPSET_REGISTERED
-    = registerCode(TLC_DISTRIBUTED_SERVER_FPSET_WAITING.num + 1, TlcCodeType.Ignore);
-export const TLC_DISTRIBUTED_SERVER_FINISHED
-    = registerCode(TLC_DISTRIBUTED_SERVER_FPSET_REGISTERED.num + 1, TlcCodeType.Ignore);
+export const TLC_DISTRIBUTED_WORKER_REGISTERED = registerCode(7001, TlcCodeType.Info);
+export const TLC_DISTRIBUTED_WORKER_DEREGISTERED = registerCode(7002, TlcCodeType.Info);
+export const TLC_DISTRIBUTED_WORKER_STATS = registerCode(7003, TlcCodeType.Ignore);
+export const TLC_DISTRIBUTED_SERVER_NOT_RUNNING = registerCode(7004, TlcCodeType.Info);
+export const TLC_DISTRIBUTED_VM_VERSION = registerCode(7005, TlcCodeType.Ignore);
+export const TLC_DISTRIBUTED_WORKER_LOST = registerCode(7006, TlcCodeType.Error);
+export const TLC_DISTRIBUTED_EXCEED_BLOCKSIZE = registerCode(7007, TlcCodeType.Error);
+export const TLC_DISTRIBUTED_SERVER_FPSET_WAITING = registerCode(7008, TlcCodeType.Ignore);
+export const TLC_DISTRIBUTED_SERVER_FPSET_REGISTERED = registerCode(7009, TlcCodeType.Ignore);
+export const TLC_DISTRIBUTED_SERVER_FINISHED = registerCode(7010, TlcCodeType.Ignore);
 
 // errors during parsing of the model configuration
 
