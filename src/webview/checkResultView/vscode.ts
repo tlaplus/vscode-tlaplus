@@ -55,6 +55,13 @@ class VSCodeWrapper {
         });
     }
 
+    public showErrorMessage(text: string) {
+        vsCodeApi.postMessage({
+            command: 'showErrorMessage',
+            text: text
+        });
+    }
+
     public setState<T extends unknown | undefined>(newState: T) {
         return vsCodeApi.setState(newState);
     }

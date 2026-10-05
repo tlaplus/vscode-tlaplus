@@ -67,4 +67,53 @@ suite('Check Result View Test Suite', () => {
         assert.ok(isCheckResultViewPanelFocused(),
             'Expected editor to lose focus when preserveEditorFocus is disabled');
     });
+
+    test('Shows an error message posted by the webview', async () => {
+        // A fresh module instance has no panel yet, so it builds one from the fake below.
+        const modulePath = require.resolve('../../../src/panels/checkResultView');
+        const cachedModule = require.cache[modulePath];
+        const vscodeWindow = vscode.window as unknown as {
+            createWebviewPanel: () => unknown;
+            showErrorMessage: (message: string) => Thenable<unknown>;
+        };
+        const originalCreateWebviewPanel = vscodeWindow.createWebviewPanel;
+        const originalShowErrorMessage = vscodeWindow.showErrorMessage;
+        let postFromWebview: ((message: unknown) => void) | undefined;
+        const shownErrors: string[] = [];
+        try {
+            delete require.cache[modulePath];
+            const isolated: typeof import('../../../src/panels/checkResultView') = await import(modulePath);
+            vscodeWindow.createWebviewPanel = () => ({
+                webview: {
+                    cspSource: '',
+                    asWebviewUri: (uri: vscode.Uri) => uri,
+                    postMessage: () => Promise.resolve(true),
+                    onDidReceiveMessage: (listener: (message: unknown) => void) => {
+                        postFromWebview = listener;
+                    }
+                },
+                onDidDispose: () => undefined,
+                reveal: () => undefined
+            });
+            vscodeWindow.showErrorMessage = (message) => {
+                shownErrors.push(message);
+                return Promise.resolve(undefined);
+            };
+
+            isolated.revealEmptyCheckResultView({
+                extensionUri: vscode.Uri.file(__dirname)
+            } as vscode.ExtensionContext);
+            assert.ok(postFromWebview, 'Expected the panel to listen for webview messages');
+            postFromWebview({
+                command: 'showErrorMessage',
+                text: 'Failed to copy value: NotAllowedError: Write permission denied.'
+            });
+
+            assert.deepStrictEqual(shownErrors, ['Failed to copy value: NotAllowedError: Write permission denied.']);
+        } finally {
+            vscodeWindow.createWebviewPanel = originalCreateWebviewPanel;
+            vscodeWindow.showErrorMessage = originalShowErrorMessage;
+            require.cache[modulePath] = cachedModule;
+        }
+    });
 });
