@@ -1,4 +1,6 @@
 import * as assert from 'assert';
+import * as fsp from 'fs/promises';
+import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { CheckModuleTool, FileParameter } from '../../../src/lm/TLCTool';
@@ -180,5 +182,73 @@ suite('TLC Tool cancellation handling', () => {
             commonMutable.exists = originalExists;
             tla2toolsMutable.runTlc = originalRunTlc;
         }
+    });
+});
+
+suite('TLC Tool explicit configFileName', () => {
+    let tmpDir: string;
+
+    setup(async () => {
+        tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'tlc-tool-cfg-test-'));
+    });
+
+    teardown(async () => {
+        await fsp.rm(tmpDir, { recursive: true, force: true });
+    });
+
+    async function writeFiles(...names: string[]): Promise<void> {
+        for (const name of names) {
+            await fsp.writeFile(path.join(tmpDir, name), '');
+        }
+    }
+
+    async function captureRunTlcArgs(input: FileParameter): Promise<string[][]> {
+        const outChannel = checkModel.outChannel;
+        const tla2toolsMutable = tla2tools as unknown as {
+            runTlc: typeof tla2tools.runTlc;
+        };
+        const originalBindTo = outChannel.bindTo;
+        const originalRunTlc = tla2toolsMutable.runTlc;
+        const calls: string[][] = [];
+
+        outChannel.bindTo = () => { /* no-op */ };
+        tla2toolsMutable.runTlc = async (tlaFilePath: string, cfgFilePath: string) => {
+            calls.push([tlaFilePath, cfgFilePath]);
+            const mockProcess = new MockProcess();
+            setTimeout(() => mockProcess.emit('close', 0), 0);
+            return new ToolProcessInfo('tlc', mockProcess as unknown as ChildProcess);
+        };
+
+        try {
+            const options = {
+                toolInvocationToken: undefined,
+                input
+            } as unknown as LanguageModelToolInvocationOptions<FileParameter>;
+            await new CheckModuleTool().invoke(options, new vscode.CancellationTokenSource().token);
+            return calls;
+        } finally {
+            outChannel.bindTo = originalBindTo;
+            tla2toolsMutable.runTlc = originalRunTlc;
+        }
+    }
+
+    test('runs TLC with the explicit config when no default config exists', async () => {
+        await writeFiles('Spec.tla', 'Spec_other.cfg');
+        const tlaFile = path.join(tmpDir, 'Spec.tla');
+        const cfgFile = path.join(tmpDir, 'Spec_other.cfg');
+
+        const calls = await captureRunTlcArgs({ fileName: tlaFile, configFileName: cfgFile });
+
+        assert.deepStrictEqual(calls, [[tlaFile, cfgFile]]);
+    });
+
+    test('pairs the explicit config with the given module, not a discovered MC model', async () => {
+        await writeFiles('Spec.tla', 'MCSpec.tla', 'MCSpec.cfg', 'Spec_other.cfg');
+        const tlaFile = path.join(tmpDir, 'Spec.tla');
+        const cfgFile = path.join(tmpDir, 'Spec_other.cfg');
+
+        const calls = await captureRunTlcArgs({ fileName: tlaFile, configFileName: cfgFile });
+
+        assert.deepStrictEqual(calls, [[tlaFile, cfgFile]]);
     });
 });
