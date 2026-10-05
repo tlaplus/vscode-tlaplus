@@ -1,7 +1,7 @@
 import * as assert from 'assert';
 import * as path from 'path';
 import * as fs from 'fs';
-import { DiagnosticSeverity } from 'vscode';
+import { DiagnosticSeverity, window } from 'vscode';
 import { before } from 'mocha';
 import { PassThrough } from 'stream';
 import { ModelCheckResult, CheckState, CheckStatus, ModelCheckResultSource, Value,
@@ -515,6 +515,29 @@ suite('TLC Output Parser Test Suite', () => {
                 .addCoverage('issue_229', 'Next', '/Users/charlie/issue_229.tla', range(117, 0, 117, 4), 951429, 101618)
                 .build()
         );
+    });
+
+    test('Consumes distributed worker stats without an error popup', async () => {
+        const errorPopups: string[] = [];
+        const originalShowErrorMessage = window.showErrorMessage;
+        (window as unknown as { showErrorMessage: (text: string) => Thenable<undefined> }).showErrorMessage =
+            (text) => {
+                errorPopups.push(text);
+                return Promise.resolve(undefined);
+            };
+        try {
+            await assertOutput('distributed-worker-stats.out', TEST_SPEC_FILES,
+                new CheckResultBuilder('distributed-worker-stats.out', CheckState.Success, CheckStatus.Finished)
+                    .setStartDateTime('2019-01-01 01:02:03')
+                    .setEndDateTime('2019-01-01 01:02:05')
+                    .setDuration(2345)
+                    .build()
+            );
+        } finally {
+            (window as unknown as { showErrorMessage: typeof window.showErrorMessage })
+                .showErrorMessage = originalShowErrorMessage;
+        }
+        assert.deepEqual(errorPopups, []);
     });
 });
 
