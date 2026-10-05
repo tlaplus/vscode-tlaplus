@@ -1,0 +1,18 @@
+@!@!@STARTMSG 2185:0 @!@!@
+Starting... (2019-01-01 01:02:03)
+@!@!@ENDMSG 2185 @!@!@
+@!@!@STARTMSG 7000:0 @!@!@
+TLC server at localhost is ready (2019-01-01 01:02:03)
+@!@!@ENDMSG 7000 @!@!@
+@!@!@STARTMSG 7001:0 @!@!@
+Registration for worker at rmi://localhost:10997 completed (2019-01-01 01:02:04)
+@!@!@ENDMSG 7001 @!@!@
+@!@!@STARTMSG 7003:0 @!@!@
+Worker: rmi://localhost:10997 Sent: 4 Rcvd: 4 CacheRatio: n/a (2019-01-01 01:02:05)
+@!@!@ENDMSG 7003 @!@!@
+@!@!@STARTMSG 2193:0 @!@!@
+Model checking completed. No error has been found.
+@!@!@ENDMSG 2193 @!@!@
+@!@!@STARTMSG 2186:0 @!@!@
+Finished in 2345ms at (2019-01-01 01:02:05)
+@!@!@ENDMSG 2186 @!@!@
