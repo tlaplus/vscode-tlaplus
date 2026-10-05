@@ -52,7 +52,7 @@ export class ParseModuleTool implements vscode.LanguageModelTool<FileParameter> 
                 // Loop over the parse failures in messages.messages and create a new LanguageModelTextPart for
                 // each DMessage.
                 return new vscode.LanguageModelToolResult(messages.messages.map((msg) => {
-                    const line = msg.diagnostic.range.start.line;
+                    const line = msg.diagnostic.range.start.line + 1;
                     const textParts = [
                         `Parsing of file ${msg.filePath} failed at line ${line}`,
                         `with error '${msg.diagnostic.message}'`
