@@ -248,6 +248,8 @@ ${traceText}
             revealFile(message.filePath, vscode.ViewColumn.One, message.location.line, message.location.character);
         } else if (message.command === 'showInfoMessage') {
             vscode.window.showInformationMessage(message.text);
+        } else if (message.command === 'showErrorMessage') {
+            vscode.window.showErrorMessage(message.text);
         } else if (message.command === 'showVariableValue') {
             const valStr = this.checkResult ? this.checkResult.formatValue(message.valueId) : undefined;
             if (valStr) {
