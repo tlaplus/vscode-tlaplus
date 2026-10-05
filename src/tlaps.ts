@@ -140,6 +140,7 @@ export class TlapsClient {
     }
 
     private makeDecoratorTypes() {
+        this.proofStateDecorationTypes.forEach(decType => decType.dispose());
         this.proofStateDecorationTypes.clear();
         Object.values(proofStateNames).forEach(name => {
             const color = { 'id': 'tlaplus.tlaps.proofState.' + name };
