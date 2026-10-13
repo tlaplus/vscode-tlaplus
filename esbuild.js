@@ -25,6 +25,18 @@ const extensionConfig = {
     external: ['vscode'],
 };
 
+// The web extension host has no Node built-ins, but main.browser.ts transitively
+// imports them (tlaDeclarations -> path, tlaSymbols -> tla2tools -> fs/os/...).
+// Map path to path-browserify and stub the rest so the extension can activate.
+const nodeShimPlugin = {
+    name: 'node-shim',
+    setup(build) {
+        build.onResolve({ filter: /^path$/ }, () => ({ path: require.resolve('path-browserify') }));
+        build.onResolve({ filter: /^(node:)?(fs|os|child_process|stream)(\/.*)?$/ }, (a) => ({ path: a.path, namespace: 'node-stub' }));
+        build.onLoad({ filter: /.*/, namespace: 'node-stub' }, () => ({ contents: 'module.exports = {};' }));
+    },
+};
+
 // Config for extension source code (to be run in a Web-based context)
 /** @type BuildOptions */
 const extensionBrowserConfig = {
@@ -33,7 +45,12 @@ const extensionBrowserConfig = {
     format: 'cjs',
     entryPoints: ['./src/main.browser.ts'],
     outfile: './out/main.browser.js',
-    external: ['vscode', 'path', 'fs', 'os', 'child_process', 'stream'],
+    external: ['vscode'],
+    plugins: [nodeShimPlugin],
+    banner: {
+        js: "var process = globalThis.process || { platform: 'web', env: {}, cwd: () => '/' };" +
+            "var __dirname = '/';",
+    },
 };
 
 // Config for webview source code (to be run in a web-based context)
@@ -90,7 +107,10 @@ const watchPlugin = (name) => [{
         if (args.includes('--watch')) {
             // Build and watch extension
             (await context({...extensionConfig, plugins: watchPlugin('extensionConfig')})).watch();
-            (await context({...extensionBrowserConfig, plugins: watchPlugin('extensionBrowserConfig')})).watch();
+            (await context({
+                ...extensionBrowserConfig,
+                plugins: [nodeShimPlugin, ...watchPlugin('extensionBrowserConfig')]
+            })).watch();
             (await context({...webviewConfig, plugins: watchPlugin('webviewConfig')})).watch();
             (await context({
                 ...webviewCurrentProofStepConfig,
