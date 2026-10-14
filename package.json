@@ -854,6 +854,7 @@
         "glob": "^8.1.0",
         "mocha": "^10.2.0",
         "node": "^22.0.0",
+        "path-browserify": "^1.0.1",
         "source-map-support": "^0.5.19",
         "typescript": "^5.7.2",
         "vscode-tmgrammar-test": "^0.1.1"
