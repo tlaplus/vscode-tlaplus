@@ -93,6 +93,16 @@ const webviewCoverageConfig = {
     }
 };
 
+/** @type BuildOptions */
+const webviewModelEditorConfig = {
+    ...baseConfig,
+    target: 'es2020',
+    format: 'esm',
+    tsconfig: 'tsconfig.webview.json',
+    entryPoints: ['./src/webview/model-editor.tsx'],
+    outfile: './out/model-editor.js',
+};
+
 const watchPlugin = (name) => [{
     name: 'watch-plugin',
     setup(build) {
@@ -120,6 +130,10 @@ const watchPlugin = (name) => [{
                 ...webviewCoverageConfig,
                 plugins: watchPlugin('webviewCoverageConfig')
             })).watch();
+            (await context({
+                ...webviewModelEditorConfig,
+                plugins: watchPlugin('webviewModelEditorConfig')
+            })).watch();
         } else {
             // Build extension
             await build(extensionConfig);
@@ -127,6 +141,7 @@ const watchPlugin = (name) => [{
             await build(webviewConfig);
             await build(webviewCurrentProofStepConfig);
             await build(webviewCoverageConfig);
+            await build(webviewModelEditorConfig);
             console.log('build complete');
         }
     } catch (err) {
