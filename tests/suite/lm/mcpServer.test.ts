@@ -6,7 +6,7 @@ import * as path from 'path';
 import { ChildProcess } from 'child_process';
 import { EventEmitter } from 'events';
 import * as vscode from 'vscode';
-import { MCPServer } from '../../../src/lm/MCPServer';
+import { MCPServer, advertisedHost } from '../../../src/lm/MCPServer';
 import { McpServer as SdkMcpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import * as checkModel from '../../../src/commands/checkModel';
 import * as common from '../../../src/common';
@@ -222,10 +222,11 @@ suite('MCP Server regressions', () => {
                 const address = httpServer.address();
                 const port = typeof address === 'object' && address !== null ? address.port : address;
                 assert.strictEqual(typeof port, 'number', 'HTTP server should expose a numeric port');
+                const boundHost = typeof address === 'object' && address !== null ? address.address : '127.0.0.1';
 
                 const response = await new Promise<{ statusCode: number | undefined }>((resolve, reject) => {
                     const req = http.request({
-                        hostname: '127.0.0.1',
+                        hostname: boundHost,
                         port: port as number,
                         path: '/mcp',
                         method: 'GET'
@@ -278,10 +279,11 @@ suite('MCP Server regressions', () => {
                 const address = httpServer.address();
                 const port = typeof address === 'object' && address !== null ? address.port : address;
                 assert.strictEqual(typeof port, 'number', 'HTTP server should expose a numeric port');
+                const boundHost = typeof address === 'object' && address !== null ? address.address : '127.0.0.1';
 
                 const makePostRequest = async () => await new Promise<void>((resolve, reject) => {
                     const req = http.request({
-                        hostname: '127.0.0.1',
+                        hostname: boundHost,
                         port: port as number,
                         path: '/mcp',
                         method: 'POST',
@@ -311,6 +313,93 @@ suite('MCP Server regressions', () => {
                 await Promise.allSettled(serverInstances.map(instance => instance.close()));
                 server?.dispose();
                 prototype.getServer = originalGetServer;
+            }
+        });
+
+        test('The HTTP server binds loopback', async function() {
+            const prototype = MCPServer.prototype as unknown as {
+                getServer(): unknown;
+            };
+            const originalGetServer = prototype.getServer;
+
+            const connectCalls: unknown[] = [];
+            prototype.getServer = () => ({
+                async connect(transport: unknown) {
+                    connectCalls.push(transport);
+                }
+            });
+
+            let server: MCPServer | undefined;
+            try {
+                server = new MCPServer(0);
+                const httpServer = (server as unknown as {
+                    mcpServer?: http.Server;
+                }).mcpServer;
+                assert.ok(httpServer, 'MCP HTTP server should be created');
+
+                await new Promise<void>((resolve) => {
+                    httpServer.once('listening', () => resolve());
+                });
+
+                const address = httpServer.address();
+                const host = typeof address === 'object' && address !== null ? address.address : address;
+                assert.ok(host === '127.0.0.1' || host === '::1',
+                    `The MCP server must bind loopback by default, not every interface: ${host}`);
+            } finally {
+                server?.dispose();
+                prototype.getServer = originalGetServer;
+            }
+        });
+
+        test('The HTTP server binds the configured host', async function() {
+            const prototype = MCPServer.prototype as unknown as {
+                getServer(): unknown;
+            };
+            const originalGetServer = prototype.getServer;
+
+            const connectCalls: unknown[] = [];
+            prototype.getServer = () => ({
+                async connect(transport: unknown) {
+                    connectCalls.push(transport);
+                }
+            });
+
+            let server: MCPServer | undefined;
+            try {
+                server = new MCPServer(0, '127.0.0.1');
+                const httpServer = (server as unknown as {
+                    mcpServer?: http.Server;
+                }).mcpServer;
+                assert.ok(httpServer, 'MCP HTTP server should be created');
+
+                await new Promise<void>((resolve) => {
+                    httpServer.once('listening', () => resolve());
+                });
+
+                const address = httpServer.address();
+                const host = typeof address === 'object' && address !== null ? address.address : address;
+                assert.strictEqual(host, '127.0.0.1', 'The MCP server must bind the host it was given');
+            } finally {
+                server?.dispose();
+                prototype.getServer = originalGetServer;
+            }
+        });
+
+        test('The advertised URL host reaches the bound socket', () => {
+            const cases: Array<[string, string, string, string]> = [
+                ['localhost', '::1', 'IPv6', 'localhost'],
+                ['localhost', '127.0.0.1', 'IPv4', 'localhost'],
+                ['tla.example', '192.0.2.7', 'IPv4', 'tla.example'],
+                ['127.0.0.1', '127.0.0.1', 'IPv4', '127.0.0.1'],
+                ['::1', '::1', 'IPv6', '[::1]'],
+                ['0.0.0.0', '0.0.0.0', 'IPv4', '127.0.0.1'],
+                ['::', '::', 'IPv6', '[::1]'],
+                ['192.0.2.7', '192.0.2.7', 'IPv4', '192.0.2.7'],
+                ['2001:db8::7', '2001:db8::7', 'IPv6', '[2001:db8::7]'],
+            ];
+            for (const [configured, address, family, expected] of cases) {
+                assert.strictEqual(advertisedHost(configured, { address, family, port: 1 }), expected,
+                    `advertised host for ${configured} bound to ${address}`);
             }
         });
     });

@@ -277,7 +277,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
     const mcpPort = vscode.workspace.getConfiguration().get<number>('tlaplus.mcp.port');
     if (typeof mcpPort === 'number' && (mcpPort >= 1024 && mcpPort <= 65535 || mcpPort === 0)) {
-        const tlaMcpServer = new MCPServer(mcpPort);
+        const mcpHost = vscode.workspace.getConfiguration().get<string>('tlaplus.mcp.host') || 'localhost';
+        const tlaMcpServer = new MCPServer(mcpPort, mcpHost);
         context.subscriptions.push(tlaMcpServer);
     }
     syncTlcStatisticsSetting()
