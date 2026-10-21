@@ -22,6 +22,17 @@ suite('CheckModel command handling', () => {
     const fixtureCfg = path.join(fixtureDir, 'Spec.cfg');
     const createOutFilesKey = 'tlaplus.tlc.modelChecker.createOutFiles';
     const delay = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
+    // Ends a fake TLC process and waits until the doCheckModel that parses its
+    // output has applied its diagnostics, for tests that cannot await doCheckModel.
+    const endTlc = async (process: EventEmitter & { stdout: PassThrough }) => {
+        const ended = process.stdout.readableEnded
+            ? Promise.resolve()
+            : new Promise<void>(resolve => process.stdout.once('end', () => resolve()));
+        process.stdout.end();
+        process.emit('close', 0, null);
+        await ended;
+        await new Promise(resolve => setImmediate(resolve));
+    };
 
     let originalTla2tools: typeof import('../../../src/tla2tools') | undefined;
     let originalParseModule: typeof import('../../../src/commands/parseModule') | undefined;
@@ -520,6 +531,90 @@ suite('CheckModel command handling', () => {
         }
     });
 
+    for (const [noDebug, name] of [
+        [false, 'Start Debugging checks the active spec with the TLC debugger'],
+        [true, 'Run Without Debugging checks the active spec without the TLC debugger']
+    ] as const) {
+        test(name, async function() {
+            this.timeout(5000);
+            originalTla2tools = await import(tla2toolsPath);
+            originalParseModule = await import(parseModulePath);
+            originalCheckResultView = await import(checkResultViewPath);
+
+            // Keep the check result view closed.
+            require.cache[checkResultViewPath] = makeCacheEntry(checkResultViewPath, {
+                ...originalCheckResultView,
+                revealEmptyCheckResultView: () => undefined,
+                updateCheckResultView: () => undefined
+            });
+
+            class FakeProcess extends EventEmitter {
+                stdout = new PassThrough();
+                stderr = new PassThrough();
+            }
+
+            // Record the options of the TLC process, which runs until the test ends it.
+            let running: FakeProcess | undefined;
+            let tlcOptions: string[] | undefined;
+            let onSpawn: () => void = () => undefined;
+            const spawned = new Promise<void>(resolve => { onSpawn = resolve; });
+            const stubbedTla2tools = {
+                ...originalTla2tools,
+                runTlc: async (_tla: string, _cfg: string, _prompt: boolean, extraOpts: string[] = []) => {
+                    running = new FakeProcess();
+                    tlcOptions = extraOpts;
+                    onSpawn();
+                    return {
+                        commandLine: 'tlc',
+                        process: running as unknown as import('child_process').ChildProcess,
+                        mergedOutput: new PassThrough()
+                    };
+                }
+            } as typeof import('../../../src/tla2tools');
+            require.cache[tla2toolsPath] = makeCacheEntry(tla2toolsPath, stubbedTla2tools);
+
+            // Skip SANY, which is not under test.
+            const stubbedParseModule = {
+                ...originalParseModule,
+                parseSpec: async () => new SanyData(),
+            } as typeof import('../../../src/commands/parseModule');
+            require.cache[parseModulePath] = makeCacheEntry(parseModulePath, stubbedParseModule);
+
+            // Ignore context updates.
+            originalExecuteCommand = vscode.commands.executeCommand;
+            (vscode.commands as unknown as { executeCommand: typeof vscode.commands.executeCommand })
+                .executeCommand = <T>(): Thenable<T> => Promise.resolve(undefined as unknown as T);
+
+            // Keep the fake output out of the TLC output channel.
+            const { outChannel } = await import(checkModelPath);
+            const { TLADebugConfigurationProvider } = await import(debuggingPath);
+            const originalBindTo = outChannel.bindTo;
+            outChannel.bindTo = () => undefined;
+
+            const ctx = {} as vscode.ExtensionContext;
+            const diagnostics = vscode.languages.createDiagnosticCollection('start-debugging-test');
+
+            try {
+                // Press F5, or Ctrl+F5, without a launch.json while Spec.tla is open.
+                await vscode.window.showTextDocument(vscode.Uri.file(fixtureSpec));
+                const provider = new TLADebugConfigurationProvider(diagnostics, ctx);
+                const config = { type: '', name: '', request: '', ...(noDebug ? { noDebug: true } : {}) };
+                const result = provider.resolveDebugConfiguration(undefined, config);
+                assert.strictEqual(result, undefined, 'VS Code must not start a session of its own');
+                await Promise.race([spawned, delay(2000)]);
+                assert.ok(tlcOptions, 'TLC must run');
+                assert.strictEqual(tlcOptions.includes('-debugger'), !noDebug);
+            } finally {
+                if (running) {
+                    await endTlc(running);
+                }
+                outChannel.bindTo = originalBindTo;
+                diagnostics.dispose();
+                await originalExecuteCommand?.call(vscode.commands, 'workbench.action.closeAllEditors');
+            }
+        });
+    }
+
     test('restarts a smoke test once its previous TLC process has exited', async function() {
         this.timeout(5000);
         originalTla2tools = await import(tla2toolsPath);
@@ -606,7 +701,7 @@ suite('CheckModel command handling', () => {
             );
         } finally {
             for (const process of spawned) {
-                exit(process);
+                await endTlc(process);
             }
             outChannel.bindTo = originalBindTo;
             diagnostics.dispose();
