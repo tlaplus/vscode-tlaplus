@@ -487,7 +487,12 @@
                 {
                     "command": "tlaplus.model.check.run",
                     "when": "resourceLangId == tlaplus || resourceLangId == tlaplus_cfg",
-                    "group": "z_commands"
+                    "group": "z_commands@10"
+                },
+                {
+                    "command": "tlaplus.debugger.run",
+                    "when": "resourceLangId == tlaplus || resourceLangId == tlaplus_cfg",
+                    "group": "z_commands@20"
                 }
             ],
             "editor/context": [
