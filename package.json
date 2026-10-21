@@ -322,6 +322,7 @@
             {
                 "command": "tlaplus.model.check.run",
                 "title": "Check model with TLC",
+                "icon": "$(play)",
                 "category": "TLA+"
             },
             {
@@ -513,9 +514,14 @@
             ],
             "editor/title": [
                 {
+                    "command": "tlaplus.model.check.run",
+                    "when": "resourceLangId == tlaplus || resourceLangId == tlaplus_cfg",
+                    "group": "navigation@1"
+                },
+                {
                     "command": "tlaplus.debugger.run",
-                    "when": "resourceLangId == tlaplus || editorLangId == tlaplus_cfg",
-                    "group": "1_run@20"
+                    "when": "resourceLangId == tlaplus || resourceLangId == tlaplus_cfg",
+                    "group": "navigation@2"
                 },
                 {
                     "command": "tlaplus.tlc.profiler.toggle",
