@@ -2,7 +2,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { exists, replaceExtension } from '../common';
 import {
-    doCheckModel, getSpecFiles, isModelCheckingActive, stopModelChecking
+    checkModel, doCheckModel, getSpecFiles, isModelCheckingActive, stopModelChecking
 } from '../commands/checkModel';
 import { SpecFiles } from '../model/check';
 import { extractFingerprintFromTrace, findLatestTraceFile } from '../tla2tools';
@@ -24,6 +24,40 @@ export class TLADebugAdapterServerDescriptorFactory implements vscode.DebugAdapt
     createDebugAdapterDescriptor(session: vscode.DebugSession, executable: vscode.DebugAdapterExecutable | undefined):
         vscode.ProviderResult<vscode.DebugAdapterDescriptor> {
         return new vscode.DebugAdapterServer(session.configuration['port']);
+    }
+}
+
+/**
+ * Makes Run > Start Debugging (F5) check and debug the spec in the active editor, and
+ * Run > Run Without Debugging (Ctrl+F5) check it.
+ */
+export class TLADebugConfigurationProvider implements vscode.DebugConfigurationProvider {
+
+    constructor(
+        private readonly diagnostic: vscode.DiagnosticCollection,
+        private readonly context: vscode.ExtensionContext
+    ) {}
+
+    resolveDebugConfiguration(
+        folder: vscode.WorkspaceFolder | undefined,
+        config: vscode.DebugConfiguration
+    ): vscode.ProviderResult<vscode.DebugConfiguration> {
+        // Sessions started by checkAndDebugSpec or from a launch.json attach config carry a port.
+        if (config.port) {
+            return config;
+        }
+        const document = vscode.window.activeTextEditor?.document;
+        if (!document || (document.languageId !== 'tlaplus' && document.languageId !== 'tlaplus_cfg')) {
+            vscode.window.showWarningMessage('Open a TLA+ specification or model to debug it.');
+            return undefined;
+        }
+        if (config.noDebug) {
+            checkModel(document.uri, this.diagnostic, this.context);
+        } else {
+            checkAndDebugSpec(document.uri, this.diagnostic, this.context);
+        }
+        // Returning undefined (unlike null) aborts the launch without opening launch.json.
+        return undefined;
     }
 }
 

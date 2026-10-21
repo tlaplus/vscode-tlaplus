@@ -2,7 +2,9 @@ import * as assert from 'assert';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
+import * as vscode from 'vscode';
 import { findLatestTraceFile, extractFingerprintFromTrace } from '../../../src/tla2tools';
+import { TLADebugConfigurationProvider } from '../../../src/debugger/debugging';
 
 suite('Debugging Test Suite', () => {
     let testDir: string;
@@ -17,6 +19,41 @@ suite('Debugging Test Suite', () => {
         if (fs.existsSync(testDir)) {
             fs.rmSync(testDir, { recursive: true, force: true });
         }
+    });
+
+    suite('TLADebugConfigurationProvider', () => {
+        let diagnostic: vscode.DiagnosticCollection;
+        let provider: TLADebugConfigurationProvider;
+
+        setup(async () => {
+            await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+            diagnostic = vscode.languages.createDiagnosticCollection('tlaplus-debug-test');
+            provider = new TLADebugConfigurationProvider(diagnostic, {} as vscode.ExtensionContext);
+        });
+
+        teardown(() => {
+            diagnostic.dispose();
+        });
+
+        test('Passes through configurations that carry a port', () => {
+            const config = { type: 'tlaplus', name: 'Debug Spec', request: 'launch', port: 4712 };
+            const result = provider.resolveDebugConfiguration(undefined, config);
+            assert.strictEqual(result, config);
+        });
+
+        test('Aborts the launch when no TLA+ editor is active', () => {
+            const result = provider.resolveDebugConfiguration(
+                undefined, { type: '', name: '', request: '' });
+            assert.strictEqual(result, undefined);
+        });
+
+        test('Aborts the launch when the active editor is not TLA+', async () => {
+            const doc = await vscode.workspace.openTextDocument({ language: 'plaintext', content: 'x' });
+            await vscode.window.showTextDocument(doc);
+            const result = provider.resolveDebugConfiguration(
+                undefined, { type: '', name: '', request: '' });
+            assert.strictEqual(result, undefined);
+        });
     });
 
     suite('findLatestTraceFile', () => {

@@ -57,7 +57,11 @@
         "debuggers": [
             {
                 "type": "tlaplus",
-                "label": "TLA+ Debug"
+                "label": "TLA+ Debug",
+                "languages": [
+                    "tlaplus",
+                    "tlaplus_cfg"
+                ]
             }
         ],
         "breakpoints": [
