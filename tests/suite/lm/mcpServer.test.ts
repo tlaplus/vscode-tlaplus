@@ -1,12 +1,14 @@
 import * as assert from 'assert';
 import * as fs from 'fs';
 import * as http from 'http';
+import * as net from 'net';
 import * as os from 'os';
+import osModule from 'os';
 import * as path from 'path';
 import { ChildProcess } from 'child_process';
 import { EventEmitter } from 'events';
 import * as vscode from 'vscode';
-import { MCPServer } from '../../../src/lm/MCPServer';
+import { MCPServer, advertisedHost, bindHost, hasIPv4Loopback } from '../../../src/lm/MCPServer';
 import { McpServer as SdkMcpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import * as checkModel from '../../../src/commands/checkModel';
 import * as common from '../../../src/common';
@@ -222,10 +224,11 @@ suite('MCP Server regressions', () => {
                 const address = httpServer.address();
                 const port = typeof address === 'object' && address !== null ? address.port : address;
                 assert.strictEqual(typeof port, 'number', 'HTTP server should expose a numeric port');
+                const boundHost = typeof address === 'object' && address !== null ? address.address : '127.0.0.1';
 
                 const response = await new Promise<{ statusCode: number | undefined }>((resolve, reject) => {
                     const req = http.request({
-                        hostname: '127.0.0.1',
+                        hostname: boundHost,
                         port: port as number,
                         path: '/mcp',
                         method: 'GET'
@@ -278,10 +281,11 @@ suite('MCP Server regressions', () => {
                 const address = httpServer.address();
                 const port = typeof address === 'object' && address !== null ? address.port : address;
                 assert.strictEqual(typeof port, 'number', 'HTTP server should expose a numeric port');
+                const boundHost = typeof address === 'object' && address !== null ? address.address : '127.0.0.1';
 
                 const makePostRequest = async () => await new Promise<void>((resolve, reject) => {
                     const req = http.request({
-                        hostname: '127.0.0.1',
+                        hostname: boundHost,
                         port: port as number,
                         path: '/mcp',
                         method: 'POST',
@@ -312,6 +316,494 @@ suite('MCP Server regressions', () => {
                 server?.dispose();
                 prototype.getServer = originalGetServer;
             }
+        });
+    });
+
+    suite('Bind address', () => {
+        const ipv6Loopback = {
+            address: '::1', netmask: 'ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff', family: 'IPv6' as const,
+            mac: '00:00:00:00:00:00', internal: true, cidr: '::1/128', scopeid: 0,
+        };
+        const ipv4Loopback = {
+            address: '127.0.0.1', netmask: '255.0.0.0', family: 'IPv4' as const,
+            mac: '00:00:00:00:00:00', internal: true, cidr: '127.0.0.1/8',
+        };
+        const ipv4Outside = {
+            address: '192.0.2.5', netmask: '255.255.255.0', family: 'IPv4' as const,
+            mac: '02:00:00:00:00:01', internal: false, cidr: '192.0.2.5/24',
+        };
+        const hasLoopbackIPv6 = () => Object.values(os.networkInterfaces())
+            .flatMap((addresses) => addresses ?? [])
+            .some((address) => address.internal && address.address === '::1');
+
+        test('The HTTP server binds loopback', async function() {
+            let server: MCPServer | undefined;
+            try {
+                server = new MCPServer(0);
+                const httpServer = (server as unknown as {
+                    mcpServer?: http.Server;
+                }).mcpServer;
+                assert.ok(httpServer, 'MCP HTTP server should be created');
+
+                await new Promise<void>((resolve, reject) => {
+                    httpServer.once('listening', () => resolve()).once('error', reject);
+                });
+
+                const address = httpServer.address();
+                const host = typeof address === 'object' && address !== null ? address.address : address;
+                assert.ok(host === '127.0.0.1' || host === '::1',
+                    `The MCP server must bind loopback by default, not every interface: ${host}`);
+            } finally {
+                server?.dispose();
+            }
+        });
+
+        test('The HTTP server binds the name localhost by default', async function() {
+            // The name, not an address of one family, must reach the bind. With no IPv4 on loopback it becomes ::1.
+            if (!hasIPv4Loopback()) {
+                this.skip();
+            }
+            const prototype = net.Server.prototype as unknown as { listen: (...args: unknown[]) => net.Server };
+            const originalListen = prototype.listen;
+            const calls: Array<{ server: net.Server; host: unknown }> = [];
+            let server: MCPServer | undefined;
+            try {
+                prototype.listen = function(this: net.Server, ...args: unknown[]) {
+                    calls.push({ server: this, host: args[1] });
+                    return originalListen.apply(this, args);
+                };
+                server = new MCPServer(0);
+                const httpServer = (server as unknown as { mcpServer?: http.Server }).mcpServer;
+                assert.ok(httpServer, 'MCP HTTP server should be created');
+                await new Promise<void>((resolve, reject) => {
+                    httpServer.once('listening', () => resolve()).once('error', reject);
+                });
+                assert.deepStrictEqual(calls.filter((call) => call.server === httpServer).map((call) => call.host),
+                    ['localhost'], 'The default must reach the bind as the name localhost, not as 127.0.0.1');
+            } finally {
+                prototype.listen = originalListen;
+                server?.dispose();
+            }
+        });
+
+        test('The HTTP server binds the host of the setting', async function() {
+            // ::1, because the extension host resolves names IPv4 first, so localhost binds 127.0.0.1 there.
+            if (!hasLoopbackIPv6()) {
+                this.skip();
+            }
+            type Provider = { provideMcpServerDefinitions(token: unknown): Array<{ uri: vscode.Uri }> };
+            const lm = vscode.lm as unknown as {
+                registerMcpServerDefinitionProvider: (id: string, provider: Provider) => vscode.Disposable;
+            };
+            const originalRegister = lm.registerMcpServerDefinitionProvider;
+            const registered = new Promise<Provider>((resolve) => {
+                lm.registerMcpServerDefinitionProvider = (_id: string, provider: Provider) => {
+                    resolve(provider);
+                    return { dispose: () => undefined };
+                };
+            });
+            const config = vscode.workspace.getConfiguration();
+            let server: MCPServer | undefined;
+            try {
+                await config.update('tlaplus.mcp.host', '::1', vscode.ConfigurationTarget.Global);
+                server = new MCPServer(0);
+                const httpServer = (server as unknown as {
+                    mcpServer?: http.Server;
+                }).mcpServer;
+                assert.ok(httpServer, 'MCP HTTP server should be created');
+                const provider = await Promise.race([
+                    registered,
+                    new Promise<never>((_resolve, reject) => httpServer.once('error', reject)),
+                ]);
+
+                const address = httpServer.address();
+                const host = typeof address === 'object' && address !== null ? address.address : address;
+                assert.strictEqual(host, '::1', 'The MCP server must bind the host of tlaplus.mcp.host');
+                // Also where loopback has IPv4, the URL must name the bound address, not a name.
+                const url = provider.provideMcpServerDefinitions(undefined)[0].uri.toString(true);
+                assert.strictEqual(new URL(url).hostname, '[::1]', `${url} must name [::1]`);
+                const statusCode = await new Promise<number | undefined>((resolve, reject) => {
+                    http.get(url, res => {
+                        res.resume();
+                        res.on('end', () => resolve(res.statusCode));
+                    }).on('error', reject);
+                });
+                assert.strictEqual(statusCode, 405, `GET ${url} must reach the server`);
+            } finally {
+                server?.dispose();
+                lm.registerMcpServerDefinitionProvider = originalRegister;
+                await config.update('tlaplus.mcp.host', undefined, vscode.ConfigurationTarget.Global);
+            }
+        });
+
+        test('A host outside loopback is kept', () => {
+            // The setting may put the server on one interface or on every one, on purpose. No port is opened here.
+            assert.strictEqual(bindHost('0.0.0.0', true), '0.0.0.0');
+            assert.strictEqual(bindHost('192.0.2.7', true), '192.0.2.7');
+        });
+
+        test('A failed bind reports the error', async function() {
+            const vscodeWindow = vscode.window as unknown as {
+                showErrorMessage: (message: string) => Thenable<undefined>;
+            };
+            const originalShowErrorMessage = vscodeWindow.showErrorMessage;
+            const reported: string[] = [];
+            vscodeWindow.showErrorMessage = (message: string) => {
+                reported.push(message);
+                return Promise.resolve(undefined);
+            };
+
+            const lm = vscode.lm as unknown as {
+                registerMcpServerDefinitionProvider: (id: string, provider: unknown) => vscode.Disposable;
+            };
+            const originalRegister = lm.registerMcpServerDefinitionProvider;
+            const registered: string[] = [];
+            lm.registerMcpServerDefinitionProvider = (id: string) => {
+                registered.push(id);
+                return { dispose: () => undefined };
+            };
+
+            // Another server holds the port on the loopback address that the default gives, so the bind fails.
+            // 192.0.2.1 is an address for documentation, which the machine does not have, so that bind fails too.
+            const holder = http.createServer();
+            try {
+                await new Promise<void>((resolve, reject) => {
+                    holder.once('error', reject).listen(0, bindHost(undefined), () => resolve());
+                });
+                const address = holder.address();
+                assert.ok(typeof address === 'object' && address !== null, 'The holder should bind a port');
+                const failures: Array<[number, string, string]> = [
+                    [address.port, address.address, 'EADDRINUSE'],
+                    [0, '192.0.2.1', 'EADDRNOTAVAIL'],
+                ];
+                for (const [port, host, code] of failures) {
+                    reported.length = 0;
+                    const server = new MCPServer(port, host);
+                    try {
+                        const httpServer = (server as unknown as { mcpServer?: http.Server }).mcpServer;
+                        assert.ok(httpServer, 'MCP HTTP server should be created');
+                        // The error listeners run in order, so the error is reported before this one runs.
+                        await new Promise<void>((resolve, reject) => {
+                            httpServer.once('error', () => resolve())
+                                .once('listening', () => reject(new Error(`The bind to ${host} should fail`)));
+                        });
+                        assert.strictEqual(reported.length, 1, `The failed bind to ${host} should be reported once`);
+                        assert.ok(reported[0].startsWith('Failed to start TLA+ MCP server'), reported[0]);
+                        assert.ok(reported[0].includes(code), reported[0]);
+                    } finally {
+                        server.dispose();
+                    }
+                }
+                assert.deepStrictEqual(registered, [], 'A server that did not bind must not register a URL');
+            } finally {
+                holder.close();
+                vscodeWindow.showErrorMessage = originalShowErrorMessage;
+                lm.registerMcpServerDefinitionProvider = originalRegister;
+            }
+        });
+
+        test('A host that is not a non-empty string binds loopback', async function() {
+            // A setting can hold any JSON value, and VS Code returns it raw. Node binds every interface for a host that
+            // is not a string, or is empty. Such a value must give the default host.
+            const prototype = net.Server.prototype as unknown as { listen: (...args: unknown[]) => net.Server };
+            const originalListen = prototype.listen;
+            const calls: Array<{ server: net.Server; host: unknown }> = [];
+            try {
+                prototype.listen = function(this: net.Server, ...args: unknown[]) {
+                    calls.push({ server: this, host: args[1] });
+                    return originalListen.apply(this, args);
+                };
+                for (const value of [8080, true, { a: 1 }, ['127.0.0.1'], '']) {
+                    await vscode.workspace.getConfiguration()
+                        .update('tlaplus.mcp.host', value, vscode.ConfigurationTarget.Global);
+                    // The default binds loopback too, so a setting that missed the value would pass.
+                    assert.strictEqual(JSON.stringify(vscode.workspace.getConfiguration().get('tlaplus.mcp.host')),
+                        JSON.stringify(value), 'tlaplus.mcp.host should hold the value written');
+                    const server = new MCPServer(0);
+                    try {
+                        const httpServer = (server as unknown as { mcpServer?: http.Server }).mcpServer;
+                        assert.ok(httpServer, 'MCP HTTP server should be created');
+                        await new Promise<void>((resolve, reject) => {
+                            httpServer.once('listening', () => resolve()).once('error', reject);
+                        });
+                        const hosts = calls.filter((call) => call.server === httpServer).map((call) => call.host);
+                        assert.deepStrictEqual(hosts, [bindHost(undefined)],
+                            `The setting ${JSON.stringify(value)} must bind the default host`);
+                        const address = httpServer.address();
+                        const host = typeof address === 'object' && address !== null ? address.address : address;
+                        assert.ok(host === '127.0.0.1' || host === '::1',
+                            `The setting ${JSON.stringify(value)} must bind loopback, not ${host}`);
+                    } finally {
+                        server.dispose();
+                    }
+                }
+            } finally {
+                prototype.listen = originalListen;
+                await vscode.workspace.getConfiguration()
+                    .update('tlaplus.mcp.host', undefined, vscode.ConfigurationTarget.Global);
+            }
+        });
+
+        test('The URL registered with VS Code reaches the server', async function() {
+            type Provider = { provideMcpServerDefinitions(token: unknown): Array<{ uri: vscode.Uri }> };
+            const lm = vscode.lm as unknown as {
+                registerMcpServerDefinitionProvider: (id: string, provider: Provider) => vscode.Disposable;
+            };
+            const originalRegister = lm.registerMcpServerDefinitionProvider;
+            const registered = new Promise<Provider>((resolve) => {
+                lm.registerMcpServerDefinitionProvider = (_id: string, provider: Provider) => {
+                    resolve(provider);
+                    return { dispose: () => undefined };
+                };
+            });
+
+            let server: MCPServer | undefined;
+            try {
+                server = new MCPServer(0);
+                const httpServer = (server as unknown as { mcpServer?: http.Server }).mcpServer;
+                assert.ok(httpServer, 'MCP HTTP server should be created');
+                const provider = await Promise.race([
+                    registered,
+                    new Promise<never>((_resolve, reject) => httpServer.once('error', reject)),
+                ]);
+                const definitions = provider.provideMcpServerDefinitions(undefined);
+                assert.strictEqual(definitions.length, 1, 'One server definition should be registered');
+                const url = definitions[0].uri.toString(true);
+                const bound = httpServer.address();
+                assert.ok(typeof bound === 'object' && bound !== null, 'The HTTP server should be bound');
+                assert.strictEqual(new URL(url).hostname.replace(/^\[(.*)\]$/, '$1'), bound.address,
+                    `${url} must name the bound address`);
+                const statusCode = await new Promise<number | undefined>((resolve, reject) => {
+                    http.get(url, res => {
+                        res.resume();
+                        res.on('end', () => resolve(res.statusCode));
+                    }).on('error', reject);
+                });
+                assert.strictEqual(statusCode, 405, `GET ${url} must reach the server`);
+            } finally {
+                server?.dispose();
+                lm.registerMcpServerDefinitionProvider = originalRegister;
+            }
+        });
+
+        test('With no IPv4 on loopback, the server binds ::1 and registers [::1]', async function() {
+            // The interface list says loopback has ::1 alone. The server must bind ::1 and advertise [::1].
+            if (!hasLoopbackIPv6()) {
+                this.skip();
+            }
+            type Provider = { provideMcpServerDefinitions(token: unknown): Array<{ uri: vscode.Uri }> };
+            const lm = vscode.lm as unknown as {
+                registerMcpServerDefinitionProvider: (id: string, provider: Provider) => vscode.Disposable;
+            };
+            const originalRegister = lm.registerMcpServerDefinitionProvider;
+            const registered = new Promise<Provider>((resolve) => {
+                lm.registerMcpServerDefinitionProvider = (_id: string, provider: Provider) => {
+                    resolve(provider);
+                    return { dispose: () => undefined };
+                };
+            });
+            const nodeOs = osModule as unknown as { networkInterfaces: () => NodeJS.Dict<os.NetworkInterfaceInfo[]> };
+            const originalInterfaces = nodeOs.networkInterfaces;
+
+            let server: MCPServer | undefined;
+            try {
+                nodeOs.networkInterfaces = () => ({ lo: [ipv6Loopback] });
+                server = new MCPServer(0);
+                const httpServer = (server as unknown as { mcpServer?: http.Server }).mcpServer;
+                assert.ok(httpServer, 'MCP HTTP server should be created');
+                const provider = await Promise.race([
+                    registered,
+                    new Promise<never>((_resolve, reject) => httpServer.once('error', reject)),
+                ]);
+                const bound = httpServer.address();
+                assert.ok(typeof bound === 'object' && bound !== null, 'The HTTP server should be bound');
+                assert.strictEqual(bound.address, '::1', 'With no IPv4 on loopback, localhost must bind ::1');
+                const url = provider.provideMcpServerDefinitions(undefined)[0].uri.toString(true);
+                assert.strictEqual(new URL(url).hostname, '[::1]', `${url} must name [::1]`);
+                const statusCode = await new Promise<number | undefined>((resolve, reject) => {
+                    http.get(url, res => {
+                        res.resume();
+                        res.on('end', () => resolve(res.statusCode));
+                    }).on('error', reject);
+                });
+                assert.strictEqual(statusCode, 405, `GET ${url} must reach the server`);
+            } finally {
+                nodeOs.networkInterfaces = originalInterfaces;
+                server?.dispose();
+                lm.registerMcpServerDefinitionProvider = originalRegister;
+            }
+        });
+
+        test('The URL of a bind to :: names 127.0.0.1 where loopback has IPv4', async function() {
+            // A bind to :: would put the server on the network. So the server binds 127.0.0.1, and the code that
+            // builds the URL is told that the bound address is ::.
+            if (!hasIPv4Loopback()) {
+                this.skip();
+            }
+            type Provider = { provideMcpServerDefinitions(token: unknown): Array<{ uri: vscode.Uri }> };
+            const lm = vscode.lm as unknown as {
+                registerMcpServerDefinitionProvider: (id: string, provider: Provider) => vscode.Disposable;
+            };
+            const originalRegister = lm.registerMcpServerDefinitionProvider;
+            const registered = new Promise<Provider>((resolve) => {
+                lm.registerMcpServerDefinitionProvider = (_id: string, provider: Provider) => {
+                    resolve(provider);
+                    return { dispose: () => undefined };
+                };
+            });
+
+            let server: MCPServer | undefined;
+            try {
+                server = new MCPServer(0, '127.0.0.1');
+                const httpServer = (server as unknown as { mcpServer?: http.Server }).mcpServer;
+                assert.ok(httpServer, 'MCP HTTP server should be created');
+                const boundAddress = httpServer.address.bind(httpServer);
+                httpServer.address = () => {
+                    const bound = boundAddress();
+                    return typeof bound === 'object' && bound !== null
+                        ? { ...bound, address: '::', family: 'IPv6' } : bound;
+                };
+                const provider = await Promise.race([
+                    registered,
+                    new Promise<never>((_resolve, reject) => httpServer.once('error', reject)),
+                ]);
+                const url = provider.provideMcpServerDefinitions(undefined)[0].uri.toString(true);
+                assert.strictEqual(new URL(url).hostname, '127.0.0.1', `${url} must name 127.0.0.1`);
+                const statusCode = await new Promise<number | undefined>((resolve, reject) => {
+                    http.get(url, res => {
+                        res.resume();
+                        res.on('end', () => resolve(res.statusCode));
+                    }).on('error', reject);
+                });
+                assert.strictEqual(statusCode, 405, `GET ${url} must reach the server`);
+            } finally {
+                server?.dispose();
+                lm.registerMcpServerDefinitionProvider = originalRegister;
+            }
+        });
+
+        test('The URL of a bind to :: names [::1] where loopback has no IPv4', async function() {
+            // The interface list says loopback has ::1 alone. The server binds ::1, and the code that builds the URL
+            // is told that the bound address is ::.
+            if (!hasLoopbackIPv6()) {
+                this.skip();
+            }
+            type Provider = { provideMcpServerDefinitions(token: unknown): Array<{ uri: vscode.Uri }> };
+            const lm = vscode.lm as unknown as {
+                registerMcpServerDefinitionProvider: (id: string, provider: Provider) => vscode.Disposable;
+            };
+            const originalRegister = lm.registerMcpServerDefinitionProvider;
+            const registered = new Promise<Provider>((resolve) => {
+                lm.registerMcpServerDefinitionProvider = (_id: string, provider: Provider) => {
+                    resolve(provider);
+                    return { dispose: () => undefined };
+                };
+            });
+            const nodeOs = osModule as unknown as { networkInterfaces: () => NodeJS.Dict<os.NetworkInterfaceInfo[]> };
+            const originalInterfaces = nodeOs.networkInterfaces;
+
+            let server: MCPServer | undefined;
+            try {
+                nodeOs.networkInterfaces = () => ({ lo: [ipv6Loopback] });
+                server = new MCPServer(0, '::1');
+                const httpServer = (server as unknown as { mcpServer?: http.Server }).mcpServer;
+                assert.ok(httpServer, 'MCP HTTP server should be created');
+                const boundAddress = httpServer.address.bind(httpServer);
+                httpServer.address = () => {
+                    const bound = boundAddress();
+                    return typeof bound === 'object' && bound !== null
+                        ? { ...bound, address: '::', family: 'IPv6' } : bound;
+                };
+                const provider = await Promise.race([
+                    registered,
+                    new Promise<never>((_resolve, reject) => httpServer.once('error', reject)),
+                ]);
+                const url = provider.provideMcpServerDefinitions(undefined)[0].uri.toString(true);
+                assert.strictEqual(new URL(url).hostname, '[::1]', `${url} must name [::1]`);
+                const statusCode = await new Promise<number | undefined>((resolve, reject) => {
+                    http.get(url, res => {
+                        res.resume();
+                        res.on('end', () => resolve(res.statusCode));
+                    }).on('error', reject);
+                });
+                assert.strictEqual(statusCode, 405, `GET ${url} must reach the server`);
+            } finally {
+                nodeOs.networkInterfaces = originalInterfaces;
+                server?.dispose();
+                lm.registerMcpServerDefinitionProvider = originalRegister;
+            }
+        });
+
+        test('The host setting defaults to localhost', () => {
+            const extension = vscode.extensions.getExtension('tlaplus.vscode-ide');
+            assert.ok(extension, 'The extension under test should be installed');
+            const setting = extension.packageJSON.contributes.configuration.properties['tlaplus.mcp.host'];
+            assert.ok(setting, 'package.json should declare tlaplus.mcp.host');
+            assert.strictEqual(setting.default, 'localhost');
+        });
+
+        test('Only user or remote settings can set the host', () => {
+            const extension = vscode.extensions.getExtension('tlaplus.vscode-ide');
+            assert.ok(extension, 'The extension under test should be installed');
+            const setting = extension.packageJSON.contributes.configuration.properties['tlaplus.mcp.host'];
+            assert.ok(setting, 'package.json should declare tlaplus.mcp.host');
+            assert.strictEqual(setting.scope, 'machine', 'A workspace must not change the bind address');
+            // VS Code drops a machine setting from the settings of a workspace or folder, with no hint at run time.
+            const instruction = 'Set it in the user settings of a local window, or in the remote settings of a remote '
+                + 'window: VS Code ignores a value in the settings of a workspace or folder, such as '
+                + '`.vscode/settings.json`.';
+            assert.ok(String(setting.markdownDescription).includes(instruction),
+                'The description must say where the value has to go');
+        });
+
+        test('The advertised URL names the bound address, or loopback for a wildcard bind', () => {
+            const cases: Array<[string, string, string]> = [
+                ['127.0.0.1', 'IPv4', '127.0.0.1'],
+                ['::1', 'IPv6', '[::1]'],
+                ['0.0.0.0', 'IPv4', '127.0.0.1'],
+                ['::', 'IPv6', '127.0.0.1'],
+                ['192.0.2.7', 'IPv4', '192.0.2.7'],
+                ['2001:db8::7', 'IPv6', '[2001:db8::7]'],
+            ];
+            // On a loopback with IPv4, as on most machines.
+            for (const [address, family, expected] of cases) {
+                assert.strictEqual(advertisedHost({ address, family, port: 1 }, true), expected,
+                    `advertised host for a bind to ${address}`);
+            }
+        });
+
+        test('Only the loopback decides whether it has IPv4', () => {
+            assert.strictEqual(hasIPv4Loopback(() => ({ lo: [ipv6Loopback] })), false);
+            assert.strictEqual(hasIPv4Loopback(() => ({ lo: [ipv4Loopback] })), true, 'A loopback with IPv4 alone');
+            assert.strictEqual(hasIPv4Loopback(() => ({ lo: [ipv6Loopback], eth0: [ipv4Outside] })), false,
+                'An IPv4 address outside loopback does not count');
+            assert.strictEqual(hasIPv4Loopback(() => ({ lo0: [ipv6Loopback, ipv4Loopback] })), true,
+                'The loopback counts whatever its name');
+            assert.strictEqual(hasIPv4Loopback(() => ({ lo0: [ipv6Loopback] })), false,
+                'A loopback with no IPv4 counts whatever its name');
+            assert.strictEqual(hasIPv4Loopback(() => ({})), true, 'A machine that lists no loopback keeps localhost');
+            assert.strictEqual(hasIPv4Loopback(() => ({ eth0: [ipv4Outside] })), true,
+                'Only the loopback is read: an IPv4 address outside it is no loopback');
+        });
+
+        test('localhost becomes ::1 when loopback has no IPv4', () => {
+            assert.strictEqual(bindHost(undefined, false), '::1');
+            assert.strictEqual(bindHost('localhost', false), '::1');
+            assert.strictEqual(bindHost('LocalHost.', false), '::1');
+            assert.strictEqual(bindHost('127.0.0.1', false), '127.0.0.1', 'An explicit address is kept');
+            assert.strictEqual(bindHost(undefined, true), 'localhost');
+        });
+
+        test('A bind to :: is advertised as [::1] when loopback has no IPv4', () => {
+            assert.strictEqual(advertisedHost({ address: '::', family: 'IPv6', port: 1 }, false), '[::1]');
+        });
+
+        test('An interface list that cannot be read keeps localhost', () => {
+            const unreadable = (): NodeJS.Dict<os.NetworkInterfaceInfo[]> => {
+                throw new Error('uv_interface_addresses failed');
+            };
+            assert.strictEqual(hasIPv4Loopback(unreadable), true);
+            assert.strictEqual(bindHost(undefined, hasIPv4Loopback(unreadable)), 'localhost');
         });
     });
 

@@ -622,6 +622,12 @@
                     "default": 0,
                     "markdownDescription": "Listening port for TLA+ MCP server. If set to -1, MCP server will be disabled. Set to 0 to have the server listen on a non-deterministically assigned available port. Restart VSCode to apply changes."
                 },
+                "tlaplus.mcp.host": {
+                    "type": "string",
+                    "scope": "machine",
+                    "default": "localhost",
+                    "markdownDescription": "Address that the TLA+ MCP server binds to. The default is `localhost`, which keeps the server on loopback. A value outside loopback, such as `0.0.0.0`, puts the server on the network. The server has no authentication. Set it in the user settings of a local window, or in the remote settings of a remote window: VS Code ignores a value in the settings of a workspace or folder, such as `.vscode/settings.json`. Restart VSCode to apply changes."
+                },
                 "tlaplus.mcp.enableFilesystemTools": {
                     "type": "boolean",
                     "scope": "window",
