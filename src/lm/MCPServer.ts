@@ -1,7 +1,9 @@
 import { z } from 'zod';
 import * as http from 'http';
+import { AddressInfo } from 'net';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as os from 'os';
 import express from 'express';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
@@ -53,6 +55,53 @@ export class ArticleValidationError extends Error {
 }
 
 
+// A setting can hold any JSON value, and Node binds every interface for a host
+// that is not a string, or is empty. So only a non-empty string is taken as the host.
+// localhost can resolve to 127.0.0.1 alone, which a loopback with no IPv4
+// cannot bind, so there it becomes ::1.
+export function bindHost(configured: unknown, ipv4Loopback = hasIPv4Loopback()): string {
+    const host = typeof configured === 'string' && configured !== '' ? configured : 'localhost';
+    return isLocalhost(host) && !ipv4Loopback ? '::1' : host;
+}
+
+function isLocalhost(host: string): boolean {
+    return host.toLowerCase().replace(/\.$/, '') === 'localhost';
+}
+
+// Whether loopback has an IPv4 address. Only a listed loopback with no 127.x
+// address says no, so a machine that cannot list its interfaces, or lists no
+// loopback, keeps localhost.
+export function hasIPv4Loopback(
+    listInterfaces: () => NodeJS.Dict<os.NetworkInterfaceInfo[]> = os.networkInterfaces
+): boolean {
+    let listed: NodeJS.Dict<os.NetworkInterfaceInfo[]>;
+    try {
+        listed = listInterfaces();
+    } catch {
+        return true;
+    }
+    const loopback = Object.values(listed)
+        .flatMap((addresses) => addresses ?? [])
+        .filter((address) => address.internal);
+    return loopback.length === 0 ||
+        loopback.some((address) => address.family === 'IPv4' && address.address.startsWith('127.'));
+}
+
+// The URL names the address the server bound, so a client reaches that socket
+// whatever its resolver prefers. A bind to 0.0.0.0 is advertised as 127.0.0.1.
+// A bind to :: serves both families, so it is advertised as 127.0.0.1 too, or
+// as [::1] when loopback has no IPv4.
+export function advertisedHost(bound: AddressInfo, ipv4Loopback = hasIPv4Loopback()): string {
+    if (bound.address === '0.0.0.0') {
+        return '127.0.0.1';
+    }
+    if (bound.address === '::') {
+        return ipv4Loopback ? '127.0.0.1' : '[::1]';
+    }
+    // An IPv6 address goes in brackets.
+    return bound.family === 'IPv6' ? `[${bound.address}]` : bound.address;
+}
+
 export class MCPServer implements vscode.Disposable {
 
     private mcpServer: http.Server | undefined;
@@ -60,14 +109,14 @@ export class MCPServer implements vscode.Disposable {
     private vscodeRegistrationDisposable: vscode.Disposable | undefined;
     private mcpOutputChannel: vscode.OutputChannel;
 
-    constructor(port: number) {
+    constructor(port: number, host: unknown = vscode.workspace.getConfiguration().get('tlaplus.mcp.host')) {
         // Initialize JAR file system provider
         this.jarProviderHandle = acquireJarFileSystemProvider();
 
         // Create dedicated output channel for MCP server messages
         this.mcpOutputChannel = vscode.window.createOutputChannel('TLA+ MCP');
 
-        this.startServer(port);
+        this.startServer(port, bindHost(host));
     }
 
     /**
@@ -223,7 +272,7 @@ export class MCPServer implements vscode.Disposable {
         return resolved;
     }
 
-    private startServer(port: number): void {
+    private startServer(port: number, host: string): void {
         try {
             const app = express();
             app.use(express.json());
@@ -309,13 +358,19 @@ export class MCPServer implements vscode.Disposable {
             });
 
 
-            this.mcpServer = app.listen(port, () => {
-                // Get the actual port that was assigned (important when port is 0)
-                const actualPort = (this.mcpServer?.address() as { port: number })?.port || port;
+            this.mcpServer = app.listen(port, host, (error?: Error) => {
+                // Express 5 also calls this when the listen fails. The 'error' handler below reports it.
+                const bound = this.mcpServer?.address();
+                if (error || !bound || typeof bound === 'string') {
+                    return;
+                }
 
-                const serverUrl = `http://localhost:${actualPort}/mcp`;
+                // Get the actual port that was assigned (important when port is 0)
+                const actualPort = bound.port;
+                const serverUrl = `http://${advertisedHost(bound)}:${actualPort}/mcp`;
                 const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || 'no workspace';
-                const message = `TLA+ MCP server listening at ${serverUrl} for workspace ${workspaceRoot}`;
+                const message = `TLA+ MCP server listening at ${serverUrl} for workspace ${workspaceRoot}. ` +
+                    `Bound to ${bound.address}.`;
 
                 // Log to multiple destinations so users can easily find the URL if they want to
                 // use this MCP server from another IDE or MCP client
@@ -331,10 +386,10 @@ export class MCPServer implements vscode.Disposable {
                         (vscode as any).cursor.mcp.registerServer({
                             name: 'TLA+ MCP Server',
                             server: {
-                                url: `http://localhost:${actualPort}/mcp`
+                                url: serverUrl
                             }
                         });
-                        console.log(`TLA+ MCP server registered programmatically in Cursor at http://localhost:${actualPort}/mcp`);
+                        console.log(`TLA+ MCP server registered programmatically in Cursor at ${serverUrl}`);
                         this.mcpOutputChannel.appendLine('TLA+ MCP server registered programmatically in Cursor');
                     } catch (error) {
                         console.warn('Failed to register TLA+ MCP server programmatically in Cursor:', error);
@@ -352,7 +407,7 @@ export class MCPServer implements vscode.Disposable {
                             if (McpHttpServerDefinition) {
                                 const serverDef = new McpHttpServerDefinition(
                                     'TLA+ MCP Server',
-                                    vscode.Uri.parse(`http://localhost:${actualPort}/mcp`),
+                                    vscode.Uri.parse(serverUrl),
                                     {},
                                     '1.0.0'
                                 );
@@ -364,7 +419,7 @@ export class MCPServer implements vscode.Disposable {
 
                     try {
                         this.vscodeRegistrationDisposable = (vscode.lm as any).registerMcpServerDefinitionProvider('tlaplus.mcp-server', provider);
-                        console.log(`TLA+ MCP server registered programmatically with VS Code at http://localhost:${actualPort}/mcp`);
+                        console.log(`TLA+ MCP server registered programmatically with VS Code at ${serverUrl}`);
                         this.mcpOutputChannel.appendLine('TLA+ MCP server registered programmatically with VS Code');
                     } catch (error) {
                         console.warn('Failed to register TLA+ MCP server programmatically in VS Code:', error);
