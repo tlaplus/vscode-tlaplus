@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import { PassThrough } from 'stream';
 import * as vscode from 'vscode';
+import { applyCheckResultCoverage } from './checkModel';
 import { ModelCheckResultSource } from '../model/check';
 import { revealEmptyCheckResultView, updateCheckResultView } from '../panels/checkResultView';
 import { TlcModelCheckerStdoutParser } from '../parsers/tlc';
@@ -36,6 +37,9 @@ function showOutput(buffer: Buffer, extContext: vscode.ExtensionContext) {
     stream.end(buffer);
     revealEmptyCheckResultView(extContext);
     const parser = new TlcModelCheckerStdoutParser(
-        ModelCheckResultSource.OutFile, stream, undefined, false, updateCheckResultView);
+        ModelCheckResultSource.OutFile, stream, undefined, false, (checkResult) => {
+            updateCheckResultView(checkResult);
+            applyCheckResultCoverage(checkResult);
+        });
     parser.readAll();
 }
