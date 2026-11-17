@@ -59,6 +59,19 @@ export function setCoverageProvider(provider: TlcCoverageDecorationProvider): vo
 }
 
 /**
+ * Paints editor coverage from a model-check result. Used for runs this
+ * extension launches and for coverage loaded from an existing .out file.
+ */
+export function applyCheckResultCoverage(checkResult: ModelCheckResult): void {
+    if (!coverageProvider || checkResult.coverageStat.length === 0) {
+        return;
+    }
+    const stats = checkResult.initialStatesStat;
+    const totalDistinctStates = stats.length > 0 ? stats[stats.length - 1].distinct : 0;
+    coverageProvider.updateCoverage(checkResult.coverageStat, totalDistinctStates);
+}
+
+/**
  * Runs TLC on a TLA+ specification.
  */
 export async function checkModel(
@@ -255,16 +268,7 @@ export async function doCheckModel(
                 updateCheckResultView(checkResult);
             }
 
-            // Update coverage visualization
-            if (coverageProvider && checkResult.coverageStat.length > 0) {
-                // Get total distinct states from the last entry in initialStatesStat
-                let totalDistinctStates = 0;
-                if (checkResult.initialStatesStat.length > 0) {
-                    const lastStat = checkResult.initialStatesStat[checkResult.initialStatesStat.length - 1];
-                    totalDistinctStates = lastStat.distinct;
-                }
-                coverageProvider.updateCoverage(checkResult.coverageStat, totalDistinctStates);
-            }
+            applyCheckResultCoverage(checkResult);
         };
         // Accumulate raw stdout for sequence-diagram generation
         const rawChunks: string[] = [];
