@@ -97,9 +97,9 @@ test.describe('Check Result webview fixture', () => {
         expect(after).toBe(before);
 
         const valueCell = page.locator('vscode-tree-item#state-1 .var-block .var-value').first();
-        const whiteSpace = await valueCell.evaluate<string>(el => getComputedStyle(el).whiteSpace);
+        const whiteSpace = await valueCell.evaluate(el => getComputedStyle(el).whiteSpace);
         expect(whiteSpace).toBe('normal');
-        const overflowX = await valueCell.evaluate<string>(el => getComputedStyle(el).overflowX);
+        const overflowX = await valueCell.evaluate(el => getComputedStyle(el).overflowX);
         expect(overflowX).toBe('visible');
 
         // Verify copy button click does not toggle the tree item

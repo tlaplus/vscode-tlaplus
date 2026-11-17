@@ -855,7 +855,7 @@
         "test:playwright": "playwright test"
     },
     "devDependencies": {
-        "@playwright/test": "^1.56.1",
+        "@playwright/test": "^1.65.1",
         "@types/adm-zip": "^0.5.7",
         "@types/express": "^5.0.2",
         "@types/glob": "^8.1.0",
